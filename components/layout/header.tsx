@@ -235,7 +235,7 @@ export function Header() {
 
               {/* ── Auth area ── */}
               {isAuthenticated ? (
-                <div className="relative" ref={userMenuRef}>
+                <div className="relative hidden md:block" ref={userMenuRef}>
                   <button
                     onClick={() => setUserMenuOpen((p) => !p)}
                     className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white/5 transition-colors shrink-0"

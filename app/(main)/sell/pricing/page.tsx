@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import {
   Check,
   ChevronRight,
@@ -137,7 +139,7 @@ const FAQ = [
   },
 ]
 
-function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean }) {
+function PlanCard({ plan, isAnnual, onStartSelling }: { plan: typeof PLANS[0]; isAnnual: boolean; onStartSelling: () => void }) {
   const price = isAnnual
     ? `$${((plan.priceCents * 10) / 100).toFixed(2)}`
     : plan.priceDisplay
@@ -200,8 +202,8 @@ function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean
       </div>
 
       <div className="p-6 pt-0">
-        <Link
-          href={`/auth/register?role=seller&plan=${plan.slug}`}
+        <button
+          onClick={onStartSelling}
           className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] ${
             plan.badge === "Most Popular"
               ? "bg-primary text-header hover:bg-primary/90 shadow-lg shadow-primary/20"
@@ -210,7 +212,7 @@ function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean
         >
           Start Free Trial
           <ChevronRight className="h-4 w-4" />
-        </Link>
+        </button>
         <p className="text-center text-[11px] text-gray-600 mt-2">
           1st month free · No credit card required
         </p>
@@ -222,6 +224,24 @@ function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const { status } = useSession()
+  const router = useRouter()
+  const isAuthenticated = status === "authenticated"
+
+  async function handleStartSelling() {
+    if (!isAuthenticated) {
+      router.push("/auth/register?role=seller")
+      return
+    }
+    try {
+      localStorage.setItem("afro_register_intent", JSON.stringify({ callbackUrl: "/dashboard/onboarding", role: "seller" }))
+      document.cookie = "afro_seller_intent=1; path=/; max-age=2592000; SameSite=Lax"
+      await fetch("/api/auth/set-seller-intent", { method: "POST" })
+      router.push("/dashboard/onboarding")
+    } catch {
+      router.push("/auth/register?role=seller")
+    }
+  }
 
   return (
     <main className="min-h-screen">
@@ -288,7 +308,7 @@ export default function PricingPage() {
       <section className="px-4 sm:px-6 pb-16">
         <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-5">
           {PLANS.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} isAnnual={isAnnual} />
+            <PlanCard key={plan.id} plan={plan} isAnnual={isAnnual} onStartSelling={handleStartSelling} />
           ))}
         </div>
       </section>
@@ -381,13 +401,13 @@ export default function PricingPage() {
           Join 200+ immigrant entrepreneurs already earning on AfroTransact. Your first month is on us.
         </p>
         <div className="flex flex-wrap gap-3 justify-center">
-          <Link
-            href="/auth/register?role=seller"
+          <button
+            onClick={handleStartSelling}
             className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
           >
             Start Free Trial
             <ChevronRight className="h-4 w-4" />
-          </Link>
+          </button>
           <Link
             href="/sell"
             className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-8 text-[15px] font-semibold text-white hover:bg-white/10 transition-all"

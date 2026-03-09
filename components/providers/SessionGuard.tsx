@@ -7,21 +7,36 @@ import { useSession, signOut } from "next-auth/react"
  * Watches the session for RefreshTokenError and intercepts 401 responses
  * from API calls. When the Keycloak refresh token has expired or is
  * revoked, redirects to login so the user can re-authenticate.
+ *
+ * Also detects when a previously-authenticated session transitions to
+ * unauthenticated (e.g. server-side expiry) and redirects to login
+ * instead of leaving the user on a "sign in to view..." page.
  */
 export function SessionGuard({ children }: { children: React.ReactNode }) {
-  const { data: session, update } = useSession()
+  const { data: session, status, update } = useSession()
   const handlingRef = useRef(false)
+  const wasAuthenticatedRef = useRef(false)
 
-  const forceSignOut = useCallback(() => {
+  const forceSignOut = useCallback((reason: string = "session_expired") => {
     if (handlingRef.current) return
     handlingRef.current = true
-    signOut({ callbackUrl: "/auth/login?reason=session_expired" })
+    signOut({ callbackUrl: `/auth/login?reason=${reason}` })
   }, [])
+
+  // Track auth → unauth transitions
+  useEffect(() => {
+    if (status === "authenticated") {
+      wasAuthenticatedRef.current = true
+    }
+    if (status === "unauthenticated" && wasAuthenticatedRef.current) {
+      forceSignOut("session_expired")
+    }
+  }, [status, forceSignOut])
 
   useEffect(() => {
     const err = (session as { error?: string } | null)?.error
     if (err === "RefreshTokenError") {
-      forceSignOut()
+      forceSignOut("session_expired")
     }
   }, [session, forceSignOut])
 

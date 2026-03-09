@@ -1,4 +1,9 @@
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Check, ChevronRight, Gift, ShieldCheck, Sparkles, Store, TrendingUp, Users, Zap } from "lucide-react"
 
 const STEPS = [
@@ -18,6 +23,29 @@ const FEATURES = [
 ]
 
 export default function SellPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [starting, setStarting] = useState(false)
+  const isAuthenticated = status === "authenticated"
+
+  async function handleStartSelling() {
+    if (!isAuthenticated) {
+      router.push("/auth/register?role=seller")
+      return
+    }
+    setStarting(true)
+    try {
+      localStorage.setItem("afro_register_intent", JSON.stringify({ callbackUrl: "/dashboard/onboarding", role: "seller" }))
+      document.cookie = "afro_seller_intent=1; path=/; max-age=2592000; SameSite=Lax"
+      await fetch("/api/auth/set-seller-intent", { method: "POST" })
+      router.push("/dashboard/onboarding")
+    } catch {
+      router.push("/auth/register?role=seller")
+    } finally {
+      setStarting(false)
+    }
+  }
+
   return (
     <main className="min-h-screen">
       {/* Hero */}
@@ -35,9 +63,13 @@ export default function SellPage() {
             Join 200+ immigrant entrepreneurs already selling food, fashion, and cultural goods on AfroTransact.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 justify-center">
-            <Link href="/auth/register?role=seller" className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
-              Start Selling — Free <ChevronRight className="h-4 w-4" />
-            </Link>
+            <button
+              onClick={handleStartSelling}
+              disabled={starting}
+              className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-60"
+            >
+              {starting ? "Setting up..." : "Start Selling — Free"} <ChevronRight className="h-4 w-4" />
+            </button>
             <Link href="/sell/pricing" className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-8 text-[15px] font-semibold text-white hover:bg-white/10 transition-all">
               View Pricing
             </Link>
@@ -93,9 +125,13 @@ export default function SellPage() {
             </span>
           ))}
         </div>
-        <Link href="/auth/register?role=seller" className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all">
-          Create Seller Account <ChevronRight className="h-4 w-4" />
-        </Link>
+        <button
+          onClick={handleStartSelling}
+          disabled={starting}
+          className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all disabled:opacity-60"
+        >
+          {starting ? "Setting up..." : isAuthenticated ? "Start Selling" : "Create Seller Account"} <ChevronRight className="h-4 w-4" />
+        </button>
         <p className="text-xs text-gray-600 mt-4">
           By signing up you agree to our{" "}
           <Link href="/seller-agreement" className="underline hover:text-gray-400">Seller Agreement</Link> and{" "}
