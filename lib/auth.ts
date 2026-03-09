@@ -177,8 +177,10 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Return token early if it hasn't expired
-      if (token.expiresAt && Date.now() < token.expiresAt * 1000) {
+      // Proactive refresh: renew 60s before expiry so the client never
+      // holds an expired access token between SessionProvider refetches.
+      const bufferMs = 60_000
+      if (token.expiresAt && Date.now() < (token.expiresAt as number) * 1000 - bufferMs) {
         return token
       }
 
@@ -198,6 +200,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.accessToken = token.accessToken
       session.error = token.error
+      session.expiresAt = token.expiresAt as number | undefined
 
       if (token.id) {
         session.user.id = token.id

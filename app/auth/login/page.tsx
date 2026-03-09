@@ -23,6 +23,7 @@ function LoginForm() {
   const intentUrl = typeof window !== "undefined" ? getSellerIntentCallbackUrl() : null
   const callbackUrl = intentUrl || searchParams.get("callbackUrl") || "/"
   const error = searchParams.get("error")
+  const reason = searchParams.get("reason")
 
   useEffect(() => {
     if (error === "OAuthCallback" || error === "Callback") {
@@ -106,6 +107,15 @@ function LoginForm() {
               Access your account and continue where you left off.
             </p>
           </div>
+
+          {/* Session expired / idle notice */}
+          {reason && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-300">
+              {reason === "session_expired" && "Your session has expired. Please sign in again."}
+              {reason === "idle" && "You were signed out due to inactivity."}
+              {!["session_expired", "idle"].includes(reason) && "Please sign in to continue."}
+            </div>
+          )}
 
           {/* Error message */}
           {error && (

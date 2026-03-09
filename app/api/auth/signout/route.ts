@@ -1,27 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 
-async function handleSignout(req: NextRequest) {
-  const token = await getToken({ req })
-
-  const issuer =
-    process.env.KEYCLOAK_ISSUER ||
-    "http://localhost:8180/realms/afrotransact"
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001"
-
-  const logoutUrl = new URL(`${issuer}/protocol/openid-connect/logout`)
-  const clientId = process.env.KEYCLOAK_CLIENT_ID || "afrotransact-web"
-  logoutUrl.searchParams.set("client_id", clientId)
-  logoutUrl.searchParams.set("post_logout_redirect_uri", baseUrl)
-  if (token?.idToken) {
-    logoutUrl.searchParams.set("id_token_hint", String(token.idToken))
-  }
-  const redirectTarget = logoutUrl.toString()
-
-  const response = NextResponse.redirect(redirectTarget, { status: 302 })
-
-  // Clear ALL NextAuth cookies on the redirect response directly.
-  // Enumerate the request cookies and expire anything next-auth related.
+function clearAuthCookies(req: NextRequest, response: NextResponse) {
   for (const cookie of req.cookies.getAll()) {
     if (
       cookie.name.startsWith("next-auth") ||
@@ -37,8 +17,6 @@ async function handleSignout(req: NextRequest) {
     }
   }
 
-  // Also explicitly delete the well-known cookie names in case the
-  // request jar is empty (e.g. race condition).
   const KNOWN_COOKIES = [
     "next-auth.session-token",
     "next-auth.csrf-token",
@@ -49,14 +27,44 @@ async function handleSignout(req: NextRequest) {
     "__Host-next-auth.csrf-token",
   ]
   for (const name of KNOWN_COOKIES) {
-    response.cookies.set(name, "", {
-      maxAge: 0,
-      path: "/",
-    })
+    response.cookies.set(name, "", { maxAge: 0, path: "/" })
   }
 
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate")
+}
 
+function isJwtExpired(jwt: string): boolean {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(jwt.split(".")[1], "base64url").toString()
+    )
+    return typeof payload.exp === "number" && Date.now() / 1000 > payload.exp
+  } catch {
+    return true
+  }
+}
+
+async function handleSignout(req: NextRequest) {
+  const token = await getToken({ req })
+
+  const issuer =
+    process.env.KEYCLOAK_ISSUER ||
+    "http://localhost:8180/realms/afrotransact"
+  const publicIssuer =
+    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER || issuer
+  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001"
+  const clientId = process.env.KEYCLOAK_CLIENT_ID || "afrotransact-web"
+
+  const logoutUrl = new URL(`${publicIssuer}/protocol/openid-connect/logout`)
+  logoutUrl.searchParams.set("client_id", clientId)
+  logoutUrl.searchParams.set("post_logout_redirect_uri", baseUrl)
+
+  if (token?.idToken && !isJwtExpired(String(token.idToken))) {
+    logoutUrl.searchParams.set("id_token_hint", String(token.idToken))
+  }
+
+  const response = NextResponse.redirect(logoutUrl.toString(), { status: 302 })
+  clearAuthCookies(req, response)
   return response
 }
 
