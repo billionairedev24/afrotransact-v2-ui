@@ -273,6 +273,7 @@ async function refreshAccessToken(token: {
     throw new Error("Failed to refresh access token")
   }
 
+  let id = token.id as string | undefined
   let roles = token.roles as string[] | undefined
   let registrationRole = token.registrationRole as string | undefined
   if (refreshedTokens.access_token) {
@@ -280,6 +281,9 @@ async function refreshAccessToken(token: {
       const payload = JSON.parse(
         Buffer.from(refreshedTokens.access_token.split(".")[1], "base64url").toString()
       )
+      if (payload.sub) {
+        id = payload.sub as string
+      }
       const flatRoles = payload.realm_roles as string[] | undefined
       const nestedRoles = (payload.realm_access as { roles?: string[] })?.roles
       roles = flatRoles ?? nestedRoles ?? roles
@@ -293,6 +297,7 @@ async function refreshAccessToken(token: {
 
   return {
     ...token,
+    id,
     accessToken: refreshedTokens.access_token,
     refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
     idToken: refreshedTokens.id_token ?? token.idToken,
