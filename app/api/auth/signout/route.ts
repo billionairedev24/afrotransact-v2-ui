@@ -33,17 +33,6 @@ function clearAuthCookies(req: NextRequest, response: NextResponse) {
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate")
 }
 
-function isJwtExpired(jwt: string): boolean {
-  try {
-    const payload = JSON.parse(
-      Buffer.from(jwt.split(".")[1], "base64url").toString()
-    )
-    return typeof payload.exp === "number" && Date.now() / 1000 > payload.exp
-  } catch {
-    return true
-  }
-}
-
 async function handleSignout(req: NextRequest) {
   const token = await getToken({ req })
 
@@ -59,7 +48,10 @@ async function handleSignout(req: NextRequest) {
   logoutUrl.searchParams.set("client_id", clientId)
   logoutUrl.searchParams.set("post_logout_redirect_uri", baseUrl)
 
-  if (token?.idToken && !isJwtExpired(String(token.idToken))) {
+  // Always send id_token_hint — Keycloak accepts expired id_tokens for
+  // logout session identification.  Without it, Keycloak shows a
+  // confirmation page instead of silently ending the session.
+  if (token?.idToken) {
     logoutUrl.searchParams.set("id_token_hint", String(token.idToken))
   }
 
