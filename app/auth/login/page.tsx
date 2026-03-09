@@ -12,8 +12,10 @@ function getSellerIntentCallbackUrl(): string | null {
     const raw = localStorage.getItem("afro_register_intent")
     if (!raw) return null
     const intent = JSON.parse(raw) as { callbackUrl?: string; role?: string }
+    localStorage.removeItem("afro_register_intent")
     return intent.callbackUrl || null
   } catch {
+    try { localStorage.removeItem("afro_register_intent") } catch { /* */ }
     return null
   }
 }

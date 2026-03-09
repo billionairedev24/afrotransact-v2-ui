@@ -59,7 +59,6 @@ export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
     if (!session?.user?.id || checkedRef.current) return
     checkedRef.current = true
 
-    // Ensure user profile exists — only call once per user per browser
     const profileKey = `afro_profile_ok_${session.user.id}`
     if (!sessionStorage.getItem(profileKey)) {
       try {
@@ -77,6 +76,7 @@ export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
     const roles = session.user.roles ?? []
     const regRole = session.user.registrationRole
     const hasSeller = roles.includes("seller")
+    const isAdmin = roles.includes("admin") || roles.includes("realm-admin")
     const isOnDashboard = pathname?.startsWith("/dashboard")
     const isOnOnboarding = pathname?.startsWith("/dashboard/onboarding")
     const isOnAuthPage = pathname?.startsWith("/auth/")
@@ -84,6 +84,7 @@ export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
     const isOnAdmin = pathname?.startsWith("/admin")
 
     if (isOnAuthPage || isOnApiPage || isOnOnboarding || isOnAdmin) return
+    if (isAdmin) return
 
     let localIntent = false
     try {
@@ -106,25 +107,13 @@ export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
 
     const hasSellerIntent = hasSeller || regRole === "seller" || localIntent || cookieIntent
 
-    if (hasSellerIntent) {
-      const obStatus = await fetchOnboardingStatus()
-      if (obStatus === "approved") {
-        if (!isOnDashboard) router.replace("/dashboard")
-      } else {
-        router.replace("/dashboard/onboarding")
-      }
-      return
-    }
+    if (!hasSellerIntent) return
 
-    // Always check backend as fallback — catches seller records
-    // created from registration even when no local signals exist
     const obStatus = await fetchOnboardingStatus()
-    if (obStatus !== null) {
-      if (obStatus === "approved") {
-        if (!isOnDashboard) router.replace("/dashboard")
-      } else {
-        router.replace("/dashboard/onboarding")
-      }
+    if (obStatus === "approved") {
+      if (!isOnDashboard) router.replace("/dashboard")
+    } else if (obStatus !== null) {
+      router.replace("/dashboard/onboarding")
     }
   }, [session, pathname, router])
 
