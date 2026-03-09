@@ -15,10 +15,6 @@ function RegisterForm() {
 
   const handleEmailRegister = () => {
     if (isSeller) {
-      localStorage.setItem("afro_register_intent", JSON.stringify({ callbackUrl, role: "seller" }))
-      document.cookie = "afro_seller_intent=1; path=/; max-age=2592000; SameSite=Lax"
-      // Dedicated provider lets the jwt callback detect seller intent
-      // and persist registration_role to Keycloak — works across devices.
       signIn("keycloak-register-seller", { callbackUrl })
     } else {
       signIn("keycloak-register", { callbackUrl })

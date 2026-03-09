@@ -1131,6 +1131,7 @@ export interface UserProfile {
   email: string
   firstName: string | null
   lastName: string | null
+  role: string
   phone: string | null
   avatarUrl: string | null
   preferences: string | null

@@ -7,23 +7,9 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
-function getSellerIntentCallbackUrl(): string | null {
-  try {
-    const raw = localStorage.getItem("afro_register_intent")
-    if (!raw) return null
-    const intent = JSON.parse(raw) as { callbackUrl?: string; role?: string }
-    localStorage.removeItem("afro_register_intent")
-    return intent.callbackUrl || null
-  } catch {
-    try { localStorage.removeItem("afro_register_intent") } catch { /* */ }
-    return null
-  }
-}
-
 function LoginForm() {
   const searchParams = useSearchParams()
-  const intentUrl = typeof window !== "undefined" ? getSellerIntentCallbackUrl() : null
-  const callbackUrl = intentUrl || searchParams.get("callbackUrl") || "/"
+  const callbackUrl = searchParams.get("callbackUrl") || "/"
   const error = searchParams.get("error")
   const reason = searchParams.get("reason")
 

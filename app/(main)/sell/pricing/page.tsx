@@ -234,8 +234,6 @@ export default function PricingPage() {
       return
     }
     try {
-      localStorage.setItem("afro_register_intent", JSON.stringify({ callbackUrl: "/dashboard/onboarding", role: "seller" }))
-      document.cookie = "afro_seller_intent=1; path=/; max-age=2592000; SameSite=Lax"
       await fetch("/api/auth/set-seller-intent", { method: "POST" })
       router.push("/dashboard/onboarding")
     } catch {
