@@ -458,6 +458,7 @@ export interface OnboardingProgress {
   createdAt: string
   submittedAt: string | null
   rejectionReason: string | null
+  adminNotes: string | null
 }
 
 export interface OnboardingDocument {

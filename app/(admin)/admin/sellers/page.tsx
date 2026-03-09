@@ -562,7 +562,7 @@ function DetailPanel({
     if (!detail) return
     setSubmitting(true)
     try {
-      await onReview(detail.id, action, action === "reject" ? text : undefined, action === "request_info" ? text : undefined)
+      await onReview(detail.id, action, action === "reject" || action === "request_info" ? text : undefined, action === "request_info" ? text : undefined)
     } finally {
       setSubmitting(false)
     }

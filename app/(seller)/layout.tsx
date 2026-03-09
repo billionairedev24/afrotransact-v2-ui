@@ -43,7 +43,6 @@ export default async function SellerLayout({
         const seller = await res.json()
         const obStatus = (seller.onboardingStatus ?? "").toLowerCase()
         if (obStatus === "approved") {
-          // Approved seller — show the full dashboard with sidebar
           return (
             <SellerShell
               userName={session.user?.name ?? undefined}

@@ -15,6 +15,7 @@ import {
 import {
   MapPin, Plus, Pencil, Trash2, Star, Loader2, AlertCircle, X, ChevronLeft,
 } from "lucide-react"
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 
 type FormState = {
   label: string; line1: string; line2: string; city: string; state: string; postalCode: string; countryCode: string; isDefault: boolean
@@ -30,6 +31,7 @@ export default function AddressesPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [addressQuery, setAddressQuery] = useState("")
 
   async function load() {
     const token = await getAccessToken()
@@ -53,6 +55,7 @@ export default function AddressesPage() {
   function openEdit(a: UserAddress) {
     setEditingId(a.id)
     setForm({ label: a.label || "", line1: a.line1, line2: a.line2 || "", city: a.city, state: a.state, postalCode: a.postalCode, countryCode: a.countryCode, isDefault: a.isDefault })
+    setAddressQuery(a.line1)
     setShowForm(true)
   }
 
@@ -69,6 +72,7 @@ export default function AddressesPage() {
       setShowForm(false)
       setEditingId(null)
       setForm(EMPTY)
+      setAddressQuery("")
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed")
@@ -100,17 +104,7 @@ export default function AddressesPage() {
     }
   }
 
-  const field = (label: string, key: keyof FormState, placeholder = "") => (
-    <div>
-      <label className="block text-xs text-gray-400 mb-1">{label}</label>
-      <input
-        value={form[key] as string}
-        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-        placeholder={placeholder}
-        className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
-      />
-    </div>
-  )
+  const inputClass = "w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
 
   return (
     <main className="mx-auto max-w-[700px] px-4 sm:px-6 py-8">
@@ -132,13 +126,57 @@ export default function AddressesPage() {
       {showForm && (
         <div className="rounded-2xl border border-white/10 p-6 mb-6" style={{ background: "hsl(0 0% 11%)" }}>
           <h2 className="text-lg font-semibold text-white mb-4">{editingId ? "Edit Address" : "New Address"}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {field("Label (e.g. Home, Work)", "label", "Home")}
-            {field("Address Line 1", "line1", "123 Main St")}
-            {field("Line 2 (optional)", "line2", "Apt 4B")}
-            {field("City", "city", "Austin")}
-            {field("State", "state", "TX")}
-            {field("ZIP Code", "postalCode", "78701")}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Label (e.g. Home, Work)</label>
+              <input
+                value={form.label}
+                onChange={(e) => setForm({ ...form, label: e.target.value })}
+                placeholder="Home"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Address</label>
+              <AddressAutocomplete
+                value={addressQuery}
+                onChange={setAddressQuery}
+                onSelect={(parts) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    line1: parts.line1,
+                    line2: parts.line2,
+                    city: parts.city,
+                    state: parts.state,
+                    postalCode: parts.zip,
+                    countryCode: parts.country || "US",
+                  }))
+                }}
+                placeholder="Start typing your address…"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Address Line 1</label>
+                <input value={form.line1} onChange={(e) => setForm({ ...form, line1: e.target.value })} placeholder="123 Main St" className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Line 2 (optional)</label>
+                <input value={form.line2} onChange={(e) => setForm({ ...form, line2: e.target.value })} placeholder="Apt 4B" className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">City</label>
+                <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Austin" className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">State</label>
+                <input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} placeholder="TX" className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">ZIP Code</label>
+                <input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} placeholder="78701" className={inputClass} />
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-2 mt-4">
             <input
@@ -159,7 +197,7 @@ export default function AddressesPage() {
               {editingId ? "Update" : "Save"}
             </button>
             <button
-              onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY) }}
+              onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY); setAddressQuery("") }}
               className="rounded-xl border border-white/10 px-5 py-2.5 text-sm text-white"
             >
               Cancel
@@ -169,7 +207,7 @@ export default function AddressesPage() {
       )}
 
       <button
-        onClick={() => { setEditingId(null); setForm(EMPTY); setShowForm(true) }}
+        onClick={() => { setEditingId(null); setForm(EMPTY); setAddressQuery(""); setShowForm(true) }}
         className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 px-4 py-3 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors w-full justify-center mb-6"
       >
         <Plus className="h-4 w-4" /> Add New Address

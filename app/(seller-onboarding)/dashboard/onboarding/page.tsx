@@ -265,6 +265,9 @@ export default function SellerOnboardingPage() {
     if (s === "submitted" || s === "under_review" || s === "approved") {
       setSubmitted(true)
     }
+    if (s === "needs_action") {
+      setSubmitted(false)
+    }
     const b = p.businessInfo
     setBusinessName(b.businessName ?? "")
     setEntityType(b.entityType ?? "")
@@ -760,27 +763,83 @@ export default function SellerOnboardingPage() {
   }
 
   if (submitted) {
+    const obStatus = progress?.onboardingStatus?.toLowerCase()
+    const isRejected = obStatus === "rejected"
+
     return (
       <div className="flex items-center justify-center min-h-[60vh]" style={{ background: BG }}>
         <div
-          className="flex flex-col items-center justify-center rounded-2xl border p-12 text-center max-w-lg"
+          className="flex flex-col items-center justify-center rounded-2xl border p-8 sm:p-12 text-center max-w-lg w-full mx-4"
           style={{ background: CARD, borderColor: BORDER }}
         >
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-500/10 mb-6">
-            <CheckCircle2 className="h-10 w-10 text-green-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-white">Application Submitted</h2>
-          <p className="mt-3 text-sm text-gray-400 max-w-sm leading-relaxed">
-            Your seller application is under review. We&apos;ll notify you via email once it&apos;s been processed. This typically takes 1–2 business days.
-          </p>
-          <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              Go to Dashboard <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
+          {isRejected ? (
+            <>
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10 mb-6">
+                <AlertCircle className="h-10 w-10 text-red-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">Application Not Approved</h2>
+              <p className="mt-3 text-sm text-gray-400 max-w-sm leading-relaxed">
+                Unfortunately, your seller application was not approved at this time.
+              </p>
+              {progress?.rejectionReason && (
+                <div className="mt-4 w-full rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-left">
+                  <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-1">Reason</p>
+                  <p className="text-sm text-red-300">{progress.rejectionReason}</p>
+                </div>
+              )}
+              <p className="mt-4 text-xs text-gray-500">
+                If you believe this was a mistake, please contact us at{" "}
+                <a href="mailto:hello@afrotransact.com" className="text-primary hover:underline">hello@afrotransact.com</a>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 mb-6">
+                <Shield className="h-10 w-10 text-primary" />
+                <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-black">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                </span>
+              </div>
+              <h2 className="text-2xl font-bold text-white">Application Under Review</h2>
+              <p className="mt-3 text-sm text-gray-400 max-w-sm leading-relaxed">
+                Thank you for submitting your seller application! Our team is carefully reviewing your information. We&apos;ll notify you via email once it&apos;s been processed.
+              </p>
+
+              <div className="mt-6 w-full space-y-3">
+                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-left">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <FileText className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Business verification</p>
+                    <p className="text-xs text-gray-500">We review your documents and business details</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-left">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <CreditCard className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Payment setup confirmation</p>
+                    <p className="text-xs text-gray-500">Stripe account and subscription verified</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-6 text-xs text-gray-500">
+                This typically takes 1–2 business days. If we need additional information, we&apos;ll reach out to you directly.
+              </p>
+
+              <div className="mt-6">
+                <button
+                  onClick={() => router.push("/")}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back to Marketplace
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     )
@@ -805,6 +864,34 @@ export default function SellerOnboardingPage() {
             <p className="text-sm text-yellow-300">
               Your application has been submitted. Fields are locked. To request changes, contact support.
             </p>
+          </div>
+        )}
+        {progress?.onboardingStatus?.toLowerCase() === "needs_action" && (
+          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-300">Action required — additional information needed</p>
+                <p className="text-xs text-amber-400/70 mt-1">Please review the notes below, update the required information, and resubmit your application.</p>
+              </div>
+            </div>
+            {(progress.rejectionReason || progress.adminNotes) && (
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 ml-8">
+                <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">What we need</p>
+                <p className="text-sm text-amber-200">{progress.rejectionReason || progress.adminNotes}</p>
+              </div>
+            )}
+            {progress.documents?.some(d => d.adminNotes) && (
+              <div className="ml-8 space-y-2">
+                <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Document notes</p>
+                {progress.documents.filter(d => d.adminNotes).map(d => (
+                  <div key={d.id} className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-2">
+                    <p className="text-xs text-gray-400">{d.documentType}: <span className="font-medium">{d.fileName}</span></p>
+                    <p className="text-sm text-amber-200 mt-0.5">{d.adminNotes}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <fieldset disabled={submitted && step < 6} className={submitted && step < 6 ? "opacity-70 pointer-events-none" : ""}>
@@ -944,6 +1031,8 @@ export default function SellerOnboardingPage() {
             >
               {submitting ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>
+              ) : progress?.onboardingStatus?.toLowerCase() === "needs_action" ? (
+                <>Resubmit Application <ArrowRight className="h-4 w-4" /></>
               ) : (
                 <>Submit Application <CheckCircle2 className="h-4 w-4" /></>
               )}
