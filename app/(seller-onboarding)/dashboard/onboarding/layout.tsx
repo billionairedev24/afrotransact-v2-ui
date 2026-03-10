@@ -15,7 +15,7 @@ export default async function OnboardingLayout({
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "hsl(0 0% 7%)" }}>
+    <div className="min-h-screen bg-gray-50">
       <OnboardingHeader userName={session.user?.name ?? session.user?.email ?? ""} />
       {children}
     </div>

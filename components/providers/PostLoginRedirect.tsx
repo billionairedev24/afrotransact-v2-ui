@@ -1,42 +1,138 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, usePathname } from "next/navigation"
+import { getAccessToken } from "@/lib/auth-helpers"
 
-/**
- * Immediately redirects sellers to /dashboard after login using session
- * JWT data — no API calls needed. The seller layout handles the
- * approved vs onboarding distinction server-side.
- */
+const INTENT_KEY = "afro_register_intent"
+const COOKIE_NAME = "afro_seller_intent"
+
+function hasSellerCookie(): boolean {
+  try {
+    return document.cookie.split(";").some((c) => c.trim().startsWith(`${COOKIE_NAME}=`))
+  } catch {
+    return false
+  }
+}
+
+function clearSellerCookie() {
+  try {
+    document.cookie = `${COOKIE_NAME}=; path=/; max-age=0`
+  } catch { /* */ }
+}
+
+async function persistSellerIntentToKeycloak(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/auth/set-seller-intent", { method: "POST" })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+async function fetchOnboardingStatus(): Promise<string | null> {
+  try {
+    const token = await getAccessToken()
+    if (!token) return null
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+    const res = await fetch(`${API_BASE}/api/v1/seller/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      return (data.onboardingStatus ?? "").toLowerCase()
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const pathname = usePathname()
   const checkedRef = useRef(false)
 
-  useEffect(() => {
-    if (status !== "authenticated" || !session?.user?.id || checkedRef.current) return
+  const doCheck = useCallback(async () => {
+    if (!session?.user?.id || checkedRef.current) return
     checkedRef.current = true
 
+    // Ensure user profile exists — only call once per user per browser
+    const profileKey = `afro_profile_ok_${session.user.id}`
+    if (!sessionStorage.getItem(profileKey)) {
+      try {
+        const token = await getAccessToken()
+        if (token) {
+          const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+          await fetch(`${API_BASE}/api/v1/users/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          sessionStorage.setItem(profileKey, "1")
+        }
+      } catch { /* best-effort */ }
+    }
+
+    const roles = session.user.roles ?? []
+    const regRole = session.user.registrationRole
+    const hasSeller = roles.includes("seller")
     const isOnDashboard = pathname?.startsWith("/dashboard")
+    const isOnOnboarding = pathname?.startsWith("/dashboard/onboarding")
     const isOnAuthPage = pathname?.startsWith("/auth/")
     const isOnApiPage = pathname?.startsWith("/api/")
     const isOnAdmin = pathname?.startsWith("/admin")
 
-    if (isOnAuthPage || isOnApiPage || isOnDashboard || isOnAdmin) return
+    if (isOnAuthPage || isOnApiPage || isOnOnboarding || isOnAdmin) return
 
-    const roles = session.user.roles ?? []
-    const isAdmin = roles.includes("admin") || roles.includes("realm-admin")
-    if (isAdmin) return
-
-    const registrationRole = (session.user.registrationRole ?? "").toLowerCase()
-    const isSeller = registrationRole === "seller" || roles.includes("seller")
-
-    if (isSeller) {
-      router.replace("/dashboard")
+    let localIntent = false
+    try {
+      const raw = localStorage.getItem(INTENT_KEY)
+      if (raw) {
+        const intent = JSON.parse(raw) as { role?: string }
+        if (intent.role === "seller") localIntent = true
+        localStorage.removeItem(INTENT_KEY)
+      }
+    } catch {
+      try { localStorage.removeItem(INTENT_KEY) } catch { /* */ }
     }
-  }, [status, session, pathname, router])
+
+    const cookieIntent = hasSellerCookie()
+
+    if (cookieIntent && regRole !== "seller") {
+      await persistSellerIntentToKeycloak()
+      clearSellerCookie()
+    }
+
+    const hasSellerIntent = hasSeller || regRole === "seller" || localIntent || cookieIntent
+
+    if (hasSellerIntent) {
+      const obStatus = await fetchOnboardingStatus()
+      if (obStatus === "approved") {
+        if (!isOnDashboard) router.replace("/dashboard")
+      } else {
+        router.replace("/dashboard/onboarding")
+      }
+      return
+    }
+
+    // Always check backend as fallback — catches seller records
+    // created from registration even when no local signals exist
+    const obStatus = await fetchOnboardingStatus()
+    if (obStatus !== null) {
+      if (obStatus === "approved") {
+        if (!isOnDashboard) router.replace("/dashboard")
+      } else {
+        router.replace("/dashboard/onboarding")
+      }
+    }
+  }, [session, pathname, router])
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      doCheck()
+    }
+  }, [status, doCheck])
 
   return <>{children}</>
 }

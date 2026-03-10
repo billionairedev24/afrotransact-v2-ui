@@ -63,11 +63,11 @@ const col = createColumnHelper<AdminUser>()
 
 function StatCard({ label, value, icon: Icon, iconColor }: { label: string; value: number; icon: React.ElementType; iconColor: string }) {
   return (
-    <div className="rounded-xl border border-white/10 p-4" style={{ background: "hsl(0 0% 11%)" }}>
+    <div className="rounded-xl border border-gray-200 p-4 bg-white">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-400">{label}</p>
-          <p className="mt-1 text-2xl font-bold text-white">{value}</p>
+          <p className="text-sm text-gray-500">{label}</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
         </div>
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconColor}`}>
           <Icon className="h-5 w-5" />
@@ -94,18 +94,17 @@ function ActionMenu({ onView }: { onView: () => void }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open && (
         <div
-          className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-white/10 py-1 shadow-xl"
-          style={{ background: "hsl(0 0% 11%)" }}
+          className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-gray-200 py-1 shadow-xl bg-white"
         >
           <button
             onClick={() => { onView(); setOpen(false) }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
           >
             <UserIcon className="h-3.5 w-3.5" /> View Details
           </button>
@@ -165,7 +164,7 @@ export default function UsersPage() {
               {(user.firstName?.[0] || user.username?.[0] || "?").toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="truncate font-medium text-white">{displayName(user)}</p>
+              <p className="truncate font-medium text-gray-900">{displayName(user)}</p>
               <p className="truncate text-xs text-gray-500">{info.getValue()}</p>
             </div>
           </div>
@@ -189,7 +188,7 @@ export default function UsersPage() {
         return (
           <div className="flex flex-wrap gap-1.5">
             {roles.map((role) => {
-              const badge = ROLE_BADGE[role] ?? { label: role, className: "bg-white/10 text-gray-400 border border-white/10" }
+              const badge = ROLE_BADGE[role] ?? { label: role, className: "bg-gray-100 text-gray-500 border border-gray-200" }
               return (
                 <span key={role} className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
                   {badge.label}
@@ -204,7 +203,7 @@ export default function UsersPage() {
     col.accessor("enabled", {
       header: "Status",
       cell: (info) => (
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${info.getValue() ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${info.getValue() ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-600"}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${info.getValue() ? "bg-green-400" : "bg-red-400"}`} />
           {info.getValue() ? "Active" : "Disabled"}
         </span>
@@ -212,7 +211,7 @@ export default function UsersPage() {
     }),
     col.accessor("createdTimestamp", {
       header: "Joined",
-      cell: (info) => <span className="text-gray-400">{formatDate(info.getValue())}</span>,
+      cell: (info) => <span className="text-gray-500">{formatDate(info.getValue())}</span>,
     }),
     col.display({
       id: "actions",
@@ -232,18 +231,18 @@ export default function UsersPage() {
   }
 
   if (status !== "authenticated" && !loading) {
-    return <div className="py-20 text-center text-gray-400">Sign in as admin to manage users.</div>
+    return <div className="py-20 text-center text-gray-500">Sign in as admin to manage users.</div>
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Users</h1>
-        <p className="mt-1 text-sm text-gray-400">All registered users across the platform.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+        <p className="mt-1 text-sm text-gray-500">All registered users across the platform.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total Users" value={stats.total} icon={Users} iconColor="bg-white/10 text-white" />
+        <StatCard label="Total Users" value={stats.total} icon={Users} iconColor="bg-gray-100 text-gray-900" />
         <StatCard label="Admins" value={stats.admins} icon={Shield} iconColor="bg-purple-500/10 text-purple-400" />
         <StatCard label="Sellers" value={stats.sellers} icon={Store} iconColor="bg-blue-500/10 text-blue-400" />
         <StatCard label="Buyers" value={stats.buyers} icon={ShoppingBag} iconColor="bg-green-500/10 text-green-400" />
@@ -272,10 +271,10 @@ export default function UsersPage() {
                   {(viewUser.firstName?.[0] || viewUser.username?.[0] || "?").toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-lg font-semibold text-white">{displayName(viewUser)}</p>
+                  <p className="text-lg font-semibold text-gray-900">{displayName(viewUser)}</p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {classifyRoles(viewUser).map((role) => {
-                      const badge = ROLE_BADGE[role] ?? { label: role, className: "bg-white/10 text-gray-400" }
+                      const badge = ROLE_BADGE[role] ?? { label: role, className: "bg-gray-100 text-gray-500" }
                       return (
                         <span key={role} className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
                           {badge.label}
@@ -303,12 +302,12 @@ export default function UsersPage() {
                     { label: "Account Status", value: viewUser.enabled ? "Active" : "Disabled" },
                     { label: "Joined", value: formatDate(viewUser.createdTimestamp) },
                   ].map((item) => (
-                    <div key={item.label} className="rounded-xl border border-white/10 p-3.5" style={{ background: "hsl(0 0% 9%)" }}>
+                    <div key={item.label} className="rounded-xl border border-gray-200 p-3.5 bg-gray-50">
                       <p className="text-[11px] font-medium uppercase tracking-wider text-gray-500 mb-1">{item.label}</p>
                       <div className="flex items-center gap-2">
-                        <p className="break-all text-sm font-medium text-white truncate">{item.value}</p>
+                        <p className="break-all text-sm font-medium text-gray-900 truncate">{item.value}</p>
                         {"action" in item && item.action && (
-                          <button onClick={item.action} className="shrink-0 rounded p-1 text-gray-500 hover:text-white hover:bg-white/10 transition-colors">
+                          <button onClick={item.action} className="shrink-0 rounded p-1 text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
                             {item.icon}
                           </button>
                         )}
@@ -330,11 +329,11 @@ export default function UsersPage() {
               {/* Activity */}
               <div className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Activity</h3>
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 p-3.5" style={{ background: "hsl(0 0% 9%)" }}>
+                <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-3.5 bg-gray-50">
                   <Calendar className="h-4 w-4 text-gray-500" />
                   <div>
                     <p className="text-xs text-gray-500">Member since</p>
-                    <p className="text-sm text-white">{formatDate(viewUser.createdTimestamp)}</p>
+                    <p className="text-sm text-gray-900">{formatDate(viewUser.createdTimestamp)}</p>
                   </div>
                 </div>
               </div>

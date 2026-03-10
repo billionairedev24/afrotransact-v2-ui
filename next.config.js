@@ -34,6 +34,9 @@ const securityHeaders = [
 ]
 
 const nextConfig = {
+  output: 'standalone',
+  outputFileTracingRoot: require('path').join(__dirname, '../'),
+
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'cdn.afrotransact.com' },

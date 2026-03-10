@@ -18,7 +18,7 @@ import {
 } from "@/lib/api"
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-primary/60 transition-colors"
+  "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
 
 type RegionFormData = {
   code: string
@@ -61,7 +61,7 @@ function RegionForm({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">Region Code</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Region Code</label>
           <input
             type="text"
             value={form.code}
@@ -73,7 +73,7 @@ function RegionForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">Display Name</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Display Name</label>
           <input
             type="text"
             value={form.name}
@@ -87,7 +87,7 @@ function RegionForm({
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">Country Code</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Country Code</label>
           <input
             type="text"
             value={form.country_code}
@@ -98,7 +98,7 @@ function RegionForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">State / Province</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">State / Province</label>
           <input
             type="text"
             value={form.state_or_province}
@@ -108,7 +108,7 @@ function RegionForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">City</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">City</label>
           <input
             type="text"
             value={form.city}
@@ -121,7 +121,7 @@ function RegionForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">Currency</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Currency</label>
           <input
             type="text"
             value={form.currency}
@@ -130,7 +130,7 @@ function RegionForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">Timezone</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Timezone</label>
           <input
             type="text"
             value={form.timezone}
@@ -142,7 +142,7 @@ function RegionForm({
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">Tax Rate (%)</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Tax Rate (%)</label>
           <input
             type="number"
             step={0.01}
@@ -154,7 +154,7 @@ function RegionForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">Ship (cents/lb)</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Ship (cents/lb)</label>
           <input
             type="number"
             step={1}
@@ -165,7 +165,7 @@ function RegionForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">Free Ship ($)</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Free Ship ($)</label>
           <input
             type="number"
             step={1}
@@ -183,9 +183,9 @@ function RegionForm({
           id="region-active"
           checked={form.active}
           onChange={(e) => onChange({ ...form, active: e.target.checked })}
-          className="rounded border-white/20 bg-white/5 text-primary focus:ring-primary"
+          className="rounded border-gray-300 bg-gray-50 text-primary focus:ring-primary"
         />
-        <label htmlFor="region-active" className="text-sm text-gray-300">Active</label>
+        <label htmlFor="region-active" className="text-sm text-gray-600">Active</label>
       </div>
     </div>
   )
@@ -369,8 +369,8 @@ export default function RegionsPage() {
 
   if (status !== "authenticated") {
     return (
-      <div className="rounded-2xl border border-white/10 p-8 text-center" style={{ background: "hsl(0 0% 11%)" }}>
-        <p className="text-gray-400">Sign in to manage regions.</p>
+      <div className="rounded-2xl border border-gray-200 p-8 text-center bg-white">
+        <p className="text-gray-500">Sign in to manage regions.</p>
       </div>
     )
   }
@@ -379,8 +379,8 @@ export default function RegionsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Regions</h1>
-          <p className="text-gray-400 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Regions</h1>
+          <p className="text-gray-500 text-sm mt-1">
             {regions.length} region{regions.length !== 1 ? "s" : ""} &middot; {totalActive} active
           </p>
         </div>
@@ -394,16 +394,16 @@ export default function RegionsPage() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 py-16" style={{ background: "hsl(0 0% 11%)" }}>
+        <div className="flex items-center justify-center gap-3 rounded-2xl border border-gray-200 py-16 bg-white">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <span className="text-gray-400">Loading regions...</span>
+          <span className="text-gray-500">Loading regions...</span>
         </div>
       )}
 
       {!loading && regions.length === 0 && (
-        <div className="rounded-2xl border border-white/10 p-12 text-center" style={{ background: "hsl(0 0% 11%)" }}>
+        <div className="rounded-2xl border border-gray-200 p-12 text-center bg-white">
           <MapPin className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400">No regions yet. Add your first region to get started.</p>
+          <p className="text-gray-500">No regions yet. Add your first region to get started.</p>
         </div>
       )}
 
@@ -420,11 +420,11 @@ export default function RegionsPage() {
               className="flex items-center gap-2 group w-full text-left"
             >
               {isCountryCollapsed
-                ? <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-white transition-colors" />
-                : <ChevronDown className="h-4 w-4 text-gray-400 group-hover:text-white transition-colors" />
+                ? <ChevronRight className="h-4 w-4 text-gray-500 group-hover:text-gray-900 transition-colors" />
+                : <ChevronDown className="h-4 w-4 text-gray-500 group-hover:text-gray-900 transition-colors" />
               }
               <Globe className="h-4 w-4 text-primary" />
-              <span className="text-base font-semibold text-white">
+              <span className="text-base font-semibold text-gray-900">
                 {COUNTRY_NAMES[countryGroup.country] || countryGroup.country}
               </span>
               <span className="text-xs text-gray-500 ml-1">
@@ -444,11 +444,11 @@ export default function RegionsPage() {
                     className="flex items-center gap-2 group w-full text-left"
                   >
                     {isStateCollapsed
-                      ? <ChevronRight className="h-3.5 w-3.5 text-gray-500 group-hover:text-white transition-colors" />
-                      : <ChevronDown className="h-3.5 w-3.5 text-gray-500 group-hover:text-white transition-colors" />
+                      ? <ChevronRight className="h-3.5 w-3.5 text-gray-500 group-hover:text-gray-900 transition-colors" />
+                      : <ChevronDown className="h-3.5 w-3.5 text-gray-500 group-hover:text-gray-900 transition-colors" />
                     }
-                    <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-200">
+                    <Building2 className="h-3.5 w-3.5 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">
                       {stateGroup.state}
                     </span>
                     <span className="text-xs text-gray-500">
@@ -457,10 +457,10 @@ export default function RegionsPage() {
                   </button>
 
                   {!isStateCollapsed && (
-                    <div className="ml-6 rounded-xl border border-white/10" style={{ background: "hsl(0 0% 11%)" }}>
+                    <div className="ml-6 rounded-xl border border-gray-200 bg-white">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-white/10 text-xs text-gray-400 uppercase tracking-wider">
+                          <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
                             <th className="text-left px-4 py-2.5 font-medium">City / Region</th>
                             <th className="text-right px-4 py-2.5 font-medium">Tax %</th>
                             <th className="text-right px-4 py-2.5 font-medium hidden sm:table-cell">Ship ¢/lb</th>
@@ -469,7 +469,7 @@ export default function RegionsPage() {
                             <th className="w-[50px]" />
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-gray-100">
                           {stateGroup.regions.map((region) => {
                             const actions: RowAction[] = [
                               {
@@ -486,28 +486,28 @@ export default function RegionsPage() {
                             ]
 
                             return (
-                              <tr key={region.id} className="hover:bg-white/[0.02] transition-colors">
+                              <tr key={region.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <MapPin className="h-4 w-4 text-primary shrink-0" />
                                     <div className="min-w-0">
-                                      <p className="text-white font-medium truncate">
+                                      <p className="text-gray-900 font-medium truncate">
                                         {region.city || region.name || <span className="text-gray-500 italic">Unnamed Region</span>}
                                       </p>
                                       <p className="text-gray-500 text-xs font-mono truncate">{region.code || "—"}</p>
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-4 py-3 text-right text-gray-300 tabular-nums">{region.taxRate}%</td>
-                                <td className="px-4 py-3 text-right text-gray-300 hidden sm:table-cell tabular-nums">{region.shippingRateCentsPerLb}¢</td>
-                                <td className="px-4 py-3 text-right text-gray-300 hidden md:table-cell tabular-nums">
+                                <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{region.taxRate}%</td>
+                                <td className="px-4 py-3 text-right text-gray-600 hidden sm:table-cell tabular-nums">{region.shippingRateCentsPerLb}¢</td>
+                                <td className="px-4 py-3 text-right text-gray-600 hidden md:table-cell tabular-nums">
                                   ${(region.freeShippingThresholdCents / 100).toFixed(0)}
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   {savingId === region.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto" />
                                   ) : (
-                                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${region.active ? "bg-green-500/20 text-green-400" : "bg-white/10 text-gray-400"}`}>
+                                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${region.active ? "bg-green-500/20 text-green-400" : "bg-gray-100 text-gray-500"}`}>
                                       {region.active ? "Active" : "Off"}
                                     </span>
                                   )}
@@ -539,7 +539,7 @@ export default function RegionsPage() {
         <DialogFooter>
           <button
             onClick={() => setDialogOpen(false)}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
           >
             Cancel
           </button>

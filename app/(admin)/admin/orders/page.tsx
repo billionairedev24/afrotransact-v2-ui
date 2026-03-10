@@ -27,14 +27,14 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   dispatched:           { label: "Dispatched",           className: "bg-indigo-500/20 text-indigo-400" },
   delivered:            { label: "Delivered",            className: "bg-green-500/20 text-green-400" },
   completed:            { label: "Completed",            className: "bg-green-500/20 text-green-400" },
-  cancelled:            { label: "Cancelled",            className: "bg-red-500/20 text-red-400" },
-  delivery_exception:   { label: "Exception",            className: "bg-red-500/20 text-red-400" },
+  cancelled:            { label: "Cancelled",            className: "bg-red-500/20 text-red-600" },
+  delivery_exception:   { label: "Exception",            className: "bg-red-500/20 text-red-600" },
   returned:             { label: "Returned",             className: "bg-orange-500/20 text-orange-400" },
 }
 
 function statusBadge(status: string) {
   const key = status.toLowerCase()
-  return STATUS_BADGE[key] ?? { label: status.replace(/_/g, " "), className: "bg-white/10 text-gray-400" }
+  return STATUS_BADGE[key] ?? { label: status.replace(/_/g, " "), className: "bg-gray-100 text-gray-500" }
 }
 
 function formatCents(cents: number, currency = "USD") {
@@ -108,11 +108,11 @@ export default function AdminOrdersPage() {
   const columns = useMemo(() => [
     col.accessor("orderNumber", {
       header: "Order",
-      cell: (info) => <span className="font-mono text-sm font-medium text-white">{info.getValue()}</span>,
+      cell: (info) => <span className="font-mono text-sm font-medium text-gray-900">{info.getValue()}</span>,
     }),
     col.accessor("placedAt", {
       header: "Date",
-      cell: (info) => <span className="text-gray-400">{formatDate(info.getValue())}</span>,
+      cell: (info) => <span className="text-gray-500">{formatDate(info.getValue())}</span>,
     }),
     col.accessor("status", {
       header: "Order Status",
@@ -130,11 +130,11 @@ export default function AdminOrdersPage() {
     }),
     col.accessor("itemsCount", {
       header: "Items",
-      cell: (info) => <span className="text-gray-300">{info.getValue()}</span>,
+      cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
     }),
     col.accessor("totalCents", {
       header: "Total",
-      cell: (info) => <span className="font-medium text-white">{formatCents(info.getValue(), info.row.original.currency)}</span>,
+      cell: (info) => <span className="font-medium text-gray-900">{formatCents(info.getValue(), info.row.original.currency)}</span>,
     }),
     col.display({
       id: "actions",
@@ -159,8 +159,8 @@ export default function AdminOrdersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Order Management</h1>
-        <p className="mt-1 text-sm text-gray-400">Manage all orders, update fulfillment status, and handle exceptions</p>
+        <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
+        <p className="mt-1 text-sm text-gray-500">Manage all orders, update fulfillment status, and handle exceptions</p>
       </div>
 
       <DataTable
@@ -227,57 +227,57 @@ function AdminOrderDetailSheet({
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Placed</p>
-                <p className="mt-1 text-sm text-gray-300">{formatDate(order.placedAt)}</p>
+                <p className="mt-1 text-sm text-gray-600">{formatDate(order.placedAt)}</p>
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Total</p>
-                <p className="mt-1 text-sm font-medium text-white">{formatCents(order.totalCents, order.currency)}</p>
+                <p className="mt-1 text-sm font-medium text-gray-900">{formatCents(order.totalCents, order.currency)}</p>
               </div>
             </div>
 
             {order.raw.shippingAddress && (
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Shipping Address</p>
-                <p className="mt-1 text-sm text-gray-300">{order.raw.shippingAddress}</p>
+                <p className="mt-1 text-sm text-gray-600">{order.raw.shippingAddress}</p>
               </div>
             )}
 
             {order.raw.subOrders.map((sub) => (
-              <div key={sub.id} className="rounded-xl border border-white/10 p-4 space-y-4" style={{ background: "hsl(0 0% 9%)" }}>
+              <div key={sub.id} className="rounded-xl border border-gray-200 p-4 space-y-4 bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <p className="text-sm font-semibold text-white">Store {sub.storeId.slice(0, 8)}…</p>
+                    <p className="text-sm font-semibold text-gray-900">Store {sub.storeId.slice(0, 8)}…</p>
                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusBadge(sub.fulfillmentStatus).className}`}>
                       {sub.fulfillmentStatus.replace(/_/g, " ")}
                     </span>
                   </div>
-                  <span className="text-sm font-medium text-white">{formatCents(sub.subtotalCents, order.currency)}</span>
+                  <span className="text-sm font-medium text-gray-900">{formatCents(sub.subtotalCents, order.currency)}</span>
                 </div>
 
                 {sub.trackingNumber && (
-                  <p className="text-xs text-gray-400">Tracking: <span className="text-white font-mono">{sub.trackingNumber}</span></p>
+                  <p className="text-xs text-gray-500">Tracking: <span className="text-gray-900 font-mono">{sub.trackingNumber}</span></p>
                 )}
 
-                <div className="overflow-hidden rounded-lg border border-white/10">
+                <div className="overflow-hidden rounded-lg border border-gray-200">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-white/10 bg-white/[0.03]">
-                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Product</th>
-                        <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-400">Qty</th>
-                        <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-400">Price</th>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Product</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Qty</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Price</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sub.items.map((item, idx) => (
-                        <tr key={item.id || idx} className="border-b border-white/5 last:border-0">
+                        <tr key={item.id || idx} className="border-b border-gray-100 last:border-0">
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">
-                              {item.imageUrl && <img src={item.imageUrl} alt="" className="h-7 w-7 rounded object-cover border border-white/10" />}
-                              <span className="text-gray-300">{item.productTitle || "Product"}</span>
+                              {item.imageUrl && <img src={item.imageUrl} alt="" className="h-7 w-7 rounded object-cover border border-gray-200" />}
+                              <span className="text-gray-600">{item.productTitle || "Product"}</span>
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-right text-gray-400">{item.quantity}</td>
-                          <td className="px-3 py-2 text-right text-white">{formatCents(item.unitPriceCents * item.quantity, order.currency)}</td>
+                          <td className="px-3 py-2 text-right text-gray-500">{item.quantity}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">{formatCents(item.unitPriceCents * item.quantity, order.currency)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -286,7 +286,7 @@ function AdminOrderDetailSheet({
 
                 {sub.fulfillmentStatus !== "delivered" && sub.fulfillmentStatus !== "returned" && (
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Update Fulfillment</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Update Fulfillment</p>
                     <div className="flex flex-wrap gap-2">
                       {ADMIN_STATUSES.map((s) => (
                         <button
@@ -297,8 +297,8 @@ function AdminOrderDetailSheet({
                             ${s === sub.fulfillmentStatus
                               ? "border-primary/40 bg-primary/10 text-primary"
                               : s === "delivery_exception" || s === "returned"
-                                ? "border-red-500/30 text-red-400 hover:bg-red-500/10"
-                                : "border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"}`}
+                                ? "border-red-500/30 text-red-600 hover:bg-red-500/10"
+                                : "border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                         >
                           {updating === sub.id + s ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                           {s.replace(/_/g, " ")}
@@ -310,7 +310,7 @@ function AdminOrderDetailSheet({
                       value={trackingInput}
                       onChange={(e) => setTrackingInput(e.target.value)}
                       placeholder="Tracking number (optional)"
-                      className="h-8 w-full rounded-lg border border-white/10 bg-transparent px-3 text-xs text-white placeholder:text-gray-500 focus:border-primary focus:outline-none"
+                      className="h-8 w-full rounded-lg border border-gray-200 bg-transparent px-3 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                     />
                   </div>
                 )}

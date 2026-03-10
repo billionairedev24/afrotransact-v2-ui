@@ -177,10 +177,8 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Proactive refresh: renew 60s before expiry so the client never
-      // holds an expired access token between SessionProvider refetches.
-      const bufferMs = 60_000
-      if (token.expiresAt && Date.now() < (token.expiresAt as number) * 1000 - bufferMs) {
+      // Return token early if it hasn't expired
+      if (token.expiresAt && Date.now() < token.expiresAt * 1000) {
         return token
       }
 
@@ -200,7 +198,6 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.accessToken = token.accessToken
       session.error = token.error
-      session.expiresAt = token.expiresAt as number | undefined
 
       if (token.id) {
         session.user.id = token.id
@@ -273,7 +270,6 @@ async function refreshAccessToken(token: {
     throw new Error("Failed to refresh access token")
   }
 
-  let id = token.id as string | undefined
   let roles = token.roles as string[] | undefined
   let registrationRole = token.registrationRole as string | undefined
   if (refreshedTokens.access_token) {
@@ -281,9 +277,6 @@ async function refreshAccessToken(token: {
       const payload = JSON.parse(
         Buffer.from(refreshedTokens.access_token.split(".")[1], "base64url").toString()
       )
-      if (payload.sub) {
-        id = payload.sub as string
-      }
       const flatRoles = payload.realm_roles as string[] | undefined
       const nestedRoles = (payload.realm_access as { roles?: string[] })?.roles
       roles = flatRoles ?? nestedRoles ?? roles
@@ -297,7 +290,6 @@ async function refreshAccessToken(token: {
 
   return {
     ...token,
-    id,
     accessToken: refreshedTokens.access_token,
     refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
     idToken: refreshedTokens.id_token ?? token.idToken,

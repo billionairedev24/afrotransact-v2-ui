@@ -33,10 +33,10 @@ export function Sheet({ open, onClose, children, className, side = "right" }: Sh
         open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
       )}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div
         className={cn(
-          "absolute top-0 bottom-0 flex w-full max-w-2xl flex-col border-white/10 shadow-2xl transition-transform duration-300 ease-out",
+          "absolute top-0 bottom-0 flex w-full max-w-2xl flex-col bg-white border-gray-200 shadow-xl transition-transform duration-300 ease-out",
           side === "right" ? "right-0 border-l" : "left-0 border-r",
           open
             ? "translate-x-0"
@@ -45,7 +45,6 @@ export function Sheet({ open, onClose, children, className, side = "right" }: Sh
               : "-translate-x-full",
           className,
         )}
-        style={{ background: "hsl(0 0% 7%)" }}
       >
         {children}
       </div>
@@ -63,12 +62,12 @@ export function SheetHeader({
   className?: string
 }) {
   return (
-    <div className={cn("flex shrink-0 items-center justify-between border-b border-white/10 px-6 py-4", className)}>
-      <h2 className="text-lg font-semibold text-white">{children}</h2>
+    <div className={cn("flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4", className)}>
+      <h2 className="text-lg font-semibold text-gray-900">{children}</h2>
       {onClose && (
         <button
           onClick={onClose}
-          className="rounded-lg p-1.5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -87,7 +86,7 @@ export function SheetBody({ children, className }: { children: ReactNode; classN
 
 export function SheetFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex shrink-0 items-center justify-end gap-3 border-t border-white/10 px-6 py-4", className)}>
+    <div className={cn("flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4", className)}>
       {children}
     </div>
   )

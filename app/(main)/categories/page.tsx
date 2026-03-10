@@ -19,12 +19,12 @@ export default function CategoriesPage() {
       <div className="flex items-center gap-2 mb-1 text-sm text-gray-500">
         <Link href="/" className="hover:text-gray-300 transition-colors">Home</Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-white">Categories</span>
+        <span className="text-gray-900">Categories</span>
       </div>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-white">All Categories</h1>
-        <p className="text-gray-400 mt-1">Browse everything available from immigrant-owned stores near you</p>
+        <h1 className="text-3xl font-black text-gray-900">All Categories</h1>
+        <p className="text-gray-500 mt-1">Browse everything available from immigrant-owned stores near you</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">

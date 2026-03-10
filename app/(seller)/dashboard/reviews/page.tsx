@@ -34,7 +34,7 @@ function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
           className={
             i < Math.round(rating)
               ? "fill-amber-400 text-amber-400"
-              : "fill-transparent text-white/20"
+              : "fill-transparent text-gray-300"
           }
         />
       ))}
@@ -143,7 +143,7 @@ export default function SellerReviewsPage() {
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-white/40" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
       </div>
     )
   }
@@ -152,8 +152,8 @@ export default function SellerReviewsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Reviews</h1>
-        <p className="mt-1 text-sm text-gray-400">
+        <h1 className="text-2xl font-bold text-gray-900">Reviews</h1>
+        <p className="mt-1 text-sm text-gray-500">
           Reviews from customers on your products
         </p>
       </div>
@@ -161,13 +161,13 @@ export default function SellerReviewsPage() {
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         {/* Average Rating */}
-        <div className="rounded-2xl border border-white/10 bg-[hsl(0_0%_11%)] p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-400">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
             <Star size={16} />
             Average Rating
           </div>
           <div className="mt-3 flex items-end gap-3">
-            <span className="text-4xl font-bold text-white">
+            <span className="text-4xl font-bold text-gray-900">
               {avgRating > 0 ? avgRating.toFixed(1) : "—"}
             </span>
             {avgRating > 0 && <Stars rating={avgRating} size={18} />}
@@ -175,28 +175,28 @@ export default function SellerReviewsPage() {
         </div>
 
         {/* Total Reviews */}
-        <div className="rounded-2xl border border-white/10 bg-[hsl(0_0%_11%)] p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-400">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
             <MessageCircle size={16} />
             Total Reviews
           </div>
-          <p className="mt-3 text-4xl font-bold text-white">
+          <p className="mt-3 text-4xl font-bold text-gray-900">
             {totalReviews.toLocaleString()}
           </p>
         </div>
 
         {/* Star Distribution */}
-        <div className="rounded-2xl border border-white/10 bg-[hsl(0_0%_11%)] p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-400">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
             <BarChart3 size={16} />
             Distribution
           </div>
           <div className="mt-3 space-y-1.5">
             {distributionEntries.map((d) => (
               <div key={d.star} className="flex items-center gap-2 text-xs">
-                <span className="w-3 text-right text-gray-400">{d.star}</span>
+                <span className="w-3 text-right text-gray-500">{d.star}</span>
                 <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
                   <div
                     className="h-full rounded-full bg-amber-400 transition-all"
                     style={{ width: `${d.pct}%` }}
@@ -212,18 +212,18 @@ export default function SellerReviewsPage() {
       </div>
 
       {/* Reviews List */}
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[hsl(0_0%_11%)]">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
         {reviews.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <MessageCircle className="h-10 w-10 text-white/20" />
-            <p className="mt-4 text-sm text-gray-400">
+            <MessageCircle className="h-10 w-10 text-gray-300" />
+            <p className="mt-4 text-sm text-gray-500">
               No reviews yet. Reviews from your customers will appear here.
             </p>
           </div>
         ) : (
           <>
             {/* Table Header */}
-            <div className="hidden border-b border-white/10 bg-white/[0.03] px-5 py-3 sm:grid sm:grid-cols-[1fr_100px_1fr_1.5fr_90px_80px] sm:gap-4">
+            <div className="hidden border-b border-gray-200 bg-gray-50 px-5 py-3 sm:grid sm:grid-cols-[1fr_100px_1fr_1.5fr_90px_80px] sm:gap-4">
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Product
               </span>
@@ -245,14 +245,14 @@ export default function SellerReviewsPage() {
             </div>
 
             {/* Rows */}
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-gray-100">
               {reviews.map((r) => (
                 <div
                   key={r.id}
                   className="grid gap-2 px-5 py-4 sm:grid-cols-[1fr_100px_1fr_1.5fr_90px_80px] sm:items-center sm:gap-4"
                 >
                   {/* Product */}
-                  <span className="truncate text-sm font-medium text-white">
+                  <span className="truncate text-sm font-medium text-gray-900">
                     {productMap.get(r.product_id) ?? "Unknown Product"}
                   </span>
 
@@ -262,12 +262,12 @@ export default function SellerReviewsPage() {
                   </div>
 
                   {/* Title */}
-                  <span className="truncate text-sm text-gray-300">
+                  <span className="truncate text-sm text-gray-600">
                     {r.title || "—"}
                   </span>
 
                   {/* Body Snippet */}
-                  <span className="text-sm text-gray-400 line-clamp-2">
+                  <span className="text-sm text-gray-500 line-clamp-2">
                     {snippet(r.body)}
                   </span>
 
@@ -304,7 +304,7 @@ export default function SellerReviewsPage() {
             <button
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 transition-colors hover:bg-white/10 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 disabled:pointer-events-none disabled:opacity-40"
             >
               <ChevronLeft size={16} />
               Prev
@@ -312,7 +312,7 @@ export default function SellerReviewsPage() {
             <button
               disabled={page >= totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 transition-colors hover:bg-white/10 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 disabled:pointer-events-none disabled:opacity-40"
             >
               Next
               <ChevronRight size={16} />

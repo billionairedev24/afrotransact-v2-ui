@@ -132,7 +132,7 @@ export default function ProductReviews({ productId }: Props) {
     <section className="w-full space-y-8">
       {/* ── heading ── */}
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
+        <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
           <MessageCircle size={22} />
           Customer Reviews
         </h2>
@@ -150,7 +150,7 @@ export default function ProductReviews({ productId }: Props) {
           className="w-full rounded-xl border border-primary/20 bg-primary/5 px-5 py-3.5 flex items-center gap-3 hover:bg-primary/10 transition-colors text-left"
         >
           <Star size={18} className="text-primary shrink-0" />
-          <span className="text-sm font-medium text-white">Write a review for this product</span>
+          <span className="text-sm font-medium text-gray-900">Write a review for this product</span>
         </button>
       )}
 
@@ -167,7 +167,7 @@ export default function ProductReviews({ productId }: Props) {
 
       {loading && !data ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="animate-spin text-white/40" size={32} />
+          <Loader2 className="animate-spin text-gray-400" size={32} />
         </div>
       ) : data ? (
         <>
@@ -176,7 +176,7 @@ export default function ProductReviews({ productId }: Props) {
 
           {/* ── review list ── */}
           {data.reviews.length === 0 ? (
-            <p className="py-12 text-center text-sm text-white/40">
+            <p className="py-12 text-center text-sm text-gray-400">
               No reviews yet. Be the first to share your thoughts!
             </p>
           ) : (
@@ -193,19 +193,17 @@ export default function ProductReviews({ productId }: Props) {
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/5 disabled:pointer-events-none disabled:opacity-30"
-                style={{ borderColor: "rgba(255,255,255,0.08)" }}
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-900 transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-30"
               >
                 <ChevronLeft size={16} /> Prev
               </button>
-              <span className="text-sm text-white/50">
+              <span className="text-sm text-gray-500">
                 Page {page} of {totalPages}
               </span>
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/5 disabled:pointer-events-none disabled:opacity-30"
-                style={{ borderColor: "rgba(255,255,255,0.08)" }}
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-900 transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-30"
               >
                 Next <ChevronRight size={16} />
               </button>
@@ -225,19 +223,15 @@ function ReviewSummary({ data }: { data: ProductReviewsResponse }) {
 
   return (
     <div
-      className="grid gap-8 rounded-2xl border p-6 sm:grid-cols-[auto_1fr]"
-      style={{
-        background: "hsl(0 0% 11%)",
-        borderColor: "rgba(255,255,255,0.08)",
-      }}
+      className="grid gap-8 rounded-2xl border border-gray-200 bg-white p-6 sm:grid-cols-[auto_1fr]"
     >
       {/* left: big rating */}
       <div className="flex flex-col items-center justify-center gap-2 text-center">
-        <span className="text-5xl font-bold text-white">
+        <span className="text-5xl font-bold text-gray-900">
           {data.avg_rating.toFixed(1)}
         </span>
         <Stars rating={data.avg_rating} size={22} />
-        <span className="text-sm text-white/50">
+        <span className="text-sm text-gray-500">
           {data.review_count} {data.review_count === 1 ? "review" : "reviews"}
         </span>
       </div>
@@ -249,16 +243,16 @@ function ReviewSummary({ data }: { data: ProductReviewsResponse }) {
           const pct = total > 0 ? (count / total) * 100 : 0
           return (
             <div key={star} className="flex items-center gap-3">
-              <span className="w-12 text-right text-sm text-white/70">
+              <span className="w-12 text-right text-sm text-gray-600">
                 {star} star
               </span>
-              <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-white/10">
+              <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-gray-100">
                 <div
                   className="absolute inset-y-0 left-0 rounded-full bg-yellow-400 transition-all"
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <span className="w-10 text-right text-xs text-white/50">
+              <span className="w-10 text-right text-xs text-gray-500">
                 {Math.round(pct)}%
               </span>
             </div>
@@ -274,11 +268,7 @@ function ReviewSummary({ data }: { data: ProductReviewsResponse }) {
 function ReviewCard({ review }: { review: Review }) {
   return (
     <div
-      className="rounded-2xl border p-5"
-      style={{
-        background: "hsl(0 0% 11%)",
-        borderColor: "rgba(255,255,255,0.08)",
-      }}
+      className="rounded-2xl border border-gray-200 bg-white p-5"
     >
       <div className="mb-2 flex flex-wrap items-center gap-3">
         <Stars rating={review.rating} size={16} />
@@ -287,17 +277,17 @@ function ReviewCard({ review }: { review: Review }) {
             <BadgeCheck size={13} /> Verified Purchase
           </span>
         )}
-        <span className="ml-auto text-xs text-white/40">
+        <span className="ml-auto text-xs text-gray-400">
           {timeAgo(review.created_at)}
         </span>
       </div>
 
       {review.title && (
-        <h4 className="mb-1 text-sm font-semibold text-white">{review.title}</h4>
+        <h4 className="mb-1 text-sm font-semibold text-gray-900">{review.title}</h4>
       )}
 
       {review.body && (
-        <p className="whitespace-pre-line text-sm leading-relaxed text-white/70">
+        <p className="whitespace-pre-line text-sm leading-relaxed text-gray-600">
           {review.body}
         </p>
       )}
@@ -358,22 +348,18 @@ function ReviewForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-2xl border p-6"
-      style={{
-        background: "hsl(0 0% 11%)",
-        borderColor: "rgba(255,255,255,0.08)",
-      }}
+      className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6"
     >
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-white/70">
+        <label className="mb-1.5 block text-sm font-medium text-gray-600">
           Your Rating
         </label>
         <Stars rating={rating} size={28} interactive onSelect={setRating} />
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-white/70">
-          Title <span className="text-white/30">(optional)</span>
+        <label className="mb-1.5 block text-sm font-medium text-gray-600">
+          Title <span className="text-gray-400">(optional)</span>
         </label>
         <input
           type="text"
@@ -381,14 +367,13 @@ function ReviewForm({
           onChange={(e) => setTitle(e.target.value)}
           maxLength={120}
           placeholder="Summarize your experience"
-          className="w-full rounded-xl border bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none transition-colors focus:border-white/20"
-          style={{ borderColor: "rgba(255,255,255,0.1)" }}
+          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-colors focus:border-primary"
         />
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-white/70">
-          Review <span className="text-white/30">(optional)</span>
+        <label className="mb-1.5 block text-sm font-medium text-gray-600">
+          Review <span className="text-gray-400">(optional)</span>
         </label>
         <textarea
           value={body}
@@ -396,8 +381,7 @@ function ReviewForm({
           rows={4}
           maxLength={2000}
           placeholder="Share more details about your experience…"
-          className="w-full resize-none rounded-xl border bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none transition-colors focus:border-white/20"
-          style={{ borderColor: "rgba(255,255,255,0.1)" }}
+          className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-colors focus:border-primary"
         />
       </div>
 

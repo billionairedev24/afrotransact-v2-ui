@@ -193,7 +193,7 @@ export default function AdminCategoriesPage() {
       return (
         <div key={cat.id}>
           <div
-            className="flex items-center gap-2 px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors"
+            className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors"
             style={{ paddingLeft: `${1 + depth * 1.5}rem` }}
           >
             <button
@@ -203,9 +203,9 @@ export default function AdminCategoriesPage() {
             >
               {hasChildren ? (
                 isExpanded ? (
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
                 ) : (
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                  <ChevronRight className="h-4 w-4 text-gray-500" />
                 )
               ) : (
                 <span className="w-4" />
@@ -215,7 +215,7 @@ export default function AdminCategoriesPage() {
             <FolderTree className="h-4 w-4 text-primary shrink-0" />
 
             <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium text-white">{cat.name}</span>
+              <span className="text-sm font-medium text-gray-900">{cat.name}</span>
               <span className="text-xs text-gray-500 ml-2">/{cat.slug}</span>
             </div>
 
@@ -232,7 +232,7 @@ export default function AdminCategoriesPage() {
 
   if (status !== "authenticated" && !loading) {
     return (
-      <div className="py-20 text-center text-gray-400">
+      <div className="py-20 text-center text-gray-500">
         Sign in as admin to manage categories.
       </div>
     )
@@ -243,8 +243,8 @@ export default function AdminCategoriesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Categories</h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
+          <p className="text-sm text-gray-500 mt-1">
             Organize your product catalog with a hierarchical category tree.
           </p>
         </div>
@@ -258,18 +258,17 @@ export default function AdminCategoriesPage() {
 
       {/* Category tree */}
       <div
-        className="rounded-2xl border border-white/10 overflow-hidden"
-        style={{ background: "hsl(0 0% 11%)" }}
+        className="rounded-2xl border border-gray-200 overflow-hidden bg-white"
       >
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-3">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <span className="text-sm text-gray-400">Loading categories…</span>
+            <span className="text-sm text-gray-500">Loading categories…</span>
           </div>
         ) : categories.length === 0 ? (
           <div className="py-16 text-center">
             <FolderTree className="mx-auto h-10 w-10 text-gray-600" />
-            <p className="mt-3 text-sm text-gray-400">
+            <p className="mt-3 text-sm text-gray-500">
               No categories yet. Create your first one above.
             </p>
           </div>
@@ -285,32 +284,32 @@ export default function AdminCategoriesPage() {
         </DialogHeader>
         <DialogBody className="space-y-4">
           <div>
-            <label className="text-xs text-gray-400 block mb-1">Name *</label>
+            <label className="text-xs text-gray-500 block mb-1">Name *</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-primary focus:outline-none"
               placeholder="e.g. Fresh Produce"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-400 block mb-1">Slug</label>
+            <label className="text-xs text-gray-500 block mb-1">Slug</label>
             <input
               type="text"
               value={form.slug}
               onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-              className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-primary focus:outline-none"
               placeholder="auto-generated if empty"
             />
           </div>
           {!editingId && (
             <div>
-              <label className="text-xs text-gray-400 block mb-1">Parent Category</label>
+              <label className="text-xs text-gray-500 block mb-1">Parent Category</label>
               <select
                 value={form.parentId}
                 onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
-                className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-black/30 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none"
               >
                 <option value="">— Top Level —</option>
                 {flatParents(categories).map((p) => (
@@ -322,19 +321,19 @@ export default function AdminCategoriesPage() {
             </div>
           )}
           <div>
-            <label className="text-xs text-gray-400 block mb-1">Sort Order</label>
+            <label className="text-xs text-gray-500 block mb-1">Sort Order</label>
             <input
               type="number"
               value={form.sortOrder}
               onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}
-              className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 bg-black/30 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none"
             />
           </div>
         </DialogBody>
         <DialogFooter>
           <button
             onClick={closeDialog}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
           >
             Cancel
           </button>

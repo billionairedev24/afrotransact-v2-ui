@@ -109,24 +109,24 @@ export default function NotificationPreferencesPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 sm:px-6 py-8 space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/account" className="rounded-lg p-2 hover:bg-white/5 transition-colors">
-          <ArrowLeft className="h-5 w-5 text-gray-400" />
+        <Link href="/account" className="rounded-lg p-2 hover:bg-gray-50 transition-colors">
+          <ArrowLeft className="h-5 w-5 text-gray-500" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Bell className="h-6 w-6 text-pink-400" />
             Notification Preferences
           </h1>
-          <p className="text-sm text-gray-400 mt-1">Choose what notifications you receive</p>
+          <p className="text-sm text-gray-500 mt-1">Choose what notifications you receive</p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 divide-y divide-white/5" style={{ background: "hsl(0 0% 11%)" }}>
+      <div className="rounded-2xl border border-gray-200 divide-y divide-gray-100 bg-white">
         {PREF_ITEMS.map((item) => (
           <div key={item.key} className="flex items-center justify-between px-5 py-4">
             <div className="min-w-0 pr-4">
-              <p className="text-sm font-medium text-white">{item.label}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
+              <p className="text-sm font-medium text-gray-900">{item.label}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
             </div>
             <button
               onClick={() => toggle(item.key)}

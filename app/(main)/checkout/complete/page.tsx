@@ -23,10 +23,10 @@ function CheckoutCompleteContent() {
     return (
       <main className="mx-auto max-w-[600px] px-4 py-20 text-center">
         <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
-          <XCircle className="h-10 w-10 text-red-400" />
+          <XCircle className="h-10 w-10 text-red-600" />
         </div>
-        <h1 className="text-xl font-bold text-white mt-6">Payment Failed</h1>
-        <p className="text-gray-400 text-sm mt-2">Your payment could not be processed. Please try again.</p>
+        <h1 className="text-xl font-bold text-gray-900 mt-6">Payment Failed</h1>
+        <p className="text-gray-500 text-sm mt-2">Your payment could not be processed. Please try again.</p>
         <button
           onClick={() => router.push("/checkout")}
           className="mt-6 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-[#0f0f10]"
@@ -42,8 +42,8 @@ function CheckoutCompleteContent() {
       <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-green-500/15 border border-green-500/30">
         <CheckCircle className="h-10 w-10 text-green-400" />
       </div>
-      <h1 className="text-xl font-bold text-white mt-6">Order Placed!</h1>
-      <p className="text-gray-400 text-sm mt-2">
+      <h1 className="text-xl font-bold text-gray-900 mt-6">Order Placed!</h1>
+      <p className="text-gray-500 text-sm mt-2">
         Thank you for your purchase. You&apos;ll receive a confirmation email shortly.
       </p>
       <div className="flex justify-center gap-3 mt-6">
@@ -55,7 +55,7 @@ function CheckoutCompleteContent() {
         </button>
         <button
           onClick={() => router.push("/")}
-          className="rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-gray-300 hover:bg-white/5 transition-colors"
+          className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
         >
           Continue Shopping
         </button>
@@ -69,7 +69,7 @@ export default function CheckoutCompletePage() {
     <Suspense fallback={
       <main className="mx-auto max-w-[600px] px-4 py-20 text-center">
         <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
-        <p className="mt-4 text-gray-400">Loading…</p>
+        <p className="mt-4 text-gray-500">Loading…</p>
       </main>
     }>
       <CheckoutCompleteContent />

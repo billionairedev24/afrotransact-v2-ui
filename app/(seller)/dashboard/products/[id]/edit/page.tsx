@@ -124,29 +124,29 @@ function parseOptionsToRows(jsonStr: string | null): VariantOptionRow[] {
   }
 }
 
-const CARD = "rounded-2xl border border-white/10 bg-[#1a1a1a] p-6"
+const CARD = "rounded-2xl border border-gray-200 bg-white p-6"
 
 function inputCls(error?: string) {
   return cn(
-    "h-10 w-full rounded-lg border bg-white/5 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 transition-colors",
+    "h-10 w-full rounded-lg border bg-gray-50 px-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-white/10 focus:border-[#d4a853] focus:ring-[#d4a853]/50",
+      : "border-gray-200 focus:border-[#d4a853] focus:ring-[#d4a853]/50",
   )
 }
 
 function textareaCls(error?: string) {
   return cn(
-    "w-full rounded-lg border bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 transition-colors resize-none",
+    "w-full rounded-lg border bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors resize-none",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-white/10 focus:border-[#d4a853] focus:ring-[#d4a853]/50",
+      : "border-gray-200 focus:border-[#d4a853] focus:ring-[#d4a853]/50",
   )
 }
 
 function FieldError({ msg }: { msg?: string }) {
   if (!msg) return null
-  return <p className="mt-1 text-xs text-red-400">{msg}</p>
+  return <p className="mt-1 text-xs text-red-600">{msg}</p>
 }
 
 /* ------------------------------------------------------------------ */
@@ -754,13 +754,13 @@ export default function EditProductPage() {
       <div className="flex items-center gap-4">
         <Link
           href="/dashboard/products"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-white/50 transition-colors hover:bg-white/5 hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white">Edit Product</h1>
-          <p className="mt-0.5 text-sm text-white/50">Update product details</p>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
+          <p className="mt-0.5 text-sm text-gray-500">Update product details</p>
         </div>
       </div>
 
@@ -783,13 +783,13 @@ export default function EditProductPage() {
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* ─── Section 1: Basic Info ─── */}
         <section className={CARD}>
-          <h2 className="text-lg font-semibold text-white">Basic Information</h2>
-          <p className="mt-1 text-sm text-white/50">Core product details</p>
+          <h2 className="text-lg font-semibold text-gray-900">Basic Information</h2>
+          <p className="mt-1 text-sm text-gray-500">Core product details</p>
 
           <div className="mt-6 space-y-5">
             {/* Product Name */}
             <div>
-              <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-white">
+              <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-gray-900">
                 Product Name <span className="text-red-400">*</span>
               </label>
               <input
@@ -806,7 +806,7 @@ export default function EditProductPage() {
 
             {/* Description */}
             <div>
-              <label htmlFor="desc" className="mb-1.5 block text-sm font-medium text-white">
+              <label htmlFor="desc" className="mb-1.5 block text-sm font-medium text-gray-900">
                 Description <span className="text-red-400">*</span>
               </label>
               <textarea
@@ -823,7 +823,7 @@ export default function EditProductPage() {
 
             {/* Brand */}
             <div>
-              <label htmlFor="brand" className="mb-1.5 block text-sm font-medium text-white">
+              <label htmlFor="brand" className="mb-1.5 block text-sm font-medium text-gray-900">
                 Brand
               </label>
               <input
@@ -838,7 +838,7 @@ export default function EditProductPage() {
 
             {/* Weight + Unit */}
             <div>
-              <label htmlFor="weight" className="mb-1.5 block text-sm font-medium text-white">
+              <label htmlFor="weight" className="mb-1.5 block text-sm font-medium text-gray-900">
                 Weight <span className="text-red-400">*</span>
               </label>
               <div className="flex gap-2">
@@ -870,7 +870,7 @@ export default function EditProductPage() {
 
             {/* Status */}
             <div>
-              <span className="mb-2 block text-sm font-medium text-white">Status</span>
+              <span className="mb-2 block text-sm font-medium text-gray-900">Status</span>
               <div className="flex gap-3">
                 {(["draft", "active"] as const).map((s) => (
                   <button
@@ -881,7 +881,7 @@ export default function EditProductPage() {
                       "rounded-lg border px-5 py-2 text-sm font-medium capitalize transition-colors",
                       status === s
                         ? "border-[#d4a853] bg-[#d4a853]/10 text-[#d4a853]"
-                        : "border-white/10 text-white/50 hover:border-white/20 hover:text-white/70",
+                        : "border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-600",
                     )}
                   >
                     {s}
@@ -894,13 +894,13 @@ export default function EditProductPage() {
 
         {/* ─── Section 2: Category & Tags ─── */}
         <section className={CARD}>
-          <h2 className="text-lg font-semibold text-white">Category & Tags</h2>
-          <p className="mt-1 text-sm text-white/50">Organize your product</p>
+          <h2 className="text-lg font-semibold text-gray-900">Category & Tags</h2>
+          <p className="mt-1 text-sm text-gray-500">Organize your product</p>
 
           <div className="mt-6 space-y-5">
             {/* Category */}
             <div>
-              <label htmlFor="category" className="mb-1.5 block text-sm font-medium text-white">
+              <label htmlFor="category" className="mb-1.5 block text-sm font-medium text-gray-900">
                 Category <span className="text-red-400">*</span>
               </label>
               <select
@@ -911,7 +911,7 @@ export default function EditProductPage() {
                   touch("categoryId")
                 }}
                 onBlur={() => touch("categoryId")}
-                className={cn(inputCls(err("categoryId")), !categoryId && "text-white/30")}
+                className={cn(inputCls(err("categoryId")), !categoryId && "text-gray-400")}
               >
                 <option value="">Select a category</option>
                 {categories.map((cat) => (
@@ -925,11 +925,11 @@ export default function EditProductPage() {
 
             {/* Tags */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-white">Tags</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-900">Tags</label>
               <div
                 className={cn(
-                  "flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-lg border bg-white/5 px-2 py-1.5 transition-colors focus-within:ring-1",
-                  "border-white/10 focus-within:border-[#d4a853] focus-within:ring-[#d4a853]/50",
+                  "flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-lg border bg-gray-50 px-2 py-1.5 transition-colors focus-within:ring-1",
+                  "border-gray-200 focus-within:border-[#d4a853] focus-within:ring-[#d4a853]/50",
                 )}
               >
                 {tags.map((tag) => (
@@ -956,18 +956,18 @@ export default function EditProductPage() {
                     if (tagInput.trim()) addTag(tagInput)
                   }}
                   placeholder={tags.length === 0 ? "Type and press Enter to add tags" : "Add tag…"}
-                  className="min-w-[120px] flex-1 bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
+                  className="min-w-[120px] flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
                 />
               </div>
-              <p className="mt-1 text-xs text-white/30">Press Enter or comma to add a tag</p>
+              <p className="mt-1 text-xs text-gray-400">Press Enter or comma to add a tag</p>
             </div>
           </div>
         </section>
 
         {/* ─── Section 3: Images ─── */}
         <section className={CARD}>
-          <h2 className="text-lg font-semibold text-white">Product Images</h2>
-          <p className="mt-1 text-sm text-white/50">
+          <h2 className="text-lg font-semibold text-gray-900">Product Images</h2>
+          <p className="mt-1 text-sm text-gray-500">
             Upload up to {MAX_IMAGES} images. Click the star to set the main image.
           </p>
 
@@ -981,8 +981,8 @@ export default function EditProductPage() {
                     <div
                       key={img.id}
                       className={cn(
-                        "group relative aspect-square overflow-hidden rounded-lg border-2 bg-white/5",
-                        img.isPrimary ? "border-[#d4a853]" : "border-white/10",
+                        "group relative aspect-square overflow-hidden rounded-lg border-2 bg-gray-50",
+                        img.isPrimary ? "border-[#d4a853]" : "border-gray-200",
                       )}
                     >
                       <img src={img.url} alt={img.altText ?? ""} className="h-full w-full object-cover" />
@@ -998,14 +998,14 @@ export default function EditProductPage() {
                             "h-4 w-4",
                             img.isPrimary
                               ? "fill-[#d4a853] text-[#d4a853]"
-                              : "text-white/40 hover:text-white/70",
+                              : "text-gray-400 hover:text-gray-600",
                           )}
                         />
                       </button>
                       <button
                         type="button"
                         onClick={() => removeExistingImage(img.id)}
-                        className="absolute right-1 top-1 rounded bg-black/60 p-0.5 text-white/50 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+                        className="absolute right-1 top-1 rounded bg-black/60 p-0.5 text-gray-500 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -1022,7 +1022,7 @@ export default function EditProductPage() {
                   .map((img) => (
                     <div
                       key={img.id}
-                      className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-dashed border-white/20 opacity-50"
+                      className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 opacity-50"
                     >
                       <img src={img.url} alt="" className="h-full w-full object-cover" />
                       <button
@@ -1039,12 +1039,12 @@ export default function EditProductPage() {
 
             {/* Upload zone */}
             {totalImageCount < MAX_IMAGES && (
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/10 py-10 transition-colors hover:border-[#d4a853]/40 hover:bg-[#d4a853]/5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
-                  <Upload className="h-6 w-6 text-white/40" />
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-[#d4a853]/40 hover:bg-[#d4a853]/5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
+                  <Upload className="h-6 w-6 text-gray-400" />
                 </div>
-                <p className="mt-3 text-sm font-medium text-white">Click to upload new images</p>
-                <p className="mt-1 text-xs text-white/40">
+                <p className="mt-3 text-sm font-medium text-gray-900">Click to upload new images</p>
+                <p className="mt-1 text-xs text-gray-400">
                   JPEG, PNG, WebP, GIF &middot; {MAX_IMAGES - totalImageCount} remaining
                 </p>
                 <input
@@ -1063,7 +1063,7 @@ export default function EditProductPage() {
                 {newImages.map((img) => (
                   <div
                     key={img.id}
-                    className="group relative aspect-square overflow-hidden rounded-lg border-2 border-white/10 bg-white/5"
+                    className="group relative aspect-square overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-50"
                   >
                     {img.status === "done" && img.url ? (
                       <img src={img.url} alt="" className="h-full w-full object-cover" />
@@ -1071,7 +1071,7 @@ export default function EditProductPage() {
                       <img src={img.preview} alt="" className="h-full w-full object-cover opacity-60" />
                     ) : (
                       <div className="flex h-full items-center justify-center">
-                        <ImageIcon className="h-6 w-6 text-white/20" />
+                        <ImageIcon className="h-6 w-6 text-gray-300" />
                       </div>
                     )}
                     {img.status === "uploading" && (
@@ -1087,7 +1087,7 @@ export default function EditProductPage() {
                     <button
                       type="button"
                       onClick={() => removeNewImage(img.id)}
-                      className="absolute right-1 top-1 rounded bg-black/60 p-0.5 text-white/50 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+                      className="absolute right-1 top-1 rounded bg-black/60 p-0.5 text-gray-500 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -1102,15 +1102,15 @@ export default function EditProductPage() {
         <section className={CARD}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-white">Variants</h2>
-              <p className="mt-1 text-sm text-white/50">
+              <h2 className="text-lg font-semibold text-gray-900">Variants</h2>
+              <p className="mt-1 text-sm text-gray-500">
                 Pricing, stock, and options for each variant
               </p>
             </div>
             <button
               type="button"
               onClick={addVariantRow}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 px-3 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
               <Plus className="h-3.5 w-3.5" />
               Add Variant
@@ -1123,13 +1123,13 @@ export default function EditProductPage() {
             {variants.map((variant, idx) => (
               <div
                 key={variant.id}
-                className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"
+                className="rounded-xl border border-gray-200 bg-gray-50 p-4"
               >
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-white/30">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                     Variant {idx + 1}
                     {variant.apiId && (
-                      <span className="ml-2 text-[10px] normal-case tracking-normal text-white/15">
+                      <span className="ml-2 text-[10px] normal-case tracking-normal text-gray-200">
                         (existing)
                       </span>
                     )}
@@ -1138,7 +1138,7 @@ export default function EditProductPage() {
                     <button
                       type="button"
                       onClick={() => removeVariantRow(variant.id)}
-                      className="rounded p-1 text-white/30 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                      className="rounded p-1 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -1147,7 +1147,7 @@ export default function EditProductPage() {
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="mb-1 block text-xs text-white/40">
+                    <label className="mb-1 block text-xs text-gray-400">
                       Name <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -1161,7 +1161,7 @@ export default function EditProductPage() {
                     <FieldError msg={err(`v${idx}_name`)} />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-white/40">
+                    <label className="mb-1 block text-xs text-gray-400">
                       SKU <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -1175,7 +1175,7 @@ export default function EditProductPage() {
                     <FieldError msg={err(`v${idx}_sku`)} />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-white/40">
+                    <label className="mb-1 block text-xs text-gray-400">
                       Price ($) <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -1191,7 +1191,7 @@ export default function EditProductPage() {
                     <FieldError msg={err(`v${idx}_price`)} />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-white/40">Compare at ($)</label>
+                    <label className="mb-1 block text-xs text-gray-400">Compare at ($)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1204,7 +1204,7 @@ export default function EditProductPage() {
                     <FieldError msg={err(`v${idx}_compare`)} />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-white/40">
+                    <label className="mb-1 block text-xs text-gray-400">
                       Stock Qty <span className="text-red-400">*</span>
                     </label>
                     <input
@@ -1221,9 +1221,9 @@ export default function EditProductPage() {
                 </div>
 
                 {/* Options */}
-                <div className="mt-3 border-t border-white/[0.06] pt-3">
+                <div className="mt-3 border-t border-gray-200 pt-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-white/40">Options</span>
+                    <span className="text-xs text-gray-400">Options</span>
                     <button
                       type="button"
                       onClick={() => addVariantOption(variant.id)}
@@ -1243,7 +1243,7 @@ export default function EditProductPage() {
                               updateVariantOption(variant.id, opt.id, "key", e.target.value)
                             }
                             placeholder="Key (e.g. Size)"
-                            className="h-8 flex-1 rounded-md border border-white/10 bg-white/5 px-2 text-xs text-white placeholder:text-white/25 focus:border-[#d4a853] focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#d4a853] focus:outline-none"
                           />
                           <input
                             type="text"
@@ -1252,12 +1252,12 @@ export default function EditProductPage() {
                               updateVariantOption(variant.id, opt.id, "value", e.target.value)
                             }
                             placeholder="Value (e.g. M)"
-                            className="h-8 flex-1 rounded-md border border-white/10 bg-white/5 px-2 text-xs text-white placeholder:text-white/25 focus:border-[#d4a853] focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#d4a853] focus:outline-none"
                           />
                           <button
                             type="button"
                             onClick={() => removeVariantOption(variant.id, opt.id)}
-                            className="text-white/25 hover:text-red-400"
+                            className="text-gray-300 hover:text-red-400"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -1268,10 +1268,10 @@ export default function EditProductPage() {
                 </div>
 
                 {/* Variant image */}
-                <div className="mt-3 border-t border-white/[0.06] pt-3">
-                  <span className="mb-1.5 block text-xs text-white/40">Variant Image</span>
+                <div className="mt-3 border-t border-gray-200 pt-3">
+                  <span className="mb-1.5 block text-xs text-gray-400">Variant Image</span>
                   {variant.imagePreview || variant.imageUrl ? (
-                    <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-white/10">
+                    <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
                       <img
                         src={variant.imageUrl || variant.imagePreview}
                         alt=""
@@ -1285,13 +1285,13 @@ export default function EditProductPage() {
                       <button
                         type="button"
                         onClick={() => clearVariantImage(variant.id)}
-                        className="absolute right-0.5 top-0.5 rounded bg-black/70 p-0.5 text-white/50 hover:text-red-400"
+                        className="absolute right-0.5 top-0.5 rounded bg-black/70 p-0.5 text-gray-500 hover:text-red-400"
                       >
                         <X className="h-3 w-3" />
                       </button>
                     </div>
                   ) : (
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-white/10 px-3 py-2 text-xs text-white/40 transition-colors hover:border-white/20 hover:text-white/60">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-500">
                       <Upload className="h-3.5 w-3.5" />
                       Upload
                       <input
@@ -1312,15 +1312,15 @@ export default function EditProductPage() {
         <section className={CARD}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-white">Custom Attributes</h2>
-              <p className="mt-1 text-sm text-white/50">
+              <h2 className="text-lg font-semibold text-gray-900">Custom Attributes</h2>
+              <p className="mt-1 text-sm text-gray-500">
                 Add key-value pairs (e.g. Origin Country, Certification)
               </p>
             </div>
             <button
               type="button"
               onClick={addAttribute}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 px-3 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
               <Plus className="h-3.5 w-3.5" />
               Add
@@ -1328,7 +1328,7 @@ export default function EditProductPage() {
           </div>
 
           {attributes.length === 0 ? (
-            <p className="mt-5 rounded-lg border border-dashed border-white/10 py-6 text-center text-sm text-white/30">
+            <p className="mt-5 rounded-lg border border-dashed border-gray-200 py-6 text-center text-sm text-gray-400">
               No attributes yet. Click Add to create one.
             </p>
           ) : (
@@ -1340,19 +1340,19 @@ export default function EditProductPage() {
                     value={attr.key}
                     onChange={(e) => updateAttribute(attr.id, "key", e.target.value)}
                     placeholder="Key"
-                    className="h-9 flex-1 rounded-lg border border-white/10 bg-white/5 px-2.5 text-sm text-white placeholder:text-white/25 focus:border-[#d4a853] focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#d4a853] focus:outline-none"
                   />
                   <input
                     type="text"
                     value={attr.value}
                     onChange={(e) => updateAttribute(attr.id, "value", e.target.value)}
                     placeholder="Value"
-                    className="h-9 flex-1 rounded-lg border border-white/10 bg-white/5 px-2.5 text-sm text-white placeholder:text-white/25 focus:border-[#d4a853] focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#d4a853] focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => removeAttribute(attr.id)}
-                    className="rounded-md p-2 text-white/30 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                    className="rounded-md p-2 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -1363,11 +1363,11 @@ export default function EditProductPage() {
         </section>
 
         {/* ─── Submit / Delete bar ─── */}
-        <div className="flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard/products"
-              className="rounded-lg border border-white/10 px-5 py-2.5 text-center text-sm font-medium text-white/50 transition-colors hover:bg-white/5 hover:text-white"
+              className="rounded-lg border border-gray-200 px-5 py-2.5 text-center text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
               Cancel
             </Link>
@@ -1408,9 +1408,9 @@ export default function EditProductPage() {
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => !deleting && setDeleteConfirmOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-[#1a1a1a] p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-white">Delete Product</h3>
-            <p className="mt-2 text-sm text-white/50">
+          <div className="relative z-10 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-gray-900">Delete Product</h3>
+            <p className="mt-2 text-sm text-gray-500">
               Are you sure you want to delete this product? This action cannot be undone.
             </p>
             <div className="mt-6 flex justify-end gap-3">
@@ -1418,7 +1418,7 @@ export default function EditProductPage() {
                 type="button"
                 onClick={() => setDeleteConfirmOpen(false)}
                 disabled={deleting}
-                className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5 disabled:opacity-50"
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>

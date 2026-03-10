@@ -62,7 +62,7 @@ const DEFAULT_SLIDES: HeroSlide[] = [
     subtext: (
       <>
         Authentic food, spices, and cultural goods from{" "}
-        <span className="text-white font-medium">200+ immigrant-owned stores</span> across Austin.
+        <span className="text-gray-900 font-medium">200+ immigrant-owned stores</span> across Austin.
         Support your neighbors. Taste the world.
       </>
     ),
@@ -75,7 +75,7 @@ const DEFAULT_SLIDES: HeroSlide[] = [
       { label: "Start Shopping", href: "/search", primary: true, icon: <ChevronRight className="h-4 w-4" /> },
       { label: "Browse Stores", href: "/stores", primary: false, icon: <Store className="h-4 w-4 text-primary" /> },
     ],
-    bg: "from-[#0d1f0d] via-[#0f0f10] to-[#0f0f10]",
+    bg: "from-emerald-50 via-white to-white",
     accentBlobs:
       "radial-gradient(ellipse 80% 60% at 10% 50%, rgba(212,168,83,0.12) 0%, transparent 60%), " +
       "radial-gradient(ellipse 60% 80% at 90% 30%, rgba(34,197,94,0.08) 0%, transparent 60%)",
@@ -101,7 +101,7 @@ const DEFAULT_SLIDES: HeroSlide[] = [
     subtext: (
       <>
         Plantains, cassava, scotch bonnets, yams and more — direct from{" "}
-        <span className="text-white font-medium">local immigrant farmers</span> and vendors near you.
+        <span className="text-gray-900 font-medium">local immigrant farmers</span> and vendors near you.
         Buy 2 get 1 free on selected items.
       </>
     ),
@@ -114,7 +114,7 @@ const DEFAULT_SLIDES: HeroSlide[] = [
       { label: "Shop the Sale", href: "/deals", primary: true, icon: <Tag className="h-4 w-4" /> },
       { label: "See All Deals", href: "/deals", primary: false },
     ],
-    bg: "from-[#1f0e00] via-[#120a00] to-[#0f0f10]",
+    bg: "from-orange-50 via-white to-white",
     accentBlobs:
       "radial-gradient(ellipse 70% 70% at 15% 60%, rgba(251,146,60,0.15) 0%, transparent 55%), " +
       "radial-gradient(ellipse 50% 60% at 85% 20%, rgba(212,168,83,0.10) 0%, transparent 55%)",
@@ -132,15 +132,15 @@ const DEFAULT_SLIDES: HeroSlide[] = [
         <span className="text-yellow-400">Mama&apos;s Market</span>
         <br />
         <span className="text-3xl sm:text-4xl">Your Neighborhood&apos;s{" "}
-          <span className="text-white">Favorite Store</span>
+          <span className="text-gray-900">Favorite Store</span>
         </span>
       </>
     ),
     subtext: (
       <>
-        <span className="text-white font-medium">Amara Okafor</span> left Lagos and built a thriving
+        <span className="text-gray-900 font-medium">Amara Okafor</span> left Lagos and built a thriving
         West African grocery right here in Austin. Over{" "}
-        <span className="text-white font-medium">312 five-star reviews</span> and growing daily.
+        <span className="text-gray-900 font-medium">312 five-star reviews</span> and growing daily.
       </>
     ),
     stats: [
@@ -152,7 +152,7 @@ const DEFAULT_SLIDES: HeroSlide[] = [
       { label: "Visit Store", href: "/stores", primary: true, icon: <Store className="h-4 w-4" /> },
       { label: "Start Selling Too", href: "/sell", primary: false },
     ],
-    bg: "from-[#1a1400] via-[#100f00] to-[#0f0f10]",
+    bg: "from-yellow-50 via-white to-white",
     accentBlobs:
       "radial-gradient(ellipse 60% 70% at 5% 40%, rgba(234,179,8,0.12) 0%, transparent 55%), " +
       "radial-gradient(ellipse 50% 50% at 80% 70%, rgba(212,168,83,0.10) 0%, transparent 55%)",
@@ -170,13 +170,13 @@ const DEFAULT_SLIDES: HeroSlide[] = [
         <span className="text-violet-400">First Order?</span>
         <br />
         Free Delivery{" "}
-        <span className="text-white">on Us.</span>
+        <span className="text-gray-900">on Us.</span>
       </>
     ),
     subtext: (
       <>
         Create your account today and get{" "}
-        <span className="text-white font-medium">free delivery on your first order</span> from any
+        <span className="text-gray-900 font-medium">free delivery on your first order</span> from any
         store in Austin. No minimum spend required.
       </>
     ),
@@ -189,7 +189,7 @@ const DEFAULT_SLIDES: HeroSlide[] = [
       { label: "Create Account", href: "/auth/register", primary: true, icon: <ChevronRight className="h-4 w-4" /> },
       { label: "Learn More", href: "/about", primary: false },
     ],
-    bg: "from-[#0d0020] via-[#0a001a] to-[#0f0f10]",
+    bg: "from-violet-50 via-white to-white",
     accentBlobs:
       "radial-gradient(ellipse 70% 60% at 20% 60%, rgba(139,92,246,0.15) 0%, transparent 55%), " +
       "radial-gradient(ellipse 50% 50% at 85% 30%, rgba(212,168,83,0.08) 0%, transparent 55%)",
@@ -254,7 +254,7 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
         className="absolute inset-0 opacity-[0.025]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)",
+            "linear-gradient(rgba(0,0,0,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       />
@@ -303,7 +303,7 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
                 <Link
                   key={cta.label}
                   href={cta.href}
-                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-7 text-[15px] font-semibold text-white hover:bg-white/10 hover:border-white/30 transition-all active:scale-[0.98]"
+                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-gray-50 px-7 text-[15px] font-semibold text-gray-900 hover:bg-gray-100 hover:border-gray-400 transition-all active:scale-[0.98]"
                 >
                   {cta.icon}
                   {cta.label}
@@ -330,14 +330,14 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
       <button
         onClick={prev}
         aria-label="Previous slide"
-        className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 border border-white/10 text-white/70 hover:text-white hover:bg-black/60 transition-all backdrop-blur-sm hidden sm:flex"
+        className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white transition-all backdrop-blur-sm hidden sm:flex"
       >
         <ChevronLeft className="h-5 w-5" />
       </button>
       <button
         onClick={next}
         aria-label="Next slide"
-        className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 border border-white/10 text-white/70 hover:text-white hover:bg-black/60 transition-all backdrop-blur-sm hidden sm:flex"
+        className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white transition-all backdrop-blur-sm hidden sm:flex"
       >
         <ChevronRight className="h-5 w-5" />
       </button>
@@ -352,7 +352,7 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
             className={`rounded-full transition-all duration-300 ${
               i === current
                 ? "w-6 h-2 bg-primary"
-                : "w-2 h-2 bg-white/30 hover:bg-white/60"
+                : "w-2 h-2 bg-gray-300 hover:bg-gray-500"
             }`}
           />
         ))}

@@ -8,7 +8,7 @@ import { Save, Percent, Loader2 } from "lucide-react"
 import { getRegions, updateRegion, type Region } from "@/lib/api"
 
 const INPUT_CLASS =
-  "w-20 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white text-center outline-none focus:border-primary/60 transition-colors"
+  "w-20 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 text-center outline-none focus:border-primary/60 transition-colors"
 
 export default function CommissionPage() {
   const { status } = useSession()
@@ -79,10 +79,9 @@ export default function CommissionPage() {
   if (status !== "authenticated") {
     return (
       <div
-        className="rounded-2xl border border-white/10 p-8 text-center"
-        style={{ background: "hsl(0 0% 11%)" }}
+        className="rounded-2xl border border-gray-200 p-8 text-center bg-white"
       >
-        <p className="text-gray-400">Sign in to manage commission rates.</p>
+        <p className="text-gray-500">Sign in to manage commission rates.</p>
       </div>
     )
   }
@@ -91,14 +90,13 @@ export default function CommissionPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Commission Rates</h1>
-          <p className="text-gray-400 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Commission Rates</h1>
+          <p className="text-gray-500 text-sm mt-1">
             Set the platform commission percentage per region. Applied at checkout to each sub-order.
           </p>
         </div>
         <div
-          className="rounded-2xl border border-white/10 p-12 flex items-center justify-center"
-          style={{ background: "hsl(0 0% 11%)" }}
+          className="rounded-2xl border border-gray-200 p-12 flex items-center justify-center bg-white"
         >
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -110,19 +108,19 @@ export default function CommissionPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Commission Rates</h1>
-          <p className="text-gray-400 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Commission Rates</h1>
+          <p className="text-gray-500 text-sm mt-1">
             Set the platform commission percentage per region. Applied at checkout to each sub-order.
           </p>
         </div>
         <div
-          className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-400"
+          className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-600"
         >
           <p className="font-medium">Failed to load regions</p>
           <p className="text-sm mt-1">{error}</p>
           <button
             onClick={fetchRegions}
-            className="mt-4 rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 transition-colors"
+            className="mt-4 rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
           >
             Retry
           </button>
@@ -134,8 +132,8 @@ export default function CommissionPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Commission Rates</h1>
-        <p className="text-gray-400 text-sm mt-1">
+        <h1 className="text-2xl font-bold text-gray-900">Commission Rates</h1>
+        <p className="text-gray-500 text-sm mt-1">
           Set the platform commission percentage per region. Applied at checkout to each sub-order.
         </p>
       </div>
@@ -144,11 +142,10 @@ export default function CommissionPage() {
         {regions.map((region) => (
           <div
             key={region.id}
-            className="rounded-2xl border border-white/10 overflow-hidden"
-            style={{ background: "hsl(0 0% 11%)" }}
+            className="rounded-2xl border border-gray-200 overflow-hidden bg-white"
           >
             <div className="p-5">
-              <p className="text-white font-medium text-sm">{region.name || region.city || "Unnamed Region"}</p>
+              <p className="text-gray-900 font-medium text-sm">{region.name || region.city || "Unnamed Region"}</p>
               <p className="text-gray-500 text-xs font-mono mt-0.5">{region.code || "—"}</p>
 
               <div className="flex items-center gap-2 mt-4">
@@ -161,7 +158,7 @@ export default function CommissionPage() {
                   onChange={(e) => updateLocalRate(region.id, Number(e.target.value))}
                   className={INPUT_CLASS}
                 />
-                <Percent className="h-4 w-4 text-gray-400 shrink-0" />
+                <Percent className="h-4 w-4 text-gray-500 shrink-0" />
               </div>
 
               <button
@@ -186,10 +183,9 @@ export default function CommissionPage() {
 
       {regions.length === 0 && (
         <div
-          className="rounded-2xl border border-white/10 p-12 text-center"
-          style={{ background: "hsl(0 0% 11%)" }}
+          className="rounded-2xl border border-gray-200 p-12 text-center bg-white"
         >
-          <p className="text-gray-400">No regions found. Add regions in the Regions page.</p>
+          <p className="text-gray-500">No regions found. Add regions in the Regions page.</p>
         </div>
       )}
 

@@ -9,11 +9,11 @@ export default function AboutPage() {
         <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary uppercase tracking-wider mb-6">
           Our Story
         </span>
-        <h1 className="text-4xl sm:text-5xl font-black text-white leading-tight">
+        <h1 className="text-4xl sm:text-5xl font-black text-gray-900 leading-tight">
           A marketplace built<br />
           <span className="text-primary">for immigrants, by immigrants</span>
         </h1>
-        <p className="mt-5 text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
+        <p className="mt-5 text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
           When you move to a new country, you carry your culture with you — in your food, your clothes,
           your rituals. AfroTransact was born to ensure that culture stays alive, and that the entrepreneurs
           who preserve it have a place to thrive.
@@ -22,13 +22,13 @@ export default function AboutPage() {
 
       {/* Mission */}
       <section id="mission" className="py-12 border-y border-border space-y-6">
-        <h2 className="text-2xl font-bold text-white">Our Mission</h2>
-        <p className="text-gray-300 leading-relaxed">
+        <h2 className="text-2xl font-bold text-gray-900">Our Mission</h2>
+        <p className="text-gray-600 leading-relaxed">
           AfroTransact exists to close the gap between immigrant communities and the authentic goods they
           need — and to empower the entrepreneurs within those communities to build sustainable businesses
           without barriers.
         </p>
-        <p className="text-gray-300 leading-relaxed">
+        <p className="text-gray-600 leading-relaxed">
           We started in Austin, Texas, home to one of the fastest-growing immigrant populations in the
           United States. Our goal is to expand to every city where immigrant communities deserve better
           access to the products that connect them to home.
@@ -38,12 +38,12 @@ export default function AboutPage() {
           {[
             { icon: <Users className="h-6 w-6" />, color: "text-primary", bg: "bg-primary/10 border-primary/20",   title: "Community-first",    desc: "Every decision we make starts with what's best for buyers and sellers in our community." },
             { icon: <Shield className="h-6 w-6" />, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", title: "Transparent & fair", desc: "Clear fees, honest policies, no surprises. We succeed when our sellers succeed." },
-            { icon: <Heart className="h-6 w-6" />, color: "text-red-400", bg: "bg-red-500/10 border-red-500/20",   title: "Built with love",    desc: "We are ourselves immigrants and children of immigrants. This platform is personal." },
+            { icon: <Heart className="h-6 w-6" />, color: "text-red-600", bg: "bg-red-500/10 border-red-500/20",   title: "Built with love",    desc: "We are ourselves immigrants and children of immigrants. This platform is personal." },
           ].map((v) => (
             <div key={v.title} className={`rounded-2xl border ${v.bg} p-5 space-y-2`}>
               <div className={v.color}>{v.icon}</div>
-              <h3 className="font-bold text-white">{v.title}</h3>
-              <p className="text-sm text-gray-400">{v.desc}</p>
+              <h3 className="font-bold text-gray-900">{v.title}</h3>
+              <p className="text-sm text-gray-500">{v.desc}</p>
             </div>
           ))}
         </div>
@@ -51,10 +51,10 @@ export default function AboutPage() {
 
       {/* Where we operate */}
       <section className="py-12 space-y-5">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <MapPin className="h-6 w-6 text-primary" /> Where we operate
         </h2>
-        <p className="text-gray-300 leading-relaxed">
+        <p className="text-gray-600 leading-relaxed">
           We currently serve the greater Austin metropolitan area across 5 cities, with delivery available
           in more neighborhoods each week. Expansion to additional Texas cities is planned — driven by where
           our community is growing.
@@ -65,7 +65,7 @@ export default function AboutPage() {
               <MapPin className="h-3.5 w-3.5" />{city}
             </span>
           ))}
-          <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-400">
+          <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-500">
             + more cities coming
           </span>
         </div>
@@ -77,7 +77,7 @@ export default function AboutPage() {
           <Link href="/search" className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-header hover:bg-primary/90 transition-all">
             Start Shopping <ChevronRight className="h-4 w-4" />
           </Link>
-          <Link href="/sell" className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 text-sm font-semibold text-white hover:bg-white/10 transition-all">
+          <Link href="/sell" className="inline-flex h-11 items-center gap-2 rounded-xl border border-gray-300 bg-gray-50 px-6 text-sm font-semibold text-gray-900 hover:bg-gray-100 transition-all">
             <Store className="h-4 w-4 text-primary" /> Become a Seller
           </Link>
         </div>

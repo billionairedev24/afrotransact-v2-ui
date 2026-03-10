@@ -30,21 +30,21 @@ export default function StoresPage() {
       <div className="flex items-center gap-2 mb-1 text-sm text-gray-500">
         <Link href="/" className="hover:text-gray-300 transition-colors">Home</Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-white">Stores</span>
+        <span className="text-gray-900">Stores</span>
       </div>
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-black text-white flex items-center gap-2">
+          <h1 className="text-3xl font-black text-gray-900 flex items-center gap-2">
             <Store className="h-7 w-7 text-primary" />
             All Stores
           </h1>
-          <p className="text-gray-400 mt-1 flex items-center gap-1">
+          <p className="text-gray-500 mt-1 flex items-center gap-1">
             <MapPin className="h-3.5 w-3.5 text-primary" />
             Browse stores on the platform
           </p>
         </div>
-        <Link href="/search" className="hidden sm:flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
+        <Link href="/search" className="hidden sm:flex items-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
           <Search className="h-4 w-4" /> Search products
         </Link>
       </div>
@@ -54,10 +54,10 @@ export default function StoresPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : stores.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.08] px-6 py-16 text-center" style={{ background: "hsl(0 0% 11%)" }}>
+        <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center">
           <Store className="mx-auto h-14 w-14 text-gray-600" />
-          <h2 className="text-lg font-semibold text-white mt-5">No stores yet</h2>
-          <p className="text-gray-400 text-sm mt-2 max-w-sm mx-auto">
+          <h2 className="text-lg font-semibold text-gray-900 mt-5">No stores yet</h2>
+          <p className="text-gray-500 text-sm mt-2 max-w-sm mx-auto">
             Stores will appear here once sellers create them.
           </p>
         </div>
@@ -116,7 +116,7 @@ export default function StoresPage() {
       )}
 
       <div className="mt-10 text-center">
-        <p className="text-gray-400 text-sm">More stores are joining every week.</p>
+        <p className="text-gray-500 text-sm">More stores are joining every week.</p>
         <Link href="/sell" className="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold text-primary hover:text-primary/80">
           Want to list your store? <ChevronRight className="h-4 w-4" />
         </Link>

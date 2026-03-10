@@ -16,16 +16,16 @@ export default function DealsPage() {
       <div className="flex items-center gap-2 mb-1 text-sm text-gray-500">
         <Link href="/" className="hover:text-gray-300 transition-colors">Home</Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-white">Deals</span>
+        <span className="text-gray-900">Deals</span>
       </div>
 
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-black text-white flex items-center gap-2">
+          <h1 className="text-3xl font-black text-gray-900 flex items-center gap-2">
             <Flame className="h-7 w-7 text-orange-400" />
             Today&apos;s Deals
           </h1>
-          <p className="text-gray-400 mt-1">Limited-time offers from immigrant-owned stores near you</p>
+          <p className="text-gray-500 mt-1">Limited-time offers from immigrant-owned stores near you</p>
         </div>
         <Link href="/search?sort=discount" className="hidden sm:flex items-center gap-1 text-sm text-primary hover:text-primary/80">
           All discounted items <ChevronRight className="h-4 w-4" />
@@ -66,8 +66,8 @@ export default function DealsPage() {
 
       <div className="mt-10 rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center">
         <Tag className="h-6 w-6 text-primary mx-auto mb-3" />
-        <h2 className="text-lg font-bold text-white">Want to run a deal on your store?</h2>
-        <p className="text-gray-400 text-sm mt-1 mb-4">Sellers can create promotions directly from their dashboard.</p>
+        <h2 className="text-lg font-bold text-gray-900">Want to run a deal on your store?</h2>
+        <p className="text-gray-500 text-sm mt-1 mb-4">Sellers can create promotions directly from their dashboard.</p>
         <Link href="/dashboard" className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-header hover:bg-primary/90 transition-colors">
           Go to Seller Dashboard <ChevronRight className="h-4 w-4" />
         </Link>

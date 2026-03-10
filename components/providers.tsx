@@ -23,7 +23,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <SessionProvider refetchInterval={3 * 60} refetchOnWindowFocus={true}>
+    <SessionProvider refetchInterval={4 * 60} refetchOnWindowFocus={true}>
       <SessionGuard>
         <IdleTimeoutProvider>
         <PostLoginRedirect>
@@ -31,13 +31,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <CartMergeProvider>
               {children}
             <Toaster
-              theme="dark"
+              theme="light"
               position="bottom-right"
               toastOptions={{
                 style: {
-                  background: "hsl(0 0% 9%)",
-                  border: "1px solid hsl(0 0% 15%)",
-                  color: "#fff",
+                  background: "#fff",
+                  border: "1px solid hsl(0 0% 90%)",
+                  color: "#171717",
                 },
               }}
             />

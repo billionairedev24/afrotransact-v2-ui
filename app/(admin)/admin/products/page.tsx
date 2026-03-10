@@ -49,8 +49,8 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   pending_review: { label: "Pending Review", className: "bg-yellow-500/20 text-yellow-400" },
   active:         { label: "Active",         className: "bg-green-500/20 text-green-400" },
   approved:       { label: "Approved",       className: "bg-green-500/20 text-green-400" },
-  rejected:       { label: "Rejected",       className: "bg-red-500/20 text-red-400" },
-  draft:          { label: "Draft",          className: "bg-white/10 text-gray-400" },
+  rejected:       { label: "Rejected",       className: "bg-red-500/20 text-red-600" },
+  draft:          { label: "Draft",          className: "bg-gray-100 text-gray-500" },
 }
 
 function formatDate(iso: string) {
@@ -71,7 +71,7 @@ function totalStock(product: Product): number {
 
 function StatusBadge({ status }: { status: string }) {
   const key = status.toLowerCase()
-  const b = STATUS_BADGE[key] ?? { label: status, className: "bg-white/10 text-gray-400" }
+  const b = STATUS_BADGE[key] ?? { label: status, className: "bg-gray-100 text-gray-500" }
   return (
     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${b.className}`}>
       {b.label}
@@ -176,10 +176,10 @@ export default function AdminProductsPage() {
             <img
               src={imgs[0].url}
               alt={imgs[0].altText ?? ""}
-              className="h-10 w-10 rounded-lg object-cover border border-white/10"
+              className="h-10 w-10 rounded-lg object-cover border border-gray-200"
             />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 border border-white/10">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 border border-gray-200">
               <ImageOff className="h-4 w-4 text-gray-600" />
             </div>
           )
@@ -190,7 +190,7 @@ export default function AdminProductsPage() {
       col.accessor("title", {
         header: "Product Name",
         cell: (info) => (
-          <span className="font-medium text-white">{info.getValue()}</span>
+          <span className="font-medium text-gray-900">{info.getValue()}</span>
         ),
       }),
       col.accessor("categories", {
@@ -198,7 +198,7 @@ export default function AdminProductsPage() {
         cell: (info) => {
           const cats = info.getValue()
           return (
-            <span className="text-gray-400">
+            <span className="text-gray-500">
               {cats?.[0]?.name ?? "—"}
             </span>
           )
@@ -212,7 +212,7 @@ export default function AdminProductsPage() {
           const variants = info.getValue()
           const price = variants?.[0]?.price
           return (
-            <span className="text-gray-300">
+            <span className="text-gray-600">
               {price != null ? formatPrice(price) : "—"}
             </span>
           )
@@ -228,10 +228,10 @@ export default function AdminProductsPage() {
             <span
               className={
                 qty === 0
-                  ? "text-red-400"
+                  ? "text-red-600"
                   : qty <= 5
                     ? "text-yellow-400"
-                    : "text-gray-300"
+                    : "text-gray-600"
               }
             >
               {qty}
@@ -246,7 +246,7 @@ export default function AdminProductsPage() {
       col.accessor("createdAt", {
         header: "Created",
         cell: (info) => (
-          <span className="text-gray-400">{formatDate(info.getValue())}</span>
+          <span className="text-gray-500">{formatDate(info.getValue())}</span>
         ),
       }),
       col.display({
@@ -295,7 +295,7 @@ export default function AdminProductsPage() {
 
   if (sessionStatus !== "authenticated" && !loading) {
     return (
-      <div className="py-20 text-center text-gray-400">
+      <div className="py-20 text-center text-gray-500">
         Sign in as admin to manage products.
       </div>
     )
@@ -305,21 +305,20 @@ export default function AdminProductsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Products</h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+          <p className="text-sm text-gray-500 mt-1">
             Review and approve product listings from sellers.
           </p>
         </div>
         <div
-          className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 p-12"
-          style={{ background: "hsl(0 0% 11%)" }}
+          className="flex flex-col items-center gap-4 rounded-2xl border border-gray-200 p-12 bg-white"
         >
           <Package className="h-12 w-12 text-gray-600" />
           <div className="text-center">
-            <p className="text-white font-medium">
+            <p className="text-gray-900 font-medium">
               Product approval API not connected yet
             </p>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-sm text-gray-500 mt-1">
               The admin products endpoint is not available. Ensure the backend
               service is running and the endpoint is deployed.
             </p>
@@ -335,8 +334,8 @@ export default function AdminProductsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Products</h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+          <p className="text-sm text-gray-500 mt-1">
             Review and approve product listings from sellers.
           </p>
         </div>
@@ -344,14 +343,13 @@ export default function AdminProductsPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-gray-300 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
-          style={{ background: "hsl(0 0% 11%)" }}
+          className="h-10 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-600 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30 bg-white"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option
               key={opt.value}
               value={opt.value}
-              className="bg-[hsl(0_0%_11%)] text-gray-300"
+              className="bg-white text-gray-600"
             >
               {opt.label}
             </option>
@@ -385,9 +383,9 @@ export default function AdminProductsPage() {
       <Dialog open={rejectModal.open} onClose={closeRejectModal}>
         <DialogHeader onClose={closeRejectModal}>Reject Product</DialogHeader>
         <DialogBody>
-          <p className="text-sm text-gray-400 mb-4">
+          <p className="text-sm text-gray-500 mb-4">
             Provide a reason for rejecting{" "}
-            <span className="text-white font-medium">
+            <span className="text-gray-900 font-medium">
               {rejectModal.productName}
             </span>
             . This will be visible to the seller.
@@ -397,13 +395,13 @@ export default function AdminProductsPage() {
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="Reason for rejection…"
             rows={4}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30 resize-none"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30 resize-none"
           />
         </DialogBody>
         <DialogFooter>
           <button
             onClick={closeRejectModal}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
           >
             Cancel
           </button>
@@ -412,7 +410,7 @@ export default function AdminProductsPage() {
             disabled={
               !rejectReason.trim() || actionLoading === rejectModal.productId
             }
-            className="inline-flex items-center gap-2 rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {actionLoading === rejectModal.productId && (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -456,7 +454,7 @@ function ProductDetailPanel({
           <>
             {product.images.length > 0 ? (
               <div className="space-y-3">
-                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black/20">
                   <img
                     src={product.images[galleryIndex]?.url}
                     alt={product.images[galleryIndex]?.altText ?? product.title}
@@ -496,7 +494,7 @@ function ProductDetailPanel({
                         className={`shrink-0 h-14 w-14 rounded-lg overflow-hidden border-2 transition-colors ${
                           i === galleryIndex
                             ? "border-primary"
-                            : "border-white/10 hover:border-white/30"
+                            : "border-gray-200 hover:border-white/30"
                         }`}
                       >
                         <img
@@ -510,7 +508,7 @@ function ProductDetailPanel({
                 )}
               </div>
             ) : (
-              <div className="flex aspect-video items-center justify-center rounded-xl border border-white/10 bg-white/5">
+              <div className="flex aspect-video items-center justify-center rounded-xl border border-gray-200 bg-gray-50">
                 <ImageOff className="h-10 w-10 text-gray-600" />
               </div>
             )}
@@ -521,7 +519,7 @@ function ProductDetailPanel({
                 <InfoRow label="Slug" value={product.slug} mono />
                 <InfoRow label="Type" value={product.productType || "—"} />
                 <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-gray-400">Status</span>
+                  <span className="text-sm text-gray-500">Status</span>
                   <StatusBadge status={product.status} />
                 </div>
                 <InfoRow label="Created" value={formatDate(product.createdAt)} />
@@ -531,11 +529,10 @@ function ProductDetailPanel({
               </InfoTable>
               {product.description && (
                 <div
-                  className="mt-3 rounded-xl border border-white/5 px-4 py-3"
-                  style={{ background: "hsl(0 0% 11%)" }}
+                  className="mt-3 rounded-xl border border-gray-100 px-4 py-3 bg-white"
                 >
                   <p className="text-xs text-gray-500 mb-1">Description</p>
-                  <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
                     {product.description}
                   </p>
                 </div>
@@ -550,43 +547,42 @@ function ProductDetailPanel({
                   {product.variants.map((v) => (
                     <div
                       key={v.id}
-                      className="rounded-xl border border-white/5 px-4 py-3"
-                      style={{ background: "hsl(0 0% 11%)" }}
+                      className="rounded-xl border border-gray-100 px-4 py-3 bg-white"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-white">{v.name || "Default"}</p>
+                        <p className="text-sm font-medium text-gray-900">{v.name || "Default"}</p>
                         <span className="text-sm font-semibold text-emerald-400">{formatPrice(v.price)}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                        <div className="flex items-center gap-1.5 text-gray-400">
+                        <div className="flex items-center gap-1.5 text-gray-500">
                           <Hash className="h-3 w-3" />
-                          SKU: <span className="text-gray-300 font-mono">{v.sku}</span>
+                          SKU: <span className="text-gray-600 font-mono">{v.sku}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-gray-400">
+                        <div className="flex items-center gap-1.5 text-gray-500">
                           <BoxesIcon className="h-3 w-3" />
                           Stock:{" "}
                           <span
                             className={
                               v.stockQuantity === 0
-                                ? "text-red-400"
+                                ? "text-red-600"
                                 : v.stockQuantity <= 5
                                   ? "text-yellow-400"
-                                  : "text-gray-300"
+                                  : "text-gray-600"
                             }
                           >
                             {v.stockQuantity}
                           </span>
                         </div>
                         {v.compareAtPrice != null && (
-                          <div className="flex items-center gap-1.5 text-gray-400">
+                          <div className="flex items-center gap-1.5 text-gray-500">
                             <DollarSign className="h-3 w-3" />
-                            Compare: <span className="text-gray-300 line-through">{formatPrice(v.compareAtPrice)}</span>
+                            Compare: <span className="text-gray-600 line-through">{formatPrice(v.compareAtPrice)}</span>
                           </div>
                         )}
                         {v.weightKg != null && (
-                          <div className="flex items-center gap-1.5 text-gray-400">
+                          <div className="flex items-center gap-1.5 text-gray-500">
                             <Weight className="h-3 w-3" />
-                            Weight: <span className="text-gray-300">{v.weightKg} kg</span>
+                            Weight: <span className="text-gray-600">{v.weightKg} kg</span>
                           </div>
                         )}
                       </div>
@@ -602,7 +598,7 @@ function ProductDetailPanel({
                   {product.categories.map((cat) => (
                     <span
                       key={cat.id}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600"
                     >
                       <Tag className="h-3 w-3 text-gray-500" />
                       {cat.name}
@@ -619,7 +615,7 @@ function ProductDetailPanel({
           <button
             onClick={() => onReject(product)}
             disabled={busy}
-            className="rounded-xl bg-red-600/20 px-5 py-2.5 text-sm font-medium text-red-400 hover:bg-red-600/30 disabled:opacity-50 transition-colors"
+            className="rounded-xl bg-red-600/20 px-5 py-2.5 text-sm font-medium text-red-600 hover:bg-red-600/30 disabled:opacity-50 transition-colors"
           >
             Reject
           </button>
@@ -659,8 +655,7 @@ function Section({
 function InfoTable({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="rounded-xl border border-white/5 divide-y divide-white/5"
-      style={{ background: "hsl(0 0% 11%)" }}
+      className="rounded-xl border border-gray-100 divide-y divide-gray-100 bg-white"
     >
       {children}
     </div>
@@ -678,9 +673,9 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-center justify-between px-4 py-3">
-      <span className="text-sm text-gray-400">{label}</span>
+      <span className="text-sm text-gray-500">{label}</span>
       <span
-        className={`text-sm text-right max-w-[60%] truncate text-gray-200 ${
+        className={`text-sm text-right max-w-[60%] truncate text-gray-700 ${
           mono ? "font-mono text-xs" : ""
         }`}
       >

@@ -5,10 +5,9 @@ import { NextResponse } from "next/server"
 /**
  * POST /api/auth/set-seller-intent
  *
- * Called when an authenticated buyer clicks "Start Selling".
+ * Called by PostLoginRedirect when it detects the afro_seller_intent cookie.
  * Sets registration_role="seller" on the user in Keycloak via Admin API.
- * This triggers the Keycloak event-listener SPI webhook which updates
- * the user-profile service's role field — the source of truth for routing.
+ * After this, every token on ANY device will contain registration_role: "seller".
  */
 export async function POST() {
   const session = await getServerSession(authOptions)

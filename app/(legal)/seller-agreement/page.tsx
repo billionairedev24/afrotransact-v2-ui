@@ -212,14 +212,14 @@ export default function SellerAgreementPage() {
               To help new sellers get established, {COMPANY_SHORT} offers the following trial structure:
             </p>
             <div className="space-y-3">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                 <p className="font-semibold text-white mb-1">Month 1 — Always Free</p>
                 <p className="text-gray-400 text-sm">
                   Every new seller receives the first 30 days free, regardless of which plan they select.
                   No credit card is required to start.
                 </p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                 <p className="font-semibold text-white mb-1">Month 2 — Free if You Qualify</p>
                 <p className="text-gray-400 text-sm">
                   If you have listed at least{" "}
@@ -228,7 +228,7 @@ export default function SellerAgreementPage() {
                   30 days. This threshold is subject to change with notice.
                 </p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                 <p className="font-semibold text-white mb-1">Month 3+ — Paid Subscription</p>
                 <p className="text-gray-400 text-sm">
                   After your trial period ends, your selected subscription plan becomes active and

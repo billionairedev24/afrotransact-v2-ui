@@ -189,13 +189,13 @@ export default function WorkQueuePage() {
   const filteredSellers = tab === "products" ? [] : pendingSellers
 
   if (sessionStatus !== "authenticated" && !loading) {
-    return <div className="py-20 text-center text-gray-400">Sign in as admin.</div>
+    return <div className="py-20 text-center text-gray-500">Sign in as admin.</div>
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
           Work Queue
           {totalCount > 0 && (
             <span className="inline-flex h-7 min-w-[28px] items-center justify-center rounded-full bg-red-500 px-2 text-xs font-bold text-white animate-pulse">
@@ -203,7 +203,7 @@ export default function WorkQueuePage() {
             </span>
           )}
         </h1>
-        <p className="text-sm text-gray-400 mt-1">
+        <p className="text-sm text-gray-500 mt-1">
           Items requiring your review and approval
         </p>
       </div>
@@ -234,7 +234,7 @@ export default function WorkQueuePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg border border-white/10 p-1" style={{ background: "hsl(0 0% 9%)" }}>
+      <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
         {([
           { key: "all" as const, label: "All", count: totalCount },
           { key: "products" as const, label: "Products", count: productCount },
@@ -246,8 +246,8 @@ export default function WorkQueuePage() {
             className={cn(
               "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               tab === t.key
-                ? "bg-white/10 text-white"
-                : "text-gray-400 hover:text-white"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-900"
             )}
           >
             {t.label}
@@ -265,14 +265,11 @@ export default function WorkQueuePage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : totalCount === 0 ? (
-        <div
-          className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 p-12"
-          style={{ background: "hsl(0 0% 11%)" }}
-        >
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-gray-200 bg-white p-12">
           <CheckCircle className="h-12 w-12 text-emerald-500/50" />
           <div className="text-center">
-            <p className="text-white font-medium">All caught up!</p>
-            <p className="text-sm text-gray-400 mt-1">No items require your attention right now.</p>
+            <p className="text-gray-900 font-medium">All caught up!</p>
+            <p className="text-sm text-gray-500 mt-1">No items require your attention right now.</p>
           </div>
         </div>
       ) : (
@@ -283,11 +280,10 @@ export default function WorkQueuePage() {
             return (
               <div
                 key={`product-${product.id}`}
-                className="rounded-xl border border-white/10 p-4 flex items-center gap-4 cursor-pointer hover:border-white/20 transition-colors"
-                style={{ background: "hsl(0 0% 11%)" }}
+                className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-4 cursor-pointer hover:border-gray-300 transition-colors"
                 onClick={() => { setGalleryIndex(0); setSelectedProduct(product) }}
               >
-                <div className="h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
+                <div className="h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-gray-50 border border-gray-200 flex items-center justify-center">
                   {product.images?.[0]?.url ? (
                     <img src={product.images[0].url} alt="" className="h-full w-full object-cover" />
                   ) : (
@@ -304,7 +300,7 @@ export default function WorkQueuePage() {
                       Pending Review
                     </span>
                   </div>
-                  <p className="text-sm font-medium text-white mt-1 truncate">{product.title}</p>
+                  <p className="text-sm font-medium text-gray-900 mt-1 truncate">{product.title}</p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {product.variants?.[0]?.price != null ? formatPrice(product.variants[0].price) : "—"} &middot; {formatDate(product.createdAt)}
                   </p>
@@ -339,8 +335,7 @@ export default function WorkQueuePage() {
             return (
               <div
                 key={`seller-${seller.id}`}
-                className="rounded-xl border border-white/10 p-4 flex items-center gap-4 cursor-pointer hover:border-white/20 transition-colors"
-                style={{ background: "hsl(0 0% 11%)" }}
+                className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-4 cursor-pointer hover:border-gray-300 transition-colors"
                 onClick={() => openSellerReview(seller)}
               >
                 <div className="h-14 w-14 shrink-0 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
@@ -356,7 +351,7 @@ export default function WorkQueuePage() {
                       {badge.label}
                     </span>
                   </div>
-                  <p className="text-sm font-medium text-white mt-1 truncate">{seller.businessName}</p>
+                  <p className="text-sm font-medium text-gray-900 mt-1 truncate">{seller.businessName}</p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {seller.contactEmail ?? "—"} &middot; Applied {seller.createdAt ? formatDate(seller.createdAt) : "—"}
                   </p>
@@ -444,22 +439,22 @@ export default function WorkQueuePage() {
           Reject {rejectModal.type === "product" ? "Product" : "Seller"}
         </DialogHeader>
         <DialogBody>
-          <p className="text-sm text-gray-400 mb-4">
+          <p className="text-sm text-gray-500 mb-4">
             Provide a reason for rejecting{" "}
-            <span className="text-white font-medium">{rejectModal.name}</span>.
+            <span className="text-gray-900 font-medium">{rejectModal.name}</span>.
           </p>
           <textarea
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="Reason for rejection…"
             rows={4}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30 resize-none"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30 resize-none"
           />
         </DialogBody>
         <DialogFooter>
           <button
             onClick={() => setRejectModal({ ...rejectModal, open: false })}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
           >
             Cancel
           </button>
@@ -483,16 +478,13 @@ function StatCard({
   label: string; value: number; icon: React.ReactNode; color: string; bg: string
 }) {
   return (
-    <div
-      className="flex items-center gap-4 rounded-xl border border-white/10 p-4"
-      style={{ background: "hsl(0 0% 11%)" }}
-    >
+    <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4">
       <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg} ${color}`}>
         {icon}
       </div>
       <div>
-        <p className="text-2xl font-bold text-white">{value}</p>
-        <p className="text-xs text-gray-400">{label}</p>
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <p className="text-xs text-gray-500">{label}</p>
       </div>
     </div>
   )
@@ -525,7 +517,7 @@ function ProductReviewSheet({
           <>
             {product.images.length > 0 ? (
               <div className="space-y-3">
-                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
                   <img
                     src={product.images[galleryIndex]?.url}
                     alt={product.images[galleryIndex]?.altText ?? product.title}
@@ -555,7 +547,7 @@ function ProductReviewSheet({
                         key={img.id}
                         onClick={() => setGalleryIndex(i)}
                         className={`shrink-0 h-14 w-14 rounded-lg overflow-hidden border-2 transition-colors ${
-                          i === galleryIndex ? "border-primary" : "border-white/10 hover:border-white/30"
+                          i === galleryIndex ? "border-primary" : "border-gray-200 hover:border-gray-300"
                         }`}
                       >
                         <img src={img.url} alt={img.altText ?? ""} className="h-full w-full object-cover" />
@@ -565,37 +557,34 @@ function ProductReviewSheet({
                 )}
               </div>
             ) : (
-              <div className="flex aspect-video items-center justify-center rounded-xl border border-white/10 bg-white/5">
+              <div className="flex aspect-video items-center justify-center rounded-xl border border-gray-200 bg-gray-50">
                 <ImageOff className="h-10 w-10 text-gray-600" />
               </div>
             )}
 
-            <div
-              className="rounded-xl border border-white/5 divide-y divide-white/5"
-              style={{ background: "hsl(0 0% 11%)" }}
-            >
+            <div className="rounded-xl border border-gray-100 bg-white divide-y divide-gray-100">
               <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-gray-400">Title</span>
-                <span className="text-sm text-gray-200 text-right max-w-[60%] truncate">{product.title}</span>
+                <span className="text-sm text-gray-500">Title</span>
+                <span className="text-sm text-gray-700 text-right max-w-[60%] truncate">{product.title}</span>
               </div>
               <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-gray-400">Slug</span>
-                <span className="text-xs text-gray-200 font-mono text-right max-w-[60%] truncate">{product.slug}</span>
+                <span className="text-sm text-gray-500">Slug</span>
+                <span className="text-xs text-gray-700 font-mono text-right max-w-[60%] truncate">{product.slug}</span>
               </div>
               <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-gray-400">Type</span>
-                <span className="text-sm text-gray-200">{product.productType || "—"}</span>
+                <span className="text-sm text-gray-500">Type</span>
+                <span className="text-sm text-gray-700">{product.productType || "—"}</span>
               </div>
               <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-gray-400">Created</span>
-                <span className="text-sm text-gray-200">{formatDate(product.createdAt)}</span>
+                <span className="text-sm text-gray-500">Created</span>
+                <span className="text-sm text-gray-700">{formatDate(product.createdAt)}</span>
               </div>
             </div>
 
             {product.description && (
-              <div className="rounded-xl border border-white/5 px-4 py-3" style={{ background: "hsl(0 0% 11%)" }}>
+              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
                 <p className="text-xs text-gray-500 mb-1">Description</p>
-                <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{product.description}</p>
+                <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{product.description}</p>
               </div>
             )}
 
@@ -604,17 +593,17 @@ function ProductReviewSheet({
                 <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Variants ({product.variants.length})</h3>
                 <div className="space-y-2">
                   {product.variants.map((v) => (
-                    <div key={v.id} className="rounded-xl border border-white/5 px-4 py-3" style={{ background: "hsl(0 0% 11%)" }}>
+                    <div key={v.id} className="rounded-xl border border-gray-100 bg-white px-4 py-3">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-white">{v.name || "Default"}</p>
+                        <p className="text-sm font-medium text-gray-900">{v.name || "Default"}</p>
                         <span className="text-sm font-semibold text-emerald-400">{formatPrice(v.price)}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                        <div className="flex items-center gap-1.5 text-gray-400">
-                          <Hash className="h-3 w-3" /> SKU: <span className="text-gray-300 font-mono">{v.sku}</span>
+                        <div className="flex items-center gap-1.5 text-gray-500">
+                          <Hash className="h-3 w-3" /> SKU: <span className="text-gray-600 font-mono">{v.sku}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-gray-400">
-                          <BoxesIcon className="h-3 w-3" /> Stock: <span className={v.stockQuantity === 0 ? "text-red-400" : "text-gray-300"}>{v.stockQuantity}</span>
+                        <div className="flex items-center gap-1.5 text-gray-500">
+                          <BoxesIcon className="h-3 w-3" /> Stock: <span className={v.stockQuantity === 0 ? "text-red-600" : "text-gray-600"}>{v.stockQuantity}</span>
                         </div>
                       </div>
                     </div>
@@ -628,7 +617,7 @@ function ProductReviewSheet({
                 <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Categories</h3>
                 <div className="flex flex-wrap gap-2">
                   {product.categories.map((cat) => (
-                    <span key={cat.id} className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300">
+                    <span key={cat.id} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600">
                       <Tag className="h-3 w-3 text-gray-500" /> {cat.name}
                     </span>
                   ))}
@@ -691,9 +680,9 @@ function SellerReviewSheet({
   if (!seller) return null
 
   const busy = actionLoading === seller.id
-  const sectionCls = "border-t border-white/5 pt-4 mt-4"
+  const sectionCls = "border-t border-gray-100 pt-4 mt-4"
   const labelCls = "text-xs font-medium text-gray-500 uppercase tracking-wider"
-  const valueCls = "text-sm text-gray-200"
+  const valueCls = "text-sm text-gray-700"
   const fieldCls = "flex items-start gap-3 text-sm"
 
   return (
@@ -705,7 +694,7 @@ function SellerReviewSheet({
         </span>
       </SheetHeader>
       <div className="px-6 pb-2 -mt-1">
-        <p className="text-sm text-gray-400">{seller.businessName} — submitted {seller.submittedAt ? new Date(seller.submittedAt).toLocaleDateString() : "N/A"}</p>
+        <p className="text-sm text-gray-500">{seller.businessName} — submitted {seller.submittedAt ? new Date(seller.submittedAt).toLocaleDateString() : "N/A"}</p>
       </div>
 
       <SheetBody>
@@ -716,7 +705,7 @@ function SellerReviewSheet({
             <div className={fieldCls}>
               <Building2 className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
               <div>
-                <p className="text-white font-medium">{seller.businessName}</p>
+                <p className="text-gray-900 font-medium">{seller.businessName}</p>
                 <p className="text-xs text-gray-500">{seller.entityType || "N/A"} · {seller.businessType || "N/A"}</p>
               </div>
             </div>
@@ -770,27 +759,27 @@ function SellerReviewSheet({
         <div className={sectionCls}>
           <h3 className={cn(labelCls, "mb-3")}>Payment & Stripe</h3>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-white/5 border border-white/10 p-3">
+            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Stripe Connected</p>
               <p className={cn("text-sm font-medium mt-1", seller.stripeAccountId ? "text-emerald-400" : "text-yellow-400")}>
                 {seller.stripeAccountId ? "Yes" : "Not yet"}
               </p>
             </div>
-            <div className="rounded-lg bg-white/5 border border-white/10 p-3">
+            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Charges Enabled</p>
-              <p className={cn("text-sm font-medium mt-1", seller.chargesEnabled ? "text-emerald-400" : "text-gray-400")}>
+              <p className={cn("text-sm font-medium mt-1", seller.chargesEnabled ? "text-emerald-400" : "text-gray-500")}>
                 {seller.chargesEnabled ? "Yes" : "No"}
               </p>
             </div>
-            <div className="rounded-lg bg-white/5 border border-white/10 p-3">
+            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Payouts Enabled</p>
-              <p className={cn("text-sm font-medium mt-1", seller.payoutsEnabled ? "text-emerald-400" : "text-gray-400")}>
+              <p className={cn("text-sm font-medium mt-1", seller.payoutsEnabled ? "text-emerald-400" : "text-gray-500")}>
                 {seller.payoutsEnabled ? "Yes" : "No"}
               </p>
             </div>
-            <div className="rounded-lg bg-white/5 border border-white/10 p-3">
+            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Commission Rate</p>
-              <p className="text-sm font-medium mt-1 text-white">{(seller.commissionRate * 100).toFixed(1)}%</p>
+              <p className="text-sm font-medium mt-1 text-gray-900">{(seller.commissionRate * 100).toFixed(1)}%</p>
             </div>
           </div>
           {seller.stripeAccountId && (
@@ -806,16 +795,16 @@ function SellerReviewSheet({
             <h3 className={cn(labelCls, "mb-3")}>Stores</h3>
             <div className="space-y-2">
               {seller.stores.map((store) => (
-                <div key={store.id} className="flex items-center gap-3 rounded-lg bg-white/5 border border-white/10 p-3">
+                <div key={store.id} className="flex items-center gap-3 rounded-lg bg-gray-50 border border-gray-200 p-3">
                   {store.logoUrl ? (
                     <img src={store.logoUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />
                   ) : (
-                    <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
                       <Store className="h-5 w-5 text-gray-500" />
                     </div>
                   )}
                   <div>
-                    <p className="text-sm font-medium text-white">{store.name}</p>
+                    <p className="text-sm font-medium text-gray-900">{store.name}</p>
                     <p className="text-xs text-gray-500">/{store.slug}</p>
                   </div>
                 </div>
@@ -835,11 +824,11 @@ function SellerReviewSheet({
                   href={doc.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 rounded-lg bg-white/5 border border-white/10 p-3 hover:bg-white/10 transition-colors group"
+                  className="flex items-center gap-3 rounded-lg bg-gray-50 border border-gray-200 p-3 hover:bg-gray-100 transition-colors group"
                 >
-                  <FileText className="h-4 w-4 text-gray-400 shrink-0" />
+                  <FileText className="h-4 w-4 text-gray-500 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-200 truncate">{doc.fileName || doc.documentType}</p>
+                    <p className="text-sm text-gray-700 truncate">{doc.fileName || doc.documentType}</p>
                     <p className="text-[10px] text-gray-500 uppercase">{doc.documentType.replace(/_/g, " ")}</p>
                   </div>
                   <ExternalLink className="h-3.5 w-3.5 text-gray-500 group-hover:text-primary transition-colors shrink-0" />
@@ -853,10 +842,10 @@ function SellerReviewSheet({
         <div className={sectionCls}>
           <h3 className={cn(labelCls, "mb-3")}>Onboarding Progress</h3>
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
               <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(100, (seller.onboardingStep / 7) * 100)}%` }} />
             </div>
-            <span className="text-xs text-gray-400">Step {seller.onboardingStep}/7</span>
+            <span className="text-xs text-gray-500">Step {seller.onboardingStep}/7</span>
           </div>
           <p className="text-xs text-gray-500 mt-2 capitalize">Status: {seller.onboardingStatus.replace(/_/g, " ")}</p>
         </div>
@@ -871,13 +860,13 @@ function SellerReviewSheet({
             {seller.rejectionReason && (
               <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 mb-2">
                 <p className="text-xs font-medium text-red-400 mb-1">Rejection Reason</p>
-                <p className="text-sm text-gray-300">{seller.rejectionReason}</p>
+                <p className="text-sm text-gray-600">{seller.rejectionReason}</p>
               </div>
             )}
             {seller.adminNotes && (
               <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3">
                 <p className="text-xs font-medium text-yellow-400 mb-1">Admin Notes</p>
-                <p className="text-sm text-gray-300">{seller.adminNotes}</p>
+                <p className="text-sm text-gray-600">{seller.adminNotes}</p>
               </div>
             )}
           </div>
@@ -892,12 +881,12 @@ function SellerReviewSheet({
               onChange={(e) => setAdminNotes(e.target.value)}
               rows={4}
               placeholder="Describe what information you need from the seller..."
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/25"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/25"
             />
             <div className="flex gap-2 mt-2">
               <button
                 onClick={() => { setShowInfoForm(false); setAdminNotes("") }}
-                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-400 hover:bg-white/5"
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
               >
                 Cancel
               </button>

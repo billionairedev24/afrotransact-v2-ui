@@ -9,8 +9,6 @@ import {
   getAdminSellerStats,
   getAdminSellerDetail,
   reviewAdminSeller,
-  triggerOnboardingReminders,
-  sendSellerReminder,
 } from "@/lib/api"
 import type { OnboardingStats, AdminSellerDetail } from "@/lib/api"
 import { toast } from "sonner"
@@ -36,7 +34,6 @@ import {
   Globe,
   MapPin,
   Loader2,
-  Bell,
 } from "lucide-react"
 
 interface AdminSellerRow {
@@ -92,19 +89,8 @@ function fmtDate(iso: string | null) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
-function fmtAge(iso: string | null) {
-  if (!iso) return "—"
-  const diff = Date.now() - new Date(iso).getTime()
-  const hours = Math.floor(diff / 3600000)
-  if (hours < 1) return "< 1h"
-  if (hours < 24) return `${hours}h`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d`
-  return `${Math.floor(days / 30)}mo`
-}
-
 function StatusBadge({ status }: { status: string }) {
-  const c = STATUS_CFG[status.toLowerCase().replace(/ /g, "_")] ?? { label: status, cls: "bg-white/10 text-gray-400" }
+  const c = STATUS_CFG[status.toLowerCase().replace(/ /g, "_")] ?? { label: status, cls: "bg-gray-100 text-gray-400" }
   return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${c.cls}`}>{c.label}</span>
 }
 
@@ -213,34 +199,12 @@ export default function AdminSellersPage() {
     }
   }
 
-  async function handleTriggerReminders() {
-    try {
-      const token = await getAccessToken()
-      if (!token) return
-      const res = await triggerOnboardingReminders(token)
-      toast.success(`Triggered reminders for ${res.triggered ?? 0} seller(s)`)
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to trigger reminders")
-    }
-  }
-
-  async function handleSendReminder(sellerId: string, businessName: string) {
-    try {
-      const token = await getAccessToken()
-      if (!token) return
-      await sendSellerReminder(token, sellerId)
-      toast.success(`Reminder sent to ${businessName}`)
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to send reminder")
-    }
-  }
-
   if (sessionStatus !== "authenticated" && !loading) {
     return <div className="flex items-center justify-center py-20 text-gray-400">Sign in as admin to manage sellers.</div>
   }
 
   const statCards = [
-    { label: "Total Sellers", value: stats?.totalSellers ?? 0, icon: Users, color: "text-white" },
+    { label: "Total Sellers", value: stats?.totalSellers ?? 0, icon: Users, color: "text-gray-900" },
     { label: "Pending", value: (stats?.started ?? 0) + (stats?.inProgress ?? 0), icon: Clock, color: "text-gray-400" },
     { label: "Submitted", value: (stats?.submitted ?? 0) + (stats?.underReview ?? 0), icon: Clock, color: "text-yellow-400" },
     { label: "Approved", value: stats?.approved ?? 0, icon: CheckCircle2, color: "text-emerald-400" },
@@ -249,30 +213,21 @@ export default function AdminSellersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Seller Management</h1>
-          <p className="text-sm text-gray-400 mt-1">Review applications, manage onboarding, and monitor seller status.</p>
-        </div>
-        <button
-          onClick={handleTriggerReminders}
-          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
-        >
-          <Bell className="h-4 w-4" />
-          Trigger All Reminders
-        </button>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Seller Management</h1>
+        <p className="text-sm text-gray-500 mt-1">Review applications, manage onboarding, and monitor seller status.</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {statCards.map((c) => (
-          <div key={c.label} className="rounded-xl border border-white/5 p-5" style={{ background: "hsl(0 0% 11%)" }}>
+          <div key={c.label} className="rounded-xl border border-gray-200 p-5 bg-white">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{c.label}</p>
                 <p className={`text-2xl font-bold mt-1 ${c.color}`}>{statsLoading ? "…" : c.value}</p>
               </div>
-              <div className={`rounded-xl p-2.5 bg-white/5 ${c.color}`}>
+              <div className={`rounded-xl p-2.5 bg-gray-50 ${c.color}`}>
                 <c.icon className="h-5 w-5" />
               </div>
             </div>
@@ -283,7 +238,7 @@ export default function AdminSellersPage() {
       {/* Donut + Table */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {stats && !statsLoading && (
-          <div className="lg:col-span-1 rounded-xl border border-white/5 p-5" style={{ background: "hsl(0 0% 11%)" }}>
+          <div className="lg:col-span-1 rounded-xl border border-gray-200 p-5 bg-white">
             <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">Onboarding Funnel</h3>
             <DonutChart stats={stats} />
           </div>
@@ -297,7 +252,7 @@ export default function AdminSellersPage() {
                 key={t.key}
                 onClick={() => changeTab(t.key)}
                 className={`shrink-0 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
-                  activeTab === t.key ? "bg-white/10 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"
+                  activeTab === t.key ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                 }`}
               >
                 {t.label}
@@ -306,54 +261,53 @@ export default function AdminSellersPage() {
           </div>
 
           {/* Table */}
-          <div className="rounded-xl border border-white/5" style={{ background: "hsl(0 0% 11%)" }}>
+          <div className="rounded-xl border border-gray-200 bg-white">
             <div className="overflow-x-auto overflow-y-visible">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    {["Business Name", "Entity Type", "Status", "Step", "Age", "Submitted", ""].map((h) => (
+                  <tr className="border-b border-gray-100">
+                    {["Business Name", "Entity Type", "Status", "Onboarding Step", "Submitted", ""].map((h) => (
                       <th key={h || "actions"} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-gray-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-16 text-center">
+                      <td colSpan={6} className="px-4 py-16 text-center">
                         <Loader2 className="h-5 w-5 animate-spin text-gray-500 mx-auto" />
                       </td>
                     </tr>
                   ) : sellers.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-16 text-center text-sm text-gray-500">
+                      <td colSpan={6} className="px-4 py-16 text-center text-sm text-gray-500">
                         No sellers found.
                       </td>
                     </tr>
                   ) : (
                     sellers.map((s) => (
-                      <tr key={s.id} className="hover:bg-white/[0.02] transition-colors">
+                      <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                               <Store className="h-4 w-4 text-primary" />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-white truncate">{s.businessName}</p>
+                              <p className="text-sm font-medium text-gray-900 truncate">{s.businessName}</p>
                               {s.contactEmail && <p className="text-xs text-gray-500 truncate">{s.contactEmail}</p>}
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-300">{s.entityType || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{s.entityType || "—"}</td>
                         <td className="px-4 py-3">
                           <StatusBadge status={s.onboardingStatus} />
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-300">
+                        <td className="px-4 py-3 text-sm text-gray-600">
                           {STEP_LABELS[s.onboardingStep] || `Step ${s.onboardingStep}`}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-400 whitespace-nowrap">{fmtAge(s.createdAt)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-400 whitespace-nowrap">{fmtDate(s.submittedAt)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{fmtDate(s.submittedAt)}</td>
                         <td className="px-4 py-3">
                           <ActionDropdown
                             seller={s}
@@ -361,7 +315,6 @@ export default function AdminSellersPage() {
                             onApprove={() => handleReview(s.id, "approve")}
                             onReject={() => openDetail(s.id, "reject")}
                             onRequestInfo={() => openDetail(s.id, "request")}
-                            onSendReminder={() => handleSendReminder(s.id, s.businessName)}
                           />
                         </td>
                       </tr>
@@ -372,7 +325,7 @@ export default function AdminSellersPage() {
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-white/5 px-4 py-3">
+              <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
                 <p className="text-xs text-gray-500">
                   Page {page + 1} of {totalPages} &middot; {totalElements} total
                 </p>
@@ -380,14 +333,14 @@ export default function AdminSellersPage() {
                   <button
                     onClick={() => changePage(page - 1)}
                     disabled={page === 0}
-                    className="rounded-lg p-1.5 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="rounded-lg p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => changePage(page + 1)}
                     disabled={page >= totalPages - 1}
-                    className="rounded-lg p-1.5 text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="rounded-lg p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -441,7 +394,7 @@ function DonutChart({ stats }: { stats: OnboardingStats }) {
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xl font-bold text-white">{total}</span>
+          <span className="text-xl font-bold text-gray-900">{total}</span>
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Total</span>
         </div>
       </div>
@@ -449,8 +402,8 @@ function DonutChart({ stats }: { stats: OnboardingStats }) {
         {segments.map((seg) => (
           <div key={seg.label} className="flex items-center gap-2 text-xs">
             <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: seg.color }} />
-            <span className="text-gray-400 flex-1">{seg.label}</span>
-            <span className="text-white font-medium">{seg.value}</span>
+            <span className="text-gray-500 flex-1">{seg.label}</span>
+            <span className="text-gray-900 font-medium">{seg.value}</span>
           </div>
         ))}
       </div>
@@ -466,14 +419,12 @@ function ActionDropdown({
   onApprove,
   onReject,
   onRequestInfo,
-  onSendReminder,
 }: {
   seller: AdminSellerRow
   onView: () => void
   onApprove: () => void
   onReject: () => void
   onRequestInfo: () => void
-  onSendReminder: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [positioned, setPositioned] = useState(false)
@@ -490,13 +441,12 @@ function ActionDropdown({
   const canReject = isSubmitted || ob === "needs_action"
   const canRequestInfo = isSubmitted || ob === "needs_action"
   const canSuspend = isApproved && !isSuspended
-  const canRemind = ob !== "submitted" && ob !== "under_review" && ob !== "approved" && ob !== "rejected" && ob !== "active" && ob !== "pending_review"
 
   const recalc = useCallback(() => {
     if (!triggerRef.current) return
     const rect = triggerRef.current.getBoundingClientRect()
     const menuWidth = 192
-    const itemCount = [true, canApprove, canReject, canRequestInfo, canSuspend, canRemind].filter(Boolean).length
+    const itemCount = [true, canApprove, canReject, canRequestInfo, canSuspend].filter(Boolean).length
     const menuHeight = Math.max(itemCount * 40 + 16, 100)
     const spaceBelow = window.innerHeight - rect.bottom
     const openUp = spaceBelow < menuHeight + 20
@@ -524,16 +474,15 @@ function ActionDropdown({
 
   return (
     <>
-      <button ref={triggerRef} onClick={() => setOpen((v) => !v)} className="rounded-lg p-1.5 text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+      <button ref={triggerRef} onClick={() => setOpen((v) => !v)} className="rounded-lg p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open && positioned && typeof document !== "undefined" &&
         createPortal(
           <div
             ref={menuRef}
-            className="fixed z-[9999] w-48 rounded-xl border border-white/10 py-1 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
+            className="fixed z-[9999] w-48 rounded-xl border border-gray-200 bg-white py-1 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
             style={{
-              background: "hsl(0 0% 13%)",
               top: coords.openUp ? undefined : coords.top,
               bottom: coords.openUp ? window.innerHeight - coords.top : undefined,
               left: coords.left,
@@ -563,11 +512,6 @@ function ActionDropdown({
                 Suspend Seller
               </DdItem>
             )}
-            {canRemind && (
-              <DdItem icon={<Bell className="h-3.5 w-3.5" />} className="text-blue-400" onClick={() => { onSendReminder(); setOpen(false) }}>
-                Send Reminder
-              </DdItem>
-            )}
           </div>,
           document.body
         )}
@@ -577,7 +521,7 @@ function ActionDropdown({
 
 function DdItem({ icon, children, onClick, className = "" }: { icon: React.ReactNode; children: React.ReactNode; onClick: () => void; className?: string }) {
   return (
-    <button onClick={onClick} className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm hover:bg-white/5 transition-colors ${className || "text-gray-300"}`}>
+    <button onClick={onClick} className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${className || "text-gray-600"}`}>
       {icon}
       {children}
     </button>
@@ -617,7 +561,7 @@ function DetailPanel({
     if (!detail) return
     setSubmitting(true)
     try {
-      await onReview(detail.id, action, action === "reject" || action === "request_info" ? text : undefined, action === "request_info" ? text : undefined)
+      await onReview(detail.id, action, action === "reject" ? text : undefined, action === "request_info" ? text : undefined)
     } finally {
       setSubmitting(false)
     }
@@ -630,13 +574,12 @@ function DetailPanel({
     <>
       {open && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onClose} />}
       <div
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-lg transform transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}
-        style={{ background: "hsl(0 0% 9%)" }}
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-lg transform transition-transform duration-300 ease-out bg-white ${open ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-            <h2 className="text-lg font-semibold text-white">Seller Details</h2>
-            <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <h2 className="text-lg font-semibold text-gray-900">Seller Details</h2>
+            <button onClick={onClose} className="rounded-lg p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">
               <XIcon className="h-5 w-5" />
             </button>
           </div>
@@ -661,9 +604,9 @@ function DetailPanel({
                     <InfoRow icon={<MapPin className="h-4 w-4" />} label="Address" value={detail.businessAddress || "—"} />
                   </InfoTable>
                   {detail.businessDescription && (
-                    <div className="mt-3 rounded-xl border border-white/5 px-4 py-3" style={{ background: "hsl(0 0% 11%)" }}>
+                    <div className="mt-3 rounded-xl border border-gray-100 px-4 py-3" style={{ background: "#FFFFFF" }}>
                       <p className="text-xs text-gray-500 mb-1">Description</p>
-                      <p className="text-sm text-gray-300 leading-relaxed">{detail.businessDescription}</p>
+                      <p className="text-sm text-gray-600 leading-relaxed">{detail.businessDescription}</p>
                     </div>
                   )}
                 </Section>
@@ -673,16 +616,16 @@ function DetailPanel({
                   <Section title="Stores">
                     <div className="space-y-2">
                       {detail.stores.map((store) => (
-                        <div key={store.id} className="rounded-xl border border-white/5 px-4 py-3 flex items-center gap-3" style={{ background: "hsl(0 0% 11%)" }}>
+                        <div key={store.id} className="rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-3" style={{ background: "#FFFFFF" }}>
                           {store.logoUrl ? (
                             <img src={store.logoUrl} alt="" className="h-8 w-8 rounded-lg object-cover" />
                           ) : (
-                            <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center">
+                            <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center">
                               <Store className="h-4 w-4 text-gray-500" />
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-white truncate">{store.name}</p>
+                            <p className="text-sm font-medium text-gray-900 truncate">{store.name}</p>
                             <p className="text-xs text-gray-500">/{store.slug}</p>
                           </div>
                         </div>
@@ -700,17 +643,17 @@ function DetailPanel({
                       {detail.documents.map((doc) => {
                         const isImage = doc.mimeType?.startsWith("image/") || /\.(jpe?g|png|webp|gif)$/i.test(doc.fileName)
                         return (
-                          <div key={doc.id} className="rounded-xl border border-white/5 p-4" style={{ background: "hsl(0 0% 11%)" }}>
+                          <div key={doc.id} className="rounded-xl border border-gray-100 p-4" style={{ background: "#FFFFFF" }}>
                             <div className="flex items-center gap-3 mb-2">
                               <FileText className="h-4 w-4 text-gray-500 shrink-0" />
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-200 truncate">{doc.fileName}</p>
+                                <p className="text-sm font-medium text-gray-700 truncate">{doc.fileName}</p>
                                 <p className="text-xs text-gray-500 capitalize">{doc.documentType.replace(/_/g, " ")}</p>
                               </div>
                               <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${doc.status === "approved" ? "bg-green-500/10 text-green-400" : doc.status === "rejected" ? "bg-red-500/10 text-red-400" : "bg-yellow-500/10 text-yellow-400"}`}>
                                 {doc.status || "pending"}
                               </span>
-                              <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg p-1.5 text-primary hover:text-white hover:bg-white/5 transition-colors" title="Open document">
+                              <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg p-1.5 text-primary hover:text-gray-900 hover:bg-gray-50 transition-colors" title="Open document">
                                 <ExternalLink className="h-4 w-4" />
                               </a>
                             </div>
@@ -719,7 +662,7 @@ function DetailPanel({
                                 <img
                                   src={doc.fileUrl}
                                   alt={doc.fileName}
-                                  className="w-full max-h-48 object-contain rounded-lg border border-white/5 bg-black/20"
+                                  className="w-full max-h-48 object-contain rounded-lg border border-gray-100 bg-black/20"
                                 />
                               </a>
                             )}
@@ -762,7 +705,7 @@ function DetailPanel({
                 <Section title="Status">
                   <InfoTable>
                     <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-sm text-gray-400">Current Status</span>
+                      <span className="text-sm text-gray-500">Current Status</span>
                       <StatusBadge status={detail.onboardingStatus} />
                     </div>
                     <InfoRow label="Created" value={fmtDate(detail.createdAt)} />
@@ -770,15 +713,15 @@ function DetailPanel({
                     <InfoRow label="Approved" value={fmtDate(detail.approvedAt)} />
                   </InfoTable>
                   {detail.rejectionReason && (
-                    <div className="mt-3 rounded-xl border border-red-500/20 px-4 py-3" style={{ background: "hsl(0 0% 11%)" }}>
+                    <div className="mt-3 rounded-xl border border-red-500/20 px-4 py-3" style={{ background: "#FFFFFF" }}>
                       <p className="text-xs text-red-400/70 mb-1">Rejection Reason</p>
-                      <p className="text-sm text-red-400">{detail.rejectionReason}</p>
+                      <p className="text-sm text-red-600">{detail.rejectionReason}</p>
                     </div>
                   )}
                   {detail.adminNotes && (
-                    <div className="mt-2 rounded-xl border border-white/5 px-4 py-3" style={{ background: "hsl(0 0% 11%)" }}>
+                    <div className="mt-2 rounded-xl border border-gray-100 px-4 py-3" style={{ background: "#FFFFFF" }}>
                       <p className="text-xs text-gray-500 mb-1">Admin Notes</p>
-                      <p className="text-sm text-gray-300">{detail.adminNotes}</p>
+                      <p className="text-sm text-gray-600">{detail.adminNotes}</p>
                     </div>
                   )}
                 </Section>
@@ -812,10 +755,10 @@ function DetailPanel({
                         onChange={(e) => setReason(e.target.value)}
                         placeholder="Rejection reason…"
                         rows={3}
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-red-500/50 resize-none"
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-red-500/50 resize-none"
                       />
                       <div className="flex gap-2">
-                        <button onClick={() => setMode("none")} className="rounded-xl px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+                        <button onClick={() => setMode("none")} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
                           Cancel
                         </button>
                         <button
@@ -839,10 +782,10 @@ function DetailPanel({
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder="What information do you need?"
                         rows={3}
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 resize-none"
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 resize-none"
                       />
                       <div className="flex gap-2">
-                        <button onClick={() => setMode("none")} className="rounded-xl px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+                        <button onClick={() => setMode("none")} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
                           Cancel
                         </button>
                         <button
@@ -881,7 +824,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function InfoTable({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-white/5 divide-y divide-white/5" style={{ background: "hsl(0 0% 11%)" }}>
+    <div className="rounded-xl border border-gray-100 divide-y divide-gray-100" style={{ background: "#FFFFFF" }}>
       {children}
     </div>
   )
@@ -892,9 +835,9 @@ function InfoRow({ icon, label, value, mono, valueColor }: { icon?: React.ReactN
     <div className="flex items-center justify-between px-4 py-3">
       <div className="flex items-center gap-2">
         {icon && <span className="text-gray-500">{icon}</span>}
-        <span className="text-sm text-gray-400">{label}</span>
+        <span className="text-sm text-gray-500">{label}</span>
       </div>
-      <span className={`text-sm text-right max-w-[55%] truncate ${valueColor || "text-gray-200"} ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
+      <span className={`text-sm text-right max-w-[55%] truncate ${valueColor || "text-gray-700"} ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
     </div>
   )
 }

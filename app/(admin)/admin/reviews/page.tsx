@@ -57,21 +57,17 @@ function StatCard({
 }) {
   return (
     <div
-      className="rounded-2xl border p-5"
-      style={{
-        background: "hsl(0 0% 11%)",
-        borderColor: "rgba(255,255,255,0.08)",
-      }}
+      className="rounded-2xl border border-gray-200 p-5 bg-white"
     >
       <div className="flex items-center gap-3 mb-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50">
           <Icon className="h-4.5 w-4.5 text-gray-400" />
         </div>
         <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
           {label}
         </p>
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
     </div>
   )
@@ -92,14 +88,10 @@ function DistributionBar({
 
   return (
     <div
-      className="rounded-2xl border p-5 space-y-2.5"
-      style={{
-        background: "hsl(0 0% 11%)",
-        borderColor: "rgba(255,255,255,0.08)",
-      }}
+      className="rounded-2xl border border-gray-200 p-5 space-y-2.5 bg-white"
     >
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50">
           <BarChart3 className="h-4.5 w-4.5 text-gray-400" />
         </div>
         <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -108,11 +100,11 @@ function DistributionBar({
       </div>
       {bars.map(({ star, count, pct }) => (
         <div key={star} className="flex items-center gap-3">
-          <span className="w-14 text-xs text-gray-400 flex items-center gap-1 shrink-0">
+          <span className="w-14 text-xs text-gray-500 flex items-center gap-1 shrink-0">
             {star}
             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
           </span>
-          <div className="flex-1 h-2.5 rounded-full bg-white/5 overflow-hidden">
+          <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
             <div
               className="h-full rounded-full bg-yellow-400/80 transition-all duration-500"
               style={{ width: `${pct}%` }}
@@ -170,7 +162,7 @@ export default function AdminReviewsPage() {
 
   if (sessionStatus !== "authenticated" && !loading) {
     return (
-      <div className="py-20 text-center text-gray-400">
+      <div className="py-20 text-center text-gray-500">
         Sign in as admin to view reviews.
       </div>
     )
@@ -180,8 +172,8 @@ export default function AdminReviewsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Platform Reviews</h1>
-        <p className="text-sm text-gray-400 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900">Platform Reviews</h1>
+        <p className="text-sm text-gray-500 mt-1">
           All product reviews across the marketplace
         </p>
       </div>
@@ -222,32 +214,24 @@ export default function AdminReviewsPage() {
       {/* Loading */}
       {loading && (
         <div
-          className="flex items-center justify-center gap-3 rounded-2xl border p-16"
-          style={{
-            background: "hsl(0 0% 11%)",
-            borderColor: "rgba(255,255,255,0.08)",
-          }}
+          className="flex items-center justify-center gap-3 rounded-2xl border border-gray-200 p-16 bg-white"
         >
-          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-          <span className="text-sm text-gray-400">Loading reviews…</span>
+          <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+          <span className="text-sm text-gray-500">Loading reviews…</span>
         </div>
       )}
 
       {/* Reviews Table */}
       {!loading && (
         <div
-          className="rounded-2xl border overflow-hidden"
-          style={{
-            background: "hsl(0 0% 11%)",
-            borderColor: "rgba(255,255,255,0.08)",
-          }}
+          className="rounded-2xl border border-gray-200 overflow-hidden bg-white"
         >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr
                   className="text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+                  style={{ borderBottom: "1px solid #e5e7eb" }}
                 >
                   <th className="px-4 py-3">Review ID</th>
                   <th className="px-4 py-3">Product ID</th>
@@ -273,9 +257,9 @@ export default function AdminReviewsPage() {
                   reviews.map((r: Review) => (
                     <tr
                       key={r.id}
-                      className="transition-colors hover:bg-white/[0.02]"
+                      className="transition-colors hover:bg-gray-50"
                       style={{
-                        borderBottom: "1px solid rgba(255,255,255,0.05)",
+                        borderBottom: "1px solid #f3f4f6",
                       }}
                     >
                       <td className="px-4 py-3 font-mono text-xs text-gray-500">
@@ -290,10 +274,10 @@ export default function AdminReviewsPage() {
                       <td className="px-4 py-3">
                         <Stars rating={r.rating} />
                       </td>
-                      <td className="px-4 py-3 text-white font-medium max-w-[180px] truncate">
+                      <td className="px-4 py-3 text-gray-900 font-medium max-w-[180px] truncate">
                         {r.title || <span className="text-gray-600">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-400 max-w-[240px] truncate">
+                      <td className="px-4 py-3 text-gray-500 max-w-[240px] truncate">
                         {r.body || <span className="text-gray-600">—</span>}
                       </td>
                       <td className="px-4 py-3">
@@ -306,7 +290,7 @@ export default function AdminReviewsPage() {
                           <span className="text-xs text-gray-600">No</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-400 whitespace-nowrap">
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                         {formatDate(r.created_at)}
                       </td>
                     </tr>
@@ -320,7 +304,7 @@ export default function AdminReviewsPage() {
           {totalPages > 1 && (
             <div
               className="flex items-center justify-between px-4 py-3"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+              style={{ borderTop: "1px solid #e5e7eb" }}
             >
               <p className="text-xs text-gray-500">
                 Page {page} of {totalPages} &middot; {totalReviews.toLocaleString()} total reviews
@@ -329,7 +313,7 @@ export default function AdminReviewsPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
                   Prev
@@ -337,7 +321,7 @@ export default function AdminReviewsPage() {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   Next
                   <ChevronRight className="h-3.5 w-3.5" />

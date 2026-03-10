@@ -38,10 +38,9 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
       />
       <div
         className={cn(
-          "relative w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200",
+          "relative w-full max-w-lg rounded-2xl border border-gray-200 bg-gray-50 shadow-xl animate-in fade-in-0 zoom-in-95 duration-200",
           className
         )}
-        style={{ background: "hsl(0 0% 9%)" }}
       >
         {children}
       </div>
@@ -57,12 +56,12 @@ export function DialogHeader({
   onClose?: () => void
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-      <h2 className="text-lg font-semibold text-white">{children}</h2>
+    <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+      <h2 className="text-lg font-semibold text-gray-900">{children}</h2>
       {onClose && (
         <button
           onClick={onClose}
-          className="rounded-lg p-1.5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -81,7 +80,7 @@ export function DialogBody({ children, className }: { children: ReactNode; class
 
 export function DialogFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex items-center justify-end gap-3 border-t border-white/10 px-6 py-4", className)}>
+    <div className={cn("flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4", className)}>
       {children}
     </div>
   )
@@ -123,7 +122,7 @@ export function ConfirmDialog({
         <button
           onClick={onClose}
           disabled={loading}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+          className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
         >
           {cancelLabel}
         </button>

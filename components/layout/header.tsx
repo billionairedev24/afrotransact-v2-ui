@@ -33,18 +33,18 @@ import { useCartStore } from "@/stores/cart-store"
 import { searchSuggest, type SearchSuggestion } from "@/lib/api"
 
 const navLinks = [
-  { name: "Fresh Produce",  href: "/category/produce",    icon: Leaf,    accent: "#4ade80" },
-  { name: "Spices & Herbs", href: "/category/spices",     icon: Flame,   accent: "#fb923c" },
-  { name: "Meats & Seafood",href: "/category/meats",      icon: Beef,    accent: "#f87171" },
-  { name: "Fashion",        href: "/category/fashion",    icon: Shirt,   accent: "#c084fc" },
-  { name: "Pantry & Dry",   href: "/category/pantry",     icon: Package, accent: "#fbbf24" },
-  { name: "Beverages",      href: "/category/beverages",  icon: Wine,    accent: "#67e8f9" },
-  { name: "Deals",          href: "/deals",               icon: Tag,     accent: "#facc15" },
+  { name: "Fresh Produce",  href: "/category/produce",    icon: Leaf,    accent: "#16a34a" },
+  { name: "Spices & Herbs", href: "/category/spices",     icon: Flame,   accent: "#ea580c" },
+  { name: "Meats & Seafood",href: "/category/meats",      icon: Beef,    accent: "#dc2626" },
+  { name: "Fashion",        href: "/category/fashion",    icon: Shirt,   accent: "#9333ea" },
+  { name: "Pantry & Dry",   href: "/category/pantry",     icon: Package, accent: "#ca8a04" },
+  { name: "Beverages",      href: "/category/beverages",  icon: Wine,    accent: "#0891b2" },
+  { name: "Deals",          href: "/deals",               icon: Tag,     accent: "#ca8a04" },
 ]
 
 const drawerCategories = [
   ...navLinks,
-  { name: "Home & Living", href: "/category/home", icon: Home, accent: "#a78bfa" },
+  { name: "Home & Living", href: "/category/home", icon: Home, accent: "#7c3aed" },
 ]
 
 function getGreeting(): string {
@@ -132,10 +132,10 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50" style={{ background: "hsl(0 0% 8%)" }}>
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
 
         {/* ── Row 1: Logo · Location · Search · Account · Cart ── */}
-        <div style={{ borderBottom: "1px solid hsl(0 0% 14%)" }}>
+        <div className="border-b border-gray-100">
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex h-[58px] items-center gap-2 sm:gap-3">
 
@@ -143,19 +143,19 @@ export function Header() {
               <Link href="/" className="flex items-center gap-1.5 shrink-0 mr-1" aria-label="AfroTransact home">
                 <Image src="/logo.png" alt="" width={28} height={28} className="rounded-md" />
                 <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-primary leading-none">Afro</span>
-                <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-white leading-none">Transact</span>
+                <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-gray-900 leading-none">Transact</span>
               </Link>
 
               {/* Location — large desktop only */}
               <button
-                className="hidden lg:flex flex-col items-start shrink-0 px-2 py-1 rounded hover:bg-white/5 transition-colors"
+                className="hidden lg:flex flex-col items-start shrink-0 px-2 py-1 rounded hover:bg-gray-50 transition-colors"
                 aria-label="Change delivery location"
               >
-                <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
                   <MapPin className="h-2.5 w-2.5" />
                   Deliver to
                 </span>
-                <span className="text-[13px] font-semibold text-white flex items-center gap-0.5 leading-tight">
+                <span className="text-[13px] font-semibold text-gray-900 flex items-center gap-0.5 leading-tight">
                   {locationDisplay}
                   <ChevronDown className="h-3 w-3 text-gray-400" />
                 </span>
@@ -165,7 +165,7 @@ export function Header() {
               <div className="hidden md:flex flex-1 relative" ref={searchRef}>
                 <form
                   onSubmit={(e) => { handleSearch(e); setShowSuggestions(false) }}
-                  className="flex flex-1 items-stretch h-[40px] rounded-lg overflow-hidden ring-2 ring-transparent focus-within:ring-primary/60 transition-all"
+                  className="flex flex-1 items-stretch h-[40px] rounded-lg overflow-hidden ring-2 ring-transparent focus-within:ring-primary/60 border border-gray-300 transition-all"
                 >
                   <input
                     ref={inputRef}
@@ -182,19 +182,16 @@ export function Header() {
                     className="flex items-center justify-center w-11 bg-primary hover:bg-primary/90 transition-colors shrink-0"
                     aria-label="Search"
                   >
-                    <Search className="h-4 w-4 text-[#0f0f10]" strokeWidth={2.5} />
+                    <Search className="h-4 w-4 text-black" strokeWidth={2.5} />
                   </button>
                 </form>
 
                 {showSuggestions && suggestions.length > 0 && (
-                  <div
-                    className="absolute left-0 right-0 top-full mt-1 rounded-xl border border-white/10 shadow-2xl shadow-black/40 z-[60] py-1 overflow-hidden max-h-[360px] overflow-y-auto"
-                    style={{ background: "hsl(0 0% 11%)" }}
-                  >
+                  <div className="absolute left-0 right-0 top-full mt-1 rounded-xl border border-gray-200 shadow-xl bg-white z-[60] py-1 overflow-hidden max-h-[360px] overflow-y-auto">
                     {suggestions.map((item, idx) => (
                       <button
                         key={`${item.product_id}-${idx}`}
-                        className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-white/5 transition-colors"
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
                         onClick={() => {
                           setShowSuggestions(false)
                           setQuery(item.text)
@@ -202,15 +199,15 @@ export function Header() {
                         }}
                       >
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" className="h-10 w-10 rounded-md object-cover shrink-0 bg-white/5" />
+                          <img src={item.image_url} alt="" className="h-10 w-10 rounded-md object-cover shrink-0 bg-gray-100" />
                         ) : (
-                          <div className="h-10 w-10 rounded-md bg-white/5 flex items-center justify-center shrink-0">
-                            <Search className="h-4 w-4 text-gray-600" />
+                          <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
+                            <Search className="h-4 w-4 text-gray-400" />
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm text-white truncate">{item.text}</p>
-                          <p className="text-xs text-gray-400 truncate">
+                          <p className="text-sm text-gray-900 truncate">{item.text}</p>
+                          <p className="text-xs text-gray-500 truncate">
                             {item.category && <span>{item.category}</span>}
                             {item.price > 0 && <span className="ml-2 text-primary font-medium">${item.price.toFixed(2)}</span>}
                           </p>
@@ -218,7 +215,7 @@ export function Header() {
                       </button>
                     ))}
                     <button
-                      className="w-full px-4 py-2 text-xs text-primary font-medium text-center hover:bg-white/5 transition-colors border-t border-white/10"
+                      className="w-full px-4 py-2 text-xs text-primary font-medium text-center hover:bg-gray-50 transition-colors border-t border-gray-100"
                       onClick={() => {
                         setShowSuggestions(false)
                         router.push(`/search?q=${encodeURIComponent(query)}`)
@@ -235,13 +232,13 @@ export function Header() {
 
               {/* ── Auth area ── */}
               {isAuthenticated ? (
-                <div className="relative hidden md:block" ref={userMenuRef}>
+                <div className="relative" ref={userMenuRef}>
                   <button
                     onClick={() => setUserMenuOpen((p) => !p)}
-                    className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white/5 transition-colors shrink-0"
+                    className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors shrink-0"
                     aria-label="User menu"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-[#0f0f10]">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-black">
                       {getInitials(userName)}
                     </div>
                     <ChevronDown className="h-3 w-3 text-gray-400 hidden sm:block" />
@@ -249,31 +246,28 @@ export function Header() {
 
                   {/* Dropdown */}
                   {userMenuOpen && (
-                    <div
-                      className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-white/10 shadow-2xl shadow-black/40 z-[60] py-2 overflow-hidden"
-                      style={{ background: "hsl(0 0% 11%)" }}
-                    >
+                    <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-gray-200 shadow-xl bg-white z-[60] py-2 overflow-hidden">
                       {/* User info */}
-                      <div className="px-4 py-3 border-b border-white/10">
-                        <p className="text-sm font-semibold text-white truncate">{userName ?? "User"}</p>
-                        <p className="text-xs text-gray-400 truncate">{userEmail}</p>
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{userName ?? "User"}</p>
+                        <p className="text-xs text-gray-500 truncate">{userEmail}</p>
                       </div>
 
                       <div className="py-1">
                         <Link
                           href="/account"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
                         >
-                          <User className="h-4 w-4 text-gray-500" />
+                          <User className="h-4 w-4 text-gray-400" />
                           My Account
                         </Link>
                         <Link
                           href="/orders"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
                         >
-                          <Package className="h-4 w-4 text-gray-500" />
+                          <Package className="h-4 w-4 text-gray-400" />
                           Orders
                         </Link>
 
@@ -281,9 +275,9 @@ export function Header() {
                           <Link
                             href="/dashboard"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
                           >
-                            <LayoutDashboard className="h-4 w-4 text-gray-500" />
+                            <LayoutDashboard className="h-4 w-4 text-gray-400" />
                             Seller Dashboard
                           </Link>
                         )}
@@ -292,7 +286,7 @@ export function Header() {
                           <Link
                             href="/admin"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-amber-300 hover:text-amber-200 hover:bg-white/5 transition-colors"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-yellow-700 hover:text-yellow-800 hover:bg-yellow-50 transition-colors"
                           >
                             <ShieldCheck className="h-4 w-4" />
                             Admin Panel
@@ -302,17 +296,17 @@ export function Header() {
                         <Link
                           href="/account/settings"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
                         >
-                          <Settings className="h-4 w-4 text-gray-500" />
+                          <Settings className="h-4 w-4 text-gray-400" />
                           Settings
                         </Link>
                       </div>
 
-                      <div className="border-t border-white/10 py-1">
+                      <div className="border-t border-gray-100 py-1">
                         <button
                           onClick={() => { setUserMenuOpen(false); window.location.href = "/api/auth/signout" }}
-                          className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-white/5 transition-colors"
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
                         >
                           <LogOut className="h-4 w-4" />
                           Sign Out
@@ -323,13 +317,13 @@ export function Header() {
                 </div>
               ) : (
                 <div className="hidden md:flex flex-col items-start px-2 py-1 shrink-0">
-                  <span className="text-[10px] text-gray-400">{getGreeting()}</span>
+                  <span className="text-[10px] text-gray-500">{getGreeting()}</span>
                   <span className="text-[13px] leading-tight">
                     <Link href="/auth/login" className="font-semibold text-primary hover:text-primary/80 transition-colors">
                       Sign in
                     </Link>
-                    <span className="text-gray-500 mx-1">or</span>
-                    <Link href="/auth/register" className="font-semibold text-white hover:text-primary transition-colors">
+                    <span className="text-gray-400 mx-1">or</span>
+                    <Link href="/auth/register" className="font-semibold text-gray-900 hover:text-primary transition-colors">
                       Register
                     </Link>
                   </span>
@@ -339,22 +333,22 @@ export function Header() {
               {/* Cart */}
               <Link
                 href="/cart"
-                className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/5 transition-colors shrink-0"
+                className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-50 transition-colors shrink-0"
               >
                 <div className="relative">
-                  <ShoppingCart className="h-6 w-6 text-white" strokeWidth={1.75} />
+                  <ShoppingCart className="h-6 w-6 text-gray-700" strokeWidth={1.75} />
                   {cartCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-[#0f0f10] px-0.5">
+                    <span className="absolute -top-1.5 -right-1.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-black px-0.5">
                       {cartCount}
                     </span>
                   )}
                 </div>
-                <span className="hidden sm:block text-[13px] font-semibold text-white">Cart</span>
+                <span className="hidden sm:block text-[13px] font-semibold text-gray-700">Cart</span>
               </Link>
 
               {/* Hamburger — mobile only */}
               <button
-                className="md:hidden flex items-center justify-center w-9 h-9 rounded text-gray-300 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+                className="md:hidden flex items-center justify-center w-9 h-9 rounded text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors shrink-0"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               >
@@ -365,10 +359,7 @@ export function Header() {
         </div>
 
         {/* ── Row 2: Slim category strip — desktop only ── */}
-        <nav
-          className="hidden md:block"
-          style={{ background: "hsl(0 0% 11%)", borderBottom: "1px solid hsl(0 0% 16%)" }}
-        >
+        <nav className="hidden md:block bg-gray-50 border-b border-gray-200">
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex items-center h-[34px] gap-0">
               {navLinks.map((link, i) => {
@@ -381,19 +372,19 @@ export function Header() {
                   <Link
                     key={link.name}
                     href={link.href}
-                    className={`group items-center gap-1.5 px-3 h-full text-[13px] text-gray-300 whitespace-nowrap hover:text-white hover:bg-white/10 transition-colors ${hideClass}`}
+                    className={`group items-center gap-1.5 px-3 h-full text-[13px] text-gray-600 whitespace-nowrap hover:text-gray-900 hover:bg-gray-100 transition-colors ${hideClass}`}
                   >
-                    <Icon className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 shrink-0" style={{ color: link.accent }} />
+                    <Icon className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 shrink-0" style={{ color: link.accent }} />
                     {link.name}
                   </Link>
                 )
               })}
 
-              <span className="w-px h-4 bg-white/20 mx-1 shrink-0" />
+              <span className="w-px h-4 bg-gray-300 mx-1 shrink-0" />
 
               <Link
                 href="/stores"
-                className="flex items-center gap-1.5 px-3 h-full text-[13px] text-amber-300 font-medium whitespace-nowrap hover:text-amber-200 hover:bg-white/10 transition-colors"
+                className="flex items-center gap-1.5 px-3 h-full text-[13px] text-yellow-700 font-medium whitespace-nowrap hover:text-yellow-800 hover:bg-yellow-50 transition-colors"
               >
                 <Store className="h-3.5 w-3.5" />
                 Stores Near Me
@@ -403,7 +394,7 @@ export function Header() {
 
               <Link
                 href="/sell"
-                className="flex items-center gap-1 px-3 h-full text-[13px] text-emerald-400 font-medium whitespace-nowrap hover:text-emerald-300 hover:bg-white/10 transition-colors"
+                className="flex items-center gap-1 px-3 h-full text-[13px] text-emerald-600 font-medium whitespace-nowrap hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
               >
                 Start Selling
                 <ArrowRight className="h-3 w-3" />
@@ -416,37 +407,35 @@ export function Header() {
       {/* ── Mobile drawer ── */}
       {mobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
       <div
         className={cn(
-          "md:hidden fixed left-0 right-0 top-[58px] z-50 border-b border-white/10 transition-transform duration-300 ease-in-out",
+          "md:hidden fixed left-0 right-0 top-[58px] z-50 border-b border-gray-200 bg-white transition-transform duration-300 ease-in-out",
           mobileMenuOpen ? "translate-y-0" : "-translate-y-[110%]"
         )}
-        style={{ background: "hsl(0 0% 9%)" }}
       >
         <div className="px-3 py-3 space-y-3">
           {/* Search */}
-          <form onSubmit={handleSearch} className="flex h-11 rounded-xl overflow-hidden border border-white/15">
+          <form onSubmit={handleSearch} className="flex h-11 rounded-xl overflow-hidden border border-gray-300">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search products, stores…"
-              className="flex-1 px-4 text-sm text-white placeholder:text-gray-500 outline-none"
-              style={{ background: "rgba(255,255,255,0.06)" }}
+              className="flex-1 px-4 text-sm text-gray-900 placeholder:text-gray-400 bg-white outline-none"
             />
             <button type="submit" className="flex items-center justify-center w-11 bg-primary shrink-0" aria-label="Search">
-              <Search className="h-4 w-4 text-[#0f0f10]" />
+              <Search className="h-4 w-4 text-black" />
             </button>
           </form>
 
           {/* Location */}
-          <div className="flex items-center gap-2 text-sm text-gray-400 rounded-lg px-3 py-2 border border-white/10">
+          <div className="flex items-center gap-2 text-sm text-gray-500 rounded-lg px-3 py-2 border border-gray-200 bg-gray-50">
             <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span>Delivering to <span className="font-semibold text-white">{locationDisplay}</span></span>
+            <span>Delivering to <span className="font-semibold text-gray-900">{locationDisplay}</span></span>
             <button className="ml-auto text-primary text-xs font-medium">Change</button>
           </div>
 
@@ -459,8 +448,7 @@ export function Header() {
                   key={cat.name}
                   href={cat.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-300 hover:text-white transition-colors"
-                  style={{ background: "rgba(255,255,255,0.05)" }}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <Icon className="h-4 w-4 shrink-0" style={{ color: cat.accent }} />
                   {cat.name}
@@ -470,23 +458,22 @@ export function Header() {
           </div>
 
           {/* Auth area at bottom */}
-          <div className="pt-1 border-t border-white/10">
+          <div className="pt-1 border-t border-gray-200">
             {isAuthenticated ? (
               <div className="space-y-1">
                 <div className="flex items-center gap-3 px-3 py-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-[#0f0f10]">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-black">
                     {getInitials(userName)}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{userName}</p>
-                    <p className="text-xs text-gray-400 truncate">{userEmail}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
+                    <p className="text-xs text-gray-500 truncate">{userEmail}</p>
                   </div>
                 </div>
                 <Link
                   href="/account"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-300 hover:text-white transition-colors"
-                  style={{ background: "rgba(255,255,255,0.05)" }}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <User className="h-4 w-4 text-gray-400" />
                   My Account
@@ -494,8 +481,7 @@ export function Header() {
                 <Link
                   href="/orders"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-300 hover:text-white transition-colors"
-                  style={{ background: "rgba(255,255,255,0.05)" }}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <Package className="h-4 w-4 text-gray-400" />
                   Orders
@@ -504,8 +490,7 @@ export function Header() {
                   <Link
                     href="/dashboard"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-300 hover:text-white transition-colors"
-                    style={{ background: "rgba(255,255,255,0.05)" }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
                     <LayoutDashboard className="h-4 w-4 text-gray-400" />
                     Seller Dashboard
@@ -515,8 +500,7 @@ export function Header() {
                   <Link
                     href="/admin"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-amber-300 hover:text-amber-200 transition-colors"
-                    style={{ background: "rgba(255,255,255,0.05)" }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-yellow-700 hover:text-yellow-800 bg-yellow-50 hover:bg-yellow-100 transition-colors"
                   >
                     <ShieldCheck className="h-4 w-4" />
                     Admin Panel
@@ -524,21 +508,17 @@ export function Header() {
                 )}
                 <button
                   onClick={() => { setMobileMenuOpen(false); window.location.href = "/api/auth/signout" }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-red-400 hover:text-red-300 transition-colors"
-                  style={{ background: "rgba(255,255,255,0.05)" }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
                   Sign Out
                 </button>
               </div>
             ) : (
-              <div
-                className="flex items-center gap-3 rounded-lg px-3 py-3 text-[13px]"
-                style={{ background: "rgba(255,255,255,0.05)" }}
-              >
+              <div className="flex items-center gap-3 rounded-lg px-3 py-3 text-[13px] bg-gray-50">
                 <User className="h-5 w-5 text-primary shrink-0" />
                 <div>
-                  <span className="text-[10px] text-gray-400 block">{getGreeting()}</span>
+                  <span className="text-[10px] text-gray-500 block">{getGreeting()}</span>
                   <span className="leading-tight">
                     <Link
                       href="/auth/login"
@@ -547,11 +527,11 @@ export function Header() {
                     >
                       Sign in
                     </Link>
-                    <span className="text-gray-500 mx-1">or</span>
+                    <span className="text-gray-400 mx-1">or</span>
                     <Link
                       href="/auth/register"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="font-semibold text-white hover:text-primary transition-colors"
+                      className="font-semibold text-gray-900 hover:text-primary transition-colors"
                     >
                       Register
                     </Link>

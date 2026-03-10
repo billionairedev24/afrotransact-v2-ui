@@ -179,7 +179,7 @@ export default function SubscriptionPage() {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-        <p className="text-gray-400">Loading subscription...</p>
+        <p className="text-gray-500">Loading subscription...</p>
       </div>
     )
   }
@@ -191,7 +191,7 @@ export default function SubscriptionPage() {
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <span className="font-medium">{error}</span>
         </div>
-        <p className="text-sm text-gray-400 mt-2">Please try again later or contact support.</p>
+        <p className="text-sm text-gray-500 mt-2">Please try again later or contact support.</p>
         <button onClick={() => { setLoading(true); loadAll() }} className="mt-3 inline-flex items-center gap-2 text-sm text-primary hover:underline">
           <RefreshCw className="h-3.5 w-3.5" /> Retry
         </button>
@@ -206,14 +206,14 @@ export default function SubscriptionPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Subscription & Billing</h1>
-        <p className="text-gray-400 text-sm mt-1">Manage your AfroTransact seller subscription</p>
+        <h1 className="text-2xl font-bold text-gray-900">Subscription & Billing</h1>
+        <p className="text-gray-500 text-sm mt-1">Manage your AfroTransact seller subscription</p>
       </div>
 
       {error && (
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 flex items-center gap-3">
           <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
-          <span className="text-sm text-amber-200">{error}</span>
+          <span className="text-sm text-amber-600">{error}</span>
         </div>
       )}
 
@@ -222,8 +222,8 @@ export default function SubscriptionPage() {
         <>
           <div className="rounded-2xl border border-primary/30 bg-primary/10 p-8 text-center">
             <Sparkles className="h-12 w-12 text-primary mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-white mb-2">Start Your Free Trial</h2>
-            <p className="text-gray-400 text-sm max-w-md mx-auto mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Start Your Free Trial</h2>
+            <p className="text-gray-500 text-sm max-w-md mx-auto mb-6">
               Get full seller access with a free trial. No credit card required.
             </p>
             <button
@@ -236,7 +236,7 @@ export default function SubscriptionPage() {
           </div>
           {plans.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Store className="h-5 w-5 text-primary" /> Available Plans
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -263,23 +263,23 @@ export default function SubscriptionPage() {
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-bold ${statusCfg.color}`}>{statusCfg.label}</span>
                     <span className="text-xs text-gray-500">·</span>
-                    <span className="text-xs text-gray-400">{subscription.plan.name} Plan</span>
+                    <span className="text-xs text-gray-500">{subscription.plan.name} Plan</span>
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     {subscription.statusMessage ?? `${subscription.plan.name} plan`}
                   </p>
                 </div>
               </div>
               {(subscription.status === "trial" || subscription.status === "trial_extended") && trialDays > 0 && (
-                <div className="rounded-lg bg-white/5 px-3 py-1.5 border border-white/10">
+                <div className="rounded-lg bg-gray-50 px-3 py-1.5 border border-gray-200">
                   <span className="text-sky-400 font-semibold">{trialDays} days</span>
-                  <span className="text-gray-400 text-xs ml-1">left in trial</span>
+                  <span className="text-gray-500 text-xs ml-1">left in trial</span>
                 </div>
               )}
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setChangePlanOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 >
                   <TrendingUp className="h-3.5 w-3.5" /> Change Plan
                 </button>
@@ -290,33 +290,33 @@ export default function SubscriptionPage() {
           {/* Current plan + Billing timeline */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                 <Package className="h-4 w-4 text-primary" /> Current Plan — {subscription.plan.name}
               </h2>
               <div className="space-y-2">
                 {(subscription.plan.features ?? []).map((f) => (
                   <div key={f} className="flex items-center gap-2 text-sm">
                     <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                    <span className="text-gray-300">{f}</span>
+                    <span className="text-gray-600">{f}</span>
                   </div>
                 ))}
                 <div className="flex items-center gap-2 text-sm">
                   <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                  <span className="text-gray-300">Up to {subscription.plan.maxProducts} products</span>
+                  <span className="text-gray-600">Up to {subscription.plan.maxProducts} products</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                  <span className="text-gray-300">{subscription.plan.maxStores} store{subscription.plan.maxStores !== 1 ? "s" : ""}</span>
+                  <span className="text-gray-600">{subscription.plan.maxStores} store{subscription.plan.maxStores !== 1 ? "s" : ""}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                  <span className="text-gray-300">{commissionLabel(subscription.plan)} commission</span>
+                  <span className="text-gray-600">{commissionLabel(subscription.plan)} commission</span>
                 </div>
               </div>
               <div className="pt-3 border-t border-border">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Monthly price</span>
-                  <span className="font-bold text-white">
+                  <span className="text-gray-500">Monthly price</span>
+                  <span className="font-bold text-gray-900">
                     {subscription.plan.priceDisplay || formatPrice(subscription.plan.priceCentsPerMonth)}
                   </span>
                 </div>
@@ -324,16 +324,16 @@ export default function SubscriptionPage() {
             </div>
 
             <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-primary" /> Billing Timeline
               </h2>
               <div className="space-y-3 text-sm">
                 {billingTimeline.length > 0 ? (
                   billingTimeline.map((item, i) => (
                     <div key={i} className="flex justify-between items-start gap-4">
-                      <span className="text-gray-400">{item.label}</span>
+                      <span className="text-gray-500">{item.label}</span>
                       <div className="text-right">
-                        <span className="text-white block">{formatDate(item.date)}</span>
+                        <span className="text-gray-900 block">{formatDate(item.date)}</span>
                         {item.value && <span className="text-sky-400 font-semibold text-xs">{item.value}</span>}
                       </div>
                     </div>
@@ -352,8 +352,8 @@ export default function SubscriptionPage() {
 
           {/* Billing history */}
           <div className="rounded-2xl border border-border bg-card p-5">
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2 mb-4">
-              <CreditCard className="h-4 w-4 text-primary" /> Billing History
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                <CreditCard className="h-4 w-4 text-primary" /> Billing History
             </h2>
             <div className="space-y-2">
               {subscription.trialStartedAt && (
@@ -363,7 +363,7 @@ export default function SubscriptionPage() {
                       <Check className="h-3.5 w-3.5 text-emerald-400" />
                     </div>
                     <div>
-                      <p className="text-white font-medium">Trial started</p>
+                      <p className="text-gray-900 font-medium">Trial started</p>
                       <p className="text-xs text-gray-500">{formatDate(subscription.trialStartedAt)}</p>
                     </div>
                   </div>
@@ -377,7 +377,7 @@ export default function SubscriptionPage() {
                       <Clock className="h-3.5 w-3.5 text-amber-400" />
                     </div>
                     <div>
-                      <p className="text-white font-medium">Cancellation requested</p>
+                      <p className="text-gray-900 font-medium">Cancellation requested</p>
                       <p className="text-xs text-gray-500">Effective at period end</p>
                     </div>
                   </div>
@@ -397,12 +397,12 @@ export default function SubscriptionPage() {
             <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
               <h2 className="text-sm font-semibold text-red-400 mb-3">Danger Zone</h2>
               <div className="flex items-center justify-between gap-4 flex-wrap">
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-500">
                   Cancelling will keep your store active until the end of the current period.
                 </p>
                 <button
                   onClick={() => setConfirmCancel(true)}
-                  className="text-sm font-medium text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg px-4 py-2 hover:bg-red-500/10 transition-colors"
+                  className="text-sm font-medium text-red-600 hover:text-red-700 border border-red-500/30 rounded-lg px-4 py-2 hover:bg-red-500/10 transition-colors"
                 >
                   Cancel Subscription
                 </button>
@@ -443,12 +443,12 @@ export default function SubscriptionPage() {
 function PaymentMethodCard({ seller, paymentInfo }: { seller: SellerInfo | null; paymentInfo: PaymentInfo | null }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="text-sm font-semibold text-white flex items-center gap-2 mb-4">
+      <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
         <ShieldCheck className="h-4 w-4 text-primary" /> Payment & Payout Setup
       </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-        <div className="rounded-xl border border-white/10 p-4" style={{ background: "hsl(0 0% 9%)" }}>
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
           <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Stripe Connect (Payouts)</p>
           {paymentInfo?.stripeAccountId || seller?.stripeAccountId ? (
             <div className="flex items-center gap-2">
@@ -456,22 +456,22 @@ function PaymentMethodCard({ seller, paymentInfo }: { seller: SellerInfo | null;
               <span className="text-sm text-emerald-400 font-medium">Connected</span>
             </div>
           ) : (
-            <span className="text-sm text-gray-400">Not connected</span>
+            <span className="text-sm text-gray-500">Not connected</span>
           )}
           {(paymentInfo?.chargesEnabled || seller?.chargesEnabled) && <p className="text-xs text-gray-500 mt-1">Charges enabled</p>}
           {(paymentInfo?.payoutsEnabled || seller?.payoutsEnabled) && <p className="text-xs text-gray-500">Payouts enabled</p>}
         </div>
 
-        <div className="rounded-xl border border-white/10 p-4" style={{ background: "hsl(0 0% 9%)" }}>
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
           <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Payment Method (Billing)</p>
           {paymentInfo?.hasPaymentMethod ? (
             <div className="flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-primary" />
-              <span className="text-sm text-white font-medium">Card on file</span>
+              <span className="text-sm text-gray-900 font-medium">Card on file</span>
             </div>
           ) : (
             <div>
-              <span className="text-sm text-gray-400">No card on file</span>
+              <span className="text-sm text-gray-500">No card on file</span>
               <p className="text-xs text-amber-400 mt-1">Add a payment method before your trial ends</p>
             </div>
           )}
@@ -504,34 +504,34 @@ function PlanCard({
   return (
     <div
       className={`rounded-2xl border p-5 space-y-4 transition-colors ${
-        isCurrent ? "border-primary/40 bg-primary/5" : "border-border bg-card hover:border-white/20"
+        isCurrent ? "border-primary/40 bg-primary/5" : "border-border bg-card hover:border-gray-300"
       }`}
     >
       <div className="flex items-start justify-between">
-        <h3 className="text-lg font-bold text-white">{plan.name}</h3>
+        <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
         {isCurrent && (
           <span className="rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">Current</span>
         )}
       </div>
-      <div className="text-2xl font-bold text-white">
+      <div className="text-2xl font-bold text-gray-900">
         {plan.priceDisplay || formatPrice(plan.priceCentsPerMonth)}
-        <span className="text-sm font-normal text-gray-400">/month</span>
+        <span className="text-sm font-normal text-gray-500">/month</span>
       </div>
       <ul className="space-y-2 text-sm">
-        <li className="flex items-center gap-2 text-gray-300">
+        <li className="flex items-center gap-2 text-gray-600">
           <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
           Up to {plan.maxProducts} products
         </li>
-        <li className="flex items-center gap-2 text-gray-300">
+        <li className="flex items-center gap-2 text-gray-600">
           <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
           {plan.maxStores} store{plan.maxStores !== 1 ? "s" : ""}
         </li>
-        <li className="flex items-center gap-2 text-gray-300">
+        <li className="flex items-center gap-2 text-gray-600">
           <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
           {commissionLabel(plan)} commission
         </li>
         {plan.features?.map((f) => (
-          <li key={f} className="flex items-center gap-2 text-gray-300">
+          <li key={f} className="flex items-center gap-2 text-gray-600">
             <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
             {f}
           </li>
@@ -573,7 +573,7 @@ function ChangePlanDialog({
     <Dialog open={open} onClose={onClose} className="max-w-3xl">
       <DialogHeader onClose={onClose}>Change Plan</DialogHeader>
       <DialogBody>
-        <p className="text-sm text-gray-400 mb-4">
+        <p className="text-sm text-gray-500 mb-4">
           Select a new plan. The change will take effect immediately. Your billing will be adjusted accordingly.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -591,7 +591,7 @@ function ChangePlanDialog({
       <DialogFooter>
         <button
           onClick={onClose}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+          className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
         >
           Cancel
         </button>

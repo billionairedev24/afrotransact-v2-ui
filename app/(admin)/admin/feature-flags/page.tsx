@@ -14,7 +14,7 @@ import {
 } from "@/lib/api"
 
 const INPUT_CLASS =
-  "rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-primary/60 transition-colors"
+  "rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
 
 function humanizeKey(key: string): string {
   return key
@@ -148,15 +148,15 @@ export default function FeatureFlagsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Feature Flags</h1>
-        <p className="text-gray-400 text-sm mt-1">
+        <h1 className="text-2xl font-bold text-gray-900">Feature Flags</h1>
+        <p className="text-gray-500 text-sm mt-1">
           Toggle features on/off per region. Propagated via Config Service in real time.
         </p>
       </div>
 
       {/* Region selector */}
       <div className="flex items-center gap-4">
-        <label className="text-sm text-gray-400 shrink-0">Region</label>
+        <label className="text-sm text-gray-500 shrink-0">Region</label>
         <select
           value={selectedRegionId}
           onChange={(e) => setSelectedRegionId(e.target.value)}
@@ -175,7 +175,7 @@ export default function FeatureFlagsPage() {
       </div>
 
       {regionsError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600">
           {regionsError}
         </div>
       )}
@@ -187,25 +187,24 @@ export default function FeatureFlagsPage() {
       {selectedRegionId && (
         <>
           {flagsError && (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600">
               {flagsError}
             </div>
           )}
 
           {flagsLoading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
             </div>
           ) : (
             <>
               <div
-                className="rounded-2xl border border-white/10 divide-y divide-white/5 overflow-hidden"
-                style={{ background: "hsl(0 0% 11%)" }}
+                className="rounded-2xl border border-gray-200 divide-y divide-gray-100 overflow-hidden bg-white"
               >
                 {flags.map((flag) => (
                   <div key={flag.id || flag.key} className="flex items-center gap-4 px-5 py-4">
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium text-sm">{humanizeKey(flag.key)}</p>
+                      <p className="text-gray-900 font-medium text-sm">{humanizeKey(flag.key)}</p>
                       <p className="text-gray-500 text-xs mt-0.5 font-mono">{flag.key}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -219,7 +218,7 @@ export default function FeatureFlagsPage() {
                       <button
                         onClick={() => handleToggle(flag)}
                         disabled={saving === flag.id}
-                        className="text-gray-400 hover:text-white transition-colors disabled:opacity-40"
+                        className="text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-40"
                         aria-label={`Toggle ${flag.key}`}
                       >
                         {saving === flag.id ? (
@@ -242,15 +241,14 @@ export default function FeatureFlagsPage() {
 
               {/* Add flag form */}
               <div
-                className="rounded-2xl border border-white/10 overflow-hidden"
-                style={{ background: "hsl(0 0% 11%)" }}
+                className="rounded-2xl border border-gray-200 overflow-hidden bg-white"
               >
-                <div className="px-5 py-4 border-b border-white/5">
-                  <p className="text-white font-medium text-sm">Add Flag</p>
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <p className="text-gray-900 font-medium text-sm">Add Flag</p>
                 </div>
                 <form onSubmit={handleAddFlag} className="p-5 flex items-end gap-3">
                   <div className="flex-1">
-                    <label className="block text-xs text-gray-400 mb-1.5">Feature Key</label>
+                    <label className="block text-xs text-gray-500 mb-1.5">Feature Key</label>
                     <input
                       type="text"
                       value={newFlagKey}
@@ -262,7 +260,7 @@ export default function FeatureFlagsPage() {
                   <button
                     type="submit"
                     disabled={adding || !newFlagKey.trim()}
-                    className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-900 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                   >
                     {adding ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   AlertCircle,
   Loader2,
-  Ticket,
 } from "lucide-react"
 import {
   Elements,
@@ -32,7 +31,6 @@ import {
   getAddresses,
   createAddress,
   getUserProfile,
-  validateCoupon,
   ApiError,
   type CheckoutResponse,
   type Region,
@@ -44,17 +42,17 @@ const stripePromise = loadStripe(
 )
 
 const STRIPE_APPEARANCE = {
-  theme: "night" as const,
+  theme: "stripe" as const,
   variables: {
-    colorPrimary: "#d4a853",
-    colorBackground: "#1c1c1e",
-    colorText: "#ffffff",
-    colorDanger: "#f87171",
+    colorPrimary: "#EAB308",
+    colorBackground: "#FFFFFF",
+    colorText: "#171717",
+    colorDanger: "#DC2626",
     fontFamily: "Inter, system-ui, sans-serif",
     borderRadius: "10px",
   },
   rules: {
-    ".Input": { border: "1px solid rgba(255,255,255,0.12)", padding: "10px 14px" },
+    ".Input": { border: "1px solid #E5E5E5", padding: "10px 14px" },
     ".Input:focus": { border: "1px solid rgba(212,168,83,0.6)", boxShadow: "none" },
     ".Label": { color: "rgba(255,255,255,0.5)", fontSize: "12px", marginBottom: "4px" },
   },
@@ -152,12 +150,12 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
 
   const field = (label: string, key: keyof typeof form, placeholder = "") => (
     <div>
-      <label className="block text-xs text-gray-400 mb-1">{label}</label>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
       <input
         value={form[key]}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
+        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
       />
     </div>
   )
@@ -172,7 +170,7 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold text-white">Shipping Address</h2>
+      <h2 className="text-lg font-bold text-gray-900">Shipping Address</h2>
 
       {savedAddresses.length > 0 && !showNew && (
         <>
@@ -184,23 +182,23 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
                 className={`w-full rounded-xl border p-4 text-left transition-colors ${
                   selectedId === addr.id
                     ? "border-primary/60 bg-primary/10"
-                    : "border-white/10 bg-white/5 hover:border-white/20"
+                    : "border-gray-200 bg-gray-50 hover:border-gray-300"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-white">{addr.label || "Address"}</span>
+                  <span className="text-sm font-medium text-gray-900">{addr.label || "Address"}</span>
                   {addr.isDefault && (
                     <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Default</span>
                   )}
                 </div>
-                <p className="text-sm text-gray-400 mt-1">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}</p>
-                <p className="text-sm text-gray-400">{addr.city}, {addr.state} {addr.postalCode}</p>
+                <p className="text-sm text-gray-500 mt-1">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}</p>
+                <p className="text-sm text-gray-500">{addr.city}, {addr.state} {addr.postalCode}</p>
               </button>
             ))}
           </div>
 
-          <div className="rounded-xl border border-white/10 p-4 space-y-3" style={{ background: "hsl(0 0% 11%)" }}>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Shipping Contact</p>
+          <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Shipping Contact</p>
             <div className="grid grid-cols-2 gap-3">
               {field("Full name", "fullName", "Jane Doe")}
               {field("Phone", "phone", "(512) 555-0123")}
@@ -210,7 +208,7 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
           <div className="flex gap-3">
             <button
               onClick={() => setShowNew(true)}
-              className="flex-1 rounded-xl border border-white/15 py-3 text-sm font-semibold text-gray-300 hover:bg-white/5 transition-colors"
+              className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
             >
               + New Address
             </button>
@@ -240,7 +238,7 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
             {field("Phone", "phone", "(512) 555-0123")}
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Address</label>
+            <label className="block text-xs text-gray-500 mb-1">Address</label>
             <AddressAutocomplete
               value={addressQuery}
               onChange={setAddressQuery}
@@ -270,9 +268,9 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
               type="checkbox"
               checked={makeDefault}
               onChange={(e) => setMakeDefault(e.target.checked)}
-              className="h-4 w-4 rounded border-white/20 bg-white/5 text-primary accent-primary"
+              className="h-4 w-4 rounded border-gray-300 bg-gray-50 text-primary accent-primary"
             />
-            <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
+            <span className="text-sm text-gray-500 group-hover:text-gray-600 transition-colors">
               Set as my default address
             </span>
           </label>
@@ -291,106 +289,64 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
 }
 
 function ReviewStep({
-  address, onNext, onBack, items, subtotal, discount, tax, shipping, total, placing, error: placeError,
-  couponCode, couponApplied, couponError, couponValidating, onCouponChange, onApplyCoupon, onRemoveCoupon,
+  address, onNext, onBack, items, subtotal, tax, shipping, total, placing, error: placeError,
 }: {
   address: Record<string, string>
   onNext: () => void
   onBack: () => void
   items: { variantId: string; title: string; price: number; quantity: number; imageUrl?: string }[]
-  subtotal: number; discount: number; tax: number; shipping: number; total: number
+  subtotal: number; tax: number; shipping: number; total: number
   placing: boolean; error: string | null
-  couponCode: string; couponApplied: boolean; couponError: string | null; couponValidating: boolean
-  onCouponChange: (v: string) => void; onApplyCoupon: () => void; onRemoveCoupon: () => void
 }) {
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-bold text-white">Review Your Order</h2>
+      <h2 className="text-lg font-bold text-gray-900">Review Your Order</h2>
 
-      <div className="rounded-2xl border border-white/10 p-4 space-y-1" style={{ background: "hsl(0 0% 13%)" }}>
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-1">
         <div className="flex items-center gap-2 mb-2">
           <MapPin className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-white">Shipping to</span>
+          <span className="text-sm font-semibold text-gray-900">Shipping to</span>
         </div>
-        <p className="text-sm text-gray-300">{address.fullName}</p>
-        <p className="text-sm text-gray-300">{address.line1}{address.line2 ? `, ${address.line2}` : ""}</p>
-        <p className="text-sm text-gray-300">{address.city}, {address.state} {address.zip}</p>
+        <p className="text-sm text-gray-600">{address.fullName}</p>
+        <p className="text-sm text-gray-600">{address.line1}{address.line2 ? `, ${address.line2}` : ""}</p>
+        <p className="text-sm text-gray-600">{address.city}, {address.state} {address.zip}</p>
       </div>
 
-      <div className="rounded-2xl border border-white/10 p-4 space-y-2" style={{ background: "hsl(0 0% 13%)" }}>
-        <p className="text-sm font-semibold text-white mb-3">Items</p>
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
+        <p className="text-sm font-semibold text-gray-900 mb-3">Items</p>
         {items.map((item) => (
           <div key={item.variantId} className="flex justify-between text-sm">
-            <span className="text-gray-300 truncate max-w-[220px]">{item.title} x {item.quantity}</span>
-            <span className="text-white font-medium shrink-0 ml-2">{formatCents(item.price * item.quantity)}</span>
+            <span className="text-gray-600 truncate max-w-[220px]">{item.title} x {item.quantity}</span>
+            <span className="text-gray-900 font-medium shrink-0 ml-2">{formatCents(item.price * item.quantity)}</span>
           </div>
         ))}
       </div>
 
-      {/* Coupon input */}
-      <div className="rounded-2xl border border-white/10 p-4" style={{ background: "hsl(0 0% 13%)" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Ticket className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-white">Have a coupon?</span>
-        </div>
-        {couponApplied ? (
-          <div className="flex items-center justify-between rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-2.5">
-            <div>
-              <span className="text-sm font-mono font-medium text-green-400">{couponCode.toUpperCase()}</span>
-              <span className="text-sm text-green-400 ml-2">−{formatCents(discount)}</span>
-            </div>
-            <button onClick={onRemoveCoupon} className="text-xs text-gray-400 hover:text-white transition-colors">Remove</button>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <input
-              value={couponCode}
-              onChange={(e) => onCouponChange(e.target.value)}
-              placeholder="Enter coupon code"
-              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-primary/50"
-            />
-            <button
-              onClick={onApplyCoupon}
-              disabled={couponValidating || !couponCode.trim()}
-              className="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white hover:bg-white/15 disabled:opacity-40 transition-colors"
-            >
-              {couponValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
-            </button>
-          </div>
-        )}
-        {couponError && <p className="text-xs text-red-400 mt-2">{couponError}</p>}
-      </div>
-
-      <div className="rounded-2xl border border-white/10 p-4 space-y-2" style={{ background: "hsl(0 0% 13%)" }}>
-        <div className="flex justify-between text-sm text-gray-300">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
+        <div className="flex justify-between text-sm text-gray-600">
           <span>Subtotal</span><span>{formatCents(subtotal)}</span>
         </div>
-        {discount > 0 && (
-          <div className="flex justify-between text-sm text-green-400">
-            <span>Discount</span><span>−{formatCents(discount)}</span>
-          </div>
-        )}
-        <div className="flex justify-between text-sm text-gray-300">
+        <div className="flex justify-between text-sm text-gray-600">
           <span>Shipping</span><span className="text-green-400">{shipping === 0 ? "Free" : formatCents(shipping)}</span>
         </div>
-        <div className="flex justify-between text-sm text-gray-300">
+        <div className="flex justify-between text-sm text-gray-600">
           <span>Tax</span><span>{formatCents(tax)}</span>
         </div>
-        <div className="my-2 border-t border-white/10" />
-        <div className="flex justify-between text-white font-bold">
+        <div className="my-2 border-t border-gray-200" />
+        <div className="flex justify-between text-gray-900 font-bold">
           <span>Total</span><span>{formatCents(total)}</span>
         </div>
       </div>
 
       {placeError && (
         <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
-          <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-          <p className="text-sm text-red-300">{placeError}</p>
+          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+          <p className="text-sm text-red-600">{placeError}</p>
         </div>
       )}
 
       <div className="flex gap-3">
-        <button onClick={onBack} disabled={placing} className="flex-1 rounded-xl border border-white/15 py-3 text-sm font-semibold text-gray-300 hover:bg-white/5 transition-colors disabled:opacity-40">
+        <button onClick={onBack} disabled={placing} className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40">
           Back
         </button>
         <button onClick={onNext} disabled={placing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-70">
@@ -453,35 +409,35 @@ function StripePaymentForm({
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-bold text-white">Payment</h2>
+      <h2 className="text-lg font-bold text-gray-900">Payment</h2>
 
       <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
         <ShieldCheck className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-        <p className="text-xs text-gray-300 leading-relaxed">
+        <p className="text-xs text-gray-600 leading-relaxed">
           <span className="text-emerald-400 font-semibold">Card data never touches our servers.</span>{" "}
           Payment details are encrypted and sent directly to Stripe via a secure iframe.
         </p>
       </div>
 
-      <div className="rounded-2xl border border-white/10 p-5" style={{ background: "hsl(0 0% 13%)" }}>
+      <div className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="flex items-center gap-2 mb-4">
           <Lock className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs text-gray-400 font-medium">Secured by Stripe</span>
+          <span className="text-xs text-gray-500 font-medium">Secured by Stripe</span>
         </div>
         <PaymentElement options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }} />
       </div>
 
       <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 flex justify-between text-sm">
-        <span className="text-gray-300 font-medium">Total to be charged</span>
-        <span className="text-white font-bold">{formatCents(totalCents)}</span>
+        <span className="text-gray-600 font-medium">Total to be charged</span>
+        <span className="text-gray-900 font-bold">{formatCents(totalCents)}</span>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600">{error}</div>
       )}
 
       <div className="flex gap-3">
-        <button onClick={onBack} disabled={processing} className="flex-1 rounded-xl border border-white/15 py-3 text-sm font-semibold text-gray-300 hover:bg-white/5 transition-colors disabled:opacity-40">Back</button>
+        <button onClick={onBack} disabled={processing} className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40">Back</button>
         <button onClick={handlePay} disabled={processing || !stripe} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-70">
           {processing ? (
             <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-[#0f0f10]/30 border-t-[#0f0f10] rounded-full animate-spin" /> Processing…</span>
@@ -493,8 +449,8 @@ function StripePaymentForm({
 
       <p className="text-center text-[11px] text-gray-600">
         By completing payment you agree to our{" "}
-        <a href="/terms" className="underline hover:text-gray-400">Terms of Service</a> and{" "}
-        <a href="/privacy" className="underline hover:text-gray-400">Privacy Policy</a>.
+        <a href="/terms" className="underline hover:text-gray-500">Terms of Service</a> and{" "}
+        <a href="/privacy" className="underline hover:text-gray-500">Privacy Policy</a>.
       </p>
     </div>
   )
@@ -529,15 +485,15 @@ function SuccessStep({ orderNumber }: { orderNumber: string }) {
         <CheckCircle className="h-10 w-10 text-green-400" />
       </div>
       <div>
-        <h2 className="text-xl font-bold text-white">Order placed!</h2>
-        <p className="text-gray-400 text-sm mt-1">Order #{orderNumber}</p>
-        <p className="text-gray-400 text-sm mt-1">You&apos;ll receive a confirmation email shortly.</p>
+        <h2 className="text-xl font-bold text-gray-900">Order placed!</h2>
+        <p className="text-gray-500 text-sm mt-1">Order #{orderNumber}</p>
+        <p className="text-gray-500 text-sm mt-1">You&apos;ll receive a confirmation email shortly.</p>
       </div>
       <div className="flex gap-3 mt-2">
         <button onClick={() => router.push("/orders")} className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors">
           View Orders
         </button>
-        <button onClick={() => router.push("/")} className="rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-gray-300 hover:bg-white/5 transition-colors">
+        <button onClick={() => router.push("/")} className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
           Continue Shopping
         </button>
       </div>
@@ -555,11 +511,6 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState<string | null>(null)
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResponse | null>(null)
-  const [couponCode, setCouponCode] = useState("")
-  const [couponDiscount, setCouponDiscount] = useState(0)
-  const [couponError, setCouponError] = useState<string | null>(null)
-  const [couponValidating, setCouponValidating] = useState(false)
-  const [couponApplied, setCouponApplied] = useState(false)
 
   const cartItems = useCartStore((s) => s.items)
   const getSubtotal = useCartStore((s) => s.getSubtotal)
@@ -574,7 +525,7 @@ export default function CheckoutPage() {
   const freeShippingThreshold = region?.freeShippingThresholdCents ?? 7500
   const tax = Math.round(subtotal * taxRate)
   const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFlat
-  const total = Math.max(0, subtotal - couponDiscount + tax + shipping)
+  const total = subtotal + tax + shipping
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -645,7 +596,6 @@ export default function CheckoutPage() {
         state: address.state,
         zip: address.zip,
         phone: address.phone || undefined,
-        couponCode: couponApplied ? couponCode.trim() : undefined,
       })
 
       setCheckoutResult(result)
@@ -671,8 +621,8 @@ export default function CheckoutPage() {
   if (!mounted) {
     return (
       <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-10">
-        <h1 className="text-2xl font-bold text-white mb-6">Checkout</h1>
-        <div className="rounded-2xl border border-white/10 p-6" style={{ background: "hsl(0 0% 11%)" }}>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
+        <div className="rounded-2xl border border-gray-200 bg-white p-6">
           <div className="h-32 flex items-center justify-center text-gray-500">Loading…</div>
         </div>
       </main>
@@ -683,8 +633,8 @@ export default function CheckoutPage() {
     return (
       <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-16 text-center">
         <Lock className="mx-auto h-12 w-12 text-gray-500" />
-        <h1 className="text-xl font-bold text-white mt-4">Sign in to checkout</h1>
-        <p className="text-gray-400 text-sm mt-2">Your cart items will be preserved.</p>
+        <h1 className="text-xl font-bold text-gray-900 mt-4">Sign in to checkout</h1>
+        <p className="text-gray-500 text-sm mt-2">Your cart items will be preserved.</p>
         <button
           onClick={() => router.push("/auth/login?callbackUrl=/checkout")}
           className="mt-6 inline-block rounded-xl bg-primary px-6 py-3 text-sm font-bold text-[#0f0f10]"
@@ -699,7 +649,7 @@ export default function CheckoutPage() {
 
   return (
     <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-10">
-      <h1 className="text-2xl font-bold text-white mb-6">Checkout</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
 
       {step !== "success" && (
         <div className="flex items-center mb-8">
@@ -710,13 +660,13 @@ export default function CheckoutPage() {
             return (
               <div key={s.id} className="flex items-center flex-1 last:flex-none">
                 <div className="flex flex-col items-center gap-1">
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${done ? "bg-green-500" : active ? "bg-primary" : "bg-white/10"}`}>
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${done ? "bg-green-500" : active ? "bg-primary" : "bg-gray-100"}`}>
                     {done ? <CheckCircle className="h-5 w-5 text-white" /> : <Icon className={`h-4 w-4 ${active ? "text-[#0f0f10]" : "text-gray-500"}`} />}
                   </div>
-                  <span className={`text-[11px] font-medium ${active ? "text-white" : done ? "text-green-400" : "text-gray-500"}`}>{s.label}</span>
+                  <span className={`text-[11px] font-medium ${active ? "text-gray-900" : done ? "text-green-400" : "text-gray-500"}`}>{s.label}</span>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`flex-1 h-px mx-2 mb-5 transition-colors ${currentIdx > i ? "bg-green-500" : "bg-white/10"}`} />
+                  <div className={`flex-1 h-px mx-2 mb-5 transition-colors ${currentIdx > i ? "bg-green-500" : "bg-gray-100"}`} />
                 )}
               </div>
             )
@@ -724,7 +674,7 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/10 p-6" style={{ background: "hsl(0 0% 11%)" }}>
+      <div className="rounded-2xl border border-gray-200 bg-white p-6">
         {step === "address" && (
           <AddressStep token={authToken} onNext={(addr) => { setAddress(addr); setStep("review") }} />
         )}
@@ -735,38 +685,11 @@ export default function CheckoutPage() {
             onBack={() => setStep("address")}
             items={cartItems}
             subtotal={checkoutResult?.subtotalCents ?? subtotal}
-            discount={checkoutResult?.discountCents ?? couponDiscount}
             tax={checkoutResult?.taxCents ?? tax}
             shipping={checkoutResult?.shippingCostCents ?? shipping}
             total={displayTotal}
             placing={placing}
             error={placeError}
-            couponCode={couponCode}
-            couponApplied={couponApplied}
-            couponError={couponError}
-            couponValidating={couponValidating}
-            onCouponChange={(v) => { setCouponCode(v); setCouponApplied(false); setCouponDiscount(0); setCouponError(null) }}
-            onApplyCoupon={async () => {
-              if (!couponCode.trim()) return
-              setCouponValidating(true)
-              setCouponError(null)
-              try {
-                const token = await getAccessToken()
-                if (!token) return
-                const res = await validateCoupon(token, couponCode.trim(), subtotal, region?.id)
-                if (res.valid) {
-                  setCouponDiscount(res.discountCents)
-                  setCouponApplied(true)
-                } else {
-                  setCouponError(res.error || "Invalid coupon")
-                }
-              } catch (e) {
-                setCouponError(e instanceof Error ? e.message : "Failed to validate coupon")
-              } finally {
-                setCouponValidating(false)
-              }
-            }}
-            onRemoveCoupon={() => { setCouponCode(""); setCouponApplied(false); setCouponDiscount(0); setCouponError(null) }}
           />
         )}
         {step === "payment" && (

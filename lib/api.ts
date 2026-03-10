@@ -458,7 +458,6 @@ export interface OnboardingProgress {
   createdAt: string
   submittedAt: string | null
   rejectionReason: string | null
-  adminNotes: string | null
 }
 
 export interface OnboardingDocument {
@@ -906,109 +905,18 @@ export interface CheckoutRequest {
   zip?: string
   phone?: string
   totalWeightLbs?: number
-  couponCode?: string
 }
 
 export interface CheckoutResponse {
   orderId: string
   orderNumber: string
   subtotalCents: number
-  discountCents: number
   taxCents: number
   shippingCostCents: number
   totalCents: number
-  couponCode: string | null
   currency: string
   paymentClientSecret: string | null
   status: string
-}
-
-// ── Coupons ──
-
-export interface CouponData {
-  id: string
-  code: string
-  type: "percentage" | "fixed_amount"
-  value: number
-  minOrderCents: number | null
-  maxDiscountCents: number | null
-  usageLimit: number | null
-  usageCount: number
-  perUserLimit: number
-  scope: "site_wide" | "product" | "store" | "category"
-  scopeId: string | null
-  sellerId: string | null
-  regionId: string | null
-  startsAt: string
-  expiresAt: string
-  enabled: boolean
-  active: boolean
-  createdAt: string
-}
-
-export interface CouponCreateRequest {
-  code: string
-  type: "percentage" | "fixed_amount"
-  value: number
-  minOrderCents?: number
-  maxDiscountCents?: number
-  usageLimit?: number
-  perUserLimit?: number
-  scope?: string
-  scopeId?: string
-  regionId?: string
-  startsAt?: string
-  expiresAt: string
-  enabled?: boolean
-}
-
-export interface ValidateCouponResponse {
-  valid: boolean
-  code: string
-  type: string
-  value: number
-  discountCents: number
-  error: string | null
-}
-
-export function createSellerCoupon(token: string, data: CouponCreateRequest) {
-  return api<CouponData>("/api/v1/seller/coupons", { method: "POST", body: data, token })
-}
-
-export function getSellerCoupons(token: string, page = 0, size = 20) {
-  return api<Page<CouponData>>(`/api/v1/seller/coupons?page=${page}&size=${size}`, { token })
-}
-
-export function updateSellerCoupon(token: string, id: string, data: Partial<CouponCreateRequest>) {
-  return api<CouponData>(`/api/v1/seller/coupons/${id}`, { method: "PUT", body: data, token })
-}
-
-export function deleteSellerCoupon(token: string, id: string) {
-  return api<void>(`/api/v1/seller/coupons/${id}`, { method: "DELETE", token })
-}
-
-export function getAdminCoupons(token: string, page = 0, size = 20) {
-  return api<Page<CouponData>>(`/api/v1/admin/coupons?page=${page}&size=${size}`, { token })
-}
-
-export function createAdminCoupon(token: string, data: CouponCreateRequest) {
-  return api<CouponData>("/api/v1/admin/coupons", { method: "POST", body: data, token })
-}
-
-export function updateAdminCoupon(token: string, id: string, data: Partial<CouponCreateRequest>) {
-  return api<CouponData>(`/api/v1/admin/coupons/${id}`, { method: "PUT", body: data, token })
-}
-
-export function toggleAdminCoupon(token: string, id: string) {
-  return api<CouponData>(`/api/v1/admin/coupons/${id}/toggle`, { method: "POST", token })
-}
-
-export function validateCoupon(token: string, code: string, subtotalCents: number, regionId?: string) {
-  return api<ValidateCouponResponse>("/api/v1/coupons/validate", {
-    method: "POST",
-    body: { code, subtotalCents, regionId },
-    token,
-  })
 }
 
 export function checkout(token: string, data: CheckoutRequest) {
@@ -1214,14 +1122,6 @@ export function suspendSeller(token: string, id: string) {
   return api<SellerInfo>(`/api/v1/admin/sellers/${id}/suspend`, { method: "POST", token })
 }
 
-export function triggerOnboardingReminders(token: string) {
-  return api<{ triggered: number }>(`/api/v1/admin/sellers/onboarding-reminders/trigger`, { method: "POST", token })
-}
-
-export function sendSellerReminder(token: string, sellerId: string) {
-  return api<{ status: string }>(`/api/v1/admin/sellers/${sellerId}/send-reminder`, { method: "POST", token })
-}
-
 // ── User Profile ──
 
 export interface UserProfile {
@@ -1230,7 +1130,6 @@ export interface UserProfile {
   email: string
   firstName: string | null
   lastName: string | null
-  role: string
   phone: string | null
   avatarUrl: string | null
   preferences: string | null
@@ -1342,6 +1241,129 @@ export function getPayouts(token: string, storeId: string, page = 0, size = 20, 
   const params = new URLSearchParams({ page: String(page), size: String(size) })
   if (status) params.set("status", status)
   return api<Page<TransferRecord>>(`/api/v1/payouts/store/${storeId}?${params}`, { token })
+}
+
+// ── Email Templates (Admin) ──────────────────────────────────────────────────
+
+export interface VariableDef {
+  name: string
+  description: string
+  required: boolean
+  sample_value: string
+}
+
+export interface EmailTemplate {
+  id: string
+  slug: string
+  name: string
+  description: string
+  category: string
+  subject_template: string
+  html_body: string
+  text_body: string
+  variables: VariableDef[]
+  use_layout: boolean
+  is_default: boolean
+  version: number
+  updated_by: string
+  created_at: string
+  updated_at: string
+  sample_data?: Record<string, unknown>
+}
+
+export function getEmailTemplates(token: string, category?: string) {
+  const params = category ? `?category=${category}` : ""
+  return api<EmailTemplate[]>(`/api/admin/email-templates${params}`, { token })
+}
+
+export function getEmailTemplate(token: string, slug: string) {
+  return api<EmailTemplate & { sample_data: Record<string, unknown> }>(`/api/admin/email-templates/${slug}`, { token })
+}
+
+export function updateEmailTemplate(token: string, slug: string, body: { subject_template: string; html_body: string; text_body: string }) {
+  return api<EmailTemplate>(`/api/admin/email-templates/${slug}`, { method: "PUT", token, body })
+}
+
+export function previewEmailTemplate(token: string, slug: string, body: { html_body?: string; data?: Record<string, unknown> }) {
+  return fetch(`${API_BASE}/api/admin/email-templates/${slug}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  }).then(r => r.text())
+}
+
+export function resetEmailTemplate(token: string, slug: string) {
+  return api<EmailTemplate>(`/api/admin/email-templates/${slug}/reset`, { method: "POST", token })
+}
+
+export function createEmailTemplate(token: string, body: {
+  slug: string; name: string; description: string; category: string;
+  subject_template: string; html_body: string; text_body: string;
+  variables: VariableDef[]; use_layout: boolean;
+}) {
+  return api<EmailTemplate>(`/api/admin/email-templates`, { method: "POST", token, body })
+}
+
+export function deleteEmailTemplate(token: string, slug: string) {
+  return fetch(`${API_BASE}/api/admin/email-templates/${slug}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export function sendTestEmail(token: string, slug: string, body: { to: string; data?: Record<string, unknown> }) {
+  return api<{ status: string; to: string; subject: string }>(`/api/admin/email-templates/${slug}/send-test`, { method: "POST", token, body })
+}
+
+export function previewRawTemplate(token: string, body: { html_body: string; use_layout: boolean; variables?: VariableDef[]; data?: Record<string, unknown> }) {
+  return fetch(`${API_BASE}/api/admin/email-templates/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  }).then(r => r.text())
+}
+
+// ── Notification Recipients (Admin) ─────────────────────────────────────────
+
+export interface NotificationRecipient {
+  id: string
+  event_type: string
+  email: string
+  label: string
+  active: boolean
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface EventTypeInfo {
+  key: string
+  label: string
+  description: string
+}
+
+export function getNotificationRecipients(token: string, eventType?: string) {
+  const params = eventType ? `?event_type=${eventType}` : ""
+  return api<NotificationRecipient[]>(`/api/admin/notification-recipients${params}`, { token })
+}
+
+export function getEventTypes(token: string) {
+  return api<EventTypeInfo[]>(`/api/admin/notification-recipients/event-types`, { token })
+}
+
+export function addNotificationRecipient(token: string, body: { event_type: string; email: string; label: string }) {
+  return api<NotificationRecipient>(`/api/admin/notification-recipients`, { method: "POST", token, body })
+}
+
+export function removeNotificationRecipient(token: string, id: string) {
+  return fetch(`${API_BASE}/api/admin/notification-recipients/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export function toggleNotificationRecipient(token: string, id: string, active: boolean) {
+  return api<NotificationRecipient>(`/api/admin/notification-recipients/${id}/toggle`, { method: "PATCH", token, body: { active } })
 }
 
 export { API_BASE }

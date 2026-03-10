@@ -2,8 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import {
   Check,
   ChevronRight,
@@ -31,8 +29,8 @@ const PLANS = [
     commissionRate: "10%",
     badge: null,
     badgeColor: "",
-    accentClass: "border-white/15",
-    headerClass: "bg-white/5",
+    accentClass: "border-gray-200",
+    headerClass: "bg-gray-50",
     features: [
       "Up to 50 products",
       "1 store",
@@ -139,15 +137,14 @@ const FAQ = [
   },
 ]
 
-function PlanCard({ plan, isAnnual, onStartSelling }: { plan: typeof PLANS[0]; isAnnual: boolean; onStartSelling: () => void }) {
+function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean }) {
   const price = isAnnual
     ? `$${((plan.priceCents * 10) / 100).toFixed(2)}`
     : plan.priceDisplay
 
   return (
     <div
-      className={`relative flex flex-col rounded-2xl border ${plan.accentClass} overflow-hidden transition-all duration-200 hover:scale-[1.01]`}
-      style={{ background: "hsl(0 0% 11%)" }}
+      className={`relative flex flex-col rounded-2xl border ${plan.accentClass} overflow-hidden transition-all duration-200 hover:scale-[1.01] bg-white`}
     >
       {plan.badge && (
         <div className="absolute top-0 right-0">
@@ -159,11 +156,11 @@ function PlanCard({ plan, isAnnual, onStartSelling }: { plan: typeof PLANS[0]; i
       )}
 
       <div className={`p-6 ${plan.headerClass}`}>
-        <h3 className="text-xl font-black text-white">{plan.name}</h3>
-        <p className="text-sm text-gray-400 mt-1">{plan.description}</p>
+        <h3 className="text-xl font-black text-gray-900">{plan.name}</h3>
+        <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
 
         <div className="mt-5 flex items-end gap-1">
-          <span className="text-4xl font-black text-white">{price}</span>
+          <span className="text-4xl font-black text-gray-900">{price}</span>
           <span className="text-gray-500 mb-1">/month</span>
         </div>
         {isAnnual && (
@@ -171,15 +168,15 @@ function PlanCard({ plan, isAnnual, onStartSelling }: { plan: typeof PLANS[0]; i
         )}
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-lg bg-black/20 border border-white/10 px-3 py-2 text-center">
+          <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-center">
             <p className="text-xs text-gray-500">Products</p>
-            <p className="text-sm font-bold text-white">
+            <p className="text-sm font-bold text-gray-900">
               {plan.maxProducts === -1 ? "Unlimited" : `${plan.maxProducts}`}
             </p>
           </div>
-          <div className="rounded-lg bg-black/20 border border-white/10 px-3 py-2 text-center">
+          <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-center">
             <p className="text-xs text-gray-500">Commission</p>
-            <p className="text-sm font-bold text-white">{plan.commissionRate}</p>
+            <p className="text-sm font-bold text-gray-900">{plan.commissionRate}</p>
           </div>
         </div>
       </div>
@@ -189,12 +186,12 @@ function PlanCard({ plan, isAnnual, onStartSelling }: { plan: typeof PLANS[0]; i
           {plan.features.map((f) => (
             <div key={f} className="flex items-start gap-2 text-sm">
               <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-              <span className="text-gray-300">{f}</span>
+              <span className="text-gray-600">{f}</span>
             </div>
           ))}
           {plan.notIncluded.map((f) => (
             <div key={f} className="flex items-start gap-2 text-sm">
-              <X className="h-4 w-4 text-white/20 mt-0.5 shrink-0" />
+              <X className="h-4 w-4 text-gray-300 mt-0.5 shrink-0" />
               <span className="text-gray-600">{f}</span>
             </div>
           ))}
@@ -202,17 +199,17 @@ function PlanCard({ plan, isAnnual, onStartSelling }: { plan: typeof PLANS[0]; i
       </div>
 
       <div className="p-6 pt-0">
-        <button
-          onClick={onStartSelling}
+        <Link
+          href={`/auth/register?role=seller&plan=${plan.slug}`}
           className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] ${
             plan.badge === "Most Popular"
               ? "bg-primary text-header hover:bg-primary/90 shadow-lg shadow-primary/20"
-              : "border border-white/20 bg-white/5 text-white hover:bg-white/10"
+              : "border border-gray-300 bg-gray-50 text-gray-900 hover:bg-gray-100"
           }`}
         >
           Start Free Trial
           <ChevronRight className="h-4 w-4" />
-        </button>
+        </Link>
         <p className="text-center text-[11px] text-gray-600 mt-2">
           1st month free · No credit card required
         </p>
@@ -224,22 +221,6 @@ function PlanCard({ plan, isAnnual, onStartSelling }: { plan: typeof PLANS[0]; i
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
-  const { status } = useSession()
-  const router = useRouter()
-  const isAuthenticated = status === "authenticated"
-
-  async function handleStartSelling() {
-    if (!isAuthenticated) {
-      router.push("/auth/register?role=seller")
-      return
-    }
-    try {
-      await fetch("/api/auth/set-seller-intent", { method: "POST" })
-      router.push("/dashboard/onboarding")
-    } catch {
-      router.push("/auth/register?role=seller")
-    }
-  }
 
   return (
     <main className="min-h-screen">
@@ -258,11 +239,11 @@ export default function PricingPage() {
             <Store className="h-3 w-3" />
             Simple, transparent pricing
           </span>
-          <h1 className="text-4xl sm:text-5xl font-black text-white leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 leading-tight">
             Grow your business.<br />
             <span className="text-primary">Pay only when you&apos;re ready.</span>
           </h1>
-          <p className="mt-4 text-lg text-gray-400 max-w-xl mx-auto">
+          <p className="mt-4 text-lg text-gray-500 max-w-xl mx-auto">
             First month always free. Second month free if you list 9+ products.
             Then choose the plan that fits your stage.
           </p>
@@ -274,7 +255,7 @@ export default function PricingPage() {
               { icon: <Zap className="h-4 w-4 text-emerald-400" />,  text: "Month 2: Free with 9+ products" },
               { icon: <ShieldCheck className="h-4 w-4 text-sky-400" />, text: "Month 3+: Pay your chosen plan" },
             ].map(({ icon, text }) => (
-              <div key={text} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300">
+              <div key={text} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-600">
                 {icon}
                 {text}
               </div>
@@ -283,7 +264,7 @@ export default function PricingPage() {
 
           {/* Billing toggle */}
           <div className="mt-8 flex items-center justify-center gap-3">
-            <span className={`text-sm ${!isAnnual ? "text-white font-semibold" : "text-gray-500"}`}>Monthly</span>
+            <span className={`text-sm ${!isAnnual ? "text-gray-900 font-semibold" : "text-gray-500"}`}>Monthly</span>
             <button
               onClick={() => setIsAnnual(!isAnnual)}
               className={`relative h-6 w-11 rounded-full transition-colors ${isAnnual ? "bg-primary" : "bg-white/15"}`}
@@ -292,7 +273,7 @@ export default function PricingPage() {
                 className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isAnnual ? "translate-x-5" : "translate-x-0.5"}`}
               />
             </button>
-            <span className={`text-sm ${isAnnual ? "text-white font-semibold" : "text-gray-500"}`}>
+            <span className={`text-sm ${isAnnual ? "text-gray-900 font-semibold" : "text-gray-500"}`}>
               Annual
               <span className="ml-1.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 font-bold">
                 2 months free
@@ -306,7 +287,7 @@ export default function PricingPage() {
       <section className="px-4 sm:px-6 pb-16">
         <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-5">
           {PLANS.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} isAnnual={isAnnual} onStartSelling={handleStartSelling} />
+            <PlanCard key={plan.id} plan={plan} isAnnual={isAnnual} />
           ))}
         </div>
       </section>
@@ -314,25 +295,25 @@ export default function PricingPage() {
       {/* ── Commission comparison ── */}
       <section className="border-y border-border bg-card/40 px-4 sm:px-6 py-12">
         <div className="mx-auto max-w-4xl">
-          <h2 className="text-2xl font-bold text-white text-center mb-2">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
             Commission breakdown
           </h2>
-          <p className="text-gray-400 text-center text-sm mb-8">
+          <p className="text-gray-500 text-center text-sm mb-8">
             Understand exactly how much you keep from each sale.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left pb-3 font-semibold text-gray-400">Plan</th>
-                  <th className="text-right pb-3 font-semibold text-gray-400">Commission</th>
-                  <th className="text-right pb-3 font-semibold text-gray-400">On a $100 sale, you keep</th>
-                  <th className="text-right pb-3 font-semibold text-gray-400">On $10k/mo GMV, you keep</th>
+                  <th className="text-left pb-3 font-semibold text-gray-500">Plan</th>
+                  <th className="text-right pb-3 font-semibold text-gray-500">Commission</th>
+                  <th className="text-right pb-3 font-semibold text-gray-500">On a $100 sale, you keep</th>
+                  <th className="text-right pb-3 font-semibold text-gray-500">On $10k/mo GMV, you keep</th>
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { name: "Starter", rate: 10, color: "text-gray-300" },
+                  { name: "Starter", rate: 10, color: "text-gray-600" },
                   { name: "Growth",  rate: 8,  color: "text-primary"  },
                   { name: "Pro",     rate: 6,  color: "text-violet-400" },
                 ].map((row) => {
@@ -341,9 +322,9 @@ export default function PricingPage() {
                   return (
                     <tr key={row.name} className="border-b border-border/50">
                       <td className={`py-3 font-semibold ${row.color}`}>{row.name}</td>
-                      <td className="py-3 text-right text-gray-300">{row.rate}%</td>
-                      <td className="py-3 text-right font-bold text-white">${keep100}</td>
-                      <td className="py-3 text-right font-bold text-white">${parseInt(keep10k).toLocaleString()}</td>
+                      <td className="py-3 text-right text-gray-600">{row.rate}%</td>
+                      <td className="py-3 text-right font-bold text-gray-900">${keep100}</td>
+                      <td className="py-3 text-right font-bold text-gray-900">${parseInt(keep10k).toLocaleString()}</td>
                     </tr>
                   )
                 })}
@@ -359,7 +340,7 @@ export default function PricingPage() {
       {/* ── FAQ ── */}
       <section className="px-4 sm:px-6 py-16">
         <div className="mx-auto max-w-3xl">
-          <h2 className="text-2xl font-bold text-white text-center mb-8 flex items-center justify-center gap-2">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8 flex items-center justify-center gap-2">
             <HelpCircle className="h-6 w-6 text-primary" />
             Frequently asked questions
           </h2>
@@ -367,20 +348,19 @@ export default function PricingPage() {
             {FAQ.map((item, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-border overflow-hidden"
-                style={{ background: "hsl(0 0% 11%)" }}
+                className="rounded-xl border border-border overflow-hidden bg-white"
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-semibold text-white hover:bg-white/5 transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-semibold text-gray-900 hover:bg-gray-50 transition-colors"
                 >
                   {item.q}
                   <ChevronRight
-                    className={`h-4 w-4 text-gray-400 transition-transform shrink-0 ml-3 ${openFaq === i ? "rotate-90" : ""}`}
+                    className={`h-4 w-4 text-gray-500 transition-transform shrink-0 ml-3 ${openFaq === i ? "rotate-90" : ""}`}
                   />
                 </button>
                 {openFaq === i && (
-                  <div className="px-5 pb-4 text-sm text-gray-400 leading-relaxed border-t border-border">
+                  <div className="px-5 pb-4 text-sm text-gray-500 leading-relaxed border-t border-border">
                     <p className="pt-3">{item.a}</p>
                   </div>
                 )}
@@ -392,23 +372,23 @@ export default function PricingPage() {
 
       {/* ── Bottom CTA ── */}
       <section className="border-t border-border bg-gradient-to-br from-primary/10 to-transparent px-4 sm:px-6 py-16 text-center">
-        <h2 className="text-3xl font-black text-white mb-4">
+        <h2 className="text-3xl font-black text-gray-900 mb-4">
           Ready to start selling?
         </h2>
-        <p className="text-gray-400 max-w-md mx-auto mb-8">
+        <p className="text-gray-500 max-w-md mx-auto mb-8">
           Join 200+ immigrant entrepreneurs already earning on AfroTransact. Your first month is on us.
         </p>
         <div className="flex flex-wrap gap-3 justify-center">
-          <button
-            onClick={handleStartSelling}
+          <Link
+            href="/auth/register?role=seller"
             className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
           >
             Start Free Trial
             <ChevronRight className="h-4 w-4" />
-          </button>
+          </Link>
           <Link
             href="/sell"
-            className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-8 text-[15px] font-semibold text-white hover:bg-white/10 transition-all"
+            className="inline-flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-gray-50 px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-100 transition-all"
           >
             Learn More
           </Link>

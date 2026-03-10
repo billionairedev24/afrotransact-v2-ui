@@ -23,7 +23,8 @@ import {
   Star,
   ClipboardList,
   Banknote,
-  Ticket,
+  Mail,
+  Bell,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -44,7 +45,6 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/sellers",       label: "Sellers",       icon: Store            },
   { href: "/admin/products",      label: "Products",      icon: Package          },
   { href: "/admin/orders",        label: "Orders",        icon: ShoppingCart     },
-  { href: "/admin/coupons",       label: "Coupons",       icon: Ticket           },
   { href: "/admin/regions",       label: "Regions",       icon: MapPin           },
   { href: "/admin/feature-flags", label: "Feature Flags", icon: ToggleLeft       },
   { href: "/admin/commission",    label: "Commission",    icon: Percent          },
@@ -52,6 +52,8 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/reviews",       label: "Reviews",       icon: Star             },
   { href: "/admin/payouts",       label: "Payouts",       icon: Banknote         },
   { href: "/admin/ads",           label: "Ad Slots",      icon: Megaphone        },
+  { href: "/admin/email-templates", label: "Email Templates", icon: Mail          },
+  { href: "/admin/notification-routing", label: "Alert Routing", icon: Bell     },
   { href: "/admin/users",         label: "Users",         icon: Users            },
 ]
 
@@ -94,7 +96,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
           active
             ? "bg-primary/15 text-primary"
-            : "text-gray-400 hover:bg-white/5 hover:text-white"
+            : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
         )}
       >
         <Icon className="h-4 w-4 shrink-0" />
@@ -110,13 +112,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const sidebar = (onClose?: () => void) => (
     <div className="flex flex-col h-full">
-      <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
+      <div className="flex h-14 items-center justify-between border-b border-gray-200 px-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
-          <span className="font-bold text-white text-sm">Admin</span>
+          <span className="font-bold text-gray-900 text-sm">Admin</span>
         </div>
         {onClose && (
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-900">
             <X className="h-5 w-5" />
           </button>
         )}
@@ -124,18 +126,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {navItems.map((item) => navLink(item, onClose))}
       </nav>
-      <div className="border-t border-white/10 p-4 space-y-2">
+      <div className="border-t border-gray-200 p-4 space-y-2">
         <Link
           href="/"
           onClick={onClose}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
           Back to Marketplace
         </Link>
         <button
           onClick={() => { window.location.href = "/api/auth/signout" }}
-          className="flex w-full items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
+          className="flex w-full items-center gap-2 text-sm text-red-600 hover:text-red-700 transition-colors"
         >
           <LogOut className="h-4 w-4" />
           Sign Out
@@ -145,16 +147,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <div className="min-h-screen" style={{ background: "hsl(0 0% 7%)" }}>
+    <div className="min-h-screen bg-gray-50">
       {/* Mobile header */}
       <header
-        className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/10 px-4 lg:hidden"
-        style={{ background: "hsl(0 0% 9%)" }}
+        className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-gray-200 px-4 lg:hidden bg-white"
       >
-        <button onClick={() => setSidebarOpen(true)} className="text-gray-400 hover:text-white">
+        <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-gray-900">
           <Menu className="h-5 w-5" />
         </button>
-        <span className="font-bold text-white text-sm flex items-center gap-1.5">
+        <span className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
           <ShieldCheck className="h-4 w-4 text-primary" />
           Admin Panel
         </span>
@@ -164,8 +165,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="flex">
         {/* Desktop sidebar */}
         <aside
-          className="hidden lg:flex lg:w-56 lg:flex-col lg:fixed lg:inset-y-0 border-r border-white/10"
-          style={{ background: "hsl(0 0% 9%)" }}
+          className="hidden lg:flex lg:w-56 lg:flex-col lg:fixed lg:inset-y-0 border-r border-gray-200 bg-white"
         >
           {sidebar()}
         </aside>
@@ -178,8 +178,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               onClick={() => setSidebarOpen(false)}
             />
             <aside
-              className="absolute inset-y-0 left-0 w-56 border-r border-white/10 shadow-2xl"
-              style={{ background: "hsl(0 0% 9%)" }}
+              className="absolute inset-y-0 left-0 w-56 border-r border-gray-200 shadow-xl bg-white"
             >
               {sidebar(() => setSidebarOpen(false))}
             </aside>

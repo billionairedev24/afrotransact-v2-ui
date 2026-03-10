@@ -40,22 +40,22 @@ export default function HelpPage() {
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 border border-primary/30 mx-auto mb-4">
           <HelpCircle className="h-7 w-7 text-primary" />
         </div>
-        <h1 className="text-3xl font-black text-white">Help Center</h1>
-        <p className="text-gray-400 mt-2">Find answers to common questions</p>
+        <h1 className="text-3xl font-black text-gray-900">Help Center</h1>
+        <p className="text-gray-500 mt-2">Find answers to common questions</p>
       </div>
 
       <div className="space-y-8">
         {FAQ_TOPICS.map((topic) => (
           <div key={topic.topic} className={`rounded-2xl border ${topic.bg} p-6 space-y-4`}>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
               {topic.icon}
               {topic.topic}
             </h2>
             <div className="space-y-4">
               {topic.questions.map((faq) => (
                 <div key={faq.q}>
-                  <p className="text-sm font-semibold text-white">{faq.q}</p>
-                  <p className="text-sm text-gray-400 mt-1">{faq.a}</p>
+                  <p className="text-sm font-semibold text-gray-900">{faq.q}</p>
+                  <p className="text-sm text-gray-500 mt-1">{faq.a}</p>
                 </div>
               ))}
             </div>
@@ -63,10 +63,10 @@ export default function HelpPage() {
         ))}
       </div>
 
-      <div className="mt-12 rounded-2xl border border-white/10 bg-card p-8 text-center">
+      <div className="mt-12 rounded-2xl border border-gray-200 bg-card p-8 text-center">
         <MessageCircle className="h-8 w-8 text-primary mx-auto mb-3" />
-        <h2 className="text-xl font-bold text-white mb-2">Still need help?</h2>
-        <p className="text-gray-400 text-sm mb-5">Our support team typically responds within 2 hours during business hours.</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Still need help?</h2>
+        <p className="text-gray-500 text-sm mb-5">Our support team typically responds within 2 hours during business hours.</p>
         <a
           href="mailto:support@afrotransact.com"
           className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-8 text-sm font-bold text-header hover:bg-primary/90 transition-all"

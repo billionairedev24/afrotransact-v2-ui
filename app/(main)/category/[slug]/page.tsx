@@ -45,12 +45,12 @@ export default function CategoryPage() {
         <ChevronRight className="h-3.5 w-3.5" />
         <Link href="/categories" className="hover:text-gray-300 transition-colors">Categories</Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-white">{name}</span>
+        <span className="text-gray-900">{name}</span>
       </div>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-white">{name}</h1>
-        <p className="text-gray-400 mt-1">
+        <h1 className="text-3xl font-black text-gray-900">{name}</h1>
+        <p className="text-gray-500 mt-1">
           {loading ? "Loading products..." : `${total} product${total !== 1 ? "s" : ""} from local stores`}
         </p>
       </div>
@@ -62,7 +62,7 @@ export default function CategoryPage() {
       ) : products.length === 0 ? (
         <div className="text-center py-20">
           <Leaf className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400">No products found in this category yet.</p>
+          <p className="text-gray-500">No products found in this category yet.</p>
           <Link href="/" className="text-primary text-sm mt-2 inline-block hover:text-primary/80">
             Browse all products
           </Link>

@@ -34,9 +34,9 @@ import { useUploadThing } from "@/lib/uploadthing"
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   active:         { label: "Active",         className: "bg-green-500/20 text-green-400" },
   pending_review: { label: "Pending Review", className: "bg-yellow-500/20 text-yellow-400" },
-  draft:          { label: "Draft",          className: "bg-white/10 text-gray-400" },
+  draft:          { label: "Draft",          className: "bg-gray-100 text-gray-500" },
   rejected:       { label: "Rejected",       className: "bg-red-500/20 text-red-400" },
-  archived:       { label: "Archived",       className: "bg-white/10 text-gray-400" },
+  archived:       { label: "Archived",       className: "bg-gray-100 text-gray-500" },
 }
 
 interface FlatProduct {
@@ -139,7 +139,7 @@ export default function ProductsPage() {
         header: "Product",
         cell: (info) => (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white/5 overflow-hidden">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-gray-50 overflow-hidden">
               {info.row.original.imageUrl ? (
                 <img src={info.row.original.imageUrl} alt="" className="h-full w-full object-cover" />
               ) : (
@@ -147,7 +147,7 @@ export default function ProductsPage() {
               )}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-white">{info.getValue()}</p>
+              <p className="truncate text-sm font-medium text-gray-900">{info.getValue()}</p>
               <p className="text-xs text-gray-500">{info.row.original.category}</p>
             </div>
           </div>
@@ -164,20 +164,20 @@ export default function ProductsPage() {
         header: "Price",
         cell: (info) => {
           const v = info.getValue()
-          return <span className="text-white">{v != null ? `$${v.toFixed(2)}` : "—"}</span>
+          return <span className="text-gray-900">{v != null ? `$${v.toFixed(2)}` : "—"}</span>
         },
       }),
       col.accessor("stock", {
         header: "Stock",
         cell: (info) => {
           const v = info.getValue()
-          const color = v === 0 ? "text-red-400" : v < 20 ? "text-yellow-400" : "text-gray-300"
+          const color = v === 0 ? "text-red-600" : v < 20 ? "text-yellow-400" : "text-gray-600"
           return <span className={color}>{v}</span>
         },
       }),
       col.accessor("variantCount", {
         header: "Variants",
-        cell: (info) => <span className="text-gray-400">{info.getValue()}</span>,
+        cell: (info) => <span className="text-gray-500">{info.getValue()}</span>,
       }),
       col.display({
         id: "actions",
@@ -204,8 +204,8 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Products</h1>
-          <p className="mt-1 text-sm text-gray-400">Manage your product catalog</p>
+          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+          <p className="mt-1 text-sm text-gray-500">Manage your product catalog</p>
         </div>
         <Link
           href="/dashboard/products/new"
@@ -438,7 +438,7 @@ function ProductDetailSheet({
               {!editing && (
                 <button
                   onClick={() => setEditing(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
                 >
                   <Pencil className="h-3 w-3" /> Edit
                 </button>
@@ -459,18 +459,18 @@ function ProductDetailSheet({
               </div>
             )}
             {product.status === "draft" && (
-              <div className="rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3">
-                <p className="text-sm text-gray-400 font-medium">Draft — not submitted</p>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                <p className="text-sm text-gray-500 font-medium">Draft — not submitted</p>
                 <p className="text-xs text-gray-500 mt-0.5">This product is saved as a draft. Submit it for review when you&apos;re ready.</p>
               </div>
             )}
 
             {/* ─── Images ─── */}
             <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Images</p>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Images</p>
               <div className="flex flex-wrap gap-3">
                 {product.images.map((img, idx) => (
-                  <div key={img.id} className="group relative h-20 w-20 overflow-hidden rounded-lg border border-white/10">
+                  <div key={img.id} className="group relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200">
                     <img src={img.url} alt={img.altText || ""} className="h-full w-full object-cover" />
                     {idx === 0 && (
                       <div className="absolute bottom-0.5 left-0.5">
@@ -488,12 +488,12 @@ function ProductDetailSheet({
                   </div>
                 ))}
                 {product.images.length === 0 && (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-white/10">
-                    <ImageIcon className="h-6 w-6 text-white/20" />
+                  <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-gray-200">
+                    <ImageIcon className="h-6 w-6 text-gray-300" />
                   </div>
                 )}
                 {editing && (
-                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border border-dashed border-white/10 text-white/30 hover:border-[#d4a853]/40 hover:text-[#d4a853] transition-colors">
+                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-200 text-gray-400 hover:border-[#d4a853]/40 hover:text-[#d4a853] transition-colors">
                     {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
                   </label>
@@ -503,7 +503,7 @@ function ProductDetailSheet({
 
             {/* ─── Basic Info ─── */}
             <div className="space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Product Information</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Product Information</p>
 
               {editing ? (
                 <div className="space-y-3">
@@ -512,16 +512,16 @@ function ProductDetailSheet({
                     <input
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="h-9 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white focus:border-[#d4a853] focus:outline-none"
+                      className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 focus:border-[#d4a853] focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-gray-400">Description</label>
+                    <label className="mb-1 block text-xs text-gray-500">Description</label>
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={3}
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-[#d4a853] focus:outline-none resize-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-[#d4a853] focus:outline-none resize-none"
                     />
                   </div>
                 </div>
@@ -530,19 +530,19 @@ function ProductDetailSheet({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Title</p>
-                      <p className="text-sm text-white">{product.title}</p>
+                      <p className="text-sm text-gray-900">{product.title}</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Category</p>
-                      <p className="text-sm text-gray-300">{product.categories[0]?.name || product.productType}</p>
+                      <p className="text-sm text-gray-600">{product.categories[0]?.name || product.productType}</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Type</p>
-                      <p className="text-sm text-gray-300 capitalize">{product.productType}</p>
+                      <p className="text-sm text-gray-600 capitalize">{product.productType}</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Created</p>
-                      <p className="text-sm text-gray-300">
+                      <p className="text-sm text-gray-600">
                         {new Date(product.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </p>
                     </div>
@@ -550,7 +550,7 @@ function ProductDetailSheet({
                   {product.description && (
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Description</p>
-                      <p className="text-sm text-gray-300 whitespace-pre-line">{product.description}</p>
+                      <p className="text-sm text-gray-600 whitespace-pre-line">{product.description}</p>
                     </div>
                   )}
                 </div>
@@ -559,7 +559,7 @@ function ProductDetailSheet({
 
             {/* ─── Variants ─── */}
             <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Variants ({product.variants.length})
               </p>
               <div className="space-y-3">
@@ -589,7 +589,7 @@ function ProductDetailSheet({
                   setTitle(product.title)
                   setDescription(product.description)
                 }}
-                className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
               >
                 Cancel
               </button>
@@ -676,17 +676,17 @@ function VariantCard({
   }
 
   const stockColor =
-    variant.stockQuantity === 0 ? "text-red-400" : variant.stockQuantity < 20 ? "text-yellow-400" : "text-gray-300"
+    variant.stockQuantity === 0 ? "text-red-600" : variant.stockQuantity < 20 ? "text-yellow-400" : "text-gray-600"
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+    <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-white">{variant.name || "Default"}</span>
+          <span className="text-sm font-medium text-gray-900">{variant.name || "Default"}</span>
           <span className="text-xs text-gray-500 font-mono">{variant.sku}</span>
         </div>
         {editing && canDelete && (
-          <button onClick={onDelete} className="rounded p-1 text-white/30 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+          <button onClick={onDelete} className="rounded p-1 text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors">
             <Trash2 className="h-3 w-3" />
           </button>
         )}
@@ -699,7 +699,7 @@ function VariantCard({
             <input
               value={localSku}
               onChange={(e) => { setLocalSku(e.target.value); markDirty() }}
-              className="h-8 w-full rounded-md border border-white/10 bg-white/5 px-2 text-xs text-white focus:border-[#d4a853] focus:outline-none"
+              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#d4a853] focus:outline-none"
             />
           </div>
           <div>
@@ -709,7 +709,7 @@ function VariantCard({
               step="0.01"
               value={localPrice}
               onChange={(e) => { setLocalPrice(e.target.value); markDirty() }}
-              className="h-8 w-full rounded-md border border-white/10 bg-white/5 px-2 text-xs text-white focus:border-[#d4a853] focus:outline-none"
+              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#d4a853] focus:outline-none"
             />
           </div>
           <div>
@@ -718,7 +718,7 @@ function VariantCard({
               type="number"
               value={localStock}
               onChange={(e) => { setLocalStock(e.target.value); markDirty() }}
-              className="h-8 w-full rounded-md border border-white/10 bg-white/5 px-2 text-xs text-white focus:border-[#d4a853] focus:outline-none"
+              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#d4a853] focus:outline-none"
             />
           </div>
           {dirty && (
@@ -734,7 +734,7 @@ function VariantCard({
         </div>
       ) : (
         <div className="flex items-center gap-4 text-sm">
-          <span className="text-white font-medium">${variant.price.toFixed(2)}</span>
+          <span className="text-gray-900 font-medium">${variant.price.toFixed(2)}</span>
           {variant.compareAtPrice != null && variant.compareAtPrice > variant.price && (
             <span className="text-gray-500 line-through text-xs">${variant.compareAtPrice.toFixed(2)}</span>
           )}

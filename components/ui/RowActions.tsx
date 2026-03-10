@@ -61,8 +61,8 @@ export function RowActions({ actions }: { actions: RowAction[] }) {
         ref={triggerRef}
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o) }}
         className={cn(
-          "inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white",
-          open && "bg-white/10 text-white"
+          "inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900",
+          open && "bg-gray-100 text-gray-900"
         )}
       >
         <MoreHorizontal className="h-4 w-4" />
@@ -72,7 +72,7 @@ export function RowActions({ actions }: { actions: RowAction[] }) {
         createPortal(
           <div
             ref={menuRef}
-            className="fixed z-[9999] w-48 rounded-xl border border-white/10 bg-[hsl(0_0%_9%)] p-1 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
+            className="fixed z-[9999] w-48 rounded-xl border border-gray-200 bg-white p-1 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
             style={{
               top: coords.openUp ? undefined : coords.top,
               bottom: coords.openUp ? window.innerHeight - coords.top : undefined,
@@ -88,8 +88,8 @@ export function RowActions({ actions }: { actions: RowAction[] }) {
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors disabled:pointer-events-none disabled:opacity-40",
                   action.variant === "danger"
-                    ? "text-red-400 hover:bg-red-500/10"
-                    : "text-gray-300 hover:bg-white/5 hover:text-white"
+                    ? "text-red-600 hover:bg-red-50"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                 )}
               >
                 {action.icon && <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{action.icon}</span>}

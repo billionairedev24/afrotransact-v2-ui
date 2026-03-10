@@ -26,7 +26,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   processing: { label: "Processing", color: "text-blue-400",   bg: "bg-blue-500/15",   icon: Package },
   shipped:    { label: "Shipped",    color: "text-purple-400", bg: "bg-purple-500/15", icon: Truck },
   delivered:  { label: "Delivered",  color: "text-green-400",  bg: "bg-green-500/15",  icon: CheckCircle },
-  cancelled:  { label: "Cancelled",  color: "text-red-400",    bg: "bg-red-500/15",    icon: XCircle },
+  cancelled:  { label: "Cancelled",  color: "text-red-600",    bg: "bg-red-500/15",    icon: XCircle },
 }
 
 function formatCents(cents: number, currency = "USD") {
@@ -50,33 +50,32 @@ function OrderCard({ order }: { order: OrderDto }) {
   const placedDate = order.placedAt || order.createdAt
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] overflow-hidden" style={{ background: "hsl(0 0% 11%)" }}>
+    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-4 sm:px-5 py-3 text-[13px]"
-           style={{ background: "hsl(0 0% 9%)" }}>
-        <div className="flex flex-wrap gap-x-6 gap-y-1 text-gray-400">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-4 sm:px-5 py-3 text-[13px]">
+        <div className="flex flex-wrap gap-x-6 gap-y-1 text-gray-500">
           <div>
             <span className="uppercase tracking-wider text-[11px] text-gray-500">Order placed</span>
-            <p className="text-gray-300 mt-0.5">{formatDate(placedDate)}</p>
+            <p className="text-gray-600 mt-0.5">{formatDate(placedDate)}</p>
           </div>
           <div>
             <span className="uppercase tracking-wider text-[11px] text-gray-500">Total</span>
-            <p className="text-white font-medium mt-0.5">{formatCents(order.totalCents, order.currency)}</p>
+            <p className="text-gray-900 font-medium mt-0.5">{formatCents(order.totalCents, order.currency)}</p>
           </div>
           <div>
             <span className="uppercase tracking-wider text-[11px] text-gray-500">Items</span>
-            <p className="text-gray-300 mt-0.5">{totalItems}</p>
+            <p className="text-gray-600 mt-0.5">{totalItems}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-gray-500 text-[11px] uppercase tracking-wider">
-            Order <span className="font-mono text-gray-300">#{order.orderNumber}</span>
+            Order <span className="font-mono text-gray-600">#{order.orderNumber}</span>
           </span>
         </div>
       </div>
 
       {/* Status bar */}
-      <div className="flex items-center gap-2 px-4 sm:px-5 py-2.5 border-b border-white/[0.06]">
+      <div className="flex items-center gap-2 px-4 sm:px-5 py-2.5 border-b border-gray-200">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${cfg.bg} ${cfg.color}`}>
           <StatusIcon className="h-3.5 w-3.5" />
           {cfg.label}
@@ -94,24 +93,24 @@ function OrderCard({ order }: { order: OrderDto }) {
         order.subOrders.some((so) => so.fulfillmentStatus === "delivered" || so.fulfillmentStatus === "completed")) && (
         <Link
           href={`/orders/${order.orderNumber}`}
-          className="flex items-center gap-3 px-4 sm:px-5 py-3 bg-gradient-to-r from-yellow-500/10 via-orange-500/5 to-transparent border-b border-white/[0.06] hover:from-yellow-500/15 transition-colors group"
+          className="flex items-center gap-3 px-4 sm:px-5 py-3 bg-gradient-to-r from-yellow-500/10 via-orange-500/5 to-transparent border-b border-gray-200 hover:from-yellow-500/15 transition-colors group"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-yellow-500/15">
             <Star className="h-4 w-4 text-yellow-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white">Rate your purchase</p>
-            <p className="text-xs text-gray-400">Share your experience to help other shoppers</p>
+            <p className="text-sm font-medium text-gray-900">Rate your purchase</p>
+            <p className="text-xs text-gray-500">Share your experience to help other shoppers</p>
           </div>
           <ChevronRight className="h-4 w-4 text-gray-500 group-hover:text-yellow-400 transition-colors shrink-0" />
         </Link>
       )}
 
       {/* Items */}
-      <div className="divide-y divide-white/[0.04]">
+      <div className="divide-y divide-gray-100">
         {allItems.slice(0, 3).map((item) => (
           <div key={item.id} className="flex items-center gap-4 px-4 sm:px-5 py-4">
-            <div className="h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-white/5 flex items-center justify-center">
+            <div className="h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
               {item.imageUrl ? (
                 <Image
                   src={item.imageUrl}
@@ -125,17 +124,17 @@ function OrderCard({ order }: { order: OrderDto }) {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
+              <p className="text-sm font-medium text-gray-900 truncate">
                 {item.productTitle || "Product"}
               </p>
               {item.variantName && (
                 <p className="text-xs text-gray-500 mt-0.5">{item.variantName}</p>
               )}
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 Qty: {item.quantity} &middot; {formatCents(item.unitPriceCents)} each
               </p>
             </div>
-            <p className="text-sm font-medium text-white shrink-0">
+            <p className="text-sm font-medium text-gray-900 shrink-0">
               {formatCents(item.totalPriceCents)}
             </p>
           </div>
@@ -148,8 +147,7 @@ function OrderCard({ order }: { order: OrderDto }) {
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-white/[0.06] px-4 sm:px-5 py-3"
-           style={{ background: "hsl(0 0% 9%)" }}>
+      <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 sm:px-5 py-3">
         <div className="text-xs text-gray-500">
           {order.subOrders.length > 1 && `${order.subOrders.length} stores`}
         </div>
@@ -211,8 +209,8 @@ export default function OrdersPage() {
     return (
       <main className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
         <ShoppingBag className="mx-auto h-14 w-14 text-gray-600" />
-        <h1 className="text-xl font-bold text-white mt-5">Sign in to view your orders</h1>
-        <p className="text-gray-400 text-sm mt-2 max-w-md mx-auto">
+        <h1 className="text-xl font-bold text-gray-900 mt-5">Sign in to view your orders</h1>
+        <p className="text-gray-500 text-sm mt-2 max-w-md mx-auto">
           Track your purchases, view order details, and manage your order history.
         </p>
         <Link
@@ -230,7 +228,7 @@ export default function OrdersPage() {
       <main className="mx-auto max-w-3xl px-4 sm:px-6 py-20">
         <div className="flex flex-col items-center justify-center gap-3 py-20">
           <Loader2 className="h-7 w-7 animate-spin text-primary" />
-          <span className="text-sm text-gray-400">Loading your orders...</span>
+          <span className="text-sm text-gray-500">Loading your orders...</span>
         </div>
       </main>
     )
@@ -239,12 +237,12 @@ export default function OrdersPage() {
   if (error) {
     return (
       <main className="mx-auto max-w-3xl px-4 sm:px-6 py-12">
-        <div className="rounded-2xl border border-red-500/20 p-8 text-center" style={{ background: "hsl(0 0% 11%)" }}>
-          <XCircle className="mx-auto h-10 w-10 text-red-400" />
-          <p className="mt-3 text-sm text-red-300">{error}</p>
+        <div className="rounded-2xl border border-red-500/20 bg-white p-8 text-center">
+          <XCircle className="mx-auto h-10 w-10 text-red-600" />
+          <p className="mt-3 text-sm text-red-600">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 rounded-lg bg-white/10 px-4 py-2 text-xs font-medium text-white hover:bg-white/15 transition-colors"
+            className="mt-4 rounded-lg bg-gray-100 px-4 py-2 text-xs font-medium text-gray-900 hover:bg-gray-200 transition-colors"
           >
             Try again
           </button>
@@ -256,17 +254,17 @@ export default function OrdersPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 sm:px-6 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Your Orders</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Your Orders</h1>
         {totalElements > 0 && (
           <span className="text-sm text-gray-500">{totalElements} order{totalElements !== 1 ? "s" : ""}</span>
         )}
       </div>
 
       {orders.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.08] px-6 py-16 text-center" style={{ background: "hsl(0 0% 11%)" }}>
+        <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center">
           <ReceiptText className="mx-auto h-14 w-14 text-gray-600" />
-          <h2 className="text-lg font-semibold text-white mt-5">No orders yet</h2>
-          <p className="text-gray-400 text-sm mt-2 max-w-sm mx-auto">
+          <h2 className="text-lg font-semibold text-gray-900 mt-5">No orders yet</h2>
+          <p className="text-gray-500 text-sm mt-2 max-w-sm mx-auto">
             When you place an order, it will appear here. Start exploring our marketplace to find products you love.
           </p>
           <Link
@@ -288,7 +286,7 @@ export default function OrdersPage() {
               <button
                 disabled={page <= 0}
                 onClick={() => setPage((p) => p - 1)}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-4 py-2 text-sm text-white transition-colors hover:bg-white/5 disabled:pointer-events-none disabled:opacity-30"
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-900 transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-30"
               >
                 <ChevronLeft className="h-4 w-4" /> Previous
               </button>
@@ -298,7 +296,7 @@ export default function OrdersPage() {
               <button
                 disabled={page >= totalPages - 1}
                 onClick={() => setPage((p) => p + 1)}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-4 py-2 text-sm text-white transition-colors hover:bg-white/5 disabled:pointer-events-none disabled:opacity-30"
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-900 transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-30"
               >
                 Next <ChevronRight className="h-4 w-4" />
               </button>

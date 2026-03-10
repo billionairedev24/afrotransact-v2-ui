@@ -111,8 +111,8 @@ function ColumnVisibilityDropdown({
       <button
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-white/10 hover:text-white",
-          open && "bg-white/10 text-white"
+          "inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900",
+          open && "bg-gray-100 text-gray-900"
         )}
       >
         <Eye className="h-4 w-4" />
@@ -123,14 +123,14 @@ function ColumnVisibilityDropdown({
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-52 origin-top-right rounded-xl border border-white/10 bg-[hsl(0_0%_11%)] p-2 shadow-xl animate-in fade-in-0 zoom-in-95">
+        <div className="absolute right-0 z-50 mt-2 w-52 origin-top-right rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-in fade-in-0 zoom-in-95">
           {toggleable.map((col) => {
             const visible = col.getIsVisible()
             return (
               <button
                 key={col.id}
                 onClick={() => col.toggleVisibility(!visible)}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
               >
                 {visible ? (
                   <Eye className="h-3.5 w-3.5 text-primary" />
@@ -155,10 +155,10 @@ function SkeletonRows({ cols, rows }: { cols: number; rows: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, r) => (
-        <tr key={r} className="border-b border-white/5">
+        <tr key={r} className="border-b border-gray-100">
           {Array.from({ length: cols }).map((_, c) => (
             <td key={c} className="px-4 py-3">
-              <div className="h-4 w-full animate-pulse rounded bg-white/5" />
+              <div className="h-4 w-full animate-pulse rounded bg-gray-100" />
             </td>
           ))}
         </tr>
@@ -198,7 +198,7 @@ export function DataTable<TData>({
           type="checkbox"
           checked={table.getIsAllPageRowsSelected()}
           onChange={table.getToggleAllPageRowsSelectedHandler()}
-          className="h-4 w-4 rounded border-white/20 bg-transparent accent-primary cursor-pointer"
+          className="h-4 w-4 rounded border-gray-300 bg-transparent accent-primary cursor-pointer"
         />
       ),
       cell: ({ row }) => (
@@ -207,7 +207,7 @@ export function DataTable<TData>({
           checked={row.getIsSelected()}
           disabled={!row.getCanSelect()}
           onChange={row.getToggleSelectedHandler()}
-          className="h-4 w-4 rounded border-white/20 bg-transparent accent-primary cursor-pointer"
+          className="h-4 w-4 rounded border-gray-300 bg-transparent accent-primary cursor-pointer"
         />
       ),
       enableSorting: false,
@@ -283,7 +283,7 @@ export function DataTable<TData>({
                 setGlobalFilter(v)
               }
             }}
-            className="h-10 w-full rounded-lg border border-white/10 bg-white/5 pl-9 pr-9 text-sm text-white placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
+            className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-9 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
           />
           {(searchColumn
             ? (table.getColumn(searchColumn)?.getFilterValue() as string)
@@ -296,7 +296,7 @@ export function DataTable<TData>({
                   setGlobalFilter("")
                 }
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-900 transition-colors"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -311,7 +311,7 @@ export function DataTable<TData>({
             <button
               onClick={handleExport}
               disabled={totalRows === 0}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-40"
             >
               <Download className="h-4 w-4" />
               Export
@@ -321,11 +321,11 @@ export function DataTable<TData>({
       </div>
 
       {/* ── Table ───────────────────────────────────────────────────── */}
-      <div className="overflow-x-auto rounded-xl border border-white/10 bg-[hsl(0_0%_11%)]">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="border-b border-white/10">
+              <tr key={hg.id} className="border-b border-gray-200">
                 {hg.headers.map((header) => {
                   const sortable = header.column.getCanSort()
                   const sorted = header.column.getIsSorted()
@@ -335,8 +335,8 @@ export function DataTable<TData>({
                       colSpan={header.colSpan}
                       style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                       className={cn(
-                        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400",
-                        sortable && "cursor-pointer select-none hover:text-white transition-colors"
+                        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500",
+                        sortable && "cursor-pointer select-none hover:text-gray-900 transition-colors"
                       )}
                       onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
                     >
@@ -386,12 +386,12 @@ export function DataTable<TData>({
                 <tr
                   key={row.id}
                   data-selected={row.getIsSelected() || undefined}
-                  className="border-b border-white/5 transition-colors hover:bg-white/[0.03] data-[selected]:bg-primary/5"
+                  className="border-b border-gray-100 transition-colors hover:bg-gray-50 data-[selected]:bg-primary/5"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="px-4 py-3 text-sm text-gray-300"
+                      className="px-4 py-3 text-sm text-gray-600"
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
@@ -418,10 +418,10 @@ export function DataTable<TData>({
             <select
               value={table.getState().pagination.pageSize}
               onChange={(e) => table.setPageSize(Number(e.target.value))}
-              className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-sm text-gray-300 outline-none focus:border-primary/50"
+              className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-600 outline-none focus:border-primary/50"
             >
               {[10, 20, 30, 50, 100].map((size) => (
-                <option key={size} value={size} className="bg-[hsl(0_0%_11%)] text-gray-300">
+                <option key={size} value={size} className="bg-white text-gray-600">
                   {size}
                 </option>
               ))}
@@ -438,14 +438,14 @@ export function DataTable<TData>({
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-gray-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-gray-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-30"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

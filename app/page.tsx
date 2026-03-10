@@ -212,7 +212,7 @@ export default function HomePage() {
                 <Link
                   key={deal.label}
                   href="/deals"
-                  className={`shrink-0 flex items-center gap-2 rounded-lg border ${deal.color} px-3 py-1.5 text-xs font-medium text-white hover:brightness-110 transition-all`}
+                    className={`shrink-0 flex items-center gap-2 rounded-lg border ${deal.color} px-3 py-1.5 text-xs font-medium text-white/90 hover:brightness-110 transition-all`}
                 >
                   <span>{deal.label}</span>
                   <span className="text-white/70">·</span>
@@ -452,10 +452,10 @@ export default function HomePage() {
                 ].map((plan) => (
                   <div
                     key={plan.name}
-                    className="rounded-xl border border-white/10 bg-white/5 p-3 text-center"
+                    className="rounded-xl border border-gray-200 bg-white p-3 text-center"
                   >
-                    <p className="text-[10px] text-white/50 uppercase tracking-wide mb-0.5">{plan.name}</p>
-                    <p className="text-sm font-bold text-white">{plan.price}<span className="text-[10px] font-normal text-white/40">/mo</span></p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">{plan.name}</p>
+                    <p className="text-sm font-bold text-gray-900">{plan.price}<span className="text-[10px] font-normal text-gray-400">/mo</span></p>
                     <p className="text-[10px] text-emerald-400 mt-0.5">{plan.tag}</p>
                   </div>
                 ))}
@@ -475,7 +475,7 @@ export default function HomePage() {
                 </Link>
                 <Link
                   href="/sell/pricing"
-                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-8 text-[15px] font-semibold text-white hover:bg-white/10 transition-all"
+                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-white px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-50 transition-all"
                 >
                   View Pricing
                 </Link>

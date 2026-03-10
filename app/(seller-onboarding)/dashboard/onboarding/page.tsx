@@ -53,9 +53,9 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
-const BG = "hsl(0 0% 7%)"
-const CARD = "hsl(0 0% 11%)"
-const BORDER = "rgba(255,255,255,0.1)"
+const BG = "bg-gray-50"
+const CARD = "bg-white"
+const BORDER = "border-gray-200"
 
 const STEPS = [
   { label: "Business", icon: Building2 },
@@ -171,18 +171,18 @@ function needsPrincipals(entityType: string) {
 }
 
 const inputCls =
-  "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+  "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
 const inputErrCls =
-  "w-full rounded-xl border border-red-500/60 bg-red-500/5 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-400 transition-colors"
+  "w-full rounded-xl border border-red-500/60 bg-red-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-400 transition-colors"
 const selectCls =
-  "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors appearance-none"
+  "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors appearance-none"
 const selectErrCls =
-  "w-full rounded-xl border border-red-500/60 bg-red-500/5 px-4 py-3 text-sm text-white focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-400 transition-colors appearance-none"
-const labelCls = "block text-sm font-medium text-white mb-1.5"
+  "w-full rounded-xl border border-red-500/60 bg-red-50 px-4 py-3 text-sm text-gray-900 focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-400 transition-colors appearance-none"
+const labelCls = "block text-sm font-medium text-gray-900 mb-1.5"
 
 function FieldError({ error }: { error?: string }) {
   if (!error) return null
-  return <p className="mt-1 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />{error}</p>
+  return <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />{error}</p>
 }
 
 function emptyPrincipal(): Principal {
@@ -264,9 +264,6 @@ export default function SellerOnboardingPage() {
     const s = p.onboardingStatus?.toLowerCase()
     if (s === "submitted" || s === "under_review" || s === "approved") {
       setSubmitted(true)
-    }
-    if (s === "needs_action") {
-      setSubmitted(false)
     }
     const b = p.businessInfo
     setBusinessName(b.businessName ?? "")
@@ -732,23 +729,22 @@ export default function SellerOnboardingPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="flex items-center justify-center py-20 gap-3" style={{ background: BG }}>
+      <div className={`flex items-center justify-center py-20 gap-3 ${BG}`}>
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <span className="text-sm text-gray-400">Loading onboarding…</span>
+        <span className="text-sm text-gray-500">Loading onboarding…</span>
       </div>
     )
   }
 
   if (status === "unauthenticated") {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]" style={{ background: BG }}>
+      <div className={`flex items-center justify-center min-h-[60vh] ${BG}`}>
         <div
-          className="flex flex-col items-center justify-center rounded-2xl border p-12 text-center max-w-md"
-          style={{ background: CARD, borderColor: BORDER }}
+          className={`flex flex-col items-center justify-center rounded-2xl border ${BORDER} ${CARD} p-12 text-center max-w-md`}
         >
           <Store className="h-14 w-14 text-muted-foreground mb-4" />
-          <h2 className="text-xl font-bold text-white">Sign in to continue</h2>
-          <p className="mt-2 text-sm text-gray-400">
+          <h2 className="text-xl font-bold text-gray-900">Sign in to continue</h2>
+          <p className="mt-2 text-sm text-gray-500">
             You need to be signed in to set up your seller account.
           </p>
           <button
@@ -763,135 +759,49 @@ export default function SellerOnboardingPage() {
   }
 
   if (submitted) {
-    const obStatus = progress?.onboardingStatus?.toLowerCase()
-    const isRejected = obStatus === "rejected"
-
     return (
-      <div className="flex items-center justify-center min-h-[60vh]" style={{ background: BG }}>
+      <div className={`flex items-center justify-center min-h-[60vh] ${BG}`}>
         <div
-          className="flex flex-col items-center justify-center rounded-2xl border p-8 sm:p-12 text-center max-w-lg w-full mx-4"
-          style={{ background: CARD, borderColor: BORDER }}
+          className={`flex flex-col items-center justify-center rounded-2xl border ${BORDER} ${CARD} p-12 text-center max-w-lg`}
         >
-          {isRejected ? (
-            <>
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10 mb-6">
-                <AlertCircle className="h-10 w-10 text-red-400" />
-              </div>
-              <h2 className="text-2xl font-bold text-white">Application Not Approved</h2>
-              <p className="mt-3 text-sm text-gray-400 max-w-sm leading-relaxed">
-                Unfortunately, your seller application was not approved at this time.
-              </p>
-              {progress?.rejectionReason && (
-                <div className="mt-4 w-full rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-left">
-                  <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-1">Reason</p>
-                  <p className="text-sm text-red-300">{progress.rejectionReason}</p>
-                </div>
-              )}
-              <p className="mt-4 text-xs text-gray-500">
-                If you believe this was a mistake, please contact us at{" "}
-                <a href="mailto:hello@afrotransact.com" className="text-primary hover:underline">hello@afrotransact.com</a>
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 mb-6">
-                <Shield className="h-10 w-10 text-primary" />
-                <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-black">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                </span>
-              </div>
-              <h2 className="text-2xl font-bold text-white">Application Under Review</h2>
-              <p className="mt-3 text-sm text-gray-400 max-w-sm leading-relaxed">
-                Thank you for submitting your seller application! Our team is carefully reviewing your information. We&apos;ll notify you via email once it&apos;s been processed.
-              </p>
-
-              <div className="mt-6 w-full space-y-3">
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-left">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <FileText className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">Business verification</p>
-                    <p className="text-xs text-gray-500">We review your documents and business details</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-left">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <CreditCard className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">Payment setup confirmation</p>
-                    <p className="text-xs text-gray-500">Stripe account and subscription verified</p>
-                  </div>
-                </div>
-              </div>
-
-              <p className="mt-6 text-xs text-gray-500">
-                This typically takes 1–2 business days. If we need additional information, we&apos;ll reach out to you directly.
-              </p>
-
-              <div className="mt-6">
-                <button
-                  onClick={() => router.push("/")}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
-                >
-                  <ArrowLeft className="h-4 w-4" /> Back to Marketplace
-                </button>
-              </div>
-            </>
-          )}
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-500/10 mb-6">
+            <CheckCircle2 className="h-10 w-10 text-green-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">Application Submitted</h2>
+          <p className="mt-3 text-sm text-gray-500 max-w-sm leading-relaxed">
+            Your seller application is under review. We&apos;ll notify you via email once it&apos;s been processed. This typically takes 1–2 business days.
+          </p>
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              Go to Dashboard <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-10" style={{ background: BG }}>
+    <div className={`max-w-4xl mx-auto px-4 py-6 sm:py-10 ${BG}`}>
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white">Seller Onboarding</h1>
-        <p className="mt-1 text-sm text-gray-400">Complete the steps below to start selling on AfroTransact</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Seller Onboarding</h1>
+        <p className="mt-1 text-sm text-gray-500">Complete the steps below to start selling on AfroTransact</p>
       </div>
 
       <StepIndicator currentStep={step} maxReachedStep={maxReachedStep} onStepClick={(s) => { if (s <= maxReachedStep) setStep(s) }} completionChecks={completionChecks} />
 
       <div
-        className="rounded-2xl border p-6 sm:p-8 mt-8"
-        style={{ background: CARD, borderColor: BORDER }}
+        className={`rounded-2xl border ${BORDER} ${CARD} p-6 sm:p-8 mt-8`}
       >
         {submitted && step < 6 && (
           <div className="mb-6 flex items-center gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
             <Lock className="h-4 w-4 text-yellow-400 shrink-0" />
-            <p className="text-sm text-yellow-300">
+            <p className="text-sm text-yellow-600">
               Your application has been submitted. Fields are locked. To request changes, contact support.
             </p>
-          </div>
-        )}
-        {progress?.onboardingStatus?.toLowerCase() === "needs_action" && (
-          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-amber-300">Action required — additional information needed</p>
-                <p className="text-xs text-amber-400/70 mt-1">Please review the notes below, update the required information, and resubmit your application.</p>
-              </div>
-            </div>
-            {(progress.rejectionReason || progress.adminNotes) && (
-              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 ml-8">
-                <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">What we need</p>
-                <p className="text-sm text-amber-200">{progress.rejectionReason || progress.adminNotes}</p>
-              </div>
-            )}
-            {progress.documents?.some(d => d.adminNotes) && (
-              <div className="ml-8 space-y-2">
-                <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Document notes</p>
-                {progress.documents.filter(d => d.adminNotes).map(d => (
-                  <div key={d.id} className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-2">
-                    <p className="text-xs text-gray-400">{d.documentType}: <span className="font-medium">{d.fileName}</span></p>
-                    <p className="text-sm text-amber-200 mt-0.5">{d.adminNotes}</p>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
         <fieldset disabled={submitted && step < 6} className={submitted && step < 6 ? "opacity-70 pointer-events-none" : ""}>
@@ -993,14 +903,14 @@ export default function SellerOnboardingPage() {
           {step > 0 && (
             <button
               onClick={() => setStep(step - 1)}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-sm font-medium text-gray-300 hover:bg-white/5 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" /> Back
             </button>
           )}
           <button
             onClick={handleSaveLater}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-2.5 text-sm font-medium text-gray-400 hover:bg-white/5 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
           >
             <Save className="h-4 w-4" /> Save & Continue Later
           </button>
@@ -1031,8 +941,6 @@ export default function SellerOnboardingPage() {
             >
               {submitting ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>
-              ) : progress?.onboardingStatus?.toLowerCase() === "needs_action" ? (
-                <>Resubmit Application <ArrowRight className="h-4 w-4" /></>
               ) : (
                 <>Submit Application <CheckCircle2 className="h-4 w-4" /></>
               )}
@@ -1061,7 +969,7 @@ function StepIndicator({
   return (
     <div className="flex items-center justify-between relative">
       <div
-        className="absolute top-5 left-0 right-0 h-0.5 bg-white/10 hidden sm:block"
+        className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 hidden sm:block"
         style={{ left: "2rem", right: "2rem" }}
       />
       {STEPS.map((s, i) => {
@@ -1082,7 +990,7 @@ function StepIndicator({
                   ? "border-primary bg-primary text-primary-foreground"
                   : done
                     ? "border-green-500 bg-green-500/10 text-green-500"
-                    : "border-white/20 bg-white/5 text-gray-500"
+                    : "border-gray-300 bg-gray-50 text-gray-500"
               } group-hover:scale-110`}
             >
               {done && !active ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -1107,13 +1015,13 @@ function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: s
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
         <Icon className="h-5 w-5 text-primary" />
       </div>
-      <h2 className="text-xl font-bold text-white">{title}</h2>
+      <h2 className="text-xl font-bold text-gray-900">{title}</h2>
     </div>
   )
 }
 
 function RequiredDot() {
-  return <span className="text-red-400 ml-0.5">*</span>
+  return <span className="text-red-600 ml-0.5">*</span>
 }
 
 // ── Step 0: Business Information ──
@@ -1155,7 +1063,7 @@ function BusinessStep({
   return (
     <div>
       <SectionTitle icon={Building2} title="Business Information" />
-      <p className="text-sm text-gray-400 mb-6">Tell us about your business. This information is used for verification and compliance.</p>
+      <p className="text-sm text-gray-500 mb-6">Tell us about your business. This information is used for verification and compliance.</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
@@ -1166,23 +1074,23 @@ function BusinessStep({
         <div>
           <label className={labelCls}>Entity Type<RequiredDot />{locked && entityType && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}</label>
           <select value={entityType} onChange={(e) => setEntityType(e.target.value)} className={errors.entityType ? selectErrCls : selectCls} disabled={locked && !!entityType}>
-            <option value="" className="bg-neutral-900">Select type…</option>
-            {ENTITY_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-neutral-900">{t.label}</option>)}
+            <option value="" className="bg-white">Select type…</option>
+            {ENTITY_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-white">{t.label}</option>)}
           </select>
           <FieldError error={errors.entityType} />
         </div>
         <div>
           <label className={labelCls}>What do you sell?</label>
           <select value={businessType} onChange={(e) => setBusinessType(e.target.value)} className={selectCls}>
-            <option value="" className="bg-neutral-900">Select…</option>
-            {BUSINESS_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-neutral-900">{t.label}</option>)}
+            <option value="" className="bg-white">Select…</option>
+            {BUSINESS_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-white">{t.label}</option>)}
           </select>
         </div>
         <div>
           <label className={labelCls}>Industry Category</label>
           <select value={industryCategory} onChange={(e) => setIndustryCategory(e.target.value)} className={selectCls}>
-            <option value="" className="bg-neutral-900">Select…</option>
-            {INDUSTRY_CATEGORIES.map((c) => <option key={c} value={c} className="bg-neutral-900">{c}</option>)}
+            <option value="" className="bg-white">Select…</option>
+            {INDUSTRY_CATEGORIES.map((c) => <option key={c} value={c} className="bg-white">{c}</option>)}
           </select>
         </div>
         <div>
@@ -1207,12 +1115,12 @@ function BusinessStep({
         <div>
           <label className={labelCls}>Annual Revenue (approx.)</label>
           <select value={annualRevenue} onChange={(e) => setAnnualRevenue(e.target.value)} className={selectCls}>
-            <option value="" className="bg-neutral-900">Select…</option>
-            <option value="< $50K" className="bg-neutral-900">Less than $50,000</option>
-            <option value="$50K - $100K" className="bg-neutral-900">$50,000 - $100,000</option>
-            <option value="$100K - $500K" className="bg-neutral-900">$100,000 - $500,000</option>
-            <option value="$500K - $1M" className="bg-neutral-900">$500,000 - $1,000,000</option>
-            <option value="> $1M" className="bg-neutral-900">More than $1,000,000</option>
+            <option value="" className="bg-white">Select…</option>
+            <option value="< $50K" className="bg-white">Less than $50,000</option>
+            <option value="$50K - $100K" className="bg-white">$50,000 - $100,000</option>
+            <option value="$100K - $500K" className="bg-white">$100,000 - $500,000</option>
+            <option value="$500K - $1M" className="bg-white">$500,000 - $1,000,000</option>
+            <option value="> $1M" className="bg-white">More than $1,000,000</option>
           </select>
         </div>
         <div>
@@ -1231,8 +1139,8 @@ function BusinessStep({
         </div>
       </div>
 
-      <div className="mt-8 pt-6 border-t border-white/10">
-        <h3 className="text-base font-semibold text-white mb-4">Business Address</h3>
+      <div className="mt-8 pt-6 border-t border-gray-200">
+        <h3 className="text-base font-semibold text-gray-900 mb-4">Business Address</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <label className={labelCls}>Address Line 1<RequiredDot /></label>
@@ -1263,8 +1171,8 @@ function BusinessStep({
           <div>
             <label className={labelCls}>State<RequiredDot /></label>
             <select value={state} onChange={(e) => setState(e.target.value)} className={errors.state ? selectErrCls : selectCls}>
-              <option value="" className="bg-neutral-900">Select…</option>
-              {US_STATES.map((s) => <option key={s} value={s} className="bg-neutral-900">{s}</option>)}
+              <option value="" className="bg-white">Select…</option>
+              {US_STATES.map((s) => <option key={s} value={s} className="bg-white">{s}</option>)}
             </select>
             <FieldError error={errors.state} />
           </div>
@@ -1314,7 +1222,7 @@ function EntityDetailsStep({
         <SectionTitle icon={Users} title="Entity Details" />
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <AlertCircle className="h-12 w-12 text-yellow-500/60 mb-4" />
-          <p className="text-gray-400 text-sm">Please go back to Step 1 and select your entity type first.</p>
+          <p className="text-gray-500 text-sm">Please go back to Step 1 and select your entity type first.</p>
         </div>
       </div>
     )
@@ -1340,9 +1248,9 @@ function EntityDetailsStep({
   return (
     <div>
       <SectionTitle icon={Users} title="Entity & Identity Verification" />
-      <p className="text-sm text-gray-400 mb-6">
+      <p className="text-sm text-gray-500 mb-6">
         Provide identity and entity information required for{" "}
-        <span className="text-white font-medium">{ENTITY_TYPES.find((t) => t.value === entityType)?.label}</span> sellers.
+        <span className="text-gray-900 font-medium">{ENTITY_TYPES.find((t) => t.value === entityType)?.label}</span> sellers.
         This is required for KYC compliance.
       </p>
 
@@ -1393,8 +1301,8 @@ function EntityDetailsStep({
             <div>
               <label className={labelCls}>State of Incorporation</label>
               <select value={stateOfIncorporation} onChange={(e) => setStateOfIncorporation(e.target.value)} className={selectCls}>
-                <option value="" className="bg-neutral-900">Select…</option>
-                {US_STATES.map((s) => <option key={s} value={s} className="bg-neutral-900">{s}</option>)}
+                <option value="" className="bg-white">Select…</option>
+                {US_STATES.map((s) => <option key={s} value={s} className="bg-white">{s}</option>)}
               </select>
             </div>
             <div>
@@ -1415,10 +1323,10 @@ function EntityDetailsStep({
       </div>
 
       {showPrincipals && (
-        <div className="mt-8 pt-6 border-t border-white/10">
+        <div className="mt-8 pt-6 border-t border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-semibold text-white">Beneficial Owners & Officers</h3>
+              <h3 className="text-base font-semibold text-gray-900">Beneficial Owners & Officers</h3>
               <p className="text-xs text-gray-500 mt-0.5">
                 List all individuals with 25%+ ownership or significant management control. Required for compliance.
               </p>
@@ -1432,7 +1340,7 @@ function EntityDetailsStep({
           </div>
 
           {principals.length === 0 && (
-            <div className={`rounded-xl border border-dashed p-8 text-center ${errors.principals ? "border-red-500/40 bg-red-500/5" : "border-white/10"}`}>
+            <div className={`rounded-xl border border-dashed p-8 text-center ${errors.principals ? "border-red-500/40 bg-red-500/5" : "border-gray-200"}`}>
               <Users className="h-10 w-10 text-gray-600 mx-auto mb-3" />
               <p className="text-sm text-gray-500">No owners or officers added yet.</p>
               <FieldError error={errors.principals} />
@@ -1453,14 +1361,13 @@ function EntityDetailsStep({
               return (
                 <div
                   key={pr.id}
-                  className={`rounded-xl border p-4 ${hasErrors ? "border-red-500/40" : ""}`}
-                  style={hasErrors ? undefined : { borderColor: BORDER }}
+                  className={`rounded-xl border p-4 ${hasErrors ? "border-red-500/40" : BORDER}`}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-white">Person {idx + 1}</h4>
+                    <h4 className="text-sm font-semibold text-gray-900">Person {idx + 1}</h4>
                     <button
                       onClick={() => removePrincipal(pr.id)}
-                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-red-600 hover:bg-red-500/10 transition-colors"
                     >
                       <Trash2 className="h-3 w-3" /> Remove
                     </button>
@@ -1483,9 +1390,9 @@ function EntityDetailsStep({
                     <div>
                       <label className={labelCls}>Role</label>
                       <select value={pr.role} onChange={(e) => updatePrincipal(pr.id, "role", e.target.value)} className={selectCls}>
-                        <option value="owner" className="bg-neutral-900">Owner</option>
-                        <option value="officer" className="bg-neutral-900">Officer</option>
-                        <option value="director" className="bg-neutral-900">Director</option>
+                        <option value="owner" className="bg-white">Owner</option>
+                        <option value="officer" className="bg-white">Officer</option>
+                        <option value="director" className="bg-white">Director</option>
                       </select>
                     </div>
                     <div>
@@ -1541,8 +1448,8 @@ function EntityDetailsStep({
                     <div>
                       <label className={labelCls}>State<RequiredDot /></label>
                       <select value={pr.state} onChange={(e) => updatePrincipal(pr.id, "state", e.target.value)} className={pe("state") ? selectErrCls : selectCls} disabled={!!pr.state && !!pr.city}>
-                        <option value="" className="bg-neutral-900">…</option>
-                        {US_STATES.map((s) => <option key={s} value={s} className="bg-neutral-900">{s}</option>)}
+                        <option value="" className="bg-white">…</option>
+                        {US_STATES.map((s) => <option key={s} value={s} className="bg-white">{s}</option>)}
                       </select>
                       <FieldError error={pe("state")} />
                     </div>
@@ -1616,7 +1523,7 @@ function StoreStep({
   return (
     <div>
       <SectionTitle icon={Store} title="Store Setup" />
-      <p className="text-sm text-gray-400 mb-6">Create your first store. You can add more stores later from your dashboard.</p>
+      <p className="text-sm text-gray-500 mb-6">Create your first store. You can add more stores later from your dashboard.</p>
 
       <div className="grid grid-cols-1 gap-4">
         <div>
@@ -1638,17 +1545,17 @@ function StoreStep({
             <label className={labelCls}>Store Logo</label>
             {logoUrl ? (
               <div className="mt-1 flex items-center gap-3">
-                <div className="h-16 w-16 rounded-xl border border-white/10 overflow-hidden bg-white/5 shrink-0">
+                <div className="h-16 w-16 rounded-xl border border-gray-200 overflow-hidden bg-gray-50 shrink-0">
                   <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" />
                 </div>
-                <button onClick={() => setLogoUrl("")} className="text-xs text-red-400 hover:text-red-300">Remove</button>
+                <button onClick={() => setLogoUrl("")} className="text-xs text-red-600 hover:text-red-600">Remove</button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => logoInputRef.current?.click()}
                 disabled={logoUploading}
-                className="mt-1 flex flex-col items-center justify-center w-full h-24 rounded-xl border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/[0.02] transition-colors cursor-pointer"
+                className="mt-1 flex flex-col items-center justify-center w-full h-24 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary/40 bg-gray-50 transition-colors cursor-pointer"
               >
                 {logoUploading ? (
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -1667,17 +1574,17 @@ function StoreStep({
             <label className={labelCls}>Store Banner</label>
             {bannerUrl ? (
               <div className="mt-1">
-                <div className="h-24 w-full rounded-xl border border-white/10 overflow-hidden bg-white/5">
+                <div className="h-24 w-full rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
                   <img src={bannerUrl} alt="Banner" className="h-full w-full object-cover" />
                 </div>
-                <button onClick={() => setBannerUrl("")} className="mt-1 text-xs text-red-400 hover:text-red-300">Remove</button>
+                <button onClick={() => setBannerUrl("")} className="mt-1 text-xs text-red-600 hover:text-red-600">Remove</button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => bannerInputRef.current?.click()}
                 disabled={bannerUploading}
-                className="mt-1 flex flex-col items-center justify-center w-full h-24 rounded-xl border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/[0.02] transition-colors cursor-pointer"
+                className="mt-1 flex flex-col items-center justify-center w-full h-24 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary/40 bg-gray-50 transition-colors cursor-pointer"
               >
                 {bannerUploading ? (
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -1733,7 +1640,7 @@ function DocumentsStep({
         <SectionTitle icon={FileText} title="Verification Documents" />
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <AlertCircle className="h-12 w-12 text-yellow-500/60 mb-4" />
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-500 text-sm">
             Please go back to Step 1 and select your entity type first.
           </p>
         </div>
@@ -1771,9 +1678,9 @@ function DocumentsStep({
   return (
     <div>
       <SectionTitle icon={FileText} title="Verification Documents" />
-      <p className="text-sm text-gray-400 mb-2">
+      <p className="text-sm text-gray-500 mb-2">
         Upload the required documents for your{" "}
-        <span className="text-white font-medium">{ENTITY_TYPES.find((t) => t.value === entityType)?.label}</span> entity.
+        <span className="text-gray-900 font-medium">{ENTITY_TYPES.find((t) => t.value === entityType)?.label}</span> entity.
       </p>
       <p className="text-xs text-gray-500 mb-6">
         Documents are used for KYC verification by our admin team. Stripe Connect will also verify your identity separately.
@@ -1785,14 +1692,13 @@ function DocumentsStep({
           return (
             <div
               key={slot.type}
-              className="rounded-xl border p-4"
-              style={{ borderColor: slot.uploaded ? "rgba(34,197,94,0.3)" : BORDER, background: slot.uploaded ? "rgba(34,197,94,0.03)" : "transparent" }}
+              className={`rounded-xl border p-4 ${slot.uploaded ? "border-green-500/30 bg-green-500/[0.03]" : BORDER}`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-white">{slot.label}</p>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${slot.required ? "bg-red-500/10 text-red-400" : "bg-white/5 text-gray-500"}`}>
+                    <p className="text-sm font-medium text-gray-900">{slot.label}</p>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${slot.required ? "bg-red-500/10 text-red-600" : "bg-gray-50 text-gray-500"}`}>
                       {slot.required ? "Required" : "Optional"}
                     </span>
                   </div>
@@ -1808,7 +1714,7 @@ function DocumentsStep({
                   {slot.uploaded ? (
                     <button
                       onClick={() => onRemove(slot.uploaded!.id)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-400 hover:bg-white/5 hover:text-red-400 transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 hover:text-red-600 transition-colors"
                     >
                       <X className="h-3 w-3" /> Remove
                     </button>
@@ -1839,7 +1745,7 @@ function DocumentsStep({
                   <img
                     src={slot.uploaded.fileUrl}
                     alt={slot.uploaded.fileName}
-                    className="max-h-40 rounded-lg border border-white/10 object-contain bg-black/20"
+                    className="max-h-40 rounded-lg border border-gray-200 object-contain bg-black/20"
                   />
                 </div>
               )}
@@ -1898,9 +1804,9 @@ function SubscriptionStep({
                 key={plan.id}
                 onClick={() => setSelectedPlan(plan.slug)}
                 className={`relative rounded-2xl border p-5 text-left transition-all hover:scale-[1.02] ${
-                  isSelected ? "border-primary ring-1 ring-primary" : "border-white/10 hover:border-white/20"
+                  isSelected ? "border-primary ring-1 ring-primary" : "border-gray-200 hover:border-gray-300"
                 }`}
-                style={{ background: isSelected ? "rgba(var(--primary-rgb, 124,58,237),0.05)" : "rgba(255,255,255,0.02)" }}
+                style={{ background: isSelected ? "rgba(var(--primary-rgb, 124,58,237),0.05)" : undefined }}
               >
                 {isPopular && (
                   <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-primary px-3 py-0.5 text-[10px] font-bold text-primary-foreground uppercase tracking-wider">
@@ -1908,31 +1814,31 @@ function SubscriptionStep({
                   </div>
                 )}
                 <div className="mb-4 mt-1">
-                  <h3 className="text-lg font-bold text-white">{plan.name}</h3>
+                  <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
                   {plan.description && <p className="text-xs text-gray-500 mt-0.5">{plan.description}</p>}
                 </div>
                 <div className="mb-1">
-                  <span className="text-3xl font-extrabold text-white">{priceDisplay}</span>
+                  <span className="text-3xl font-extrabold text-gray-900">{priceDisplay}</span>
                   <span className="text-sm text-gray-500">/mo</span>
                 </div>
                 <p className="text-[10px] text-green-400 mb-4">Free for your first month</p>
                 <ul className="space-y-2 mb-5">
-                  <li className="flex items-center gap-2 text-xs text-gray-400">
+                  <li className="flex items-center gap-2 text-xs text-gray-500">
                     <Check className="h-3.5 w-3.5 text-primary shrink-0" />
                     Up to {plan.maxProducts.toLocaleString()} products
                   </li>
-                  <li className="flex items-center gap-2 text-xs text-gray-400">
+                  <li className="flex items-center gap-2 text-xs text-gray-500">
                     <Check className="h-3.5 w-3.5 text-primary shrink-0" />
                     {plan.maxStores} store{plan.maxStores > 1 ? "s" : ""}
                   </li>
                   {plan.commissionRateOverride !== null && (
-                    <li className="flex items-center gap-2 text-xs text-gray-400">
+                    <li className="flex items-center gap-2 text-xs text-gray-500">
                       <Check className="h-3.5 w-3.5 text-primary shrink-0" />
                       {plan.commissionRateOverride}% commission rate
                     </li>
                   )}
                   {plan.features.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2 text-xs text-gray-400">
+                    <li key={i} className="flex items-center gap-2 text-xs text-gray-500">
                       <Check className="h-3.5 w-3.5 text-primary shrink-0" />
                       {f}
                     </li>
@@ -1942,7 +1848,7 @@ function SubscriptionStep({
                   className={`w-full rounded-xl py-2 text-center text-sm font-bold transition-colors ${
                     isSelected
                       ? "bg-primary text-primary-foreground"
-                      : "bg-white/5 text-gray-400"
+                      : "bg-gray-50 text-gray-500"
                   }`}
                 >
                   {isSelected ? "Selected" : "Choose Plan"}
@@ -1975,21 +1881,20 @@ function PaymentSetupStep({
   return (
     <div>
       <SectionTitle icon={Wallet} title="Payment Setup" />
-      <p className="text-sm text-gray-400 mb-6">
-        Two things are needed: (1) a Stripe Connect account so you can <strong className="text-white">receive payouts</strong> from sales,
-        and (2) a payment method so we can <strong className="text-white">bill your subscription</strong> after the free trial.
+      <p className="text-sm text-gray-500 mb-6">
+        Two things are needed: (1) a Stripe Connect account so you can <strong className="text-gray-900">receive payouts</strong> from sales,
+        and (2) a payment method so we can <strong className="text-gray-900">bill your subscription</strong> after the free trial.
       </p>
 
       {/* Section 1: Stripe Connect */}
       <div
-        className="rounded-xl border p-6 mb-6"
-        style={{ borderColor: connectDone ? "rgba(34,197,94,0.3)" : BORDER }}
+        className={`rounded-xl border p-6 mb-6 ${connectDone ? "border-green-500/30" : BORDER}`}
       >
         <div className="flex items-center gap-3 mb-4">
           <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${connectDone ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-primary"}`}>
             {connectDone ? <Check className="h-4 w-4" /> : "1"}
           </div>
-          <h3 className="text-base font-semibold text-white">Stripe Connect — Receive Payouts</h3>
+          <h3 className="text-base font-semibold text-gray-900">Stripe Connect — Receive Payouts</h3>
         </div>
 
         {connectDone ? (
@@ -2003,7 +1908,7 @@ function PaymentSetupStep({
           </div>
         ) : (
           <div className="pl-11">
-            <p className="text-sm text-gray-400 mb-4">
+            <p className="text-sm text-gray-500 mb-4">
               You&apos;ll be redirected to Stripe to complete identity verification and bank account details.
             </p>
 
@@ -2037,14 +1942,13 @@ function PaymentSetupStep({
 
       {/* Section 2: Payment Method */}
       <div
-        className="rounded-xl border p-6"
-        style={{ borderColor: hasPaymentMethod ? "rgba(34,197,94,0.3)" : BORDER }}
+        className={`rounded-xl border p-6 ${hasPaymentMethod ? "border-green-500/30" : BORDER}`}
       >
         <div className="flex items-center gap-3 mb-4">
           <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${hasPaymentMethod ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-primary"}`}>
             {hasPaymentMethod ? <Check className="h-4 w-4" /> : "2"}
           </div>
-          <h3 className="text-base font-semibold text-white">Payment Method — Subscription Billing</h3>
+          <h3 className="text-base font-semibold text-gray-900">Payment Method — Subscription Billing</h3>
         </div>
 
         {hasPaymentMethod ? (
@@ -2062,9 +1966,9 @@ function PaymentSetupStep({
               </p>
             ) : (
               <div>
-                <p className="text-sm text-gray-400 mb-4">
+                <p className="text-sm text-gray-500 mb-4">
                   Add a card that will be charged for your subscription after the free trial period.
-                  Your card will <strong className="text-white">not</strong> be charged during the trial.
+                  Your card will <strong className="text-gray-900">not</strong> be charged during the trial.
                 </p>
                 <PaymentMethodForm
                   setupIntentSecret={stripe?.setupIntentClientSecret ?? null}
@@ -2108,19 +2012,19 @@ function PaymentMethodForm({
       options={{
         clientSecret: setupIntentSecret,
         appearance: {
-          theme: "night",
+          theme: "stripe",
           variables: {
             colorPrimary: "#f97316",
-            colorBackground: "#1a1a1a",
-            colorText: "#e5e5e5",
+            colorBackground: "#f9fafb",
+            colorText: "#111827",
             colorDanger: "#ef4444",
             borderRadius: "12px",
             fontFamily: "inherit",
           },
           rules: {
-            ".Input": { border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.03)" },
+            ".Input": { border: "1px solid #e5e7eb", backgroundColor: "#f9fafb" },
             ".Input:focus": { border: "1px solid rgba(249,115,22,0.5)", boxShadow: "0 0 0 1px rgba(249,115,22,0.3)" },
-            ".Label": { color: "#a3a3a3", fontSize: "13px", fontWeight: "500" },
+            ".Label": { color: "#6b7280", fontSize: "13px", fontWeight: "500" },
           },
         },
       }}
@@ -2165,12 +2069,12 @@ function StripeCardForm({ onConfirm, saving }: { onConfirm: (pmId: string) => vo
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
         <p className="text-xs text-gray-500 mb-4">Secure card collection powered by Stripe</p>
         <PaymentElement options={{ layout: "tabs" }} />
         {error && (
           <div className="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
-            <p className="text-xs text-red-400">{error}</p>
+            <p className="text-xs text-red-600">{error}</p>
           </div>
         )}
         <button
@@ -2228,8 +2132,8 @@ function ReviewStep({
     <div>
       <SectionTitle icon={CheckCircle2} title="Review & Submit" />
 
-      <div className="rounded-xl border p-4 mb-6" style={{ borderColor: BORDER }}>
-        <h3 className="text-sm font-semibold text-white mb-3">Completion Checklist</h3>
+      <div className={`rounded-xl border ${BORDER} p-4 mb-6`}>
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Completion Checklist</h3>
         <div className="space-y-2">
           {checks.map((c) => (
             <div key={c.key} className="flex items-center gap-2.5">
@@ -2238,13 +2142,13 @@ function ReviewStep({
               ) : (
                 <AlertCircle className="h-4 w-4 text-yellow-500 shrink-0" />
               )}
-              <span className={`text-sm ${c.done ? "text-gray-300" : "text-yellow-400"}`}>{c.label}</span>
+              <span className={`text-sm ${c.done ? "text-gray-600" : "text-yellow-400"}`}>{c.label}</span>
               {!c.done && <span className="text-[10px] text-yellow-500/70 font-medium uppercase tracking-wider">Incomplete</span>}
             </div>
           ))}
         </div>
         {!allComplete && (
-          <p className="mt-3 text-xs text-yellow-500/80 border-t border-white/5 pt-3">
+          <p className="mt-3 text-xs text-yellow-500/80 border-t border-gray-100 pt-3">
             Please complete all required steps before submitting your application.
           </p>
         )}
@@ -2280,7 +2184,7 @@ function ReviewStep({
             <div className="mt-2">
               <p className="text-sm text-gray-500 mb-2">Beneficial Owners / Officers:</p>
               {principals.map((pr, i) => (
-                <div key={pr.id} className="text-xs text-gray-400 mb-1">
+                <div key={pr.id} className="text-xs text-gray-500 mb-1">
                   {i + 1}. {pr.firstName} {pr.lastName} — {pr.title || pr.role} ({pr.ownershipPct}%)
                 </div>
               ))}
@@ -2327,8 +2231,8 @@ function ReviewStep({
 
 function ReviewSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border p-4" style={{ borderColor: BORDER }}>
-      <h4 className="text-sm font-semibold text-white mb-3">{title}</h4>
+    <div className={`rounded-xl border ${BORDER} p-4`}>
+      <h4 className="text-sm font-semibold text-gray-900 mb-3">{title}</h4>
       <div className="space-y-1.5">{children}</div>
     </div>
   )
@@ -2339,7 +2243,7 @@ function ReviewRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-4 text-sm">
       <span className="text-gray-500 sm:w-40 shrink-0">{label}</span>
-      <span className="text-gray-300 break-all">{value}</span>
+      <span className="text-gray-600 break-all">{value}</span>
     </div>
   )
 }

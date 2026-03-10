@@ -4,62 +4,6 @@
 
 @layer base {
   :root {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 48 96% 53%;
-    --primary-foreground: 0 0% 0%;
-
-    --secondary: 142 71% 35%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-
-    --accent: 45 93% 47%;
-    --accent-foreground: 0 0% 0%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 48 96% 53%;
-
-    --radius: 0.625rem;
-
-    --sidebar: 0 0% 5%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 48 96% 53%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-border: 0 0% 18%;
-
-    --chart-1: 48 96% 53%;
-    --chart-2: 142 71% 35%;
-    --chart-3: 45 93% 47%;
-    --chart-4: 0 84% 60%;
-    --chart-5: 200 80% 50%;
-
-    --success: 142 71% 35%;
-    --warning: 48 96% 53%;
-    --info: 200 80% 50%;
-    --proximity-badge: 142 71% 35%;
-
-    /* Header & hero */
-    --header: 0 0% 8%;
-    --header-border: 0 0% 14%;
-    --header-secondary: 0 0% 11%;
-    --header-secondary-border: 0 0% 16%;
-    --hero: 0 0% 5%;
-  }
-
-  .light {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
 
@@ -88,6 +32,8 @@
     --input: 0 0% 89.8%;
     --ring: 48 96% 45%;
 
+    --radius: 0.625rem;
+
     --sidebar: 0 0% 97%;
     --sidebar-foreground: 0 0% 3.9%;
     --sidebar-primary: 48 96% 45%;
@@ -104,6 +50,66 @@
     --warning: 48 96% 45%;
     --info: 200 80% 50%;
     --proximity-badge: 142 71% 35%;
+
+    /* Header & hero — light theme */
+    --header: 0 0% 100%;
+    --header-border: 0 0% 90%;
+    --header-secondary: 0 0% 97%;
+    --header-secondary-border: 0 0% 90%;
+    --hero: 0 0% 98%;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 48 96% 53%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 142 71% 35%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+
+    --accent: 45 93% 47%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 48 96% 53%;
+
+    --sidebar: 0 0% 5%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 48 96% 53%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-border: 0 0% 18%;
+
+    --chart-1: 48 96% 53%;
+    --chart-2: 142 71% 35%;
+    --chart-3: 45 93% 47%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 200 80% 50%;
+
+    --success: 142 71% 35%;
+    --warning: 48 96% 53%;
+    --info: 200 80% 50%;
+    --proximity-badge: 142 71% 35%;
+
+    --header: 0 0% 8%;
+    --header-border: 0 0% 14%;
+    --header-secondary: 0 0% 11%;
+    --header-secondary-border: 0 0% 16%;
+    --hero: 0 0% 5%;
   }
 }
 
@@ -140,7 +146,7 @@
 /* Safari backdrop-filter fallback: if backdrop-filter isn't supported, use opaque bg */
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   [class*="backdrop-blur"] {
-    background-color: rgba(0, 0, 0, 0.9) !important;
+    background-color: rgba(255, 255, 255, 0.95) !important;
   }
 }
 

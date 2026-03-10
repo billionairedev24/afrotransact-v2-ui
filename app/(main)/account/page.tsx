@@ -49,8 +49,8 @@ export default async function AccountPage() {
           {getInitials(session.user?.name)}
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">{session.user?.name ?? "Your Account"}</h1>
-          <p className="text-sm text-gray-400">{session.user?.email}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{session.user?.name ?? "Your Account"}</h1>
+          <p className="text-sm text-gray-500">{session.user?.email}</p>
         </div>
       </div>
 
@@ -73,8 +73,7 @@ export default async function AccountPage() {
             <Link
               key={item.href}
               href={item.href}
-              className="group flex items-start gap-4 rounded-xl border border-white/10 p-5 transition-colors hover:border-white/20 hover:bg-white/[0.03]"
-              style={{ background: "hsl(0 0% 11%)" }}
+              className="group flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 transition-colors hover:border-gray-300 hover:bg-gray-50"
             >
               <div
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
@@ -83,10 +82,10 @@ export default async function AccountPage() {
                 <Icon className="h-5 w-5" style={{ color: item.accent }} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white group-hover:text-primary transition-colors">
+                <p className="text-sm font-semibold text-gray-900 group-hover:text-primary transition-colors">
                   {item.label}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
               </div>
             </Link>
           )

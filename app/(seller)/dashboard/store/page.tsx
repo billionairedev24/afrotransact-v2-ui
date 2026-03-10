@@ -22,7 +22,6 @@ import {
   type StoreDetail,
 } from "@/lib/api"
 import { useUploadThing } from "@/lib/uploadthing"
-import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 
 const inputClass =
   "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
@@ -155,7 +154,6 @@ export default function StoreSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [store, setStore] = useState<StoreDetail | null>(null)
   const [form, setForm] = useState<FormData>(storeToForm(null))
-  const [storeAddressQuery, setStoreAddressQuery] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -176,7 +174,6 @@ export default function StoreSettingsPage() {
         if (!cancelled) {
           setStore(existingStore)
           setForm(storeToForm(existingStore))
-          setStoreAddressQuery(existingStore?.addressLine1 ?? "")
         }
       } catch (err) {
         if (!cancelled) {
@@ -426,22 +423,6 @@ export default function StoreSettingsPage() {
           </div>
 
           <div className="mt-6 space-y-5">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">
-                Address
-              </label>
-              <AddressAutocomplete
-                value={storeAddressQuery}
-                onChange={setStoreAddressQuery}
-                onSelect={(parts) => {
-                  update("addressLine1", parts.line1)
-                  update("addressCity", parts.city)
-                  update("addressState", parts.state)
-                  update("addressZip", parts.zip)
-                }}
-                placeholder="Start typing your store address…"
-              />
-            </div>
             <div>
               <label
                 htmlFor="addressLine1"

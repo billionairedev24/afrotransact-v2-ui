@@ -1,9 +1,4 @@
-"use client"
-
-import { useState } from "react"
 import Link from "next/link"
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import { Check, ChevronRight, Gift, ShieldCheck, Sparkles, Store, TrendingUp, Users, Zap } from "lucide-react"
 
 const STEPS = [
@@ -23,27 +18,6 @@ const FEATURES = [
 ]
 
 export default function SellPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [starting, setStarting] = useState(false)
-  const isAuthenticated = status === "authenticated"
-
-  async function handleStartSelling() {
-    if (!isAuthenticated) {
-      router.push("/auth/register?role=seller")
-      return
-    }
-    setStarting(true)
-    try {
-      await fetch("/api/auth/set-seller-intent", { method: "POST" })
-      router.push("/dashboard/onboarding")
-    } catch {
-      router.push("/auth/register?role=seller")
-    } finally {
-      setStarting(false)
-    }
-  }
-
   return (
     <main className="min-h-screen">
       {/* Hero */}
@@ -53,22 +27,18 @@ export default function SellPage() {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary uppercase tracking-wider mb-6">
             <Store className="h-3 w-3" /> For Sellers
           </span>
-          <h1 className="text-4xl sm:text-5xl font-black text-white leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 leading-tight">
             Sell to your community.<br />
             <span className="text-primary">Earn on your terms.</span>
           </h1>
-          <p className="mt-4 text-lg text-gray-400 max-w-xl mx-auto">
+          <p className="mt-4 text-lg text-gray-500 max-w-xl mx-auto">
             Join 200+ immigrant entrepreneurs already selling food, fashion, and cultural goods on AfroTransact.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 justify-center">
-            <button
-              onClick={handleStartSelling}
-              disabled={starting}
-              className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-60"
-            >
-              {starting ? "Setting up..." : "Start Selling — Free"} <ChevronRight className="h-4 w-4" />
-            </button>
-            <Link href="/sell/pricing" className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-8 text-[15px] font-semibold text-white hover:bg-white/10 transition-all">
+            <Link href="/auth/register?role=seller" className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+              Start Selling — Free <ChevronRight className="h-4 w-4" />
+            </Link>
+            <Link href="/sell/pricing" className="inline-flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-gray-50 px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-100 transition-all">
               View Pricing
             </Link>
           </div>
@@ -79,15 +49,15 @@ export default function SellPage() {
       {/* Features */}
       <section className="px-4 sm:px-6 py-16 bg-card/40 border-y border-border">
         <div className="mx-auto max-w-5xl">
-          <h2 className="text-2xl font-bold text-white text-center mb-10">Everything you need to succeed</h2>
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">Everything you need to succeed</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map((f) => (
               <div key={f.title} className="rounded-2xl border border-border bg-card p-5 space-y-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 border border-gray-200">
                   {f.icon}
                 </div>
-                <h3 className="font-semibold text-white">{f.title}</h3>
-                <p className="text-sm text-gray-400 leading-relaxed">{f.desc}</p>
+                <h3 className="font-semibold text-gray-900">{f.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -97,14 +67,14 @@ export default function SellPage() {
       {/* How it works */}
       <section className="px-4 sm:px-6 py-16">
         <div className="mx-auto max-w-4xl">
-          <h2 className="text-2xl font-bold text-white text-center mb-10">How it works</h2>
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">How it works</h2>
           <div className="space-y-4">
             {STEPS.map((step) => (
               <div key={step.n} className="flex gap-5 rounded-2xl border border-border bg-card p-5">
                 <span className="text-3xl font-black text-primary/30 leading-none shrink-0">{step.n}</span>
                 <div>
-                  <h3 className="font-bold text-white">{step.title}</h3>
-                  <p className="text-sm text-gray-400 mt-1">{step.desc}</p>
+                  <h3 className="font-bold text-gray-900">{step.title}</h3>
+                  <p className="text-sm text-gray-500 mt-1">{step.desc}</p>
                 </div>
               </div>
             ))}
@@ -114,22 +84,18 @@ export default function SellPage() {
 
       {/* CTA */}
       <section className="border-t border-border bg-gradient-to-br from-primary/10 to-transparent px-4 sm:px-6 py-16 text-center">
-        <h2 className="text-3xl font-black text-white mb-4">Ready to start?</h2>
-        <p className="text-gray-400 max-w-md mx-auto mb-6 text-sm">Your first month is completely free. No hidden fees, no lock-in.</p>
+        <h2 className="text-3xl font-black text-gray-900 mb-4">Ready to start?</h2>
+        <p className="text-gray-500 max-w-md mx-auto mb-6 text-sm">Your first month is completely free. No hidden fees, no lock-in.</p>
         <div className="flex flex-wrap gap-4 justify-center mb-6">
           {["No credit card to start", "Setup in under 10 min", "Cancel anytime"].map((t) => (
-            <span key={t} className="flex items-center gap-1.5 text-sm text-gray-300">
+            <span key={t} className="flex items-center gap-1.5 text-sm text-gray-600">
               <Check className="h-4 w-4 text-emerald-400" />{t}
             </span>
           ))}
         </div>
-        <button
-          onClick={handleStartSelling}
-          disabled={starting}
-          className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all disabled:opacity-60"
-        >
-          {starting ? "Setting up..." : isAuthenticated ? "Start Selling" : "Create Seller Account"} <ChevronRight className="h-4 w-4" />
-        </button>
+        <Link href="/auth/register?role=seller" className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all">
+          Create Seller Account <ChevronRight className="h-4 w-4" />
+        </Link>
         <p className="text-xs text-gray-600 mt-4">
           By signing up you agree to our{" "}
           <Link href="/seller-agreement" className="underline hover:text-gray-400">Seller Agreement</Link> and{" "}

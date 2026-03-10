@@ -89,7 +89,7 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex items-center justify-center py-32 gap-3">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <span className="text-sm text-gray-400">Checking subscription…</span>
+        <span className="text-sm text-gray-500">Checking subscription…</span>
       </div>
     )
   }
@@ -102,8 +102,8 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
         <ShieldCheck className="h-10 w-10 text-primary" />
       </div>
 
-      <h1 className="text-2xl font-bold text-white">Subscribe to Access Your Dashboard</h1>
-      <p className="mt-3 max-w-md text-gray-400">
+      <h1 className="text-2xl font-bold text-gray-900">Subscribe to Access Your Dashboard</h1>
+      <p className="mt-3 max-w-md text-gray-500">
         You need an active subscription to manage products, view orders, and access seller tools.
         Pick a plan below to get started.
       </p>
@@ -113,35 +113,34 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className="relative flex flex-col rounded-2xl border border-white/10 p-6 text-left transition-colors hover:border-primary/40"
-              style={{ background: "hsl(0 0% 11%)" }}
+              className="relative flex flex-col rounded-2xl border border-gray-200 bg-white p-6 text-left transition-colors hover:border-primary/40"
             >
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <h3 className="text-base font-bold text-white">{plan.name}</h3>
+                <h3 className="text-base font-bold text-gray-900">{plan.name}</h3>
               </div>
 
-              <p className="mt-2 text-2xl font-bold text-white">
+              <p className="mt-2 text-2xl font-bold text-gray-900">
                 {formatPrice(plan.priceCentsPerMonth)}
-                <span className="text-sm font-normal text-gray-400">/mo</span>
+                <span className="text-sm font-normal text-gray-500">/mo</span>
               </p>
 
               {plan.description && (
-                <p className="mt-2 text-xs text-gray-400">{plan.description}</p>
+                <p className="mt-2 text-xs text-gray-500">{plan.description}</p>
               )}
 
               <ul className="mt-4 flex-1 space-y-2">
                 {plan.features.slice(0, 5).map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-gray-300">
+                  <li key={i} className="flex items-start gap-2 text-xs text-gray-600">
                     <Check className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
                     {f}
                   </li>
                 ))}
-                <li className="flex items-start gap-2 text-xs text-gray-300">
+                <li className="flex items-start gap-2 text-xs text-gray-600">
                   <Check className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
                   Up to {plan.maxProducts} products
                 </li>
-                <li className="flex items-start gap-2 text-xs text-gray-300">
+                <li className="flex items-start gap-2 text-xs text-gray-600">
                   <Check className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
                   Up to {plan.maxStores} store{plan.maxStores > 1 ? "s" : ""}
                 </li>

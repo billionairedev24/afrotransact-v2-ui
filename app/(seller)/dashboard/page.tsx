@@ -42,10 +42,10 @@ import {
 } from "@/lib/api"
 
 const PRIMARY = "hsl(45 93% 58%)"
-const CARD_BG = "hsl(0 0% 11%)"
+const CARD_BG = "#FFFFFF"
 const TOOLTIP_STYLE = {
-  background: "hsl(0 0% 13%)",
-  border: "1px solid hsl(0 0% 20%)",
+  background: "#FFFFFF",
+  border: "1px solid #E5E7EB",
   borderRadius: 12,
 }
 
@@ -201,7 +201,7 @@ export default function DashboardOverview() {
     return (
       <div className="flex items-center justify-center py-20 gap-3">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <span className="text-sm text-gray-400">Loading dashboard...</span>
+        <span className="text-sm text-gray-500">Loading dashboard...</span>
       </div>
     )
   }
@@ -287,10 +287,10 @@ export default function DashboardOverview() {
       {/* Welcome header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-gray-900">
             Welcome back{seller?.businessName ? `, ${seller.businessName}` : ""}
           </h1>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-sm text-gray-500">
             Overview of your store performance
           </p>
         </div>
@@ -300,7 +300,7 @@ export default function DashboardOverview() {
               ? "bg-green-500/10 text-green-400"
               : subStatus === "past_due"
               ? "bg-yellow-500/10 text-yellow-400"
-              : "bg-white/5 text-gray-400"
+              : "bg-gray-50 text-gray-500"
           }`}
         >
           {subPlan}
@@ -314,7 +314,7 @@ export default function DashboardOverview() {
           return (
             <div
               key={card.label}
-              className="rounded-2xl border border-white/10 p-5 min-h-[120px] flex flex-col justify-between"
+              className="rounded-2xl border border-gray-200 p-5 min-h-[120px] flex flex-col justify-between"
               style={{ background: CARD_BG }}
             >
               <div className="flex items-start justify-between">
@@ -322,8 +322,8 @@ export default function DashboardOverview() {
                 <TrendingUp className="h-3.5 w-3.5 text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white mt-3">{card.value}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{card.label}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-3">{card.value}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{card.label}</p>
               </div>
             </div>
           )
@@ -333,10 +333,10 @@ export default function DashboardOverview() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div
-          className="rounded-2xl border border-white/10 p-5"
+          className="rounded-2xl border border-gray-200 p-5"
           style={{ background: CARD_BG }}
         >
-          <h2 className="text-sm font-semibold text-white mb-4">Sales Trend (7 days)</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Sales Trend (7 days)</h2>
           <div className="h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={buildSalesData(recentOrders)}>
@@ -377,10 +377,10 @@ export default function DashboardOverview() {
         </div>
 
         <div
-          className="rounded-2xl border border-white/10 p-5"
+          className="rounded-2xl border border-gray-200 p-5"
           style={{ background: CARD_BG }}
         >
-          <h2 className="text-sm font-semibold text-white mb-4">Order Status Breakdown</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Order Status Breakdown</h2>
           {orderStatusData.length === 0 ? (
             <div className="h-[240px] flex flex-col items-center justify-center text-center">
               <ShoppingCart className="h-10 w-10 text-gray-600 mb-2" />
@@ -418,8 +418,8 @@ export default function DashboardOverview() {
                       className="h-2.5 w-2.5 rounded-full shrink-0"
                       style={{ background: s.color }}
                     />
-                    <span className="text-xs text-gray-400 whitespace-nowrap">{s.name}</span>
-                    <span className="text-xs font-medium text-white ml-auto">{s.value}</span>
+                    <span className="text-xs text-gray-500 whitespace-nowrap">{s.name}</span>
+                    <span className="text-xs font-medium text-gray-900 ml-auto">{s.value}</span>
                   </div>
                 ))}
               </div>
@@ -431,11 +431,11 @@ export default function DashboardOverview() {
       {/* Recent Orders + Quick Actions */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div
-          className="rounded-2xl border border-white/10 lg:col-span-2"
+          className="rounded-2xl border border-gray-200 lg:col-span-2"
           style={{ background: CARD_BG }}
         >
-          <div className="flex items-center justify-between border-b border-white/10 p-5">
-            <h2 className="text-sm font-semibold text-white">Recent Orders</h2>
+          <div className="flex items-center justify-between border-b border-gray-200 p-5">
+            <h2 className="text-sm font-semibold text-gray-900">Recent Orders</h2>
             <Link
               href="/dashboard/orders"
               className="flex items-center gap-1 text-xs text-primary hover:underline"
@@ -443,7 +443,7 @@ export default function DashboardOverview() {
               View all <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-gray-100">
             {recentOrders.length === 0 ? (
               <div className="px-5 py-10 text-center">
                 <ShoppingCart className="mx-auto h-8 w-8 text-gray-600" />
@@ -469,7 +469,7 @@ export default function DashboardOverview() {
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-white">
+                      <span className="text-sm font-semibold text-gray-900">
                         {formatCents(order.totalCents, order.currency)}
                       </span>
                       <span
@@ -486,61 +486,61 @@ export default function DashboardOverview() {
         </div>
 
         <div
-          className="rounded-2xl border border-white/10"
+          className="rounded-2xl border border-gray-200"
           style={{ background: CARD_BG }}
         >
-          <div className="border-b border-white/10 p-5">
-            <h2 className="text-sm font-semibold text-white">Quick Actions</h2>
+          <div className="border-b border-gray-200 p-5">
+            <h2 className="text-sm font-semibold text-gray-900">Quick Actions</h2>
           </div>
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-gray-100">
             <Link
               href="/dashboard/products"
-              className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-white/5"
+              className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-gray-50"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                 <Plus className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium text-white">Add Product</p>
+                <p className="text-sm font-medium text-gray-900">Add Product</p>
                 <p className="text-xs text-gray-500">Create a new listing</p>
               </div>
               <ArrowRight className="ml-auto h-4 w-4 text-gray-500" />
             </Link>
             <Link
               href="/dashboard/orders"
-              className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-white/5"
+              className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-gray-50"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                 <ShoppingCart className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium text-white">View All Orders</p>
+                <p className="text-sm font-medium text-gray-900">View All Orders</p>
                 <p className="text-xs text-gray-500">Track &amp; fulfill</p>
               </div>
               <ArrowRight className="ml-auto h-4 w-4 text-gray-500" />
             </Link>
             <Link
               href="/dashboard/store"
-              className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-white/5"
+              className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-gray-50"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                 <Settings className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium text-white">Store Settings</p>
+                <p className="text-sm font-medium text-gray-900">Store Settings</p>
                 <p className="text-xs text-gray-500">Logo, address, delivery</p>
               </div>
               <ArrowRight className="ml-auto h-4 w-4 text-gray-500" />
             </Link>
             <Link
               href="/dashboard/subscription"
-              className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-white/5"
+              className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-gray-50"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                 <CreditCard className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium text-white">Subscription</p>
+                <p className="text-sm font-medium text-gray-900">Subscription</p>
                 <p className="text-xs text-gray-500">Plan &amp; billing</p>
               </div>
               <ArrowRight className="ml-auto h-4 w-4 text-gray-500" />

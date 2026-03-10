@@ -50,7 +50,7 @@ function FulfillmentTracker({ status }: { status: string }) {
             <div className="flex flex-col items-center gap-1">
               <div
                 className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                  done ? "bg-primary" : "bg-white/15"
+                  done ? "bg-primary" : "bg-gray-200"
                 } ${active ? "ring-2 ring-primary/40" : ""}`}
               />
               <span className={`text-[10px] capitalize ${done ? "text-primary" : "text-gray-500"}`}>
@@ -58,7 +58,7 @@ function FulfillmentTracker({ status }: { status: string }) {
               </span>
             </div>
             {i < FULFILLMENT_STEPS.length - 1 && (
-              <div className={`flex-1 h-px mb-3 mx-1 transition-colors ${i < idx ? "bg-primary" : "bg-white/10"}`} />
+              <div className={`flex-1 h-px mb-3 mx-1 transition-colors ${i < idx ? "bg-primary" : "bg-gray-100"}`} />
             )}
           </div>
         )
@@ -146,7 +146,7 @@ function InlineReviewForm({
   if (!expanded) {
     return (
       <div className="mt-3 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
-        <p className="text-xs text-yellow-300/80 mb-2">How was this product?</p>
+        <p className="text-xs text-yellow-700/80 mb-2">How was this product?</p>
         <InteractiveStars
           rating={rating}
           size={24}
@@ -163,7 +163,7 @@ function InlineReviewForm({
     <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
       <div>
         <p className="text-xs text-primary/80 mb-1.5">
-          Rating <span className="font-medium text-white">{productTitle}</span>
+          Rating <span className="font-medium text-gray-900">{productTitle}</span>
         </p>
         <InteractiveStars rating={rating} size={24} onSelect={setRating} />
       </div>
@@ -173,7 +173,7 @@ function InlineReviewForm({
         onChange={(e) => setTitle(e.target.value)}
         maxLength={120}
         placeholder="Add a headline (optional)"
-        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 outline-none focus:border-primary/40"
+        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/40"
       />
       <textarea
         value={body}
@@ -181,12 +181,12 @@ function InlineReviewForm({
         rows={3}
         maxLength={2000}
         placeholder="Tell others what you think… (optional)"
-        className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 outline-none focus:border-primary/40"
+        className="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/40"
       />
       <div className="flex items-center gap-2 justify-end">
         <button
           onClick={() => { setExpanded(false); setRating(0) }}
-          className="rounded-lg px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+          className="rounded-lg px-3 py-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors"
         >
           Cancel
         </button>
@@ -237,7 +237,7 @@ function OrderItemRow({
   return (
     <div className="px-5 py-4">
       <div className="flex items-center gap-4">
-        <div className="h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
+        <div className="h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-gray-50 border border-gray-200 flex items-center justify-center">
           {item.imageUrl ? (
             <Image src={item.imageUrl} alt={item.productTitle || "Product"} width={64} height={64} className="h-full w-full object-cover" />
           ) : (
@@ -245,16 +245,16 @@ function OrderItemRow({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <Link href={`/product/${item.slug || item.productId}`} className="text-sm font-medium text-white hover:text-primary transition-colors line-clamp-1">
+          <Link href={`/product/${item.slug || item.productId}`} className="text-sm font-medium text-gray-900 hover:text-primary transition-colors line-clamp-1">
             {item.productTitle || "Product"}
           </Link>
           {item.variantName && <p className="text-xs text-gray-500 mt-0.5">{item.variantName}</p>}
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             Qty: {item.quantity} &middot; {formatCents(item.unitPriceCents)} each
           </p>
         </div>
         <div className="text-right shrink-0 ml-4">
-          <p className="text-sm font-semibold text-white">
+          <p className="text-sm font-semibold text-gray-900">
             {formatCents(item.totalPriceCents)}
           </p>
           {alreadyReviewed && (
@@ -283,9 +283,9 @@ function SubOrderCard({ sub, isDelivered }: { sub: SubOrderDto; isDelivered: boo
   const [_reviewedProducts, setReviewedProducts] = useState<Set<string>>(new Set())
 
   return (
-    <section className="rounded-2xl border border-white/10 overflow-hidden" style={{ background: "hsl(0 0% 11%)" }}>
-      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-white/10" style={{ background: "hsl(0 0% 9%)" }}>
-        <div className="flex items-center gap-2 text-sm font-semibold text-white">
+    <section className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
+      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
           <Store className="h-4 w-4 text-primary" />
           Store
         </div>
@@ -303,10 +303,10 @@ function SubOrderCard({ sub, isDelivered }: { sub: SubOrderDto; isDelivered: boo
       </div>
 
       {sub.trackingNumber && (
-        <div className="flex items-center justify-between px-5 py-2.5 mx-4 mb-3 rounded-xl bg-white/5 border border-white/10">
+          <div className="flex items-center justify-between px-5 py-2.5 mx-4 mb-3 rounded-xl bg-gray-50 border border-gray-200">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-gray-500">Tracking</p>
-            <p className="text-sm text-white font-mono font-medium">{sub.trackingNumber}</p>
+            <p className="text-sm text-gray-900 font-mono font-medium">{sub.trackingNumber}</p>
           </div>
         </div>
       )}
@@ -318,14 +318,14 @@ function SubOrderCard({ sub, isDelivered }: { sub: SubOrderDto; isDelivered: boo
               <MessageSquare className="h-4 w-4 text-yellow-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-white">How was everything?</p>
-              <p className="text-xs text-gray-400">Share your experience — it helps other shoppers</p>
+              <p className="text-sm font-medium text-gray-900">How was everything?</p>
+              <p className="text-xs text-gray-500">Share your experience — it helps other shoppers</p>
             </div>
           </div>
         </div>
       )}
 
-      <div className="divide-y divide-white/5">
+      <div className="divide-y divide-gray-100">
         {sub.items.map((item) => (
           <OrderItemRow
             key={item.id}
@@ -336,9 +336,9 @@ function SubOrderCard({ sub, isDelivered }: { sub: SubOrderDto; isDelivered: boo
         ))}
       </div>
 
-      <div className="border-t border-white/10 px-5 py-3 flex justify-between text-sm" style={{ background: "hsl(0 0% 9%)" }}>
-        <span className="text-gray-400">Subtotal</span>
-        <span className="text-white font-medium">{formatCents(sub.subtotalCents)}</span>
+      <div className="border-t border-gray-200 px-5 py-3 flex justify-between text-sm bg-gray-50">
+        <span className="text-gray-500">Subtotal</span>
+        <span className="text-gray-900 font-medium">{formatCents(sub.subtotalCents)}</span>
       </div>
     </section>
   )
@@ -377,7 +377,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
     return (
       <main className="mx-auto max-w-[800px] px-4 sm:px-6 py-20 flex flex-col items-center gap-3">
         <Loader2 className="h-7 w-7 animate-spin text-primary" />
-        <span className="text-sm text-gray-400">Loading order...</span>
+        <span className="text-sm text-gray-500">Loading order...</span>
       </main>
     )
   }
@@ -385,10 +385,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   if (error || !order) {
     return (
       <main className="mx-auto max-w-[800px] px-4 sm:px-6 py-12">
-        <div className="rounded-2xl border border-red-500/20 p-8 text-center" style={{ background: "hsl(0 0% 11%)" }}>
-          <XCircle className="mx-auto h-10 w-10 text-red-400" />
-          <p className="mt-3 text-sm text-red-300">{error || "Order not found"}</p>
-          <Link href="/orders" className="inline-block mt-4 rounded-lg bg-white/10 px-4 py-2 text-xs font-medium text-white hover:bg-white/15 transition-colors">
+        <div className="rounded-2xl border border-red-500/20 bg-white p-8 text-center">
+          <XCircle className="mx-auto h-10 w-10 text-red-600" />
+          <p className="mt-3 text-sm text-red-500">{error || "Order not found"}</p>
+          <Link href="/orders" className="inline-block mt-4 rounded-lg bg-gray-100 px-4 py-2 text-xs font-medium text-gray-900 hover:bg-gray-200 transition-colors">
             Back to orders
           </Link>
         </div>
@@ -406,16 +406,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
 
   return (
     <main className="mx-auto max-w-[800px] px-4 sm:px-6 py-8">
-      <Link href="/orders" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors mb-6">
+      <Link href="/orders" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-6">
         <ArrowLeft className="h-4 w-4" /> Back to Orders
       </Link>
 
-      <div className="rounded-2xl border border-white/10 p-5 mb-5" style={{ background: "hsl(0 0% 11%)" }}>
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 mb-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs text-gray-500 font-mono uppercase tracking-wider">Order #{order.orderNumber}</p>
-            <p className="text-white font-bold text-2xl mt-1">{formatCents(order.totalCents, order.currency)}</p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-gray-900 font-bold text-2xl mt-1">{formatCents(order.totalCents, order.currency)}</p>
+            <p className="text-xs text-gray-500 mt-1">
               Placed on {formatDate(order.placedAt || order.createdAt)}
             </p>
           </div>
@@ -425,34 +425,34 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
           </span>
         </div>
 
-        <div className="mt-5 pt-4 border-t border-white/10">
+        <div className="mt-5 pt-4 border-t border-gray-200">
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-400">Subtotal ({totalItems} item{totalItems !== 1 ? "s" : ""})</span>
-              <span className="text-white">{formatCents(order.subtotalCents, order.currency)}</span>
+              <span className="text-gray-500">Subtotal ({totalItems} item{totalItems !== 1 ? "s" : ""})</span>
+              <span className="text-gray-900">{formatCents(order.subtotalCents, order.currency)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Shipping</span>
-              <span className="text-white">{formatCents(order.shippingCostCents, order.currency)}</span>
+              <span className="text-gray-500">Shipping</span>
+              <span className="text-gray-900">{formatCents(order.shippingCostCents, order.currency)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Tax</span>
-              <span className="text-white">{formatCents(order.taxCents, order.currency)}</span>
+              <span className="text-gray-500">Tax</span>
+              <span className="text-gray-900">{formatCents(order.taxCents, order.currency)}</span>
             </div>
-            <div className="flex justify-between pt-2 border-t border-white/10">
-              <span className="text-white font-semibold">Total</span>
-              <span className="text-white font-bold">{formatCents(order.totalCents, order.currency)}</span>
+            <div className="flex justify-between pt-2 border-t border-gray-200">
+              <span className="text-gray-900 font-semibold">Total</span>
+              <span className="text-gray-900 font-bold">{formatCents(order.totalCents, order.currency)}</span>
             </div>
           </div>
         </div>
 
         {order.shippingAddress && (
-          <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
               <MapPin className="h-3.5 w-3.5" />
               <span className="uppercase tracking-wider">Shipping Address</span>
             </div>
-            <p className="text-sm text-gray-300">{order.shippingAddress}</p>
+            <p className="text-sm text-gray-600">{order.shippingAddress}</p>
           </div>
         )}
       </div>
