@@ -253,7 +253,7 @@ function CouponForm({
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Scope</label>
-          <select value={scope} onChange={e => setScope(e.target.value)} className={inputCls}>
+          <select value={scope} onChange={e => setScope(e.target.value as any)} className={inputCls}>
             <option value="product">Product</option>
             <option value="store">Store</option>
           </select>

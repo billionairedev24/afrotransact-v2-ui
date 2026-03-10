@@ -6,7 +6,7 @@ import { getToken } from "next-auth/jwt"
  * Server-side middleware: redirects sellers to /dashboard before the
  * page renders so they never see a flash of the customer-facing site.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const skip =
