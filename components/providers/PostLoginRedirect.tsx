@@ -106,25 +106,13 @@ export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
 
     const hasSellerIntent = hasSeller || regRole === "seller" || localIntent || cookieIntent
 
-    if (hasSellerIntent) {
-      const obStatus = await fetchOnboardingStatus()
-      if (obStatus === "approved") {
-        if (!isOnDashboard) router.replace("/dashboard")
-      } else {
-        router.replace("/dashboard/onboarding")
-      }
-      return
-    }
+    if (!hasSellerIntent) return
 
-    // Always check backend as fallback — catches seller records
-    // created from registration even when no local signals exist
     const obStatus = await fetchOnboardingStatus()
-    if (obStatus !== null) {
-      if (obStatus === "approved") {
-        if (!isOnDashboard) router.replace("/dashboard")
-      } else {
-        router.replace("/dashboard/onboarding")
-      }
+    if (obStatus === "approved" || obStatus === "completed") {
+      if (!isOnDashboard) router.replace("/dashboard")
+    } else if (obStatus !== null) {
+      router.replace("/dashboard/onboarding")
     }
   }, [session, pathname, router])
 
