@@ -45,13 +45,13 @@ import { cn } from "@/lib/utils"
 type TabKey = "all" | "products" | "sellers"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  pending_review: { label: "Pending Review", className: "bg-yellow-500/20 text-yellow-400" },
-  active:         { label: "Active",         className: "bg-green-500/20 text-green-400" },
-  approved:       { label: "Approved",       className: "bg-green-500/20 text-green-400" },
-  rejected:       { label: "Rejected",       className: "bg-red-500/20 text-red-400" },
-  submitted:      { label: "Submitted",      className: "bg-blue-500/20 text-blue-400" },
-  under_review:   { label: "Under Review",   className: "bg-purple-500/20 text-purple-400" },
-  needs_action:   { label: "Needs Info",     className: "bg-orange-500/20 text-orange-400" },
+  pending_review: { label: "Pending Review", className: "bg-yellow-50 text-yellow-700" },
+  active:         { label: "Active",         className: "bg-green-50 text-green-700" },
+  approved:       { label: "Approved",       className: "bg-green-50 text-green-700" },
+  rejected:       { label: "Rejected",       className: "bg-red-50 text-red-700" },
+  submitted:      { label: "Submitted",      className: "bg-blue-50 text-blue-700" },
+  under_review:   { label: "Under Review",   className: "bg-purple-50 text-purple-700" },
+  needs_action:   { label: "Needs Info",     className: "bg-orange-50 text-orange-700" },
 }
 
 function formatDate(iso: string) {
@@ -214,22 +214,22 @@ export default function WorkQueuePage() {
           label="Total Pending"
           value={totalCount}
           icon={<ClipboardList className="h-5 w-5" />}
-          color="text-yellow-400"
-          bg="bg-yellow-500/10"
+          color="text-yellow-700"
+          bg="bg-yellow-50"
         />
         <StatCard
           label="Product Approvals"
           value={productCount}
           icon={<Package className="h-5 w-5" />}
-          color="text-blue-400"
-          bg="bg-blue-500/10"
+          color="text-blue-700"
+          bg="bg-blue-50"
         />
         <StatCard
           label="Seller Applications"
           value={sellerCount}
           icon={<Store className="h-5 w-5" />}
-          color="text-purple-400"
-          bg="bg-purple-500/10"
+          color="text-purple-700"
+          bg="bg-purple-50"
         />
       </div>
 
@@ -293,10 +293,10 @@ export default function WorkQueuePage() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-400">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
                       <Package className="h-2.5 w-2.5" /> Product
                     </span>
-                    <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium bg-yellow-500/20 text-yellow-400">
+                    <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium bg-yellow-50 text-yellow-700">
                       Pending Review
                     </span>
                   </div>
@@ -318,7 +318,7 @@ export default function WorkQueuePage() {
                   <button
                     onClick={() => openRejectModal("product", product.id, product.title)}
                     disabled={busy}
-                    className="rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+                    className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors"
                   >
                     Reject
                   </button>
@@ -338,13 +338,13 @@ export default function WorkQueuePage() {
                 className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-4 cursor-pointer hover:border-gray-300 transition-colors"
                 onClick={() => openSellerReview(seller)}
               >
-                <div className="h-14 w-14 shrink-0 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                  <Store className="h-6 w-6 text-purple-400" />
+                <div className="h-14 w-14 shrink-0 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center">
+                  <Store className="h-6 w-6 text-purple-700" />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-400">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-700">
                       <Store className="h-2.5 w-2.5" /> Seller
                     </span>
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${badge.className}`}>
@@ -369,7 +369,7 @@ export default function WorkQueuePage() {
                   <button
                     onClick={() => openRejectModal("seller", seller.id, seller.businessName)}
                     disabled={busy}
-                    className="rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+                    className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors"
                   >
                     Reject
                   </button>
@@ -461,7 +461,7 @@ export default function WorkQueuePage() {
           <button
             onClick={handleReject}
             disabled={!rejectReason.trim() || actionLoading === rejectModal.id}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
           >
             {actionLoading === rejectModal.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             Reject
@@ -596,7 +596,7 @@ function ProductReviewSheet({
                     <div key={v.id} className="rounded-xl border border-gray-100 bg-white px-4 py-3">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-medium text-gray-900">{v.name || "Default"}</p>
-                        <span className="text-sm font-semibold text-emerald-400">{formatPrice(v.price)}</span>
+                        <span className="text-sm font-semibold text-emerald-700">{formatPrice(v.price)}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                         <div className="flex items-center gap-1.5 text-gray-500">
@@ -632,7 +632,7 @@ function ProductReviewSheet({
           <button
             onClick={() => onReject(product)}
             disabled={busy}
-            className="rounded-xl bg-red-600/20 px-5 py-2.5 text-sm font-medium text-red-400 hover:bg-red-600/30 disabled:opacity-50 transition-colors"
+            className="rounded-xl bg-red-50 px-5 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors"
           >
             Reject
           </button>
@@ -761,19 +761,19 @@ function SellerReviewSheet({
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Stripe Connected</p>
-              <p className={cn("text-sm font-medium mt-1", seller.stripeAccountId ? "text-emerald-400" : "text-yellow-400")}>
+              <p className={cn("text-sm font-medium mt-1", seller.stripeAccountId ? "text-emerald-700" : "text-yellow-700")}>
                 {seller.stripeAccountId ? "Yes" : "Not yet"}
               </p>
             </div>
             <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Charges Enabled</p>
-              <p className={cn("text-sm font-medium mt-1", seller.chargesEnabled ? "text-emerald-400" : "text-gray-500")}>
+              <p className={cn("text-sm font-medium mt-1", seller.chargesEnabled ? "text-emerald-700" : "text-gray-500")}>
                 {seller.chargesEnabled ? "Yes" : "No"}
               </p>
             </div>
             <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Payouts Enabled</p>
-              <p className={cn("text-sm font-medium mt-1", seller.payoutsEnabled ? "text-emerald-400" : "text-gray-500")}>
+              <p className={cn("text-sm font-medium mt-1", seller.payoutsEnabled ? "text-emerald-700" : "text-gray-500")}>
                 {seller.payoutsEnabled ? "Yes" : "No"}
               </p>
             </div>
@@ -858,14 +858,14 @@ function SellerReviewSheet({
               Previous Notes
             </h3>
             {seller.rejectionReason && (
-              <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 mb-2">
-                <p className="text-xs font-medium text-red-400 mb-1">Rejection Reason</p>
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3 mb-2">
+                <p className="text-xs font-medium text-red-600 mb-1">Rejection Reason</p>
                 <p className="text-sm text-gray-600">{seller.rejectionReason}</p>
               </div>
             )}
             {seller.adminNotes && (
-              <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3">
-                <p className="text-xs font-medium text-yellow-400 mb-1">Admin Notes</p>
+              <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3">
+                <p className="text-xs font-medium text-yellow-700 mb-1">Admin Notes</p>
                 <p className="text-sm text-gray-600">{seller.adminNotes}</p>
               </div>
             )}
@@ -907,7 +907,7 @@ function SellerReviewSheet({
           {!showInfoForm && (
             <button
               onClick={() => setShowInfoForm(true)}
-              className="rounded-xl border border-yellow-500/30 px-4 py-2.5 text-sm font-medium text-yellow-400 hover:bg-yellow-500/10 transition-colors"
+              className="rounded-xl border border-yellow-200 px-4 py-2.5 text-sm font-medium text-yellow-700 hover:bg-yellow-50 transition-colors"
             >
               Request Info
             </button>
@@ -916,7 +916,7 @@ function SellerReviewSheet({
           <button
             onClick={onReject}
             disabled={busy}
-            className="rounded-xl bg-red-500/10 border border-red-500/20 px-5 py-2.5 text-sm font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+            className="rounded-xl bg-red-50 border border-red-200 px-5 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors"
           >
             Reject
           </button>

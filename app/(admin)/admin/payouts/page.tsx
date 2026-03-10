@@ -45,14 +45,14 @@ interface AdminSummary {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  pending_settlement: { label: "Settling", color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/20" },
-  ready_for_transfer: { label: "Ready", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-  transferred: { label: "Paid", color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
-  failed: { label: "Failed", color: "text-red-600", bg: "bg-red-500/10 border-red-500/20" },
+  pending_settlement: { label: "Settling", color: "text-yellow-700", bg: "bg-yellow-50 border-yellow-200" },
+  ready_for_transfer: { label: "Ready", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
+  transferred: { label: "Paid", color: "text-green-700", bg: "bg-green-50 border-green-200" },
+  failed: { label: "Failed", color: "text-red-700", bg: "bg-red-50 border-red-200" },
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? { label: status, color: "text-gray-500", bg: "bg-gray-50 border-gray-200" }
+  const cfg = STATUS_CONFIG[status] ?? { label: status, color: "text-gray-600", bg: "bg-gray-100 border-gray-200" }
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.bg} ${cfg.color}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${cfg.color.replace("text-", "bg-")}`} />
@@ -78,12 +78,12 @@ function RowActionMenu({ onView }: { onView: () => void }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-gray-200 py-1 shadow-xl bg-white">
+        <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
           <button
             onClick={() => { onView(); setOpen(false) }}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
@@ -205,10 +205,10 @@ export default function AdminPayoutsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label: "Total", value: summary?.totalCents ?? 0, icon: DollarSign, color: "text-gray-900" },
-          { label: "Settling", value: summary?.pendingSettlementCents ?? 0, icon: Clock, color: "text-yellow-400" },
-          { label: "Ready", value: summary?.readyForTransferCents ?? 0, icon: ArrowRightLeft, color: "text-blue-400" },
-          { label: "Transferred", value: summary?.transferredCents ?? 0, icon: CheckCircle2, color: "text-green-400" },
-          { label: "Failed", value: summary?.failedCents ?? 0, icon: XCircle, color: "text-red-600" },
+          { label: "Settling", value: summary?.pendingSettlementCents ?? 0, icon: Clock, color: "text-yellow-700" },
+          { label: "Ready", value: summary?.readyForTransferCents ?? 0, icon: ArrowRightLeft, color: "text-blue-700" },
+          { label: "Transferred", value: summary?.transferredCents ?? 0, icon: CheckCircle2, color: "text-green-700" },
+          { label: "Failed", value: summary?.failedCents ?? 0, icon: XCircle, color: "text-red-700" },
         ].map((card) => {
           const Icon = card.icon
           return (
@@ -231,7 +231,7 @@ export default function AdminPayoutsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-600 outline-none focus:border-primary/60"
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 outline-none focus:border-primary/60"
             >
               <option value="">All statuses</option>
               <option value="pending_settlement">Settling</option>
@@ -300,7 +300,7 @@ export default function AdminPayoutsPage() {
                     { label: "Settled At", value: formatDateTime(selected.settledAt) },
                     { label: "Transferred At", value: formatDateTime(selected.transferredAt) },
                   ].map((item) => (
-                    <div key={item.label} className="rounded-xl border border-gray-200 p-3.5 bg-gray-50">
+                    <div key={item.label} className="rounded-xl border border-gray-200 p-3.5 bg-white">
                       <p className="text-[11px] font-medium uppercase tracking-wider text-gray-500 mb-1">{item.label}</p>
                       <div className="flex items-center gap-2">
                         <p className="break-all text-sm font-medium text-gray-900 truncate">{item.value}</p>

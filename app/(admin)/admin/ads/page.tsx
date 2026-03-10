@@ -74,7 +74,7 @@ function AdModal({
         <input
           value={String(form[key] ?? "")}
           onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
           {...props}
         />
       </div>
@@ -112,11 +112,11 @@ function AdModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative rounded-2xl border border-gray-200 w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-4 bg-white"
+        className="relative rounded-2xl border border-gray-200 bg-white w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-4"
       >
         <div className="flex items-center justify-between sticky top-0 pb-2 bg-white">
           <h3 className="text-lg font-bold text-gray-900">{isEdit ? "Edit Ad" : "New Ad"}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -140,7 +140,7 @@ function AdModal({
                 onClick={() => setForm({ ...form, enabled: !form.enabled })}
                 className={`w-full flex items-center justify-center gap-2 h-[42px] rounded-xl border text-sm font-medium transition-colors ${
                   form.enabled
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                    ? "border-emerald-500/30 bg-emerald-50 text-emerald-700"
                     : "border-gray-200 bg-gray-50 text-gray-500"
                 }`}
               >
@@ -187,7 +187,7 @@ function AdModal({
             className={`rounded-xl border border-gray-200 px-4 py-3 bg-gradient-to-r ${form.gradient}`}
           >
             {form.badgeText && (
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 border border-gray-300 rounded px-1.5 py-0.5 mr-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40 border border-white/20 rounded px-1.5 py-0.5 mr-2">
                 {form.badgeText}
               </span>
             )}
@@ -257,18 +257,18 @@ export default function AdminAdsPage() {
             <div
               key={ad.id}
               className={`rounded-2xl border transition-colors ${
-                ad.enabled ? "border-gray-200 bg-gray-50" : "border-gray-100 bg-gray-50 opacity-50"
+                ad.enabled ? "border-gray-200 bg-white" : "border-gray-100 bg-gray-50 opacity-50"
               }`}
             >
               {/* Preview strip */}
               <div className={`rounded-t-2xl px-4 py-2.5 bg-gradient-to-r ${ad.gradient} flex items-center gap-2`}>
                 {ad.badgeText && (
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 border border-gray-300 rounded px-1.5 py-0.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40 border border-white/20 rounded px-1.5 py-0.5">
                     {ad.badgeText}
                   </span>
                 )}
                 <p className={`text-sm font-bold truncate ${ad.accentColor}`}>{ad.title}</p>
-                <span className="ml-auto text-[10px] text-gray-400 shrink-0 capitalize">{ad.type}</span>
+                <span className="ml-auto text-[10px] text-white/30 shrink-0 capitalize">{ad.type}</span>
               </div>
 
               {/* Controls */}
@@ -289,7 +289,7 @@ export default function AdminAdsPage() {
                     className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium border transition-colors ${
                       ad.enabled
                         ? "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
-                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                        : "border-emerald-500/30 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                     }`}
                   >
                     {ad.enabled ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -309,13 +309,13 @@ export default function AdminAdsPage() {
                   {confirmDelete === ad.id ? (
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-red-600">Delete?</span>
-                      <button onClick={() => { deleteAd(ad.id); setConfirmDelete(null) }} className="text-xs font-bold text-red-600 hover:text-red-700">Yes</button>
+                      <button onClick={() => { deleteAd(ad.id); setConfirmDelete(null) }} className="text-xs font-bold text-red-600 hover:text-red-500">Yes</button>
                       <button onClick={() => setConfirmDelete(null)} className="text-xs text-gray-500 hover:text-gray-900">No</button>
                     </div>
                   ) : (
                     <button
                       onClick={() => setConfirmDelete(ad.id)}
-                      className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-500/15 transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Delete
@@ -328,10 +328,10 @@ export default function AdminAdsPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-xs text-gray-500 space-y-1 bg-gray-50">
-        <p className="font-semibold text-gray-500">How ad slots work</p>
-        <p>Each ad has a <span className="font-mono text-gray-900/60">slotId</span> that must match the <span className="font-mono text-gray-900/60">&lt;AdSlot slotId=&quot;…&quot; /&gt;</span> placement in the page code.</p>
-        <p>Current placement IDs in use: <span className="font-mono text-gray-900/60">mid-page-1</span>, <span className="font-mono text-gray-900/60">mid-page-2</span>, <span className="font-mono text-gray-900/60">bottom-strip</span>.</p>
+      <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-xs text-gray-500 space-y-1">
+        <p className="font-semibold text-gray-600">How ad slots work</p>
+        <p>Each ad has a <span className="font-mono text-gray-700">slotId</span> that must match the <span className="font-mono text-gray-700">&lt;AdSlot slotId=&quot;…&quot; /&gt;</span> placement in the page code.</p>
+        <p>Current placement IDs in use: <span className="font-mono text-gray-700">mid-page-1</span>, <span className="font-mono text-gray-700">mid-page-2</span>, <span className="font-mono text-gray-700">bottom-strip</span>.</p>
         <p>Disabling an ad hides it immediately. Deleting removes it permanently from this admin (the slot in the page renders nothing).</p>
       </div>
 

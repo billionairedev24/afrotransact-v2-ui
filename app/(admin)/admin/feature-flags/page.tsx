@@ -14,7 +14,7 @@ import {
 } from "@/lib/api"
 
 const INPUT_CLASS =
-  "rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
+  "rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
 
 function humanizeKey(key: string): string {
   return key
@@ -175,7 +175,7 @@ export default function FeatureFlagsPage() {
       </div>
 
       {regionsError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {regionsError}
         </div>
       )}
@@ -187,7 +187,7 @@ export default function FeatureFlagsPage() {
       {selectedRegionId && (
         <>
           {flagsError && (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {flagsError}
             </div>
           )}
@@ -218,7 +218,7 @@ export default function FeatureFlagsPage() {
                       <button
                         onClick={() => handleToggle(flag)}
                         disabled={saving === flag.id}
-                        className="text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-40"
+                        className="text-gray-400 hover:text-gray-900 transition-colors disabled:opacity-40"
                         aria-label={`Toggle ${flag.key}`}
                       >
                         {saving === flag.id ? (
@@ -243,7 +243,7 @@ export default function FeatureFlagsPage() {
               <div
                 className="rounded-2xl border border-gray-200 overflow-hidden bg-white"
               >
-                <div className="px-5 py-4 border-b border-gray-100">
+                <div className="px-5 py-4 border-b border-gray-200">
                   <p className="text-gray-900 font-medium text-sm">Add Flag</p>
                 </div>
                 <form onSubmit={handleAddFlag} className="p-5 flex items-end gap-3">

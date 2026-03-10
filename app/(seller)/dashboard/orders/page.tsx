@@ -19,12 +19,12 @@ import {
 } from "@/lib/api"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  pending:    { label: "Pending",    className: "bg-yellow-500/20 text-yellow-400" },
-  paid:       { label: "Paid",       className: "bg-blue-500/20 text-blue-400" },
-  processing: { label: "Processing", className: "bg-purple-500/20 text-purple-400" },
-  shipped:    { label: "Shipped",    className: "bg-indigo-500/20 text-indigo-400" },
-  delivered:  { label: "Delivered",  className: "bg-green-500/20 text-green-400" },
-  cancelled:  { label: "Cancelled",  className: "bg-red-500/20 text-red-400" },
+  pending:    { label: "Pending",    className: "bg-yellow-50 text-yellow-700" },
+  paid:       { label: "Paid",       className: "bg-blue-50 text-blue-700" },
+  processing: { label: "Processing", className: "bg-purple-50 text-purple-700" },
+  shipped:    { label: "Shipped",    className: "bg-indigo-50 text-indigo-700" },
+  delivered:  { label: "Delivered",  className: "bg-green-50 text-green-700" },
+  cancelled:  { label: "Cancelled",  className: "bg-red-50 text-red-700" },
 }
 
 function statusBadge(status: string) {
@@ -252,11 +252,11 @@ export default function SellerOrdersPage() {
 
 const SELLER_STATUSES = ["processing", "packaged", "dispatched"] as const
 const FULFILLMENT_BADGE: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-  pending:    { label: "Pending",    className: "bg-yellow-500/20 text-yellow-400", icon: <Package className="h-3.5 w-3.5" /> },
-  processing: { label: "Processing", className: "bg-purple-500/20 text-purple-400", icon: <Package className="h-3.5 w-3.5" /> },
-  packaged:   { label: "Packaged",   className: "bg-blue-500/20 text-blue-400",     icon: <Package className="h-3.5 w-3.5" /> },
-  dispatched: { label: "Dispatched", className: "bg-indigo-500/20 text-indigo-400", icon: <Truck className="h-3.5 w-3.5" /> },
-  delivered:  { label: "Delivered",  className: "bg-green-500/20 text-green-400",   icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+  pending:    { label: "Pending",    className: "bg-yellow-50 text-yellow-700", icon: <Package className="h-3.5 w-3.5" /> },
+  processing: { label: "Processing", className: "bg-purple-50 text-purple-700", icon: <Package className="h-3.5 w-3.5" /> },
+  packaged:   { label: "Packaged",   className: "bg-blue-50 text-blue-700",     icon: <Package className="h-3.5 w-3.5" /> },
+  dispatched: { label: "Dispatched", className: "bg-indigo-50 text-indigo-700", icon: <Truck className="h-3.5 w-3.5" /> },
+  delivered:  { label: "Delivered",  className: "bg-green-50 text-green-700",   icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
 }
 
 function OrderDetailModal({

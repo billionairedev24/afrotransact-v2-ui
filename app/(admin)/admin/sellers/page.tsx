@@ -9,6 +9,9 @@ import {
   getAdminSellerStats,
   getAdminSellerDetail,
   reviewAdminSeller,
+  triggerOnboardingReminders,
+  sendSellerReminder,
+  API_BASE,
 } from "@/lib/api"
 import type { OnboardingStats, AdminSellerDetail } from "@/lib/api"
 import { toast } from "sonner"
@@ -34,6 +37,8 @@ import {
   Globe,
   MapPin,
   Loader2,
+  Bell,
+  Send,
 } from "lucide-react"
 
 interface AdminSellerRow {
@@ -62,17 +67,17 @@ const TABS = [
 ] as const
 
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
-  started:         { label: "Pending",         cls: "bg-gray-500/15 text-gray-400" },
-  in_progress:     { label: "Pending",         cls: "bg-gray-500/15 text-gray-400" },
-  pending:         { label: "Pending",         cls: "bg-gray-500/15 text-gray-400" },
-  submitted:       { label: "Submitted",       cls: "bg-yellow-500/15 text-yellow-400" },
-  pending_review:  { label: "Submitted",       cls: "bg-yellow-500/15 text-yellow-400" },
-  under_review:    { label: "In Review",       cls: "bg-blue-500/15 text-blue-400" },
-  needs_action:    { label: "Requires Info",   cls: "bg-orange-500/15 text-orange-400" },
-  approved:        { label: "Approved",        cls: "bg-emerald-500/15 text-emerald-400" },
-  active:          { label: "Approved",        cls: "bg-emerald-500/15 text-emerald-400" },
-  rejected:        { label: "Rejected",        cls: "bg-red-500/15 text-red-400" },
-  suspended:       { label: "Suspended",       cls: "bg-red-500/15 text-red-400" },
+  started:         { label: "Pending",         cls: "bg-gray-100 text-gray-600" },
+  in_progress:     { label: "Pending",         cls: "bg-gray-100 text-gray-600" },
+  pending:         { label: "Pending",         cls: "bg-gray-100 text-gray-600" },
+  submitted:       { label: "Submitted",       cls: "bg-yellow-50 text-yellow-700" },
+  pending_review:  { label: "Submitted",       cls: "bg-yellow-50 text-yellow-700" },
+  under_review:    { label: "In Review",       cls: "bg-blue-50 text-blue-700" },
+  needs_action:    { label: "Requires Info",   cls: "bg-orange-50 text-orange-700" },
+  approved:        { label: "Approved",        cls: "bg-emerald-50 text-emerald-700" },
+  active:          { label: "Approved",        cls: "bg-emerald-50 text-emerald-700" },
+  rejected:        { label: "Rejected",        cls: "bg-red-50 text-red-700" },
+  suspended:       { label: "Suspended",       cls: "bg-red-50 text-red-700" },
 }
 
 const STEP_LABELS: Record<number, string> = {
@@ -90,7 +95,7 @@ function fmtDate(iso: string | null) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const c = STATUS_CFG[status.toLowerCase().replace(/ /g, "_")] ?? { label: status, cls: "bg-gray-100 text-gray-400" }
+  const c = STATUS_CFG[status.toLowerCase().replace(/ /g, "_")] ?? { label: status, cls: "bg-gray-100 text-gray-600" }
   return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${c.cls}`}>{c.label}</span>
 }
 
@@ -111,6 +116,29 @@ export default function AdminSellersPage() {
   const [selectedDetail, setSelectedDetail] = useState<AdminSellerDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [panelAction, setPanelAction] = useState<ActionMode>("none")
+  const [triggeringReminders, setTriggeringReminders] = useState(false)
+
+  async function handleTriggerReminders() {
+    setTriggeringReminders(true)
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      const res = await fetch(`${API_BASE}/api/v1/admin/sellers/onboarding-reminders/trigger`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        toast.success(data.message || `${data.sent ?? data.triggered ?? 0} reminder(s) sent`)
+      } else {
+        toast.error("Failed to trigger reminders")
+      }
+    } catch {
+      toast.error("Failed to trigger reminders")
+    } finally {
+      setTriggeringReminders(false)
+    }
+  }
 
   const loadStats = useCallback(async () => {
     try {
@@ -205,17 +233,27 @@ export default function AdminSellersPage() {
 
   const statCards = [
     { label: "Total Sellers", value: stats?.totalSellers ?? 0, icon: Users, color: "text-gray-900" },
-    { label: "Pending", value: (stats?.started ?? 0) + (stats?.inProgress ?? 0), icon: Clock, color: "text-gray-400" },
-    { label: "Submitted", value: (stats?.submitted ?? 0) + (stats?.underReview ?? 0), icon: Clock, color: "text-yellow-400" },
-    { label: "Approved", value: stats?.approved ?? 0, icon: CheckCircle2, color: "text-emerald-400" },
-    { label: "Requires Info", value: stats?.needsAction ?? 0, icon: AlertTriangle, color: "text-orange-400" },
+    { label: "Pending", value: (stats?.started ?? 0) + (stats?.inProgress ?? 0), icon: Clock, color: "text-gray-500" },
+    { label: "Submitted", value: (stats?.submitted ?? 0) + (stats?.underReview ?? 0), icon: Clock, color: "text-yellow-700" },
+    { label: "Approved", value: stats?.approved ?? 0, icon: CheckCircle2, color: "text-emerald-700" },
+    { label: "Requires Info", value: stats?.needsAction ?? 0, icon: AlertTriangle, color: "text-orange-700" },
   ]
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Seller Management</h1>
-        <p className="text-sm text-gray-500 mt-1">Review applications, manage onboarding, and monitor seller status.</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Seller Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Review applications, manage onboarding, and monitor seller status.</p>
+        </div>
+        <button
+          onClick={handleTriggerReminders}
+          disabled={triggeringReminders}
+          className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          {triggeringReminders ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
+          Send Onboarding Reminders
+        </button>
       </div>
 
       {/* Stats */}
@@ -315,6 +353,16 @@ export default function AdminSellersPage() {
                             onApprove={() => handleReview(s.id, "approve")}
                             onReject={() => openDetail(s.id, "reject")}
                             onRequestInfo={() => openDetail(s.id, "request")}
+                            onSendReminder={async () => {
+                              try {
+                                const token = await getAccessToken()
+                                if (!token) return
+                                await sendSellerReminder(token, s.id)
+                                toast.success(`Reminder sent to ${s.businessName}`)
+                              } catch (e: any) {
+                                toast.error(e?.message || "Failed to send reminder")
+                              }
+                            }}
                           />
                         </td>
                       </tr>
@@ -419,12 +467,14 @@ function ActionDropdown({
   onApprove,
   onReject,
   onRequestInfo,
+  onSendReminder,
 }: {
   seller: AdminSellerRow
   onView: () => void
   onApprove: () => void
   onReject: () => void
   onRequestInfo: () => void
+  onSendReminder: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [positioned, setPositioned] = useState(false)
@@ -441,12 +491,13 @@ function ActionDropdown({
   const canReject = isSubmitted || ob === "needs_action"
   const canRequestInfo = isSubmitted || ob === "needs_action"
   const canSuspend = isApproved && !isSuspended
+  const canRemind = !isApproved && ob !== "rejected"
 
   const recalc = useCallback(() => {
     if (!triggerRef.current) return
     const rect = triggerRef.current.getBoundingClientRect()
     const menuWidth = 192
-    const itemCount = [true, canApprove, canReject, canRequestInfo, canSuspend].filter(Boolean).length
+    const itemCount = [true, canApprove, canReject, canRequestInfo, canSuspend, canRemind].filter(Boolean).length
     const menuHeight = Math.max(itemCount * 40 + 16, 100)
     const spaceBelow = window.innerHeight - rect.bottom
     const openUp = spaceBelow < menuHeight + 20
@@ -493,23 +544,28 @@ function ActionDropdown({
               View Details
             </DdItem>
             {canApprove && (
-              <DdItem icon={<Check className="h-3.5 w-3.5" />} className="text-emerald-400" onClick={() => { onApprove(); setOpen(false) }}>
+              <DdItem icon={<Check className="h-3.5 w-3.5" />} className="text-emerald-700" onClick={() => { onApprove(); setOpen(false) }}>
                 Approve
               </DdItem>
             )}
             {canReject && (
-              <DdItem icon={<XIcon className="h-3.5 w-3.5" />} className="text-red-400" onClick={() => { onReject(); setOpen(false) }}>
+              <DdItem icon={<XIcon className="h-3.5 w-3.5" />} className="text-red-700" onClick={() => { onReject(); setOpen(false) }}>
                 Reject
               </DdItem>
             )}
             {canRequestInfo && (
-              <DdItem icon={<MessageSquare className="h-3.5 w-3.5" />} className="text-amber-400" onClick={() => { onRequestInfo(); setOpen(false) }}>
+              <DdItem icon={<MessageSquare className="h-3.5 w-3.5" />} className="text-amber-700" onClick={() => { onRequestInfo(); setOpen(false) }}>
                 Request More Info
               </DdItem>
             )}
             {canSuspend && (
-              <DdItem icon={<XIcon className="h-3.5 w-3.5" />} className="text-red-400" onClick={() => { onReject(); setOpen(false) }}>
+              <DdItem icon={<XIcon className="h-3.5 w-3.5" />} className="text-red-700" onClick={() => { onReject(); setOpen(false) }}>
                 Suspend Seller
+              </DdItem>
+            )}
+            {canRemind && (
+              <DdItem icon={<Send className="h-3.5 w-3.5" />} className="text-blue-600" onClick={() => { onSendReminder(); setOpen(false) }}>
+                Send Reminder
               </DdItem>
             )}
           </div>,
@@ -604,7 +660,7 @@ function DetailPanel({
                     <InfoRow icon={<MapPin className="h-4 w-4" />} label="Address" value={detail.businessAddress || "—"} />
                   </InfoTable>
                   {detail.businessDescription && (
-                    <div className="mt-3 rounded-xl border border-gray-100 px-4 py-3" style={{ background: "#FFFFFF" }}>
+                    <div className="mt-3 rounded-xl border border-gray-100 px-4 py-3 bg-white">
                       <p className="text-xs text-gray-500 mb-1">Description</p>
                       <p className="text-sm text-gray-600 leading-relaxed">{detail.businessDescription}</p>
                     </div>
@@ -616,7 +672,7 @@ function DetailPanel({
                   <Section title="Stores">
                     <div className="space-y-2">
                       {detail.stores.map((store) => (
-                        <div key={store.id} className="rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-3" style={{ background: "#FFFFFF" }}>
+                        <div key={store.id} className="rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-3 bg-white">
                           {store.logoUrl ? (
                             <img src={store.logoUrl} alt="" className="h-8 w-8 rounded-lg object-cover" />
                           ) : (
@@ -643,14 +699,14 @@ function DetailPanel({
                       {detail.documents.map((doc) => {
                         const isImage = doc.mimeType?.startsWith("image/") || /\.(jpe?g|png|webp|gif)$/i.test(doc.fileName)
                         return (
-                          <div key={doc.id} className="rounded-xl border border-gray-100 p-4" style={{ background: "#FFFFFF" }}>
+                          <div key={doc.id} className="rounded-xl border border-gray-100 p-4 bg-white">
                             <div className="flex items-center gap-3 mb-2">
                               <FileText className="h-4 w-4 text-gray-500 shrink-0" />
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-gray-700 truncate">{doc.fileName}</p>
                                 <p className="text-xs text-gray-500 capitalize">{doc.documentType.replace(/_/g, " ")}</p>
                               </div>
-                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${doc.status === "approved" ? "bg-green-500/10 text-green-400" : doc.status === "rejected" ? "bg-red-500/10 text-red-400" : "bg-yellow-500/10 text-yellow-400"}`}>
+                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${doc.status === "approved" ? "bg-green-50 text-green-700" : doc.status === "rejected" ? "bg-red-50 text-red-700" : "bg-yellow-50 text-yellow-700"}`}>
                                 {doc.status || "pending"}
                               </span>
                               <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg p-1.5 text-primary hover:text-gray-900 hover:bg-gray-50 transition-colors" title="Open document">
@@ -662,7 +718,7 @@ function DetailPanel({
                                 <img
                                   src={doc.fileUrl}
                                   alt={doc.fileName}
-                                  className="w-full max-h-48 object-contain rounded-lg border border-gray-100 bg-black/20"
+                                  className="w-full max-h-48 object-contain rounded-lg border border-gray-100 bg-gray-50"
                                 />
                               </a>
                             )}
@@ -689,8 +745,8 @@ function DetailPanel({
                     <InfoRow icon={<CreditCard className="h-4 w-4" />} label="Connect Account ID" value={detail.stripeAccountId || "Not created"} mono />
                     <InfoRow icon={<CreditCard className="h-4 w-4" />} label="Connect Country" value={detail.stripeConnectCountry || "—"} />
                     <InfoRow icon={<CreditCard className="h-4 w-4" />} label="Connect Business Type" value={detail.stripeConnectBusinessType || "—"} />
-                    <InfoRow icon={<CheckCircle2 className="h-4 w-4" />} label="Charges" value={detail.chargesEnabled ? "Enabled" : "Disabled"} valueColor={detail.chargesEnabled ? "text-emerald-400" : "text-red-400"} />
-                    <InfoRow icon={<CheckCircle2 className="h-4 w-4" />} label="Payouts" value={detail.payoutsEnabled ? "Enabled" : "Disabled"} valueColor={detail.payoutsEnabled ? "text-emerald-400" : "text-red-400"} />
+                    <InfoRow icon={<CheckCircle2 className="h-4 w-4" />} label="Charges" value={detail.chargesEnabled ? "Enabled" : "Disabled"} valueColor={detail.chargesEnabled ? "text-emerald-700" : "text-red-700"} />
+                    <InfoRow icon={<CheckCircle2 className="h-4 w-4" />} label="Payouts" value={detail.payoutsEnabled ? "Enabled" : "Disabled"} valueColor={detail.payoutsEnabled ? "text-emerald-700" : "text-red-700"} />
                   </InfoTable>
                 </Section>
 
@@ -713,13 +769,13 @@ function DetailPanel({
                     <InfoRow label="Approved" value={fmtDate(detail.approvedAt)} />
                   </InfoTable>
                   {detail.rejectionReason && (
-                    <div className="mt-3 rounded-xl border border-red-500/20 px-4 py-3" style={{ background: "#FFFFFF" }}>
-                      <p className="text-xs text-red-400/70 mb-1">Rejection Reason</p>
+                    <div className="mt-3 rounded-xl border border-red-200 px-4 py-3 bg-white">
+                      <p className="text-xs text-red-600 mb-1">Rejection Reason</p>
                       <p className="text-sm text-red-600">{detail.rejectionReason}</p>
                     </div>
                   )}
                   {detail.adminNotes && (
-                    <div className="mt-2 rounded-xl border border-gray-100 px-4 py-3" style={{ background: "#FFFFFF" }}>
+                    <div className="mt-2 rounded-xl border border-gray-100 px-4 py-3 bg-white">
                       <p className="text-xs text-gray-500 mb-1">Admin Notes</p>
                       <p className="text-sm text-gray-600">{detail.adminNotes}</p>
                     </div>
@@ -739,10 +795,10 @@ function DetailPanel({
                           {submitting ? "Approving…" : "Approve"}
                         </button>
                       )}
-                      <button onClick={() => setMode("reject")} className="flex-1 rounded-xl bg-red-600/20 px-4 py-2.5 text-sm font-medium text-red-400 hover:bg-red-600/30 transition-colors">
+                      <button onClick={() => setMode("reject")} className="flex-1 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors">
                         Reject
                       </button>
-                      <button onClick={() => setMode("request")} className="flex-1 rounded-xl bg-amber-600/20 px-4 py-2.5 text-sm font-medium text-amber-400 hover:bg-amber-600/30 transition-colors">
+                      <button onClick={() => setMode("request")} className="flex-1 rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors">
                         Request Info
                       </button>
                     </div>
@@ -824,7 +880,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function InfoTable({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-gray-100 divide-y divide-gray-100" style={{ background: "#FFFFFF" }}>
+    <div className="rounded-xl border border-gray-100 divide-y divide-gray-100 bg-white">
       {children}
     </div>
   )

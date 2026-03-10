@@ -32,11 +32,11 @@ import {
 import { useUploadThing } from "@/lib/uploadthing"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  active:         { label: "Active",         className: "bg-green-500/20 text-green-400" },
-  pending_review: { label: "Pending Review", className: "bg-yellow-500/20 text-yellow-400" },
-  draft:          { label: "Draft",          className: "bg-gray-100 text-gray-500" },
-  rejected:       { label: "Rejected",       className: "bg-red-500/20 text-red-400" },
-  archived:       { label: "Archived",       className: "bg-gray-100 text-gray-500" },
+  active:         { label: "Active",         className: "bg-emerald-50 text-emerald-700" },
+  pending_review: { label: "Pending Review", className: "bg-yellow-50 text-yellow-700" },
+  draft:          { label: "Draft",          className: "bg-gray-100 text-gray-600" },
+  rejected:       { label: "Rejected",       className: "bg-red-50 text-red-700" },
+  archived:       { label: "Archived",       className: "bg-gray-100 text-gray-600" },
 }
 
 interface FlatProduct {
@@ -171,7 +171,7 @@ export default function ProductsPage() {
         header: "Stock",
         cell: (info) => {
           const v = info.getValue()
-          const color = v === 0 ? "text-red-600" : v < 20 ? "text-yellow-400" : "text-gray-600"
+          const color = v === 0 ? "text-red-600" : v < 20 ? "text-yellow-600" : "text-gray-600"
           return <span className={color}>{v}</span>
         },
       }),
@@ -422,7 +422,7 @@ function ProductDetailSheet({
       <SheetBody className="space-y-6">
         {loading && (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-[#d4a853]" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#EAB308]" />
           </div>
         )}
 
@@ -447,15 +447,15 @@ function ProductDetailSheet({
 
             {/* ─── Status context ─── */}
             {product.status === "pending_review" && (
-              <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
-                <p className="text-sm text-yellow-400 font-medium">Awaiting admin approval</p>
-                <p className="text-xs text-yellow-400/70 mt-0.5">Your product has been submitted and is being reviewed. You&apos;ll be notified once it&apos;s approved.</p>
+              <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3">
+                <p className="text-sm text-yellow-700 font-medium">Awaiting admin approval</p>
+                <p className="text-xs text-yellow-600 mt-0.5">Your product has been submitted and is being reviewed. You&apos;ll be notified once it&apos;s approved.</p>
               </div>
             )}
             {product.status === "rejected" && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3">
-                <p className="text-sm text-red-400 font-medium">Product was rejected</p>
-                <p className="text-xs text-red-400/70 mt-0.5">Please review the feedback, make necessary changes, and resubmit for approval.</p>
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                <p className="text-sm text-red-700 font-medium">Product was rejected</p>
+                <p className="text-xs text-red-600 mt-0.5">Please review the feedback, make necessary changes, and resubmit for approval.</p>
               </div>
             )}
             {product.status === "draft" && (
@@ -474,13 +474,13 @@ function ProductDetailSheet({
                     <img src={img.url} alt={img.altText || ""} className="h-full w-full object-cover" />
                     {idx === 0 && (
                       <div className="absolute bottom-0.5 left-0.5">
-                        <Star className="h-3 w-3 fill-[#d4a853] text-[#d4a853]" />
+                        <Star className="h-3 w-3 fill-[#EAB308] text-[#EAB308]" />
                       </div>
                     )}
                     {editing && (
                       <button
                         onClick={() => handleDeleteImage(img.id)}
-                        className="absolute right-0.5 top-0.5 rounded bg-black/70 p-0.5 text-white/50 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute right-0.5 top-0.5 rounded bg-black/70 p-0.5 text-white/50 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -489,11 +489,11 @@ function ProductDetailSheet({
                 ))}
                 {product.images.length === 0 && (
                   <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-gray-200">
-                    <ImageIcon className="h-6 w-6 text-gray-300" />
+                    <ImageIcon className="h-6 w-6 text-gray-500" />
                   </div>
                 )}
                 {editing && (
-                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-200 text-gray-400 hover:border-[#d4a853]/40 hover:text-[#d4a853] transition-colors">
+                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-200 text-gray-500 hover:border-[#EAB308]/40 hover:text-[#EAB308] transition-colors">
                     {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
                   </label>
@@ -508,11 +508,11 @@ function ProductDetailSheet({
               {editing ? (
                 <div className="space-y-3">
                   <div>
-                    <label className="mb-1 block text-xs text-gray-400">Title</label>
+                    <label className="mb-1 block text-xs text-gray-500">Title</label>
                     <input
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 focus:border-[#d4a853] focus:outline-none"
+                      className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none"
                     />
                   </div>
                   <div>
@@ -521,7 +521,7 @@ function ProductDetailSheet({
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={3}
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-[#d4a853] focus:outline-none resize-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none resize-none"
                     />
                   </div>
                 </div>
@@ -596,7 +596,7 @@ function ProductDetailSheet({
               <button
                 onClick={handleSaveBasicInfo}
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#d4a853] px-4 py-2 text-sm font-semibold text-black hover:bg-[#c49a48] disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#EAB308] px-4 py-2 text-sm font-semibold text-black hover:bg-[#CA8A04] disabled:opacity-50 transition-colors"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Save Changes
@@ -608,20 +608,20 @@ function ProductDetailSheet({
                 <button
                   onClick={handleSubmitForReview}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#d4a853] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[#c49a48] disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#EAB308] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[#CA8A04] disabled:opacity-50 transition-colors"
                 >
                   {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   Submit for Review
                 </button>
               )}
               {product.status === "pending_review" && (
-                <span className="inline-flex items-center gap-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 px-4 py-2.5 text-sm font-medium text-yellow-400">
+                <span className="inline-flex items-center gap-2 rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-2.5 text-sm font-medium text-yellow-700">
                   <AlertCircle className="h-4 w-4" />
                   Awaiting Admin Approval
                 </span>
               )}
               {product.status === "active" && (
-                <span className="inline-flex items-center gap-2 rounded-lg bg-green-500/10 border border-green-500/20 px-4 py-2.5 text-sm font-medium text-green-400">
+                <span className="inline-flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 text-sm font-medium text-green-700">
                   <Star className="h-4 w-4" />
                   Approved &amp; Live
                 </span>
@@ -676,7 +676,7 @@ function VariantCard({
   }
 
   const stockColor =
-    variant.stockQuantity === 0 ? "text-red-600" : variant.stockQuantity < 20 ? "text-yellow-400" : "text-gray-600"
+    variant.stockQuantity === 0 ? "text-red-600" : variant.stockQuantity < 20 ? "text-yellow-600" : "text-gray-600"
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
@@ -686,7 +686,7 @@ function VariantCard({
           <span className="text-xs text-gray-500 font-mono">{variant.sku}</span>
         </div>
         {editing && canDelete && (
-          <button onClick={onDelete} className="rounded p-1 text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+          <button onClick={onDelete} className="rounded p-1 text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors">
             <Trash2 className="h-3 w-3" />
           </button>
         )}
@@ -699,7 +699,7 @@ function VariantCard({
             <input
               value={localSku}
               onChange={(e) => { setLocalSku(e.target.value); markDirty() }}
-              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#d4a853] focus:outline-none"
+              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#EAB308] focus:outline-none"
             />
           </div>
           <div>
@@ -709,7 +709,7 @@ function VariantCard({
               step="0.01"
               value={localPrice}
               onChange={(e) => { setLocalPrice(e.target.value); markDirty() }}
-              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#d4a853] focus:outline-none"
+              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#EAB308] focus:outline-none"
             />
           </div>
           <div>
@@ -718,14 +718,14 @@ function VariantCard({
               type="number"
               value={localStock}
               onChange={(e) => { setLocalStock(e.target.value); markDirty() }}
-              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#d4a853] focus:outline-none"
+              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#EAB308] focus:outline-none"
             />
           </div>
           {dirty && (
             <div className="col-span-3 flex justify-end">
               <button
                 onClick={handleSave}
-                className="inline-flex items-center gap-1 rounded-md bg-[#d4a853]/20 px-2.5 py-1 text-xs font-medium text-[#d4a853] hover:bg-[#d4a853]/30 transition-colors"
+                className="inline-flex items-center gap-1 rounded-md bg-[#EAB308]/20 px-2.5 py-1 text-xs font-medium text-[#EAB308] hover:bg-[#EAB308]/30 transition-colors"
               >
                 <Save className="h-3 w-3" /> Save variant
               </button>

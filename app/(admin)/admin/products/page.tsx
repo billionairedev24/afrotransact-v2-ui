@@ -46,11 +46,11 @@ const STATUS_OPTIONS = [
 ]
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  pending_review: { label: "Pending Review", className: "bg-yellow-500/20 text-yellow-400" },
-  active:         { label: "Active",         className: "bg-green-500/20 text-green-400" },
-  approved:       { label: "Approved",       className: "bg-green-500/20 text-green-400" },
-  rejected:       { label: "Rejected",       className: "bg-red-500/20 text-red-600" },
-  draft:          { label: "Draft",          className: "bg-gray-100 text-gray-500" },
+  pending_review: { label: "Pending Review", className: "bg-yellow-50 text-yellow-700" },
+  active:         { label: "Active",         className: "bg-green-50 text-green-700" },
+  approved:       { label: "Approved",       className: "bg-green-50 text-green-700" },
+  rejected:       { label: "Rejected",       className: "bg-red-50 text-red-700" },
+  draft:          { label: "Draft",          className: "bg-gray-100 text-gray-600" },
 }
 
 function formatDate(iso: string) {
@@ -71,7 +71,7 @@ function totalStock(product: Product): number {
 
 function StatusBadge({ status }: { status: string }) {
   const key = status.toLowerCase()
-  const b = STATUS_BADGE[key] ?? { label: status, className: "bg-gray-100 text-gray-500" }
+  const b = STATUS_BADGE[key] ?? { label: status, className: "bg-gray-100 text-gray-600" }
   return (
     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${b.className}`}>
       {b.label}
@@ -230,7 +230,7 @@ export default function AdminProductsPage() {
                 qty === 0
                   ? "text-red-600"
                   : qty <= 5
-                    ? "text-yellow-400"
+                    ? "text-yellow-700"
                     : "text-gray-600"
               }
             >
@@ -295,7 +295,7 @@ export default function AdminProductsPage() {
 
   if (sessionStatus !== "authenticated" && !loading) {
     return (
-      <div className="py-20 text-center text-gray-500">
+      <div className="py-20 text-center text-gray-400">
         Sign in as admin to manage products.
       </div>
     )
@@ -343,7 +343,7 @@ export default function AdminProductsPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-10 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-600 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30 bg-white"
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option
@@ -410,7 +410,7 @@ export default function AdminProductsPage() {
             disabled={
               !rejectReason.trim() || actionLoading === rejectModal.productId
             }
-            className="inline-flex items-center gap-2 rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {actionLoading === rejectModal.productId && (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -454,7 +454,7 @@ function ProductDetailPanel({
           <>
             {product.images.length > 0 ? (
               <div className="space-y-3">
-                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black/20">
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
                   <img
                     src={product.images[galleryIndex]?.url}
                     alt={product.images[galleryIndex]?.altText ?? product.title}
@@ -494,7 +494,7 @@ function ProductDetailPanel({
                         className={`shrink-0 h-14 w-14 rounded-lg overflow-hidden border-2 transition-colors ${
                           i === galleryIndex
                             ? "border-primary"
-                            : "border-gray-200 hover:border-white/30"
+                            : "border-gray-200 hover:border-gray-300"
                         }`}
                       >
                         <img
@@ -551,7 +551,7 @@ function ProductDetailPanel({
                     >
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-medium text-gray-900">{v.name || "Default"}</p>
-                        <span className="text-sm font-semibold text-emerald-400">{formatPrice(v.price)}</span>
+                        <span className="text-sm font-semibold text-emerald-700">{formatPrice(v.price)}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                         <div className="flex items-center gap-1.5 text-gray-500">
@@ -566,7 +566,7 @@ function ProductDetailPanel({
                               v.stockQuantity === 0
                                 ? "text-red-600"
                                 : v.stockQuantity <= 5
-                                  ? "text-yellow-400"
+                                  ? "text-yellow-700"
                                   : "text-gray-600"
                             }
                           >
@@ -615,7 +615,7 @@ function ProductDetailPanel({
           <button
             onClick={() => onReject(product)}
             disabled={busy}
-            className="rounded-xl bg-red-600/20 px-5 py-2.5 text-sm font-medium text-red-600 hover:bg-red-600/30 disabled:opacity-50 transition-colors"
+            className="rounded-xl bg-red-50 px-5 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors"
           >
             Reject
           </button>

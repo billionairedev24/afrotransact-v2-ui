@@ -120,7 +120,7 @@ function inputCls(error?: string) {
     "h-10 w-full rounded-lg border bg-gray-50 px-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-gray-200 focus:border-[#d4a853] focus:ring-[#d4a853]/50",
+      : "border-gray-200 focus:border-[#EAB308] focus:ring-[#EAB308]/50",
   )
 }
 
@@ -129,7 +129,7 @@ function textareaCls(error?: string) {
     "w-full rounded-lg border bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors resize-none",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-gray-200 focus:border-[#d4a853] focus:ring-[#d4a853]/50",
+      : "border-gray-200 focus:border-[#EAB308] focus:ring-[#EAB308]/50",
   )
 }
 
@@ -169,6 +169,10 @@ export default function NewProductPage() {
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
   const [submitAction, setSubmitAction] = useState<"draft" | "pending_review">("pending_review")
+  const [price, setPrice] = useState("")
+  const [compareAtPrice, setCompareAtPrice] = useState("")
+  const [sku, setSku] = useState("")
+  const [stockQuantity, setStockQuantity] = useState("")
   const [attributes, setAttributes] = useState<AttributePair[]>([])
   const [images, setImages] = useState<ProductImageEntry[]>([])
   const [variants, setVariants] = useState<VariantRow[]>([])
@@ -206,9 +210,20 @@ export default function NewProductPage() {
           if (isNaN(cap) || cap < 0) e[`v${i}_compare`] = "Invalid"
         }
       })
+    } else {
+      const p = parseFloat(price)
+      if (!price.trim() || isNaN(p) || p <= 0) e.price = "Valid price required"
+      if (!sku.trim()) e.sku = "SKU is required"
+      const sq = parseInt(stockQuantity, 10)
+      if (stockQuantity.trim() === "" || isNaN(sq) || sq < 0)
+        e.stockQuantity = "Valid quantity required"
+      if (compareAtPrice.trim()) {
+        const cap = parseFloat(compareAtPrice)
+        if (isNaN(cap) || cap < 0) e.compareAtPrice = "Invalid compare at price"
+      }
     }
     return e
-  }, [name, description, categoryId, weight, variants])
+  }, [name, description, categoryId, weight, variants, price, sku, stockQuantity, compareAtPrice])
 
   function err(field: string): string | undefined {
     if (!submitted && !touched[field]) return undefined
@@ -484,7 +499,7 @@ export default function NewProductPage() {
 
       const variantPayload = variants.length > 0
         ? variants.map((v) => {
-            const price = parseFloat(v.price)
+            const vPrice = parseFloat(v.price)
             const compare = v.compareAtPrice.trim() ? parseFloat(v.compareAtPrice) : undefined
             const stock = parseInt(v.stockQuantity, 10)
             const optionsObj = v.options
@@ -496,7 +511,7 @@ export default function NewProductPage() {
             return {
               name: v.name.trim() || undefined,
               sku: v.sku.trim(),
-              price: price,
+              price: vPrice,
               compareAtPrice: compare !== undefined && !isNaN(compare) ? compare : undefined,
               currency: "USD",
               stockQuantity: isNaN(stock) ? 0 : stock,
@@ -504,7 +519,15 @@ export default function NewProductPage() {
               weightKg: isNaN(weightKg) ? undefined : weightKg,
             }
           })
-        : undefined
+        : [{
+            name: "Default",
+            sku: sku.trim(),
+            price: parseFloat(price),
+            compareAtPrice: compareAtPrice ? parseFloat(compareAtPrice) : undefined,
+            currency: "USD",
+            stockQuantity: parseInt(stockQuantity, 10),
+            weightKg: isNaN(weightKg) ? undefined : weightKg,
+          }]
 
       const product = await createProduct(token, {
         storeId: selectedStoreId,
@@ -560,7 +583,7 @@ export default function NewProductPage() {
   if (sessionStatus === "loading" || loading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#d4a853]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#EAB308]" />
       </div>
     )
   }
@@ -598,7 +621,7 @@ export default function NewProductPage() {
         <div className={CARD}>
           <p className="text-sm text-gray-500">
             You need to create a store before adding products.{" "}
-            <Link href="/dashboard/store" className="text-[#d4a853] hover:underline">
+            <Link href="/dashboard/store" className="text-[#EAB308] hover:underline">
               Go to Store Settings
             </Link>
           </p>
@@ -713,12 +736,100 @@ export default function NewProductPage() {
             </div>
 
             {/* Status info */}
-            <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
-              <p className="text-sm text-yellow-400 font-medium">Product will be submitted for review</p>
-              <p className="text-xs text-gray-400 mt-1">Your product will be reviewed by an admin before it appears on the marketplace.</p>
+            <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3">
+              <p className="text-sm text-yellow-700 font-medium">Product will be submitted for review</p>
+              <p className="text-xs text-gray-500 mt-1">Your product will be reviewed by an admin before it appears on the marketplace.</p>
             </div>
           </div>
         </section>
+
+        {/* ─── Section 1b: Pricing & Inventory (no variants) ─── */}
+        {variants.length === 0 && (
+          <section className={CARD}>
+            <h2 className="text-lg font-semibold text-gray-900">Pricing & Inventory</h2>
+            <p className="mt-1 text-sm text-gray-500">Set price and stock for your product</p>
+
+            <div className="mt-6 space-y-5">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {/* Price */}
+                <div>
+                  <label htmlFor="price" className="mb-1.5 block text-sm font-medium text-gray-900">
+                    Price ($) <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    onBlur={() => touch("price")}
+                    placeholder="0.00"
+                    className={inputCls(err("price"))}
+                  />
+                  <FieldError msg={err("price")} />
+                </div>
+
+                {/* Compare at Price */}
+                <div>
+                  <label htmlFor="compareAtPrice" className="mb-1.5 block text-sm font-medium text-gray-900">
+                    Compare at Price ($)
+                  </label>
+                  <input
+                    id="compareAtPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={compareAtPrice}
+                    onChange={(e) => setCompareAtPrice(e.target.value)}
+                    onBlur={() => touch("compareAtPrice")}
+                    placeholder="0.00"
+                    className={inputCls(err("compareAtPrice"))}
+                  />
+                  <FieldError msg={err("compareAtPrice")} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {/* SKU */}
+                <div>
+                  <label htmlFor="sku" className="mb-1.5 block text-sm font-medium text-gray-900">
+                    SKU <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="sku"
+                    type="text"
+                    value={sku}
+                    onChange={(e) => setSku(e.target.value)}
+                    onBlur={() => touch("sku")}
+                    placeholder="e.g. SHE-BTR-001"
+                    className={inputCls(err("sku"))}
+                  />
+                  <FieldError msg={err("sku")} />
+                </div>
+
+                {/* Stock Quantity */}
+                <div>
+                  <label htmlFor="stockQuantity" className="mb-1.5 block text-sm font-medium text-gray-900">
+                    Stock Quantity <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="stockQuantity"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                    onBlur={() => touch("stockQuantity")}
+                    placeholder="0"
+                    className={inputCls(err("stockQuantity"))}
+                  />
+                  <FieldError msg={err("stockQuantity")} />
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ─── Section 2: Category & Tags ─── */}
         <section className={CARD}>
@@ -741,7 +852,7 @@ export default function NewProductPage() {
                 onBlur={() => touch("categoryId")}
                 className={cn(
                   inputCls(err("categoryId")),
-                  !categoryId && "text-gray-400",
+                  !categoryId && "text-gray-500",
                 )}
               >
                 <option value="">Select a category</option>
@@ -760,19 +871,19 @@ export default function NewProductPage() {
               <div
                 className={cn(
                   "flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-lg border bg-gray-50 px-2 py-1.5 transition-colors focus-within:ring-1",
-                  "border-gray-200 focus-within:border-[#d4a853] focus-within:ring-[#d4a853]/50",
+                  "border-gray-200 focus-within:border-[#EAB308] focus-within:ring-[#EAB308]/50",
                 )}
               >
                 {tags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 rounded-md border border-[#d4a853]/30 bg-[#d4a853]/10 px-2 py-0.5 text-xs font-medium text-[#d4a853]"
+                    className="inline-flex items-center gap-1 rounded-md border border-[#EAB308]/30 bg-[#EAB308]/10 px-2 py-0.5 text-xs font-medium text-[#EAB308]"
                   >
                     {tag}
                     <button
                       type="button"
                       onClick={() => setTags((p) => p.filter((t) => t !== tag))}
-                      className="text-[#d4a853]/50 hover:text-[#d4a853]"
+                      className="text-[#EAB308]/50 hover:text-[#EAB308]"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -787,10 +898,10 @@ export default function NewProductPage() {
                     if (tagInput.trim()) addTag(tagInput)
                   }}
                   placeholder={tags.length === 0 ? "Type and press Enter to add tags" : "Add tag…"}
-                  className="min-w-[120px] flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                  className="min-w-[120px] flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none"
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-400">Press Enter or comma to add a tag</p>
+              <p className="mt-1 text-xs text-gray-500">Press Enter or comma to add a tag</p>
             </div>
           </div>
         </section>
@@ -805,9 +916,9 @@ export default function NewProductPage() {
           <div className="mt-5 space-y-4">
             {/* Upload zone */}
             {images.length < MAX_IMAGES && (
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-[#d4a853]/40 hover:bg-[#d4a853]/5">
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-[#EAB308]/40 hover:bg-[#EAB308]/5">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
-                  <Upload className="h-6 w-6 text-gray-400" />
+                  <Upload className="h-6 w-6 text-gray-500" />
                 </div>
                 <p className="mt-3 text-sm font-medium text-gray-900">Click to upload images</p>
                 <p className="mt-1 text-xs text-gray-500">
@@ -831,7 +942,7 @@ export default function NewProductPage() {
                     key={img.id}
                     className={cn(
                       "group relative aspect-square overflow-hidden rounded-lg border-2 bg-gray-50",
-                      img.isPrimary ? "border-[#d4a853]" : "border-gray-200",
+                      img.isPrimary ? "border-[#EAB308]" : "border-gray-200",
                     )}
                   >
                     {img.status === "done" && img.url ? (
@@ -840,13 +951,13 @@ export default function NewProductPage() {
                       <img src={img.preview} alt="" className="h-full w-full object-cover opacity-60" />
                     ) : (
                       <div className="flex h-full items-center justify-center">
-                        <ImageIcon className="h-6 w-6 text-gray-300" />
+                        <ImageIcon className="h-6 w-6 text-gray-500" />
                       </div>
                     )}
 
                     {img.status === "uploading" && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                        <Loader2 className="h-5 w-5 animate-spin text-[#d4a853]" />
+                        <Loader2 className="h-5 w-5 animate-spin text-[#EAB308]" />
                       </div>
                     )}
 
@@ -868,8 +979,8 @@ export default function NewProductPage() {
                         className={cn(
                           "h-4 w-4",
                           img.isPrimary
-                            ? "fill-[#d4a853] text-[#d4a853]"
-                            : "text-gray-400 hover:text-gray-600",
+                            ? "fill-[#EAB308] text-[#EAB308]"
+                            : "text-gray-500 hover:text-gray-600",
                         )}
                       />
                     </button>
@@ -901,7 +1012,7 @@ export default function NewProductPage() {
             <button
               type="button"
               onClick={addVariant}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-white"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
               <Plus className="h-3.5 w-3.5" />
               Add Variant
@@ -909,7 +1020,7 @@ export default function NewProductPage() {
           </div>
 
           {variants.length === 0 ? (
-            <p className="mt-5 rounded-lg border border-dashed border-gray-200 py-6 text-center text-sm text-gray-400">
+            <p className="mt-5 rounded-lg border border-dashed border-gray-200 py-6 text-center text-sm text-gray-500">
               No variants. Your product will be listed without size/color options.
             </p>
           ) : (
@@ -921,13 +1032,13 @@ export default function NewProductPage() {
               >
                 {/* Variant header */}
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                     Variant {idx + 1}
                   </span>
                   <button
                     type="button"
                     onClick={() => removeVariant(variant.id)}
-                    className="rounded p-1 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-600"
+                    className="rounded p-1 text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-600"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -937,7 +1048,7 @@ export default function NewProductPage() {
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                   {/* Name */}
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="mb-1 block text-xs text-gray-400">
+                    <label className="mb-1 block text-xs text-gray-500">
                       Name <span className="text-red-600">*</span>
                     </label>
                     <input
@@ -953,7 +1064,7 @@ export default function NewProductPage() {
 
                   {/* SKU */}
                   <div>
-                    <label className="mb-1 block text-xs text-gray-400">
+                    <label className="mb-1 block text-xs text-gray-500">
                       SKU <span className="text-red-600">*</span>
                     </label>
                     <input
@@ -969,7 +1080,7 @@ export default function NewProductPage() {
 
                   {/* Price */}
                   <div>
-                    <label className="mb-1 block text-xs text-gray-400">
+                    <label className="mb-1 block text-xs text-gray-500">
                       Price ($) <span className="text-red-600">*</span>
                     </label>
                     <input
@@ -987,7 +1098,7 @@ export default function NewProductPage() {
 
                   {/* Compare at Price */}
                   <div>
-                    <label className="mb-1 block text-xs text-gray-400">Compare at ($)</label>
+                    <label className="mb-1 block text-xs text-gray-500">Compare at ($)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1002,7 +1113,7 @@ export default function NewProductPage() {
 
                   {/* Stock */}
                   <div>
-                    <label className="mb-1 block text-xs text-gray-400">
+                    <label className="mb-1 block text-xs text-gray-500">
                       Stock Qty <span className="text-red-600">*</span>
                     </label>
                     <input
@@ -1021,11 +1132,11 @@ export default function NewProductPage() {
                 {/* Options key-value pairs */}
                 <div className="mt-3 border-t border-gray-200 pt-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">Options</span>
+                    <span className="text-xs text-gray-500">Options</span>
                     <button
                       type="button"
                       onClick={() => addVariantOption(variant.id)}
-                      className="text-xs text-[#d4a853] hover:underline"
+                      className="text-xs text-[#EAB308] hover:underline"
                     >
                       + Add Option
                     </button>
@@ -1041,7 +1152,7 @@ export default function NewProductPage() {
                               updateVariantOption(variant.id, opt.id, "key", e.target.value)
                             }
                             placeholder="Key (e.g. Size)"
-                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#d4a853] focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
                           />
                           <input
                             type="text"
@@ -1050,7 +1161,7 @@ export default function NewProductPage() {
                               updateVariantOption(variant.id, opt.id, "value", e.target.value)
                             }
                             placeholder="Value (e.g. M)"
-                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#d4a853] focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
                           />
                           <button
                             type="button"
@@ -1067,7 +1178,7 @@ export default function NewProductPage() {
 
                 {/* Variant image */}
                 <div className="mt-3 border-t border-gray-200 pt-3">
-                  <span className="mb-1.5 block text-xs text-gray-400">Variant Image</span>
+                  <span className="mb-1.5 block text-xs text-gray-500">Variant Image</span>
                   {variant.imagePreview || variant.imageUrl ? (
                     <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
                       <img
@@ -1077,7 +1188,7 @@ export default function NewProductPage() {
                       />
                       {variant.imageStatus === "uploading" && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                          <Loader2 className="h-4 w-4 animate-spin text-[#d4a853]" />
+                          <Loader2 className="h-4 w-4 animate-spin text-[#EAB308]" />
                         </div>
                       )}
                       <button
@@ -1119,7 +1230,7 @@ export default function NewProductPage() {
             <button
               type="button"
               onClick={addAttribute}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-white"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
               <Plus className="h-3.5 w-3.5" />
               Add
@@ -1127,7 +1238,7 @@ export default function NewProductPage() {
           </div>
 
           {attributes.length === 0 ? (
-            <p className="mt-5 rounded-lg border border-dashed border-gray-200 py-6 text-center text-sm text-gray-400">
+            <p className="mt-5 rounded-lg border border-dashed border-gray-200 py-6 text-center text-sm text-gray-500">
               No attributes yet. Click Add to create one.
             </p>
           ) : (
@@ -1139,19 +1250,19 @@ export default function NewProductPage() {
                     value={attr.key}
                     onChange={(e) => updateAttribute(attr.id, "key", e.target.value)}
                     placeholder="Key"
-                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#d4a853] focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
                   />
                   <input
                     type="text"
                     value={attr.value}
                     onChange={(e) => updateAttribute(attr.id, "value", e.target.value)}
                     placeholder="Value"
-                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#d4a853] focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => removeAttribute(attr.id)}
-                    className="rounded-md p-2 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-600"
+                    className="rounded-md p-2 text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-600"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -1191,7 +1302,7 @@ export default function NewProductPage() {
             type="submit"
             disabled={!canSubmit}
             onClick={() => setSubmitAction("pending_review")}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#d4a853] px-6 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-[#c49a48] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#EAB308] px-6 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-[#CA8A04] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           >
             {saving && submitAction === "pending_review" ? (
               <>

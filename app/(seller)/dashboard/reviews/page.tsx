@@ -279,7 +279,7 @@ export default function SellerReviewsPage() {
                   {/* Verified */}
                   <div className="flex justify-center">
                     {r.verified_purchase ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-green-500/15 px-2 py-0.5 text-[10px] font-medium text-green-400">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
                         <BadgeCheck size={12} />
                         Verified
                       </span>
