@@ -73,6 +73,7 @@ interface ProductImageEntry {
 /* ------------------------------------------------------------------ */
 
 const MAX_IMAGES = 8
+const MAX_TAGS = 10
 
 const WEIGHT_UNITS = [
   { value: "lb", label: "lb" },
@@ -166,6 +167,9 @@ export default function NewProductPage() {
   const [weight, setWeight] = useState("")
   const [weightUnit, setWeightUnit] = useState("lb")
   const [brand, setBrand] = useState("")
+  const [productPrice, setProductPrice] = useState("")
+  const [productSku, setProductSku] = useState("")
+  const [productStock, setProductStock] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
   const [submitAction, setSubmitAction] = useState<"draft" | "pending_review">("pending_review")
@@ -192,7 +196,13 @@ export default function NewProductPage() {
     if (!categoryId) e.categoryId = "Please select a category"
     if (!weight || isNaN(parseFloat(weight)) || parseFloat(weight) <= 0)
       e.weight = "Weight is required and must be a positive number"
-    if (variants.length > 0) {
+    if (variants.length === 0) {
+      const pp = parseFloat(productPrice)
+      if (!productPrice.trim() || isNaN(pp) || pp <= 0) e.productPrice = "Valid price required"
+      if (!productSku.trim()) e.productSku = "SKU is required"
+      const ps = parseInt(productStock, 10)
+      if (productStock.trim() === "" || isNaN(ps) || ps < 0) e.productStock = "Valid quantity required"
+    } else {
       variants.forEach((v, i) => {
         if (!v.name.trim()) e[`v${i}_name`] = "Required"
         if (!v.sku.trim()) e[`v${i}_sku`] = "Required"
@@ -208,7 +218,7 @@ export default function NewProductPage() {
       })
     }
     return e
-  }, [name, description, categoryId, weight, variants])
+  }, [name, description, categoryId, weight, variants, productPrice, productSku, productStock])
 
   function err(field: string): string | undefined {
     if (!submitted && !touched[field]) return undefined
@@ -326,7 +336,9 @@ export default function NewProductPage() {
 
   function addTag(raw: string) {
     const t = raw.trim()
-    if (t && !tags.includes(t)) setTags((p) => [...p, t])
+    if (!t) { setTagInput(""); return }
+    if (tags.length >= MAX_TAGS) { setTagInput(""); return }
+    if (!tags.includes(t)) setTags((p) => [...p, t])
     setTagInput("")
   }
 
@@ -482,29 +494,39 @@ export default function NewProductPage() {
       attrsObj["weight"] = weightNum
       attrsObj["weightUnit"] = weightUnit
 
-      const variantPayload = variants.length > 0
-        ? variants.map((v) => {
-            const price = parseFloat(v.price)
-            const compare = v.compareAtPrice.trim() ? parseFloat(v.compareAtPrice) : undefined
-            const stock = parseInt(v.stockQuantity, 10)
-            const optionsObj = v.options
-              .filter((o) => o.key.trim())
-              .reduce(
-                (acc, o) => ({ ...acc, [o.key.trim()]: o.value.trim() }),
-                {} as Record<string, string>,
-              )
-            return {
-              name: v.name.trim() || undefined,
-              sku: v.sku.trim(),
-              price: price,
-              compareAtPrice: compare !== undefined && !isNaN(compare) ? compare : undefined,
-              currency: "USD",
-              stockQuantity: isNaN(stock) ? 0 : stock,
-              options: Object.keys(optionsObj).length > 0 ? optionsObj : undefined,
-              weightKg: isNaN(weightKg) ? undefined : weightKg,
-            }
-          })
-        : undefined
+      let variantPayload
+      if (variants.length > 0) {
+        variantPayload = variants.map((v) => {
+          const price = parseFloat(v.price)
+          const compare = v.compareAtPrice.trim() ? parseFloat(v.compareAtPrice) : undefined
+          const stock = parseInt(v.stockQuantity, 10)
+          const optionsObj = v.options
+            .filter((o) => o.key.trim())
+            .reduce(
+              (acc, o) => ({ ...acc, [o.key.trim()]: o.value.trim() }),
+              {} as Record<string, string>,
+            )
+          return {
+            name: v.name.trim() || undefined,
+            sku: v.sku.trim(),
+            price: price,
+            compareAtPrice: compare !== undefined && !isNaN(compare) ? compare : undefined,
+            currency: "USD",
+            stockQuantity: isNaN(stock) ? 0 : stock,
+            options: Object.keys(optionsObj).length > 0 ? optionsObj : undefined,
+            weightKg: isNaN(weightKg) ? undefined : weightKg,
+          }
+        })
+      } else {
+        variantPayload = [{
+          name: "Default",
+          sku: productSku.trim(),
+          price: parseFloat(productPrice),
+          currency: "USD",
+          stockQuantity: parseInt(productStock, 10) || 0,
+          weightKg: isNaN(weightKg) ? undefined : weightKg,
+        }]
+      }
 
       const product = await createProduct(token, {
         storeId: selectedStoreId,
@@ -712,6 +734,60 @@ export default function NewProductPage() {
               <FieldError msg={err("weight")} />
             </div>
 
+            {/* Pricing & Stock (shown when no variants) */}
+            {variants.length === 0 && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label htmlFor="productPrice" className="mb-1.5 block text-sm font-medium text-white">
+                    Price ($) <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="productPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={productPrice}
+                    onChange={(e) => setProductPrice(e.target.value)}
+                    onBlur={() => touch("productPrice")}
+                    placeholder="0.00"
+                    className={inputCls(err("productPrice"))}
+                  />
+                  <FieldError msg={err("productPrice")} />
+                </div>
+                <div>
+                  <label htmlFor="productSku" className="mb-1.5 block text-sm font-medium text-white">
+                    SKU <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="productSku"
+                    type="text"
+                    value={productSku}
+                    onChange={(e) => setProductSku(e.target.value)}
+                    onBlur={() => touch("productSku")}
+                    placeholder="SKU-001"
+                    className={inputCls(err("productSku"))}
+                  />
+                  <FieldError msg={err("productSku")} />
+                </div>
+                <div>
+                  <label htmlFor="productStock" className="mb-1.5 block text-sm font-medium text-white">
+                    Stock Quantity <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="productStock"
+                    type="number"
+                    min="0"
+                    value={productStock}
+                    onChange={(e) => setProductStock(e.target.value)}
+                    onBlur={() => touch("productStock")}
+                    placeholder="0"
+                    className={inputCls(err("productStock"))}
+                  />
+                  <FieldError msg={err("productStock")} />
+                </div>
+              </div>
+            )}
+
             {/* Status info */}
             <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
               <p className="text-sm text-yellow-400 font-medium">Product will be submitted for review</p>
@@ -790,7 +866,9 @@ export default function NewProductPage() {
                   className="min-w-[120px] flex-1 bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
                 />
               </div>
-              <p className="mt-1 text-xs text-white/30">Press Enter or comma to add a tag</p>
+              <p className="mt-1 text-xs text-white/30">
+                Press Enter or comma to add a tag ({tags.length}/{MAX_TAGS})
+              </p>
             </div>
           </div>
         </section>

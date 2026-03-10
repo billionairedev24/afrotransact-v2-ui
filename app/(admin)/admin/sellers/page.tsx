@@ -9,6 +9,8 @@ import {
   getAdminSellerStats,
   getAdminSellerDetail,
   reviewAdminSeller,
+  triggerOnboardingReminders,
+  sendSellerReminder,
 } from "@/lib/api"
 import type { OnboardingStats, AdminSellerDetail } from "@/lib/api"
 import { toast } from "sonner"
@@ -34,6 +36,7 @@ import {
   Globe,
   MapPin,
   Loader2,
+  Bell,
 } from "lucide-react"
 
 interface AdminSellerRow {
@@ -87,6 +90,17 @@ const STEP_LABELS: Record<number, string> = {
 function fmtDate(iso: string | null) {
   if (!iso) return "—"
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
+
+function fmtAge(iso: string | null) {
+  if (!iso) return "—"
+  const diff = Date.now() - new Date(iso).getTime()
+  const hours = Math.floor(diff / 3600000)
+  if (hours < 1) return "< 1h"
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d`
+  return `${Math.floor(days / 30)}mo`
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -199,6 +213,28 @@ export default function AdminSellersPage() {
     }
   }
 
+  async function handleTriggerReminders() {
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      const res = await triggerOnboardingReminders(token)
+      toast.success(`Triggered reminders for ${res.triggered ?? 0} seller(s)`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to trigger reminders")
+    }
+  }
+
+  async function handleSendReminder(sellerId: string, businessName: string) {
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      await sendSellerReminder(token, sellerId)
+      toast.success(`Reminder sent to ${businessName}`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send reminder")
+    }
+  }
+
   if (sessionStatus !== "authenticated" && !loading) {
     return <div className="flex items-center justify-center py-20 text-gray-400">Sign in as admin to manage sellers.</div>
   }
@@ -213,9 +249,18 @@ export default function AdminSellersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Seller Management</h1>
-        <p className="text-sm text-gray-400 mt-1">Review applications, manage onboarding, and monitor seller status.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Seller Management</h1>
+          <p className="text-sm text-gray-400 mt-1">Review applications, manage onboarding, and monitor seller status.</p>
+        </div>
+        <button
+          onClick={handleTriggerReminders}
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
+        >
+          <Bell className="h-4 w-4" />
+          Trigger All Reminders
+        </button>
       </div>
 
       {/* Stats */}
@@ -266,7 +311,7 @@ export default function AdminSellersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/5">
-                    {["Business Name", "Entity Type", "Status", "Onboarding Step", "Submitted", ""].map((h) => (
+                    {["Business Name", "Entity Type", "Status", "Step", "Age", "Submitted", ""].map((h) => (
                       <th key={h || "actions"} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         {h}
                       </th>
@@ -276,13 +321,13 @@ export default function AdminSellersPage() {
                 <tbody className="divide-y divide-white/5">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-16 text-center">
+                      <td colSpan={7} className="px-4 py-16 text-center">
                         <Loader2 className="h-5 w-5 animate-spin text-gray-500 mx-auto" />
                       </td>
                     </tr>
                   ) : sellers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-16 text-center text-sm text-gray-500">
+                      <td colSpan={7} className="px-4 py-16 text-center text-sm text-gray-500">
                         No sellers found.
                       </td>
                     </tr>
@@ -307,6 +352,7 @@ export default function AdminSellersPage() {
                         <td className="px-4 py-3 text-sm text-gray-300">
                           {STEP_LABELS[s.onboardingStep] || `Step ${s.onboardingStep}`}
                         </td>
+                        <td className="px-4 py-3 text-sm text-gray-400 whitespace-nowrap">{fmtAge(s.createdAt)}</td>
                         <td className="px-4 py-3 text-sm text-gray-400 whitespace-nowrap">{fmtDate(s.submittedAt)}</td>
                         <td className="px-4 py-3">
                           <ActionDropdown
@@ -315,6 +361,7 @@ export default function AdminSellersPage() {
                             onApprove={() => handleReview(s.id, "approve")}
                             onReject={() => openDetail(s.id, "reject")}
                             onRequestInfo={() => openDetail(s.id, "request")}
+                            onSendReminder={() => handleSendReminder(s.id, s.businessName)}
                           />
                         </td>
                       </tr>
@@ -419,12 +466,14 @@ function ActionDropdown({
   onApprove,
   onReject,
   onRequestInfo,
+  onSendReminder,
 }: {
   seller: AdminSellerRow
   onView: () => void
   onApprove: () => void
   onReject: () => void
   onRequestInfo: () => void
+  onSendReminder: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [positioned, setPositioned] = useState(false)
@@ -441,12 +490,13 @@ function ActionDropdown({
   const canReject = isSubmitted || ob === "needs_action"
   const canRequestInfo = isSubmitted || ob === "needs_action"
   const canSuspend = isApproved && !isSuspended
+  const canRemind = ob !== "submitted" && ob !== "under_review" && ob !== "approved" && ob !== "rejected" && ob !== "active" && ob !== "pending_review"
 
   const recalc = useCallback(() => {
     if (!triggerRef.current) return
     const rect = triggerRef.current.getBoundingClientRect()
     const menuWidth = 192
-    const itemCount = [true, canApprove, canReject, canRequestInfo, canSuspend].filter(Boolean).length
+    const itemCount = [true, canApprove, canReject, canRequestInfo, canSuspend, canRemind].filter(Boolean).length
     const menuHeight = Math.max(itemCount * 40 + 16, 100)
     const spaceBelow = window.innerHeight - rect.bottom
     const openUp = spaceBelow < menuHeight + 20
@@ -511,6 +561,11 @@ function ActionDropdown({
             {canSuspend && (
               <DdItem icon={<XIcon className="h-3.5 w-3.5" />} className="text-red-400" onClick={() => { onReject(); setOpen(false) }}>
                 Suspend Seller
+              </DdItem>
+            )}
+            {canRemind && (
+              <DdItem icon={<Bell className="h-3.5 w-3.5" />} className="text-blue-400" onClick={() => { onSendReminder(); setOpen(false) }}>
+                Send Reminder
               </DdItem>
             )}
           </div>,

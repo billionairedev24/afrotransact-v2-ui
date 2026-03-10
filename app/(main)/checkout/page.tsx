@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   AlertCircle,
   Loader2,
+  Ticket,
 } from "lucide-react"
 import {
   Elements,
@@ -31,6 +32,7 @@ import {
   getAddresses,
   createAddress,
   getUserProfile,
+  validateCoupon,
   ApiError,
   type CheckoutResponse,
   type Region,
@@ -289,14 +291,17 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
 }
 
 function ReviewStep({
-  address, onNext, onBack, items, subtotal, tax, shipping, total, placing, error: placeError,
+  address, onNext, onBack, items, subtotal, discount, tax, shipping, total, placing, error: placeError,
+  couponCode, couponApplied, couponError, couponValidating, onCouponChange, onApplyCoupon, onRemoveCoupon,
 }: {
   address: Record<string, string>
   onNext: () => void
   onBack: () => void
   items: { variantId: string; title: string; price: number; quantity: number; imageUrl?: string }[]
-  subtotal: number; tax: number; shipping: number; total: number
+  subtotal: number; discount: number; tax: number; shipping: number; total: number
   placing: boolean; error: string | null
+  couponCode: string; couponApplied: boolean; couponError: string | null; couponValidating: boolean
+  onCouponChange: (v: string) => void; onApplyCoupon: () => void; onRemoveCoupon: () => void
 }) {
   return (
     <div className="space-y-5">
@@ -322,10 +327,49 @@ function ReviewStep({
         ))}
       </div>
 
+      {/* Coupon input */}
+      <div className="rounded-2xl border border-white/10 p-4" style={{ background: "hsl(0 0% 13%)" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Ticket className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold text-white">Have a coupon?</span>
+        </div>
+        {couponApplied ? (
+          <div className="flex items-center justify-between rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-2.5">
+            <div>
+              <span className="text-sm font-mono font-medium text-green-400">{couponCode.toUpperCase()}</span>
+              <span className="text-sm text-green-400 ml-2">−{formatCents(discount)}</span>
+            </div>
+            <button onClick={onRemoveCoupon} className="text-xs text-gray-400 hover:text-white transition-colors">Remove</button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              value={couponCode}
+              onChange={(e) => onCouponChange(e.target.value)}
+              placeholder="Enter coupon code"
+              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+            <button
+              onClick={onApplyCoupon}
+              disabled={couponValidating || !couponCode.trim()}
+              className="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white hover:bg-white/15 disabled:opacity-40 transition-colors"
+            >
+              {couponValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+            </button>
+          </div>
+        )}
+        {couponError && <p className="text-xs text-red-400 mt-2">{couponError}</p>}
+      </div>
+
       <div className="rounded-2xl border border-white/10 p-4 space-y-2" style={{ background: "hsl(0 0% 13%)" }}>
         <div className="flex justify-between text-sm text-gray-300">
           <span>Subtotal</span><span>{formatCents(subtotal)}</span>
         </div>
+        {discount > 0 && (
+          <div className="flex justify-between text-sm text-green-400">
+            <span>Discount</span><span>−{formatCents(discount)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-sm text-gray-300">
           <span>Shipping</span><span className="text-green-400">{shipping === 0 ? "Free" : formatCents(shipping)}</span>
         </div>
@@ -511,6 +555,11 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState<string | null>(null)
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResponse | null>(null)
+  const [couponCode, setCouponCode] = useState("")
+  const [couponDiscount, setCouponDiscount] = useState(0)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [couponValidating, setCouponValidating] = useState(false)
+  const [couponApplied, setCouponApplied] = useState(false)
 
   const cartItems = useCartStore((s) => s.items)
   const getSubtotal = useCartStore((s) => s.getSubtotal)
@@ -525,7 +574,7 @@ export default function CheckoutPage() {
   const freeShippingThreshold = region?.freeShippingThresholdCents ?? 7500
   const tax = Math.round(subtotal * taxRate)
   const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFlat
-  const total = subtotal + tax + shipping
+  const total = Math.max(0, subtotal - couponDiscount + tax + shipping)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -596,6 +645,7 @@ export default function CheckoutPage() {
         state: address.state,
         zip: address.zip,
         phone: address.phone || undefined,
+        couponCode: couponApplied ? couponCode.trim() : undefined,
       })
 
       setCheckoutResult(result)
@@ -685,11 +735,38 @@ export default function CheckoutPage() {
             onBack={() => setStep("address")}
             items={cartItems}
             subtotal={checkoutResult?.subtotalCents ?? subtotal}
+            discount={checkoutResult?.discountCents ?? couponDiscount}
             tax={checkoutResult?.taxCents ?? tax}
             shipping={checkoutResult?.shippingCostCents ?? shipping}
             total={displayTotal}
             placing={placing}
             error={placeError}
+            couponCode={couponCode}
+            couponApplied={couponApplied}
+            couponError={couponError}
+            couponValidating={couponValidating}
+            onCouponChange={(v) => { setCouponCode(v); setCouponApplied(false); setCouponDiscount(0); setCouponError(null) }}
+            onApplyCoupon={async () => {
+              if (!couponCode.trim()) return
+              setCouponValidating(true)
+              setCouponError(null)
+              try {
+                const token = await getAccessToken()
+                if (!token) return
+                const res = await validateCoupon(token, couponCode.trim(), subtotal, region?.id)
+                if (res.valid) {
+                  setCouponDiscount(res.discountCents)
+                  setCouponApplied(true)
+                } else {
+                  setCouponError(res.error || "Invalid coupon")
+                }
+              } catch (e) {
+                setCouponError(e instanceof Error ? e.message : "Failed to validate coupon")
+              } finally {
+                setCouponValidating(false)
+              }
+            }}
+            onRemoveCoupon={() => { setCouponCode(""); setCouponApplied(false); setCouponDiscount(0); setCouponError(null) }}
           />
         )}
         {step === "payment" && (

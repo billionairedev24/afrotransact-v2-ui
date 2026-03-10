@@ -23,6 +23,7 @@ import {
   Star,
   ClipboardList,
   Banknote,
+  Ticket,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -43,6 +44,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/sellers",       label: "Sellers",       icon: Store            },
   { href: "/admin/products",      label: "Products",      icon: Package          },
   { href: "/admin/orders",        label: "Orders",        icon: ShoppingCart     },
+  { href: "/admin/coupons",       label: "Coupons",       icon: Ticket           },
   { href: "/admin/regions",       label: "Regions",       icon: MapPin           },
   { href: "/admin/feature-flags", label: "Feature Flags", icon: ToggleLeft       },
   { href: "/admin/commission",    label: "Commission",    icon: Percent          },

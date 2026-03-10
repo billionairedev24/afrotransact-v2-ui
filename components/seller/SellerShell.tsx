@@ -16,6 +16,7 @@ import {
   ShoppingCart,
   LogOut,
   Star,
+  Ticket,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { href: "/dashboard",              label: "Overview",       icon: LayoutDashboard },
   { href: "/dashboard/products",     label: "Products",       icon: Package         },
   { href: "/dashboard/orders",       label: "Orders",        icon: ShoppingCart    },
+  { href: "/dashboard/coupons",      label: "Coupons",       icon: Ticket          },
   { href: "/dashboard/upload",       label: "Media Library",  icon: Upload         },
   { href: "/dashboard/reviews",      label: "Reviews",        icon: Star            },
   { href: "/dashboard/payouts",      label: "Payouts",        icon: DollarSign      },

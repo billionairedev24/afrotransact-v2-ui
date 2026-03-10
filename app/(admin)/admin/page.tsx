@@ -75,7 +75,7 @@ export default function AdminOverviewPage() {
 
         const [statsRes, pendingRes, regionsRes, plansRes, productsRes, reviewsRes] = await Promise.allSettled([
           getAdminSellerStats(token),
-          getAdminSellers(token, undefined, 0, 5, "submitted"),
+          getAdminSellers(token, undefined, 0, 5, "submitted,under_review"),
           getRegions(token),
           getAdminPlans(token),
           getAdminProducts(token, undefined, 0, 1),
@@ -122,7 +122,7 @@ export default function AdminOverviewPage() {
 
   const statCards = [
     { label: "Total Sellers", value: totalSellers, icon: Store, color: "text-primary", bgColor: "bg-primary/10" },
-    { label: "Pending", value: pendingSellers, icon: Clock, color: "text-gray-400", bgColor: "bg-gray-500/10" },
+    { label: "In Progress", value: pendingSellers, icon: Clock, color: "text-gray-400", bgColor: "bg-gray-500/10" },
     { label: "Submitted", value: submittedSellers, icon: Clock, color: "text-yellow-400", bgColor: "bg-yellow-500/10" },
     { label: "Approved", value: approvedSellers, icon: CheckCircle2, color: "text-emerald-400", bgColor: "bg-emerald-500/10" },
     { label: "Total Products", value: totalProducts ?? 0, icon: Package, color: "text-blue-400", bgColor: "bg-blue-500/10" },
@@ -219,7 +219,14 @@ export default function AdminOverviewPage() {
         {/* Pending Applications */}
         <div className="rounded-2xl border border-white/5" style={{ background: CARD_BG }}>
           <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
-            <h2 className="text-sm font-semibold text-white">Pending Applications</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-white">Pending Applications</h2>
+              {submittedSellers > 0 && (
+                <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-yellow-500/20 px-1.5 text-[10px] font-bold text-yellow-400">
+                  {submittedSellers}
+                </span>
+              )}
+            </div>
             <Link href="/admin/sellers" className="flex items-center gap-1 text-xs text-primary hover:underline">
               View all <ArrowUpRight className="h-3 w-3" />
             </Link>
