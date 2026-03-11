@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
@@ -63,36 +64,61 @@ function StatusBadge({ status }: { status: string }) {
 
 function RowActionMenu({ onView }: { onView: () => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
   useEffect(() => {
     if (!open) return
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) setOpen(false)
     }
+    function handleScroll() { setOpen(false) }
     document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
+    window.addEventListener("scroll", handleScroll, true)
+    return () => {
+      document.removeEventListener("mousedown", handleClick)
+      window.removeEventListener("scroll", handleScroll, true)
+    }
   }, [open])
 
+  function toggle() {
+    if (open) { setOpen(false); return }
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 4, left: r.right - 176 })
+    }
+    setOpen(true)
+  }
+
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
-        onClick={() => setOpen(!open)}
+        ref={btnRef}
+        onClick={toggle}
         className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
+      {open && pos && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[9999] w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl"
+          style={{ top: pos.top, left: pos.left }}
+        >
           <button
             onClick={() => { onView(); setOpen(false) }}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
           >
             <Eye className="h-3.5 w-3.5" /> View Details
           </button>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }
 
@@ -223,7 +249,7 @@ export default function AdminPayoutsPage() {
         })}
       </div>
 
-      <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
+      <div className="rounded-2xl border border-gray-200 bg-white">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-base font-semibold text-gray-900">All Transfers</h2>
           <div className="flex items-center gap-2">

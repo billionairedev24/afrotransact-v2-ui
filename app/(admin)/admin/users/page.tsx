@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { createPortal } from "react-dom"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
@@ -33,9 +34,9 @@ interface AdminUser {
 }
 
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
-  admin:  { label: "Admin",  className: "bg-purple-500/20 text-purple-400 border border-purple-500/30" },
-  seller: { label: "Seller", className: "bg-blue-500/20 text-blue-400 border border-blue-500/30" },
-  buyer:  { label: "Buyer",  className: "bg-green-500/20 text-green-400 border border-green-500/30" },
+  admin:  { label: "Admin",  className: "bg-purple-50 text-purple-700 border border-purple-200" },
+  seller: { label: "Seller", className: "bg-blue-50 text-blue-700 border border-blue-200" },
+  buyer:  { label: "Buyer",  className: "bg-green-50 text-green-700 border border-green-200" },
 }
 
 function classifyRoles(user: AdminUser): string[] {
@@ -63,7 +64,7 @@ const col = createColumnHelper<AdminUser>()
 
 function StatCard({ label, value, icon: Icon, iconColor }: { label: string; value: number; icon: React.ElementType; iconColor: string }) {
   return (
-    <div className="rounded-xl border border-gray-200 p-4 bg-white">
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-500">{label}</p>
@@ -79,28 +80,50 @@ function StatCard({ label, value, icon: Icon, iconColor }: { label: string; valu
 
 function ActionMenu({ onView }: { onView: () => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
   useEffect(() => {
     if (!open) return
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) setOpen(false)
     }
+    function handleScroll() { setOpen(false) }
     document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
+    window.addEventListener("scroll", handleScroll, true)
+    return () => {
+      document.removeEventListener("mousedown", handleClick)
+      window.removeEventListener("scroll", handleScroll, true)
+    }
   }, [open])
 
+  function toggle() {
+    if (open) { setOpen(false); return }
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 4, left: r.right - 176 })
+    }
+    setOpen(true)
+  }
+
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
-        onClick={() => setOpen(!open)}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+        ref={btnRef}
+        onClick={toggle}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
-      {open && (
+      {open && pos && createPortal(
         <div
-          className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-gray-200 py-1 shadow-xl bg-white"
+          ref={menuRef}
+          className="fixed z-[9999] w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl"
+          style={{ top: pos.top, left: pos.left }}
         >
           <button
             onClick={() => { onView(); setOpen(false) }}
@@ -108,9 +131,10 @@ function ActionMenu({ onView }: { onView: () => void }) {
           >
             <UserIcon className="h-3.5 w-3.5" /> View Details
           </button>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }
 
@@ -188,7 +212,7 @@ export default function UsersPage() {
         return (
           <div className="flex flex-wrap gap-1.5">
             {roles.map((role) => {
-              const badge = ROLE_BADGE[role] ?? { label: role, className: "bg-gray-100 text-gray-500 border border-gray-200" }
+              const badge = ROLE_BADGE[role] ?? { label: role, className: "bg-gray-100 text-gray-600 border border-gray-200" }
               return (
                 <span key={role} className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
                   {badge.label}
@@ -203,8 +227,8 @@ export default function UsersPage() {
     col.accessor("enabled", {
       header: "Status",
       cell: (info) => (
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${info.getValue() ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-600"}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${info.getValue() ? "bg-green-400" : "bg-red-400"}`} />
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${info.getValue() ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-600 border-red-200"}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${info.getValue() ? "bg-green-500" : "bg-red-400"}`} />
           {info.getValue() ? "Active" : "Disabled"}
         </span>
       ),
@@ -242,10 +266,10 @@ export default function UsersPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total Users" value={stats.total} icon={Users} iconColor="bg-gray-100 text-gray-900" />
-        <StatCard label="Admins" value={stats.admins} icon={Shield} iconColor="bg-purple-500/10 text-purple-400" />
-        <StatCard label="Sellers" value={stats.sellers} icon={Store} iconColor="bg-blue-500/10 text-blue-400" />
-        <StatCard label="Buyers" value={stats.buyers} icon={ShoppingBag} iconColor="bg-green-500/10 text-green-400" />
+        <StatCard label="Total Users" value={stats.total} icon={Users} iconColor="bg-gray-100 text-gray-700" />
+        <StatCard label="Admins" value={stats.admins} icon={Shield} iconColor="bg-purple-50 text-purple-700" />
+        <StatCard label="Sellers" value={stats.sellers} icon={Store} iconColor="bg-blue-50 text-blue-700" />
+        <StatCard label="Buyers" value={stats.buyers} icon={ShoppingBag} iconColor="bg-green-50 text-green-700" />
       </div>
 
       <DataTable
@@ -274,7 +298,7 @@ export default function UsersPage() {
                   <p className="text-lg font-semibold text-gray-900">{displayName(viewUser)}</p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {classifyRoles(viewUser).map((role) => {
-                      const badge = ROLE_BADGE[role] ?? { label: role, className: "bg-gray-100 text-gray-500" }
+                      const badge = ROLE_BADGE[role] ?? { label: role, className: "bg-gray-100 text-gray-600" }
                       return (
                         <span key={role} className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
                           {badge.label}
@@ -302,7 +326,7 @@ export default function UsersPage() {
                     { label: "Account Status", value: viewUser.enabled ? "Active" : "Disabled" },
                     { label: "Joined", value: formatDate(viewUser.createdTimestamp) },
                   ].map((item) => (
-                    <div key={item.label} className="rounded-xl border border-gray-200 p-3.5 bg-gray-50">
+                    <div key={item.label} className="rounded-xl border border-gray-200 bg-white p-3.5">
                       <p className="text-[11px] font-medium uppercase tracking-wider text-gray-500 mb-1">{item.label}</p>
                       <div className="flex items-center gap-2">
                         <p className="break-all text-sm font-medium text-gray-900 truncate">{item.value}</p>
@@ -329,7 +353,7 @@ export default function UsersPage() {
               {/* Activity */}
               <div className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Activity</h3>
-                <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-3.5 bg-gray-50">
+                <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3.5">
                   <Calendar className="h-4 w-4 text-gray-500" />
                   <div>
                     <p className="text-xs text-gray-500">Member since</p>

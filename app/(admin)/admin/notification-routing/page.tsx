@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
@@ -9,11 +9,10 @@ import {
   Loader2,
   Plus,
   Trash2,
-  ToggleLeft,
-  ToggleRight,
   Mail,
-  Info,
   X,
+  Power,
+  PowerOff,
 } from "lucide-react"
 import {
   getNotificationRecipients,
@@ -24,17 +23,19 @@ import {
   type NotificationRecipient,
   type EventTypeInfo,
 } from "@/lib/api"
+import { DataTable } from "@/components/ui/DataTable"
+import type { ColumnDef } from "@tanstack/react-table"
 
-const EVENT_COLORS: Record<string, string> = {
-  seller: "bg-amber-100 text-amber-700",
-  product: "bg-blue-100 text-blue-700",
-  order: "bg-emerald-100 text-emerald-700",
-  payment: "bg-purple-100 text-purple-700",
+const EVENT_COLORS: Record<string, { bg: string; text: string }> = {
+  seller:  { bg: "bg-amber-50",   text: "text-amber-700"  },
+  product: { bg: "bg-blue-50",    text: "text-blue-700"   },
+  order:   { bg: "bg-emerald-50", text: "text-emerald-700"},
+  payment: { bg: "bg-purple-50",  text: "text-purple-700" },
 }
 
-function eventColor(key: string) {
+function eventStyle(key: string) {
   const prefix = key.split(".")[0]
-  return EVENT_COLORS[prefix] ?? "bg-gray-100 text-gray-600"
+  return EVENT_COLORS[prefix] ?? { bg: "bg-gray-50", text: "text-gray-600" }
 }
 
 export default function NotificationRoutingPage() {
@@ -43,9 +44,7 @@ export default function NotificationRoutingPage() {
   const [eventTypes, setEventTypes] = useState<EventTypeInfo[]>([])
   const [recipients, setRecipients] = useState<NotificationRecipient[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterEvent, setFilterEvent] = useState("")
 
-  // Add form
   const [showAdd, setShowAdd] = useState(false)
   const [addEventType, setAddEventType] = useState("")
   const [addEmail, setAddEmail] = useState("")
@@ -62,8 +61,8 @@ export default function NotificationRoutingPage() {
       ])
       setEventTypes(types ?? [])
       setRecipients(recs ?? [])
-    } catch (e: any) {
-      toast.error("Failed to load data: " + e.message)
+    } catch (e: unknown) {
+      toast.error("Failed to load data: " + (e instanceof Error ? e.message : "Unknown error"))
     } finally {
       setLoading(false)
     }
@@ -92,8 +91,8 @@ export default function NotificationRoutingPage() {
       setAddLabel("")
       setShowAdd(false)
       loadData()
-    } catch (e: any) {
-      toast.error("Add failed: " + e.message)
+    } catch (e: unknown) {
+      toast.error("Add failed: " + (e instanceof Error ? e.message : "Unknown error"))
     } finally {
       setAdding(false)
     }
@@ -108,8 +107,8 @@ export default function NotificationRoutingPage() {
       if (!resp.ok) throw new Error("Delete failed")
       toast.success("Recipient removed")
       loadData()
-    } catch (e: any) {
-      toast.error("Remove failed: " + e.message)
+    } catch (e: unknown) {
+      toast.error("Remove failed: " + (e instanceof Error ? e.message : "Unknown error"))
     }
   }
 
@@ -122,70 +121,172 @@ export default function NotificationRoutingPage() {
         prev.map(x => x.id === r.id ? { ...x, active: !r.active } : x)
       )
       toast.success(r.active ? "Paused" : "Activated")
-    } catch (e: any) {
-      toast.error("Toggle failed: " + e.message)
+    } catch (e: unknown) {
+      toast.error("Toggle failed: " + (e instanceof Error ? e.message : "Unknown error"))
     }
   }
 
-  const filtered = filterEvent
-    ? recipients.filter(r => r.event_type === filterEvent)
-    : recipients
-
-  const grouped = eventTypes.map(et => ({
-    ...et,
-    recipients: filtered.filter(r => r.event_type === et.key),
-  }))
-
-  const ungroupedRecipients = filtered.filter(
-    r => !eventTypes.some(et => et.key === r.event_type)
-  )
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-      </div>
-    )
-  }
+  const columns = useMemo<ColumnDef<NotificationRecipient, unknown>[]>(() => [
+    {
+      accessorKey: "event_type",
+      header: "Event",
+      cell: ({ getValue }) => {
+        const key = getValue() as string
+        const style = eventStyle(key)
+        const info = eventTypes.find(et => et.key === key)
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className={`inline-flex w-fit rounded-full border px-2.5 py-0.5 text-xs font-medium ${style.bg} ${style.text}`}>
+              {info?.label || key}
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "email",
+      header: "Email",
+      cell: ({ getValue }) => (
+        <div className="flex items-center gap-2">
+          <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+          <span className="text-sm font-medium text-gray-900">{getValue() as string}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "label",
+      header: "Label",
+      cell: ({ getValue }) => {
+        const label = getValue() as string
+        return label ? (
+          <span className="text-sm text-gray-500">{label}</span>
+        ) : (
+          <span className="text-sm text-gray-300 italic">—</span>
+        )
+      },
+    },
+    {
+      accessorKey: "active",
+      header: "Status",
+      cell: ({ getValue }) => {
+        const active = getValue() as boolean
+        return (
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+            active
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : "bg-gray-50 text-gray-500 border-gray-200"
+          }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-emerald-500" : "bg-gray-400"}`} />
+            {active ? "Active" : "Paused"}
+          </span>
+        )
+      },
+    },
+    {
+      id: "actions",
+      header: "",
+      size: 80,
+      cell: ({ row }) => {
+        const r = row.original
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <button
+              onClick={() => handleToggle(r)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+              title={r.active ? "Pause" : "Activate"}
+            >
+              {r.active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={() => handleRemove(r)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+              title="Remove"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )
+      },
+      enableSorting: false,
+    },
+  ], [eventTypes])
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Bell className="h-6 w-6 text-yellow-600" />
-            Notification Routing
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Alert Routing</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Configure which email addresses receive admin alerts for each event type.
-            If no recipients are configured, alerts fall back to the <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">ADMIN_EMAIL</code> environment variable.
+            Route platform notifications to specific email addresses per event type.
           </p>
         </div>
         <button
-          onClick={() => { setShowAdd(true); if (!addEventType && eventTypes.length) setAddEventType(eventTypes[0].key) }}
-          className="flex items-center gap-1.5 rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 transition-colors"
+          onClick={() => {
+            setShowAdd(true)
+            if (!addEventType && eventTypes.length) setAddEventType(eventTypes[0].key)
+          }}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#EAB308] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#CA8A04] transition-colors whitespace-nowrap"
         >
-          <Plus className="h-4 w-4" /> Add Recipient
+          <Plus className="h-4 w-4" />
+          Add Recipient
         </button>
+      </div>
+
+      {/* Available events */}
+      <div className="rounded-2xl border border-gray-200 bg-white">
+        <div className="px-5 py-4 border-b border-gray-200">
+          <h2 className="text-sm font-semibold text-gray-900">Available Notification Events</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Events you can route. Add recipients below to receive alerts.
+          </p>
+        </div>
+        <div className="p-5">
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-[#EAB308]" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {eventTypes.map(et => {
+                const style = eventStyle(et.key)
+                const count = recipients.filter(r => r.event_type === et.key).length
+                return (
+                  <div key={et.key} className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-3">
+                    <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.bg}`}>
+                      <Bell className={`h-4 w-4 ${style.text}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900">{et.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{et.description}</p>
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        {count > 0 ? `${count} recipient${count > 1 ? "s" : ""}` : "No recipients — falls back to admin email"}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Add form */}
       {showAdd && (
-        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-5 space-y-4">
+        <div className="rounded-2xl border border-[#EAB308]/30 bg-[#EAB308]/5 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900">Add Notification Recipient</h3>
-            <button onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => setShowAdd(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Event Type</label>
+              <label className="mb-1.5 block text-xs font-medium text-gray-700">Event Type</label>
               <select
                 value={addEventType}
                 onChange={e => setAddEventType(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]/50"
               >
                 {eventTypes.map(et => (
                   <option key={et.key} value={et.key}>{et.label}</option>
@@ -193,38 +294,38 @@ export default function NotificationRoutingPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Email Address</label>
+              <label className="mb-1.5 block text-xs font-medium text-gray-700">Email Address</label>
               <input
                 type="email"
                 value={addEmail}
                 onChange={e => setAddEmail(e.target.value)}
                 placeholder="team@afrotransact.com"
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]/50"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Label (optional)</label>
+              <label className="mb-1.5 block text-xs font-medium text-gray-700">Label (optional)</label>
               <input
                 type="text"
                 value={addLabel}
                 onChange={e => setAddLabel(e.target.value)}
-                placeholder="e.g. Seller Team, Product Manager"
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+                placeholder="e.g. Seller Team"
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]/50"
               />
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={handleAdd}
               disabled={adding || !addEmail || !addEventType}
-              className="flex items-center gap-1.5 rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#EAB308] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#CA8A04] disabled:opacity-50 transition-colors whitespace-nowrap"
             >
               {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Add
+              Add Recipient
             </button>
             <button
               onClick={() => setShowAdd(false)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
@@ -232,119 +333,24 @@ export default function NotificationRoutingPage() {
         </div>
       )}
 
-      {/* Filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <button
-          onClick={() => setFilterEvent("")}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            !filterEvent ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
-        >
-          All
-        </button>
-        {eventTypes.map(et => {
-          const count = recipients.filter(r => r.event_type === et.key).length
-          return (
-            <button
-              key={et.key}
-              onClick={() => setFilterEvent(et.key)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                filterEvent === et.key ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {et.label} {count > 0 && `(${count})`}
-            </button>
-          )
-        })}
+      {/* Recipients table */}
+      <div className="rounded-2xl border border-gray-200 bg-white">
+        <div className="px-5 py-4 border-b border-gray-200">
+          <h2 className="text-sm font-semibold text-gray-900">Configured Recipients</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Manage who receives notifications for each event. Toggle to pause without removing.
+          </p>
+        </div>
+        <DataTable
+          columns={columns}
+          data={recipients}
+          loading={loading}
+          searchPlaceholder="Search by email..."
+          searchColumn="email"
+          emptyMessage="No recipients configured yet. Click 'Add Recipient' to get started."
+          pageSize={15}
+        />
       </div>
-
-      {/* Grouped recipient cards */}
-      <div className="space-y-4">
-        {grouped.filter(g => !filterEvent || g.key === filterEvent).map(group => (
-          <div key={group.key} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-3 bg-gray-50 border-b border-gray-100">
-              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${eventColor(group.key)}`}>
-                {group.key}
-              </span>
-              <div className="flex-1 min-w-0">
-                <span className="font-medium text-sm text-gray-900">{group.label}</span>
-                <span className="text-xs text-gray-500 ml-2">{group.description}</span>
-              </div>
-              {group.recipients.length === 0 && (
-                <span className="text-xs text-gray-400 flex items-center gap-1">
-                  <Info className="h-3 w-3" /> Falls back to ADMIN_EMAIL
-                </span>
-              )}
-            </div>
-            {group.recipients.length > 0 ? (
-              <div className="divide-y divide-gray-50">
-                {group.recipients.map(r => (
-                  <RecipientRow key={r.id} recipient={r} onToggle={handleToggle} onRemove={handleRemove} />
-                ))}
-              </div>
-            ) : (
-              <div className="px-5 py-4 text-sm text-gray-400">
-                No specific recipients configured. Alerts will go to the default admin email.
-              </div>
-            )}
-          </div>
-        ))}
-
-        {/* Ungrouped (custom event types) */}
-        {ungroupedRecipients.length > 0 && (
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
-              <span className="font-medium text-sm text-gray-900">Other Event Types</span>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {ungroupedRecipients.map(r => (
-                <RecipientRow key={r.id} recipient={r} onToggle={handleToggle} onRemove={handleRemove} />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function RecipientRow({
-  recipient: r,
-  onToggle,
-  onRemove,
-}: {
-  recipient: NotificationRecipient
-  onToggle: (r: NotificationRecipient) => void
-  onRemove: (r: NotificationRecipient) => void
-}) {
-  return (
-    <div className={`flex items-center gap-3 px-5 py-3 ${!r.active ? "opacity-50" : ""}`}>
-      <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <span className="text-sm font-medium text-gray-900">{r.email}</span>
-        {r.label && (
-          <span className="ml-2 text-xs text-gray-500">({r.label})</span>
-        )}
-      </div>
-      <span className={`text-[10px] font-medium rounded-full px-2 py-0.5 ${
-        r.active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-      }`}>
-        {r.active ? "Active" : "Paused"}
-      </span>
-      <button
-        onClick={() => onToggle(r)}
-        className="text-gray-400 hover:text-yellow-600 transition-colors p-1"
-        title={r.active ? "Pause" : "Activate"}
-      >
-        {r.active ? <ToggleRight className="h-5 w-5 text-emerald-500" /> : <ToggleLeft className="h-5 w-5" />}
-      </button>
-      <button
-        onClick={() => onRemove(r)}
-        className="text-gray-400 hover:text-red-500 transition-colors p-1"
-        title="Remove"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
     </div>
   )
 }

@@ -25,6 +25,7 @@ import {
   Banknote,
   Mail,
   Bell,
+  Ticket,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -51,6 +52,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/subscription",  label: "Subscriptions", icon: ShieldCheck      },
   { href: "/admin/reviews",       label: "Reviews",       icon: Star             },
   { href: "/admin/payouts",       label: "Payouts",       icon: Banknote         },
+  { href: "/admin/coupons",       label: "Coupons",       icon: Ticket           },
   { href: "/admin/ads",           label: "Ad Slots",      icon: Megaphone        },
   { href: "/admin/email-templates", label: "Email Templates", icon: Mail          },
   { href: "/admin/notification-routing", label: "Alert Routing", icon: Bell     },
