@@ -17,6 +17,9 @@ import {
   MoreHorizontal,
   Eye,
   Copy,
+  ChevronDown,
+  ChevronUp,
+  Receipt,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -43,18 +46,18 @@ function formatDateTime(iso: string | null) {
   return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; description: string }> = {
-  pending_settlement: { label: "Settling", color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/20", description: "Payment is being processed by Stripe. This typically takes ~2 business days." },
-  ready_for_transfer: { label: "Ready", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20", description: "Funds have settled and are queued for transfer to your Stripe account." },
-  transferred: { label: "Paid", color: "text-green-400", bg: "bg-green-500/10 border-green-500/20", description: "Funds have been transferred to your connected Stripe account." },
-  failed: { label: "Failed", color: "text-red-400", bg: "bg-red-500/10 border-red-500/20", description: "Transfer failed. Our system will retry automatically." },
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string; description: string }> = {
+  pending_settlement: { label: "Settling", color: "text-amber-700", bg: "bg-amber-50 border-amber-200", dot: "bg-amber-500", description: "Payment is being processed by Stripe. This typically takes ~2 business days." },
+  ready_for_transfer: { label: "Ready", color: "text-blue-700", bg: "bg-blue-50 border-blue-200", dot: "bg-blue-500", description: "Funds have settled and are queued for transfer to your Stripe account." },
+  transferred: { label: "Paid", color: "text-green-700", bg: "bg-green-50 border-green-200", dot: "bg-green-500", description: "Funds have been transferred to your connected Stripe account." },
+  failed: { label: "Failed", color: "text-red-700", bg: "bg-red-50 border-red-200", dot: "bg-red-500", description: "Transfer failed. Our system will retry automatically." },
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? { label: status, color: "text-gray-400", bg: "bg-gray-50 border-gray-200" }
+  const cfg = STATUS_CONFIG[status] ?? { label: status, color: "text-gray-600", bg: "bg-gray-50 border-gray-200", dot: "bg-gray-400" }
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.bg} ${cfg.color}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${cfg.color.replace("text-", "bg-")}`} />
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.bg} ${cfg.color}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
       {cfg.label}
     </span>
   )
@@ -87,10 +90,53 @@ function RowActionMenu({ onView }: { onView: () => void }) {
             onClick={() => { onView(); setOpen(false) }}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
           >
-            <Eye className="h-3.5 w-3.5" /> View Details
+            <Eye className="h-3.5 w-3.5" /> View Breakdown
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+function BreakdownLine({ label, amount, variant = "default", indent = false }: {
+  label: string
+  amount: number
+  variant?: "default" | "deduction" | "total" | "highlight"
+  indent?: boolean
+}) {
+  const isDeduction = variant === "deduction"
+  const isTotal = variant === "total"
+  const isHighlight = variant === "highlight"
+
+  return (
+    <div className={`flex items-center justify-between py-1.5 ${isTotal ? "border-t border-gray-200 pt-3 mt-1" : ""} ${indent ? "pl-4" : ""}`}>
+      <span className={`text-sm ${isTotal || isHighlight ? "font-semibold text-gray-900" : "text-gray-600"}`}>
+        {label}
+      </span>
+      <span className={`text-sm font-mono tabular-nums ${
+        isDeduction ? "text-red-600" : isTotal || isHighlight ? "font-semibold text-gray-900" : "text-gray-900"
+      }`}>
+        {isDeduction ? `−${formatCents(amount)}` : formatCents(amount)}
+      </span>
+    </div>
+  )
+}
+
+function InlineBreakdown({ t }: { t: TransferRecord }) {
+  const customerPaid = t.subtotalCents + t.shippingCents + t.taxCents
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-0.5">
+      <BreakdownLine label="Product subtotal" amount={t.subtotalCents} />
+      {t.shippingCents > 0 && <BreakdownLine label="Shipping" amount={t.shippingCents} />}
+      {t.taxCents > 0 && <BreakdownLine label="Tax" amount={t.taxCents} />}
+      <BreakdownLine label="Customer paid" amount={customerPaid} variant="highlight" />
+      <div className="my-2 border-t border-dashed border-gray-300" />
+      <BreakdownLine label="Platform commission" amount={t.platformFeeCents} variant="deduction" />
+      {t.stripeFeeCents > 0 && <BreakdownLine label="Stripe processing fee" amount={t.stripeFeeCents} variant="deduction" />}
+      {t.taxCents > 0 && <BreakdownLine label="Tax (remitted)" amount={t.taxCents} variant="deduction" />}
+      {t.shippingCents > 0 && <BreakdownLine label="Shipping (remitted)" amount={t.shippingCents} variant="deduction" />}
+      <BreakdownLine label="Your payout" amount={t.amountCents} variant="total" />
     </div>
   )
 }
@@ -105,6 +151,16 @@ export default function PayoutsPage() {
   const [transfers, setTransfers] = useState<TransferRecord[]>([])
   const [statusFilter, setStatusFilter] = useState<string>("")
   const [selected, setSelected] = useState<TransferRecord | null>(null)
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+
+  function toggleExpand(id: string) {
+    setExpandedRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   useEffect(() => {
     if (status !== "authenticated") return
@@ -171,12 +227,12 @@ export default function PayoutsPage() {
   }
 
   if (status !== "authenticated") {
-    return <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">Sign in to view payouts</div>
+    return <div className="flex items-center justify-center min-h-[400px] text-gray-500">Sign in to view payouts</div>
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] gap-2 text-muted-foreground">
+      <div className="flex items-center justify-center min-h-[400px] gap-2 text-gray-500">
         <Loader2 className="h-5 w-5 animate-spin" /> Loading payouts...
       </div>
     )
@@ -184,7 +240,7 @@ export default function PayoutsPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-destructive">
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-red-600">
         <AlertCircle className="h-6 w-6" />
         <p className="text-sm">{error}</p>
       </div>
@@ -201,7 +257,7 @@ export default function PayoutsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Payouts</h1>
-          <p className="text-sm text-gray-500 mt-1">Track your earnings from customer orders.</p>
+          <p className="text-sm text-gray-500 mt-1">Track your earnings and see exactly where every dollar goes.</p>
         </div>
         <a
           href={stripeDashboardUrl}
@@ -218,9 +274,9 @@ export default function PayoutsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Earnings", value: formatCents(summary?.totalEarningsCents ?? 0), icon: TrendingUp, color: "text-gray-900", iconBg: "bg-gray-100" },
-          { label: "Settling", value: formatCents(summary?.pendingSettlementCents ?? 0), sub: "~2 business days", icon: Clock, color: "text-yellow-400", iconBg: "bg-yellow-500/10" },
-          { label: "Ready to Transfer", value: formatCents(summary?.readyForTransferCents ?? 0), icon: ArrowRightLeft, color: "text-blue-400", iconBg: "bg-blue-500/10" },
-          { label: "Transferred", value: formatCents(summary?.transferredCents ?? 0), icon: CheckCircle2, color: "text-green-400", iconBg: "bg-green-500/10" },
+          { label: "Settling", value: formatCents(summary?.pendingSettlementCents ?? 0), sub: "~2 business days", icon: Clock, color: "text-amber-600", iconBg: "bg-amber-50" },
+          { label: "Ready to Transfer", value: formatCents(summary?.readyForTransferCents ?? 0), icon: ArrowRightLeft, color: "text-blue-600", iconBg: "bg-blue-50" },
+          { label: "Transferred", value: formatCents(summary?.transferredCents ?? 0), icon: CheckCircle2, color: "text-green-600", iconBg: "bg-green-50" },
         ].map((card) => {
           const Icon = card.icon
           return (
@@ -239,14 +295,14 @@ export default function PayoutsPage() {
       </div>
 
       {/* How payouts work */}
-      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <DollarSign className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+      <div className="flex items-start gap-3 rounded-xl border border-[#EAB308]/20 bg-[#EAB308]/5 p-4">
+        <DollarSign className="h-5 w-5 text-[#EAB308] mt-0.5 shrink-0" />
         <div>
           <p className="text-sm text-gray-900 font-medium">How payouts work</p>
           <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-            When a customer pays, the funds are held for ~2 business days while Stripe settles the payment.
-            Once settled, funds are automatically transferred to your connected Stripe account.
-            From there, Stripe pays out to your bank on your configured schedule.
+            When a customer pays, Stripe deducts its processing fee (~2.9% + $0.30). The platform then deducts its
+            commission. Tax and shipping are collected and remitted separately. The remaining amount is your net payout,
+            transferred to your Stripe account after ~2 business days of settlement.
           </p>
         </div>
       </div>
@@ -256,14 +312,14 @@ export default function PayoutsPage() {
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Transfer History</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Individual payouts for each order</p>
+            <p className="text-xs text-gray-500 mt-0.5">Click any row to see the full financial breakdown</p>
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-3.5 w-3.5 text-gray-500" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-600 outline-none focus:border-primary/60"
+              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-600 outline-none focus:border-[#EAB308]/60"
             >
               <option value="">All statuses</option>
               <option value="pending_settlement">Settling</option>
@@ -280,53 +336,81 @@ export default function PayoutsPage() {
           </div>
         ) : (
           <>
-            <div className="hidden sm:grid grid-cols-[1fr_100px_100px_120px_100px_44px] gap-2 px-5 py-2.5 text-xs text-gray-500 font-medium uppercase tracking-wide border-b border-gray-100">
+            <div className="hidden sm:grid grid-cols-[1fr_90px_90px_90px_90px_100px_100px_44px] gap-1 px-5 py-2.5 text-[11px] text-gray-500 font-medium uppercase tracking-wide border-b border-gray-100">
               <span>Order</span>
-              <span className="text-right">Amount</span>
-              <span className="text-right">Fee</span>
+              <span className="text-right">Subtotal</span>
+              <span className="text-right">Fees</span>
+              <span className="text-right">Tax</span>
+              <span className="text-right">Net Payout</span>
               <span className="text-center">Status</span>
               <span className="text-right">Date</span>
               <span />
             </div>
             <div className="divide-y divide-gray-100">
-              {filtered.map((t) => (
-                <div key={t.id} className="grid grid-cols-1 sm:grid-cols-[1fr_100px_100px_120px_100px_44px] gap-2 px-5 py-3.5 items-center hover:bg-gray-50 transition-colors">
-                  <div className="min-w-0">
-                    <p className="text-sm text-gray-900 font-mono truncate">
-                      {t.orderId ? t.orderId.substring(0, 8) + "…" : "—"}
-                    </p>
-                    {t.estimatedSettlementAt && t.status === "pending_settlement" && (
-                      <p className="text-[11px] text-gray-500 mt-0.5">Est. settlement: {formatDate(t.estimatedSettlementAt)}</p>
+              {filtered.map((t) => {
+                const totalFees = t.platformFeeCents + t.stripeFeeCents
+                const isExpanded = expandedRows.has(t.id)
+                return (
+                  <div key={t.id}>
+                    <div
+                      className="grid grid-cols-1 sm:grid-cols-[1fr_90px_90px_90px_90px_100px_100px_44px] gap-1 px-5 py-3.5 items-center hover:bg-gray-50/80 transition-colors cursor-pointer"
+                      onClick={() => toggleExpand(t.id)}
+                    >
+                      <div className="min-w-0 flex items-center gap-2">
+                        {isExpanded
+                          ? <ChevronUp className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                          : <ChevronDown className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
+                        <div>
+                          <p className="text-sm text-gray-900 font-mono truncate">
+                            {t.orderId ? t.orderId.substring(0, 8) + "…" : "—"}
+                          </p>
+                          {t.estimatedSettlementAt && t.status === "pending_settlement" && (
+                            <p className="text-[11px] text-gray-400 mt-0.5">Est. {formatDate(t.estimatedSettlementAt)}</p>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm text-gray-600 text-right">{formatCents(t.subtotalCents)}</span>
+                      <span className="text-sm text-red-500 text-right">−{formatCents(totalFees)}</span>
+                      <span className="text-sm text-gray-500 text-right">{formatCents(t.taxCents)}</span>
+                      <span className="text-sm text-gray-900 font-semibold text-right">{formatCents(t.amountCents)}</span>
+                      <div className="flex justify-center"><StatusBadge status={t.status} /></div>
+                      <span className="text-xs text-gray-500 text-right">{t.transferredAt ? formatDate(t.transferredAt) : formatDate(t.createdAt)}</span>
+                      <RowActionMenu onView={() => setSelected(t)} />
+                    </div>
+                    {isExpanded && (
+                      <div className="px-5 pb-4">
+                        <InlineBreakdown t={t} />
+                      </div>
                     )}
                   </div>
-                  <span className="text-sm text-gray-900 font-semibold text-right">{formatCents(t.amountCents)}</span>
-                  <span className="text-sm text-gray-500 text-right">{formatCents(t.platformFeeCents)}</span>
-                  <div className="flex justify-center"><StatusBadge status={t.status} /></div>
-                  <span className="text-xs text-gray-500 text-right">{t.transferredAt ? formatDate(t.transferredAt) : formatDate(t.createdAt)}</span>
-                  <RowActionMenu onView={() => setSelected(t)} />
-                </div>
-              ))}
+                )
+              })}
             </div>
           </>
         )}
       </div>
 
-      <p className="text-xs text-gray-500 text-center">
-        Platform commission is deducted from each order. After settlement, funds are transferred
-        to your Stripe Connect account. Bank payouts follow your Stripe payout schedule.
+      <p className="text-xs text-gray-400 text-center">
+        All amounts shown in USD. Stripe fees are estimates based on standard pricing (2.9% + $0.30).
+        Bank payouts follow your Stripe payout schedule.
       </p>
 
       {/* Transfer detail sheet */}
       <Sheet open={!!selected} onClose={() => setSelected(null)}>
-        <SheetHeader onClose={() => setSelected(null)}>Payout Details</SheetHeader>
+        <SheetHeader onClose={() => setSelected(null)}>
+          <div className="flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-[#EAB308]" />
+            Payout Breakdown
+          </div>
+        </SheetHeader>
         <SheetBody>
           {selected && (
             <div className="space-y-6">
               {/* Top summary */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Net Amount</p>
-                  <p className="text-3xl font-bold text-gray-900">{formatCents(selected.amountCents)}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Your Payout</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">{formatCents(selected.amountCents)}</p>
                 </div>
                 <StatusBadge status={selected.status} />
               </div>
@@ -337,20 +421,50 @@ export default function PayoutsPage() {
                   <p className={`text-sm font-medium ${STATUS_CONFIG[selected.status].color}`}>
                     {STATUS_CONFIG[selected.status].label}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">{STATUS_CONFIG[selected.status].description}</p>
+                  <p className="text-xs text-gray-600 mt-1">{STATUS_CONFIG[selected.status].description}</p>
                 </div>
               )}
 
-              {/* Details grid */}
+              {/* Full financial breakdown */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Financial Breakdown</h3>
+                <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-1">
+                  <BreakdownLine label="Product subtotal" amount={selected.subtotalCents} />
+                  <BreakdownLine label="Shipping collected" amount={selected.shippingCents} />
+                  <BreakdownLine label="Tax collected" amount={selected.taxCents} />
+                  <div className="border-t border-gray-200 my-2" />
+                  <BreakdownLine
+                    label="Total customer charge"
+                    amount={selected.subtotalCents + selected.shippingCents + selected.taxCents}
+                    variant="highlight"
+                  />
+                  <div className="border-t border-dashed border-gray-300 my-3" />
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 pb-1">Deductions</p>
+                  <BreakdownLine label="Platform commission" amount={selected.platformFeeCents} variant="deduction" />
+                  <BreakdownLine label="Stripe processing fee" amount={selected.stripeFeeCents} variant="deduction" />
+                  <BreakdownLine label="Tax remitted" amount={selected.taxCents} variant="deduction" />
+                  <BreakdownLine label="Shipping remitted" amount={selected.shippingCents} variant="deduction" />
+                  <div className="border-t-2 border-gray-900 my-2" />
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-base font-bold text-gray-900">Your net payout</span>
+                    <span className="text-base font-bold text-gray-900 font-mono tabular-nums">
+                      {formatCents(selected.amountCents)}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 pt-1">
+                    Reconciliation: {formatCents(selected.subtotalCents)} − {formatCents(selected.platformFeeCents)} (commission) − {formatCents(selected.stripeFeeCents)} (Stripe)
+                    = {formatCents(selected.subtotalCents - selected.platformFeeCents - selected.stripeFeeCents)}
+                  </p>
+                </div>
+              </div>
+
+              {/* IDs and timestamps */}
               <div className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Payout Information</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
                     { label: "Payout ID", value: selected.id, copyable: true },
                     { label: "Order ID", value: selected.orderId || "—", copyable: !!selected.orderId },
-                    { label: "Gross Amount", value: formatCents(selected.amountCents + selected.platformFeeCents) },
-                    { label: "Platform Fee", value: formatCents(selected.platformFeeCents) },
-                    { label: "Net Amount", value: formatCents(selected.amountCents) },
                     { label: "Created", value: formatDateTime(selected.createdAt) },
                     { label: "Est. Settlement", value: formatDateTime(selected.estimatedSettlementAt) },
                     { label: "Settled At", value: formatDateTime(selected.settledAt) },

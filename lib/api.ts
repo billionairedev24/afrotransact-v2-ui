@@ -1359,7 +1359,11 @@ export interface TransferRecord {
   storeId: string
   orderId: string
   amountCents: number
+  subtotalCents: number
   platformFeeCents: number
+  shippingCents: number
+  taxCents: number
+  stripeFeeCents: number
   status: string
   stripeTransferId: string | null
   estimatedSettlementAt: string | null

@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   AlertCircle,
   Loader2,
+  Tag,
 } from "lucide-react"
 import {
   Elements,
@@ -31,8 +32,10 @@ import {
   getAddresses,
   createAddress,
   getUserProfile,
+  validateCoupon,
   ApiError,
   type CheckoutResponse,
+  type ValidateCouponResponse,
   type Region,
   type UserAddress,
 } from "@/lib/api"
@@ -290,6 +293,7 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
 
 function ReviewStep({
   address, onNext, onBack, items, subtotal, tax, shipping, total, placing, error: placeError,
+  couponCode, couponResult, couponLoading, couponError, onApplyCoupon, onRemoveCoupon, onCouponCodeChange, discount,
 }: {
   address: Record<string, string>
   onNext: () => void
@@ -297,6 +301,14 @@ function ReviewStep({
   items: { variantId: string; title: string; price: number; quantity: number; imageUrl?: string }[]
   subtotal: number; tax: number; shipping: number; total: number
   placing: boolean; error: string | null
+  couponCode: string
+  couponResult: ValidateCouponResponse | null
+  couponLoading: boolean
+  couponError: string
+  onApplyCoupon: () => void
+  onRemoveCoupon: () => void
+  onCouponCodeChange: (code: string) => void
+  discount: number
 }) {
   return (
     <div className="space-y-5">
@@ -322,6 +334,41 @@ function ReviewStep({
         ))}
       </div>
 
+      {/* Coupon code */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Tag className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold text-gray-900">Promo Code</span>
+        </div>
+        {couponResult ? (
+          <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-green-700">{couponResult.code}</p>
+              <p className="text-xs text-green-600">-{formatCents(couponResult.discountCents)} off</p>
+            </div>
+            <button onClick={onRemoveCoupon} className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors">Remove</button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={couponCode}
+              onChange={(e) => onCouponCodeChange(e.target.value.toUpperCase())}
+              placeholder="Enter promo code"
+              className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/60 transition-colors"
+            />
+            <button
+              onClick={onApplyCoupon}
+              disabled={!couponCode.trim() || couponLoading}
+              className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
+            >
+              {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+            </button>
+          </div>
+        )}
+        {couponError && <p className="text-xs text-red-500">{couponError}</p>}
+      </div>
+
       <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
         <div className="flex justify-between text-sm text-gray-600">
           <span>Subtotal</span><span>{formatCents(subtotal)}</span>
@@ -332,6 +379,12 @@ function ReviewStep({
         <div className="flex justify-between text-sm text-gray-600">
           <span>Tax</span><span>{formatCents(tax)}</span>
         </div>
+        {discount > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-green-600">Discount</span>
+            <span className="text-green-600 font-medium">-{formatCents(discount)}</span>
+          </div>
+        )}
         <div className="my-2 border-t border-gray-200" />
         <div className="flex justify-between text-gray-900 font-bold">
           <span>Total</span><span>{formatCents(total)}</span>
@@ -511,6 +564,10 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState<string | null>(null)
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResponse | null>(null)
+  const [couponCode, setCouponCode] = useState("")
+  const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [couponError, setCouponError] = useState("")
 
   const cartItems = useCartStore((s) => s.items)
   const getSubtotal = useCartStore((s) => s.getSubtotal)
@@ -525,7 +582,8 @@ export default function CheckoutPage() {
   const freeShippingThreshold = region?.freeShippingThresholdCents ?? 7500
   const tax = Math.round(subtotal * taxRate)
   const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFlat
-  const total = subtotal + tax + shipping
+  const discount = couponResult?.discountCents ?? 0
+  const total = subtotal + tax + shipping - discount
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -555,6 +613,31 @@ export default function CheckoutPage() {
     fetchRegion()
     return () => { cancelled = true }
   }, [mounted])
+
+  async function handleApplyCoupon() {
+    if (!couponCode.trim() || !authToken) return
+    setCouponLoading(true)
+    setCouponError("")
+    setCouponResult(null)
+    try {
+      const result = await validateCoupon(authToken, couponCode.trim(), subtotal, region?.id)
+      if (result.valid) {
+        setCouponResult(result)
+      } else {
+        setCouponError(result.error || "Invalid coupon code")
+      }
+    } catch (e) {
+      setCouponError(e instanceof Error ? e.message : "Could not validate coupon")
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setCouponCode("")
+    setCouponResult(null)
+    setCouponError("")
+  }
 
   async function syncCartAndCheckout() {
     setPlacing(true)
@@ -596,6 +679,7 @@ export default function CheckoutPage() {
         state: address.state,
         zip: address.zip,
         phone: address.phone || undefined,
+        couponCode: couponResult ? couponCode.trim() : undefined,
       })
 
       setCheckoutResult(result)
@@ -690,6 +774,14 @@ export default function CheckoutPage() {
             total={displayTotal}
             placing={placing}
             error={placeError}
+            couponCode={couponCode}
+            couponResult={couponResult}
+            couponLoading={couponLoading}
+            couponError={couponError}
+            onApplyCoupon={handleApplyCoupon}
+            onRemoveCoupon={handleRemoveCoupon}
+            onCouponCodeChange={setCouponCode}
+            discount={discount}
           />
         )}
         {step === "payment" && (
