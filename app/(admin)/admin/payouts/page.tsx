@@ -302,14 +302,46 @@ export default function AdminPayoutsPage() {
       <Sheet open={!!selected} onClose={() => setSelected(null)}>
         <SheetHeader onClose={() => setSelected(null)}>Transfer Details</SheetHeader>
         <SheetBody>
-          {selected && (
+          {selected && (() => {
+            const discount = selected.discountCents ?? 0
+            const customerPaid = selected.subtotalCents + selected.shippingCents + selected.taxCents - discount
+            return (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Amount</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Net Payout</p>
                   <p className="text-2xl font-bold text-gray-900">{formatCents(selected.amountCents)}</p>
                 </div>
                 <StatusBadge status={selected.status} />
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Financial Breakdown</h3>
+                <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-1">
+                  <div className="flex justify-between py-1.5"><span className="text-sm text-gray-600">Product subtotal</span><span className="text-sm font-mono text-gray-900">{formatCents(selected.subtotalCents)}</span></div>
+                  {discount > 0 && (
+                    <div className="flex justify-between py-1.5"><span className="text-sm text-green-600">{selected.couponCode ? `Coupon (${selected.couponCode})` : "Coupon savings"}</span><span className="text-sm font-mono text-green-600">−{formatCents(discount)}</span></div>
+                  )}
+                  {selected.shippingCents > 0 && <div className="flex justify-between py-1.5"><span className="text-sm text-gray-600">Shipping</span><span className="text-sm font-mono text-gray-900">{formatCents(selected.shippingCents)}</span></div>}
+                  {selected.taxCents > 0 && <div className="flex justify-between py-1.5"><span className="text-sm text-gray-600">Tax</span><span className="text-sm font-mono text-gray-900">{formatCents(selected.taxCents)}</span></div>}
+                  <div className="border-t border-gray-200 my-2" />
+                  <div className="flex justify-between py-1.5"><span className="text-sm font-semibold text-gray-900">Customer paid</span><span className="text-sm font-mono font-semibold text-gray-900">{formatCents(customerPaid)}</span></div>
+                  <div className="border-t border-dashed border-gray-300 my-3" />
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 pb-1">Deductions</p>
+                  {discount > 0 && <div className="flex justify-between py-1.5"><span className="text-sm text-red-600">{selected.couponCode ? `Coupon discount (${selected.couponCode})` : "Coupon discount"}</span><span className="text-sm font-mono text-red-600">−{formatCents(discount)}</span></div>}
+                  <div className="flex justify-between py-1.5"><span className="text-sm text-red-600">Platform commission</span><span className="text-sm font-mono text-red-600">−{formatCents(selected.platformFeeCents)}</span></div>
+                  {selected.stripeFeeCents > 0 && <div className="flex justify-between py-1.5"><span className="text-sm text-red-600">Stripe processing fee</span><span className="text-sm font-mono text-red-600">−{formatCents(selected.stripeFeeCents)}</span></div>}
+                  {selected.taxCents > 0 && <div className="flex justify-between py-1.5"><span className="text-sm text-red-600">Tax remitted</span><span className="text-sm font-mono text-red-600">−{formatCents(selected.taxCents)}</span></div>}
+                  {selected.shippingCents > 0 && <div className="flex justify-between py-1.5"><span className="text-sm text-red-600">Shipping remitted</span><span className="text-sm font-mono text-red-600">−{formatCents(selected.shippingCents)}</span></div>}
+                  <div className="border-t-2 border-gray-900 my-2" />
+                  <div className="flex justify-between py-2"><span className="text-base font-bold text-gray-900">Seller net payout</span><span className="text-base font-bold text-gray-900 font-mono">{formatCents(selected.amountCents)}</span></div>
+                  <p className="text-[11px] text-gray-400 pt-1">
+                    Reconciliation: {formatCents(selected.subtotalCents)}
+                    {discount > 0 && ` − ${formatCents(discount)} (coupon)`}
+                    {` − ${formatCents(selected.platformFeeCents)} (commission) − ${formatCents(selected.stripeFeeCents)} (Stripe)`}
+                    {` = ${formatCents(selected.subtotalCents - discount - selected.platformFeeCents - selected.stripeFeeCents)}`}
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -319,8 +351,6 @@ export default function AdminPayoutsPage() {
                     { label: "Transfer ID", value: selected.id, copyable: true },
                     { label: "Store ID", value: selected.storeId, copyable: true },
                     { label: "Order ID", value: selected.orderId || "—", copyable: !!selected.orderId },
-                    { label: "Platform Fee", value: formatCents(selected.platformFeeCents) },
-                    { label: "Coupon Discount", value: selected.discountCents ? `−${formatCents(selected.discountCents)}${selected.couponCode ? ` (${selected.couponCode})` : ""}` : "None" },
                     { label: "Stripe Transfer ID", value: selected.stripeTransferId || "—" },
                     { label: "Created", value: formatDateTime(selected.createdAt) },
                     { label: "Est. Settlement", value: formatDateTime(selected.estimatedSettlementAt) },
@@ -345,7 +375,8 @@ export default function AdminPayoutsPage() {
                 </div>
               </div>
             </div>
-          )}
+            )
+          })()}
         </SheetBody>
         <SheetFooter>
           <button
