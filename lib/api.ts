@@ -1231,6 +1231,7 @@ export interface UserProfile {
   lastName: string | null
   phone: string | null
   avatarUrl: string | null
+  role: string
   preferences: string | null
   createdAt: string
 }
