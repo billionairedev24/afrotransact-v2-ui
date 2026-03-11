@@ -1513,7 +1513,7 @@ export interface DealData {
   id: string
   storeId: string
   sellerId: string
-  productId: string
+  productId: string | null
   title: string
   description: string | null
   badgeText: string | null
@@ -1532,7 +1532,8 @@ export interface DealData {
 }
 
 export interface DealCreateRequest {
-  productId: string
+  storeId?: string
+  productId?: string
   title: string
   description?: string
   badgeText?: string

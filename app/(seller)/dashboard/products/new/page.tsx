@@ -17,6 +17,7 @@ import {
   X,
   Star,
   Check,
+  Tag,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -28,6 +29,7 @@ import {
   getMarketplaceConfig,
   getRegions,
   getSellerMedia,
+  createSellerDeal,
   type CategoryRef,
   type StoreDetail,
   type MediaItem,
@@ -186,6 +188,15 @@ export default function NewProductPage() {
   const [showMediaPicker, setShowMediaPicker] = useState(false)
   const [mediaLibrary, setMediaLibrary] = useState<MediaItem[]>([])
   const [loadingLibrary, setLoadingLibrary] = useState(false)
+
+  /* ---- deal section ---- */
+  const [createDeal, setCreateDeal] = useState(false)
+  const [dealTitle, setDealTitle] = useState("")
+  const [dealDescription, setDealDescription] = useState("")
+  const [dealBadgeText, setDealBadgeText] = useState("")
+  const [dealDiscountPercent, setDealDiscountPercent] = useState("")
+  const [dealStartAt, setDealStartAt] = useState("")
+  const [dealEndAt, setDealEndAt] = useState("")
 
   /* ---- touched tracking ---- */
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -612,6 +623,23 @@ export default function NewProductPage() {
             sortOrder: variantImgStart + vIdx,
           })
           vIdx++
+        }
+      }
+
+      if (createDeal && dealTitle.trim()) {
+        try {
+          const discPct = dealDiscountPercent ? parseInt(dealDiscountPercent, 10) : undefined
+          await createSellerDeal(token, {
+            productId: product.id,
+            title: dealTitle.trim(),
+            description: dealDescription.trim() || undefined,
+            badgeText: dealBadgeText.trim() || undefined,
+            discountPercent: discPct && !isNaN(discPct) ? discPct : undefined,
+            startAt: dealStartAt ? new Date(dealStartAt).toISOString() : undefined,
+            endAt: dealEndAt ? new Date(dealEndAt).toISOString() : undefined,
+          })
+        } catch {
+          // product already created, don't block navigation
         }
       }
 
@@ -1298,6 +1326,122 @@ export default function NewProductPage() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+
+        {/* ─── Section 6: Deal (Optional) ─── */}
+        <section className={CARD}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Launch with a Deal</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Optionally create a deal for this product right away
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCreateDeal(!createDeal)}
+              className={cn(
+                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                createDeal ? "bg-[#EAB308]" : "bg-gray-200",
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block h-4 w-4 rounded-full bg-white transition-transform",
+                  createDeal ? "translate-x-6" : "translate-x-1",
+                )}
+              />
+            </button>
+          </div>
+
+          {createDeal && (
+            <div className="mt-5 space-y-4 rounded-xl border border-[#EAB308]/20 bg-[#EAB308]/5 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-[#EAB308]">
+                <Tag className="h-4 w-4" />
+                Deal Details
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Deal Title *</label>
+                <input
+                  type="text"
+                  value={dealTitle}
+                  onChange={(e) => setDealTitle(e.target.value)}
+                  placeholder="e.g. Launch Special — 20% Off!"
+                  className={inputCls()}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Description</label>
+                <textarea
+                  value={dealDescription}
+                  onChange={(e) => setDealDescription(e.target.value)}
+                  placeholder="Short deal description"
+                  rows={2}
+                  className={textareaCls()}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Badge Text</label>
+                  <input
+                    type="text"
+                    value={dealBadgeText}
+                    onChange={(e) => setDealBadgeText(e.target.value)}
+                    placeholder="e.g. NEW, HOT, 20% OFF"
+                    className={inputCls()}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Discount %</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={dealDiscountPercent}
+                    onChange={(e) => setDealDiscountPercent(e.target.value)}
+                    placeholder="e.g. 20"
+                    className={inputCls()}
+                  />
+                </div>
+              </div>
+
+              {price && dealDiscountPercent && parseInt(dealDiscountPercent) > 0 && (
+                <div className="rounded-lg bg-green-50 border border-green-200 p-3">
+                  <p className="text-sm text-green-700">
+                    Deal price:{" "}
+                    <span className="font-bold">
+                      ${(parseFloat(price) * (1 - parseInt(dealDiscountPercent) / 100)).toFixed(2)}
+                    </span>
+                    <span className="text-xs text-green-600 ml-2">(was ${parseFloat(price).toFixed(2)})</span>
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Start Date</label>
+                  <input
+                    type="datetime-local"
+                    value={dealStartAt}
+                    onChange={(e) => setDealStartAt(e.target.value)}
+                    className={inputCls()}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">End Date</label>
+                  <input
+                    type="datetime-local"
+                    value={dealEndAt}
+                    onChange={(e) => setDealEndAt(e.target.value)}
+                    className={inputCls()}
+                  />
+                </div>
+              </div>
             </div>
           )}
         </section>
