@@ -1364,6 +1364,8 @@ export interface TransferRecord {
   shippingCents: number
   taxCents: number
   stripeFeeCents: number
+  discountCents: number
+  couponCode: string | null
   status: string
   stripeTransferId: string | null
   estimatedSettlementAt: string | null

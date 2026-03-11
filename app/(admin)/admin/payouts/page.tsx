@@ -320,6 +320,7 @@ export default function AdminPayoutsPage() {
                     { label: "Store ID", value: selected.storeId, copyable: true },
                     { label: "Order ID", value: selected.orderId || "—", copyable: !!selected.orderId },
                     { label: "Platform Fee", value: formatCents(selected.platformFeeCents) },
+                    { label: "Coupon Discount", value: selected.discountCents ? `−${formatCents(selected.discountCents)}${selected.couponCode ? ` (${selected.couponCode})` : ""}` : "None" },
                     { label: "Stripe Transfer ID", value: selected.stripeTransferId || "—" },
                     { label: "Created", value: formatDateTime(selected.createdAt) },
                     { label: "Est. Settlement", value: formatDateTime(selected.estimatedSettlementAt) },

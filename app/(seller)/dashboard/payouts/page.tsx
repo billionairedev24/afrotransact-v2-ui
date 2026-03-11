@@ -123,11 +123,19 @@ function BreakdownLine({ label, amount, variant = "default", indent = false }: {
 }
 
 function InlineBreakdown({ t }: { t: TransferRecord }) {
-  const customerPaid = t.subtotalCents + t.shippingCents + t.taxCents
+  const discount = t.discountCents ?? 0
+  const customerPaid = t.subtotalCents + t.shippingCents + t.taxCents - discount
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-0.5">
       <BreakdownLine label="Product subtotal" amount={t.subtotalCents} />
+      {discount > 0 && (
+        <BreakdownLine
+          label={t.couponCode ? `Coupon (${t.couponCode})` : "Coupon discount"}
+          amount={discount}
+          variant="deduction"
+        />
+      )}
       {t.shippingCents > 0 && <BreakdownLine label="Shipping" amount={t.shippingCents} />}
       {t.taxCents > 0 && <BreakdownLine label="Tax" amount={t.taxCents} />}
       <BreakdownLine label="Customer paid" amount={customerPaid} variant="highlight" />
@@ -426,37 +434,59 @@ export default function PayoutsPage() {
               )}
 
               {/* Full financial breakdown */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Financial Breakdown</h3>
-                <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-1">
-                  <BreakdownLine label="Product subtotal" amount={selected.subtotalCents} />
-                  <BreakdownLine label="Shipping collected" amount={selected.shippingCents} />
-                  <BreakdownLine label="Tax collected" amount={selected.taxCents} />
-                  <div className="border-t border-gray-200 my-2" />
-                  <BreakdownLine
-                    label="Total customer charge"
-                    amount={selected.subtotalCents + selected.shippingCents + selected.taxCents}
-                    variant="highlight"
-                  />
-                  <div className="border-t border-dashed border-gray-300 my-3" />
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 pb-1">Deductions</p>
-                  <BreakdownLine label="Platform commission" amount={selected.platformFeeCents} variant="deduction" />
-                  <BreakdownLine label="Stripe processing fee" amount={selected.stripeFeeCents} variant="deduction" />
-                  <BreakdownLine label="Tax remitted" amount={selected.taxCents} variant="deduction" />
-                  <BreakdownLine label="Shipping remitted" amount={selected.shippingCents} variant="deduction" />
-                  <div className="border-t-2 border-gray-900 my-2" />
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-base font-bold text-gray-900">Your net payout</span>
-                    <span className="text-base font-bold text-gray-900 font-mono tabular-nums">
-                      {formatCents(selected.amountCents)}
-                    </span>
+              {(() => {
+                const discount = selected.discountCents ?? 0
+                const customerPaid = selected.subtotalCents + selected.shippingCents + selected.taxCents - discount
+                return (
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Financial Breakdown</h3>
+                    <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-1">
+                      <BreakdownLine label="Product subtotal" amount={selected.subtotalCents} />
+                      {discount > 0 && (
+                        <BreakdownLine
+                          label={selected.couponCode ? `Coupon applied (${selected.couponCode})` : "Coupon discount"}
+                          amount={discount}
+                          variant="deduction"
+                        />
+                      )}
+                      <BreakdownLine label="Shipping collected" amount={selected.shippingCents} />
+                      <BreakdownLine label="Tax collected" amount={selected.taxCents} />
+                      <div className="border-t border-gray-200 my-2" />
+                      <BreakdownLine
+                        label="Total customer charge"
+                        amount={customerPaid}
+                        variant="highlight"
+                      />
+                      <div className="border-t border-dashed border-gray-300 my-3" />
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 pb-1">Deductions</p>
+                      {discount > 0 && (
+                        <BreakdownLine
+                          label={selected.couponCode ? `Coupon discount (${selected.couponCode})` : "Coupon discount"}
+                          amount={discount}
+                          variant="deduction"
+                        />
+                      )}
+                      <BreakdownLine label="Platform commission" amount={selected.platformFeeCents} variant="deduction" />
+                      <BreakdownLine label="Stripe processing fee" amount={selected.stripeFeeCents} variant="deduction" />
+                      <BreakdownLine label="Tax remitted" amount={selected.taxCents} variant="deduction" />
+                      <BreakdownLine label="Shipping remitted" amount={selected.shippingCents} variant="deduction" />
+                      <div className="border-t-2 border-gray-900 my-2" />
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-base font-bold text-gray-900">Your net payout</span>
+                        <span className="text-base font-bold text-gray-900 font-mono tabular-nums">
+                          {formatCents(selected.amountCents)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 pt-1">
+                        Reconciliation: {formatCents(selected.subtotalCents)}
+                        {discount > 0 && ` − ${formatCents(discount)} (coupon)`}
+                        {` − ${formatCents(selected.platformFeeCents)} (commission) − ${formatCents(selected.stripeFeeCents)} (Stripe)`}
+                        {` = ${formatCents(selected.subtotalCents - discount - selected.platformFeeCents - selected.stripeFeeCents)}`}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-gray-400 pt-1">
-                    Reconciliation: {formatCents(selected.subtotalCents)} − {formatCents(selected.platformFeeCents)} (commission) − {formatCents(selected.stripeFeeCents)} (Stripe)
-                    = {formatCents(selected.subtotalCents - selected.platformFeeCents - selected.stripeFeeCents)}
-                  </p>
-                </div>
-              </div>
+                )
+              })()}
 
               {/* IDs and timestamps */}
               <div className="space-y-3">
