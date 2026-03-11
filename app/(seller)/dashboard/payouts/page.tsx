@@ -82,7 +82,7 @@ function RowActionMenu({ onView }: { onView: () => void }) {
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
+        <div className="absolute right-0 bottom-full z-50 mb-1 w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
           <button
             onClick={() => { onView(); setOpen(false) }}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
@@ -252,7 +252,7 @@ export default function PayoutsPage() {
       </div>
 
       {/* Transfers table */}
-      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+      <div className="rounded-2xl border border-gray-200 bg-white overflow-x-auto">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Transfer History</h2>

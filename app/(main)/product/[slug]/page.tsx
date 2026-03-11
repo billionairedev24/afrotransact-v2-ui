@@ -100,7 +100,7 @@ export default function ProductPage() {
 
   if (loading) {
     return (
-      <div className="container py-20 flex flex-col items-center justify-center gap-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="text-sm text-muted-foreground">Loading product...</p>
       </div>
@@ -109,7 +109,7 @@ export default function ProductPage() {
 
   if (error || !product) {
     return (
-      <div className="container py-20 text-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <h2 className="text-xl font-bold text-foreground mb-2">Product Not Found</h2>
         <p className="text-muted-foreground mb-4">{error || "This product doesn't exist or has been removed."}</p>
         <Link href="/" className="text-primary hover:underline">Back to home</Link>
@@ -118,8 +118,8 @@ export default function ProductPage() {
   }
 
   return (
-    <div className="container py-6">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
         <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
         <ChevronRight className="h-3.5 w-3.5" />
         {product.categories[0] && (
@@ -337,7 +337,7 @@ export default function ProductPage() {
             {inStock && (
               <button
                 onClick={handleBuyNow}
-                className="w-full flex items-center justify-center gap-2 rounded-md h-12 px-8 text-sm font-semibold bg-white text-[#0f0f10] hover:bg-gray-100 transition-colors shadow-sm"
+                className="w-full flex items-center justify-center gap-2 rounded-md h-12 px-8 text-sm font-semibold bg-gray-900 text-white hover:bg-gray-800 transition-colors shadow-sm"
               >
                 <Zap className="h-4 w-4" />
                 Buy Now
@@ -378,7 +378,7 @@ export default function ProductPage() {
       </div>
 
       {product && (
-        <div className="mt-12">
+        <div className="mt-16 border-t border-border pt-12">
           <ProductReviews productId={product.id} />
         </div>
       )}

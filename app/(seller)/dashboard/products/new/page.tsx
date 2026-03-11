@@ -16,6 +16,7 @@ import {
   AlertCircle,
   X,
   Star,
+  Check,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -24,8 +25,12 @@ import {
   getCategories,
   createProduct,
   addProductImage,
+  getMarketplaceConfig,
+  getRegions,
+  getSellerMedia,
   type CategoryRef,
   type StoreDetail,
+  type MediaItem,
 } from "@/lib/api"
 import { useUploadThing } from "@/lib/uploadthing"
 
@@ -72,7 +77,8 @@ interface ProductImageEntry {
 /*  Constants & helpers                                                */
 /* ------------------------------------------------------------------ */
 
-const MAX_IMAGES = 8
+const DEFAULT_MAX_IMAGES = 8
+const DEFAULT_MAX_TAGS = 10
 
 const WEIGHT_UNITS = [
   { value: "lb", label: "lb" },
@@ -158,6 +164,8 @@ export default function NewProductPage() {
   const [categories, setCategories] = useState<CategoryRef[]>([])
   const [stores, setStores] = useState<StoreDetail[]>([])
   const [selectedStoreId, setSelectedStoreId] = useState("")
+  const [maxImages, setMaxImages] = useState(DEFAULT_MAX_IMAGES)
+  const [maxTags, setMaxTags] = useState(DEFAULT_MAX_TAGS)
 
   /* ---- form fields ---- */
   const [name, setName] = useState("")
@@ -171,11 +179,13 @@ export default function NewProductPage() {
   const [submitAction, setSubmitAction] = useState<"draft" | "pending_review">("pending_review")
   const [price, setPrice] = useState("")
   const [compareAtPrice, setCompareAtPrice] = useState("")
-  const [sku, setSku] = useState("")
   const [stockQuantity, setStockQuantity] = useState("")
   const [attributes, setAttributes] = useState<AttributePair[]>([])
   const [images, setImages] = useState<ProductImageEntry[]>([])
   const [variants, setVariants] = useState<VariantRow[]>([])
+  const [showMediaPicker, setShowMediaPicker] = useState(false)
+  const [mediaLibrary, setMediaLibrary] = useState<MediaItem[]>([])
+  const [loadingLibrary, setLoadingLibrary] = useState(false)
 
   /* ---- touched tracking ---- */
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -199,7 +209,6 @@ export default function NewProductPage() {
     if (variants.length > 0) {
       variants.forEach((v, i) => {
         if (!v.name.trim()) e[`v${i}_name`] = "Required"
-        if (!v.sku.trim()) e[`v${i}_sku`] = "Required"
         const p = parseFloat(v.price)
         if (!v.price.trim() || isNaN(p) || p <= 0) e[`v${i}_price`] = "Valid price required"
         const sq = parseInt(v.stockQuantity, 10)
@@ -213,7 +222,6 @@ export default function NewProductPage() {
     } else {
       const p = parseFloat(price)
       if (!price.trim() || isNaN(p) || p <= 0) e.price = "Valid price required"
-      if (!sku.trim()) e.sku = "SKU is required"
       const sq = parseInt(stockQuantity, 10)
       if (stockQuantity.trim() === "" || isNaN(sq) || sq < 0)
         e.stockQuantity = "Valid quantity required"
@@ -223,7 +231,7 @@ export default function NewProductPage() {
       }
     }
     return e
-  }, [name, description, categoryId, weight, variants, price, sku, stockQuantity, compareAtPrice])
+  }, [name, description, categoryId, weight, variants, price, stockQuantity, compareAtPrice])
 
   function err(field: string): string | undefined {
     if (!submitted && !touched[field]) return undefined
@@ -247,11 +255,20 @@ export default function NewProductPage() {
     setLoading(true)
     setGlobalError(null)
     try {
-      const [cats, seller] = await Promise.all([getCategories(), getCurrentSeller(token)])
+      const [cats, seller, regions] = await Promise.all([
+        getCategories(),
+        getCurrentSeller(token),
+        getRegions(token, true).catch(() => []),
+      ])
       setCategories(cats)
       const st = await getSellerStores(token, seller.id)
       setStores(st)
       if (st.length > 0) setSelectedStoreId(st[0].id)
+      if (regions.length > 0) {
+        const mktCfg = await getMarketplaceConfig(regions[0].id)
+        setMaxImages(mktCfg.maxProductImages)
+        setMaxTags(mktCfg.maxProductTags)
+      }
     } catch (e) {
       setGlobalError(e instanceof Error ? e.message : "Failed to load data")
     } finally {
@@ -274,7 +291,7 @@ export default function NewProductPage() {
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (!files) return
-    const remaining = MAX_IMAGES - images.length
+    const remaining = maxImages - images.length
     if (remaining <= 0) return
     const selected = Array.from(files).slice(0, remaining)
     const isFirstBatch = images.length === 0
@@ -335,13 +352,43 @@ export default function NewProductPage() {
     setImages((prev) => prev.map((i) => ({ ...i, isPrimary: i.id === id })))
   }
 
+  async function openMediaPicker() {
+    setShowMediaPicker(true)
+    setLoadingLibrary(true)
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      const res = await getSellerMedia(token, 1, 200)
+      setMediaLibrary(res.items ?? [])
+    } catch {
+      setMediaLibrary([])
+    } finally {
+      setLoadingLibrary(false)
+    }
+  }
+
+  function selectFromLibrary(item: MediaItem) {
+    if (images.length >= maxImages) return
+    const alreadyAdded = images.some((i) => i.url === item.url)
+    if (alreadyAdded) return
+    const entry: ProductImageEntry = {
+      id: uid(),
+      file: new File([], item.name),
+      preview: item.url,
+      url: item.url,
+      status: "done",
+      isPrimary: images.length === 0,
+    }
+    setImages((prev) => [...prev, entry])
+  }
+
   /* ================================================================ */
   /*  Tag handlers                                                     */
   /* ================================================================ */
 
   function addTag(raw: string) {
     const t = raw.trim()
-    if (t && !tags.includes(t)) setTags((p) => [...p, t])
+    if (t && !tags.includes(t) && tags.length < maxTags) setTags((p) => [...p, t])
     setTagInput("")
   }
 
@@ -510,7 +557,7 @@ export default function NewProductPage() {
               )
             return {
               name: v.name.trim() || undefined,
-              sku: v.sku.trim(),
+              sku: `SKU-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
               price: vPrice,
               compareAtPrice: compare !== undefined && !isNaN(compare) ? compare : undefined,
               currency: "USD",
@@ -521,7 +568,7 @@ export default function NewProductPage() {
           })
         : [{
             name: "Default",
-            sku: sku.trim(),
+            sku: `SKU-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
             price: parseFloat(price),
             compareAtPrice: compareAtPrice ? parseFloat(compareAtPrice) : undefined,
             currency: "USD",
@@ -791,23 +838,6 @@ export default function NewProductPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                {/* SKU */}
-                <div>
-                  <label htmlFor="sku" className="mb-1.5 block text-sm font-medium text-gray-900">
-                    SKU <span className="text-red-600">*</span>
-                  </label>
-                  <input
-                    id="sku"
-                    type="text"
-                    value={sku}
-                    onChange={(e) => setSku(e.target.value)}
-                    onBlur={() => touch("sku")}
-                    placeholder="e.g. SHE-BTR-001"
-                    className={inputCls(err("sku"))}
-                  />
-                  <FieldError msg={err("sku")} />
-                </div>
-
                 {/* Stock Quantity */}
                 <div>
                   <label htmlFor="stockQuantity" className="mb-1.5 block text-sm font-medium text-gray-900">
@@ -889,19 +919,25 @@ export default function NewProductPage() {
                     </button>
                   </span>
                 ))}
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  onBlur={() => {
-                    if (tagInput.trim()) addTag(tagInput)
-                  }}
-                  placeholder={tags.length === 0 ? "Type and press Enter to add tags" : "Add tag…"}
-                  className="min-w-[120px] flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none"
-                />
+                {tags.length < maxTags && (
+                  <input
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    onBlur={() => {
+                      if (tagInput.trim()) addTag(tagInput)
+                    }}
+                    placeholder={tags.length === 0 ? "Type and press Enter to add tags" : "Add tag…"}
+                    className="min-w-[120px] flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none"
+                  />
+                )}
               </div>
-              <p className="mt-1 text-xs text-gray-500">Press Enter or comma to add a tag</p>
+              <p className="mt-1 text-xs text-gray-500">
+                {tags.length >= maxTags
+                  ? `Maximum ${maxTags} tags reached`
+                  : `Press Enter or comma to add a tag (${tags.length}/${maxTags})`}
+              </p>
             </div>
           </div>
         </section>
@@ -910,28 +946,38 @@ export default function NewProductPage() {
         <section className={CARD}>
           <h2 className="text-lg font-semibold text-gray-900">Product Images</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Upload up to {MAX_IMAGES} images. Click the star to set the main image.
+            Upload up to {maxImages} images. Click the star to set the main image.
           </p>
 
           <div className="mt-5 space-y-4">
-            {/* Upload zone */}
-            {images.length < MAX_IMAGES && (
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-[#EAB308]/40 hover:bg-[#EAB308]/5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
-                  <Upload className="h-6 w-6 text-gray-500" />
-                </div>
-                <p className="mt-3 text-sm font-medium text-gray-900">Click to upload images</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  JPEG, PNG, WebP, GIF &middot; {MAX_IMAGES - images.length} remaining
-                </p>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  multiple
-                  className="hidden"
-                  onChange={handleImageSelect}
-                />
-              </label>
+            {/* Upload zone + Library button */}
+            {images.length < maxImages && (
+              <div className="space-y-3">
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-[#EAB308]/40 hover:bg-[#EAB308]/5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
+                    <Upload className="h-6 w-6 text-gray-500" />
+                  </div>
+                  <p className="mt-3 text-sm font-medium text-gray-900">Click to upload images</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    JPEG, PNG, WebP, GIF &middot; {maxImages - images.length} remaining
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageSelect}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={openMediaPicker}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Select from Library
+                </button>
+              </div>
             )}
 
             {/* Image grid */}
@@ -1060,22 +1106,6 @@ export default function NewProductPage() {
                       className={cn(inputCls(err(`v${idx}_name`)), "h-9")}
                     />
                     <FieldError msg={err(`v${idx}_name`)} />
-                  </div>
-
-                  {/* SKU */}
-                  <div>
-                    <label className="mb-1 block text-xs text-gray-500">
-                      SKU <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={variant.sku}
-                      onChange={(e) => updateVariantField(variant.id, "sku", e.target.value)}
-                      onBlur={() => touch(`v${idx}_sku`)}
-                      placeholder="SKU-001"
-                      className={cn(inputCls(err(`v${idx}_sku`)), "h-9")}
-                    />
-                    <FieldError msg={err(`v${idx}_sku`)} />
                   </div>
 
                   {/* Price */}
@@ -1315,6 +1345,63 @@ export default function NewProductPage() {
           </button>
         </div>
       </form>
+
+      {/* Media picker modal */}
+      {showMediaPicker && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setShowMediaPicker(false)}>
+          <div className="w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-semibold text-gray-900">Select from Media Library</h3>
+              <button type="button" onClick={() => setShowMediaPicker(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-6" style={{ maxHeight: "calc(80vh - 80px)" }}>
+              {loadingLibrary ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#EAB308]" />
+                </div>
+              ) : mediaLibrary.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <ImageIcon className="h-12 w-12 text-gray-300" />
+                  <p className="mt-4 text-sm font-medium text-gray-900">No media in library</p>
+                  <p className="mt-1 text-xs text-gray-500">Upload images in the Media Library first</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  {mediaLibrary.map((item) => {
+                    const alreadyAdded = images.some((i) => i.url === item.url)
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        disabled={alreadyAdded || images.length >= maxImages}
+                        onClick={() => { selectFromLibrary(item); setShowMediaPicker(false) }}
+                        className={cn(
+                          "group relative aspect-square overflow-hidden rounded-lg border-2 transition-colors",
+                          alreadyAdded
+                            ? "border-[#EAB308] opacity-60 cursor-not-allowed"
+                            : "border-gray-200 hover:border-[#EAB308]/60 cursor-pointer",
+                        )}
+                      >
+                        <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
+                        {alreadyAdded && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <Check className="h-6 w-6 text-white" />
+                          </div>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5">
+                          <p className="truncate text-xs font-medium text-white">{item.name || "Untitled"}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

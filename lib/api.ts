@@ -1141,6 +1141,7 @@ export interface FeatureFlag {
   key: string
   enabled: boolean
   regionId: string
+  config?: Record<string, unknown>
 }
 
 interface RawFeature {
@@ -1157,6 +1158,7 @@ function mapFeature(f: RawFeature): FeatureFlag {
     key: f.feature_key,
     enabled: f.enabled,
     regionId: f.region_id,
+    config: (f.config ?? {}) as Record<string, unknown>,
   }
 }
 
@@ -1178,6 +1180,25 @@ export async function upsertFeatureFlag(
   // Upsert returns { status: "ok" }, so re-fetch the list and find the flag
   const all = await getFeatureFlags(token, regionId)
   return all.find((f) => f.key === data.key) ?? { id: "", key: data.key, enabled: data.enabled, regionId }
+}
+
+export interface MarketplaceConfig {
+  maxProductImages: number
+  maxProductTags: number
+}
+
+export async function getMarketplaceConfig(regionId: string): Promise<MarketplaceConfig> {
+  try {
+    const res = await api<{ features: RawFeature[] }>(`/api/v1/regions/${regionId}/features`)
+    const marketplace = (res.features ?? []).find((f) => f.feature_key === "marketplace_enabled")
+    const cfg = (marketplace?.config ?? {}) as Record<string, unknown>
+    return {
+      maxProductImages: typeof cfg.max_product_images === "number" ? cfg.max_product_images : 8,
+      maxProductTags: typeof cfg.max_product_tags === "number" ? cfg.max_product_tags : 10,
+    }
+  } catch {
+    return { maxProductImages: 8, maxProductTags: 10 }
+  }
 }
 
 // ── Admin: Products ──
@@ -1284,29 +1305,43 @@ export function setDefaultAddress(token: string, id: string) {
 
 // ── Media ──
 
-export interface MediaUploadResponse {
+export interface MediaItem {
   id: string
+  seller_id: string
+  name: string
+  description: string
   url: string
-  filename: string
-  contentType: string
-  sizeBytes: number
+  file_key: string
+  content_type: string
+  size_bytes: number
+  created_at: string
+  updated_at: string
 }
 
-export async function uploadMedia(token: string, file: File): Promise<MediaUploadResponse> {
-  const formData = new FormData()
-  formData.append("file", file)
+export interface MediaListResponse {
+  items: MediaItem[]
+  total_count: number
+  page: number
+  page_size: number
+}
 
-  const res = await fetch(`${API_BASE}/api/v1/media/upload`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  })
+export function getSellerMedia(token: string, page = 1, pageSize = 50) {
+  return api<MediaListResponse>(`/api/v1/media?page=${page}&page_size=${pageSize}`, { token })
+}
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    throw new ApiError(res.status, text || res.statusText, "/api/v1/media/upload")
-  }
-  return res.json()
+export function createMediaItem(
+  token: string,
+  data: { name: string; description?: string; url: string; file_key?: string; content_type?: string; size_bytes?: number },
+) {
+  return api<MediaItem>("/api/v1/media", { method: "POST", body: data, token })
+}
+
+export function updateMediaItem(token: string, id: string, data: { name?: string; description?: string }) {
+  return api<MediaItem>(`/api/v1/media/${id}`, { method: "PUT", body: data, token })
+}
+
+export function deleteMediaItem(token: string, id: string) {
+  return api<{ id: string; file_key: string; status: string }>(`/api/v1/media/${id}`, { method: "DELETE", token })
 }
 
 // ── Seller Payouts ──

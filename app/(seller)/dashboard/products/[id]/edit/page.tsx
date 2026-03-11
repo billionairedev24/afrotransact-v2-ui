@@ -212,7 +212,6 @@ export default function EditProductPage() {
     if (variants.length === 0) e.variants = "At least one variant is required"
     variants.forEach((v, i) => {
       if (!v.name.trim()) e[`v${i}_name`] = "Required"
-      if (!v.sku.trim()) e[`v${i}_sku`] = "Required"
       const p = parseFloat(v.price)
       if (!v.price.trim() || isNaN(p) || p <= 0) e[`v${i}_price`] = "Valid price required"
       const sq = parseInt(v.stockQuantity, 10)
@@ -638,7 +637,7 @@ export default function EditProductPage() {
             {} as Record<string, string>,
           )
         const data = {
-          sku: v.sku.trim(),
+          sku: `SKU-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
           name: v.name.trim() || undefined,
           price: price,
           compareAtPrice: compare !== undefined && !isNaN(compare) ? compare : undefined,
@@ -1145,7 +1144,7 @@ export default function EditProductPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <div className="col-span-2 sm:col-span-1">
                     <label className="mb-1 block text-xs text-gray-500">
                       Name <span className="text-red-600">*</span>
@@ -1159,20 +1158,6 @@ export default function EditProductPage() {
                       className={cn(inputCls(err(`v${idx}_name`)), "h-9")}
                     />
                     <FieldError msg={err(`v${idx}_name`)} />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-gray-500">
-                      SKU <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={variant.sku}
-                      onChange={(e) => updateVariantField(variant.id, "sku", e.target.value)}
-                      onBlur={() => touch(`v${idx}_sku`)}
-                      placeholder="SKU-001"
-                      className={cn(inputCls(err(`v${idx}_sku`)), "h-9")}
-                    />
-                    <FieldError msg={err(`v${idx}_sku`)} />
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-gray-500">

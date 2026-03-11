@@ -2,33 +2,51 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Star, MapPin, Leaf, ChevronRight } from "lucide-react"
+import { Star, MapPin, Leaf, ChevronRight, Sparkles } from "lucide-react"
 import { searchProducts, type SearchResult } from "@/lib/api"
 
-export function FeaturedProducts() {
+interface Props {
+  title?: string
+  subtitle?: string
+  sortBy?: string
+  size?: number
+  viewAllHref?: string
+  icon?: React.ReactNode
+}
+
+export function FeaturedProducts({
+  title = "Fresh Near You",
+  subtitle,
+  sortBy = "rating",
+  size = 8,
+  viewAllHref = "/search?sort=rating",
+  icon,
+}: Props) {
   const [products, setProducts] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    searchProducts({ size: "6", sort_by: "rating" })
+    searchProducts({ size: String(size), sort_by: sortBy })
       .then((res) => setProducts(res.results))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [sortBy, size])
 
   if (loading) {
     return (
       <section className="mx-auto max-w-[1440px] px-4 sm:px-6 py-12">
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Fresh Near You</h2>
-            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5 text-primary" />
-              Based on Austin, TX
-            </p>
+            <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+            {subtitle && (
+              <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                {icon || <MapPin className="h-3.5 w-3.5 text-primary" />}
+                {subtitle}
+              </p>
+            )}
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden animate-pulse">
               <div className="aspect-square bg-muted" />
@@ -49,21 +67,23 @@ export function FeaturedProducts() {
     <section className="mx-auto max-w-[1440px] px-4 sm:px-6 py-12">
       <div className="flex items-end justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Fresh Near You</h2>
-          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5 text-primary" />
-            Based on Austin, TX
-          </p>
+          <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+          {subtitle && (
+            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+              {icon || <MapPin className="h-3.5 w-3.5 text-primary" />}
+              {subtitle}
+            </p>
+          )}
         </div>
         <Link
-          href="/search?sort=rating"
+          href={viewAllHref}
           className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
         >
           View all <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {products.map((product) => (
           <Link
             key={product.product_id}

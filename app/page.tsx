@@ -1,3 +1,6 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   ChevronRight,
@@ -28,139 +31,44 @@ import { MobileNav } from "@/components/layout/mobile-nav"
 import { HeroCarousel } from "@/components/home/HeroCarousel"
 import { AdSlot } from "@/components/home/AdSlot"
 import { FeaturedProducts } from "@/components/home/FeaturedProducts"
+import { getCategories, getAllStores, type CategoryRef, type StoreInfo } from "@/lib/api"
 
-/* ─── Static data (will be replaced with real API calls) ─── */
+const CATEGORY_STYLE_MAP: Record<string, { icon: typeof Leaf; bg: string; border: string; iconColor: string }> = {
+  produce:     { icon: Leaf,    bg: "from-emerald-950 to-emerald-900", border: "border-emerald-800/50", iconColor: "text-emerald-400" },
+  spices:      { icon: Flame,   bg: "from-orange-950 to-orange-900",  border: "border-orange-800/50",  iconColor: "text-orange-400"  },
+  meats:       { icon: Beef,    bg: "from-red-950 to-red-900",        border: "border-red-800/50",     iconColor: "text-red-400"     },
+  baked:       { icon: Cookie,  bg: "from-amber-950 to-amber-900",    border: "border-amber-800/50",   iconColor: "text-amber-400"   },
+  beverages:   { icon: Wine,    bg: "from-sky-950 to-sky-900",        border: "border-sky-800/50",     iconColor: "text-sky-400"     },
+  fashion:     { icon: Shirt,   bg: "from-purple-950 to-purple-900",  border: "border-purple-800/50",  iconColor: "text-purple-400"  },
+  electronics: { icon: Cpu,     bg: "from-blue-950 to-blue-900",      border: "border-blue-800/50",    iconColor: "text-blue-400"    },
+  pantry:      { icon: Package, bg: "from-yellow-950 to-yellow-900",  border: "border-yellow-800/50",  iconColor: "text-yellow-400"  },
+}
 
-const categories = [
-  {
-    name: "Fresh Produce",
-    icon: Leaf,
-    description: "Farm-fresh fruits & vegetables",
-    href: "/category/produce",
-    bg: "from-emerald-950 to-emerald-900",
-    border: "border-emerald-800/50",
-    iconColor: "text-emerald-400",
-    badge: "In stock",
-    badgeColor: "bg-emerald-500/20 text-emerald-300",
-  },
-  {
-    name: "Spices & Herbs",
-    icon: Flame,
-    description: "Authentic seasonings from home",
-    href: "/category/spices",
-    bg: "from-orange-950 to-orange-900",
-    border: "border-orange-800/50",
-    iconColor: "text-orange-400",
-    badge: "Best seller",
-    badgeColor: "bg-orange-500/20 text-orange-300",
-  },
-  {
-    name: "Meats & Seafood",
-    icon: Beef,
-    description: "Halal, Kosher & specialty cuts",
-    href: "/category/meats",
-    bg: "from-red-950 to-red-900",
-    border: "border-red-800/50",
-    iconColor: "text-red-400",
-    badge: "Fresh daily",
-    badgeColor: "bg-red-500/20 text-red-300",
-  },
-  {
-    name: "Baked Goods",
-    icon: Cookie,
-    description: "Breads, pastries & sweet treats",
-    href: "/category/baked",
-    bg: "from-amber-950 to-amber-900",
-    border: "border-amber-800/50",
-    iconColor: "text-amber-400",
-    badge: "Homemade",
-    badgeColor: "bg-amber-500/20 text-amber-300",
-  },
-  {
-    name: "Beverages",
-    icon: Wine,
-    description: "Teas, juices & cultural drinks",
-    href: "/category/beverages",
-    bg: "from-sky-950 to-sky-900",
-    border: "border-sky-800/50",
-    iconColor: "text-sky-400",
-    badge: "Imported",
-    badgeColor: "bg-sky-500/20 text-sky-300",
-  },
-  {
-    name: "Fashion",
-    icon: Shirt,
-    description: "Traditional & modern clothing",
-    href: "/category/fashion",
-    bg: "from-purple-950 to-purple-900",
-    border: "border-purple-800/50",
-    iconColor: "text-purple-400",
-    badge: "Handcrafted",
-    badgeColor: "bg-purple-500/20 text-purple-300",
-  },
-  {
-    name: "Electronics",
-    icon: Cpu,
-    description: "Phones, accessories & more",
-    href: "/category/electronics",
-    bg: "from-blue-950 to-blue-900",
-    border: "border-blue-800/50",
-    iconColor: "text-blue-400",
-    badge: "New arrivals",
-    badgeColor: "bg-blue-500/20 text-blue-300",
-  },
-  {
-    name: "Pantry & Dry Goods",
-    icon: Package,
-    description: "Grains, legumes & staples",
-    href: "/category/pantry",
-    bg: "from-yellow-950 to-yellow-900",
-    border: "border-yellow-800/50",
-    iconColor: "text-yellow-400",
-    badge: "Bulk deals",
-    badgeColor: "bg-yellow-500/20 text-yellow-300",
-  },
-]
+const DEFAULT_STYLE = {
+  icon: Package,
+  bg: "from-gray-900 to-gray-800",
+  border: "border-gray-700/50",
+  iconColor: "text-gray-400",
+}
 
+function getCategoryStyle(slug: string) {
+  const key = Object.keys(CATEGORY_STYLE_MAP).find((k) => slug.toLowerCase().includes(k))
+  return key ? CATEGORY_STYLE_MAP[key] : DEFAULT_STYLE
+}
 
-const topStores = [
-  {
-    name: "Mama's Market",
-    type: "West African Grocery",
-    rating: 4.8,
-    reviews: 312,
-    distance: "0.3 mi",
-    deliveryTime: "25–40 min",
-    categories: ["Produce", "Spices", "Dry Goods"],
-    openNow: true,
-  },
-  {
-    name: "Accra Foods",
-    type: "Ghanaian Specialty",
-    rating: 4.6,
-    reviews: 189,
-    distance: "0.5 mi",
-    deliveryTime: "30–45 min",
-    categories: ["Meats", "Spices", "Pastries"],
-    openNow: true,
-  },
-  {
-    name: "Naija Pantry",
-    type: "Nigerian Grocery",
-    rating: 4.9,
-    reviews: 441,
-    distance: "0.8 mi",
-    deliveryTime: "35–50 min",
-    categories: ["Spices", "Snacks", "Beverages"],
-    openNow: false,
-  },
+const BANNER_GRADIENTS = [
+  "linear-gradient(135deg, #1a2e1a, #0f1f0f)",
+  "linear-gradient(135deg, #2e1a1a, #1f0f0f)",
+  "linear-gradient(135deg, #1a1a2e, #0f0f1f)",
+  "linear-gradient(135deg, #2e2a1a, #1f180f)",
+  "linear-gradient(135deg, #1a2e2e, #0f1f1f)",
 ]
 
 const deals = [
-  { label: "🔥 Flash Sale", detail: "Spices up to 40% off", color: "bg-orange-900 border-orange-700" },
-  { label: "🌿 Fresh Produce Week", detail: "Buy 2 get 1 free", color: "bg-emerald-900 border-emerald-700" },
-  { label: "⭐ New Seller Spotlight", detail: "Roots & Culture — free delivery", color: "bg-blue-900 border-blue-700" },
-  { label: "🎁 Weekend Bundle", detail: "Starter pack — $24.99", color: "bg-purple-900 border-purple-700" },
+  { label: "Flash Sale", detail: "Spices up to 40% off", color: "bg-orange-900 border-orange-700" },
+  { label: "Fresh Produce Week", detail: "Buy 2 get 1 free", color: "bg-emerald-900 border-emerald-700" },
+  { label: "New Seller Spotlight", detail: "Roots & Culture — free delivery", color: "bg-blue-900 border-blue-700" },
+  { label: "Weekend Bundle", detail: "Starter pack — $24.99", color: "bg-purple-900 border-purple-700" },
 ]
 
 const trustPoints = [
@@ -187,19 +95,28 @@ const trustPoints = [
   },
 ]
 
-/* ─── Page ─── */
-
 export default function HomePage() {
+  const [categories, setCategories] = useState<CategoryRef[]>([])
+  const [stores, setStores] = useState<StoreInfo[]>([])
+
+  useEffect(() => {
+    getCategories()
+      .then((cats) => setCategories(cats.slice(0, 8)))
+      .catch(() => {})
+
+    getAllStores()
+      .then((s) => setStores(s.slice(0, 6)))
+      .catch(() => {})
+  }, [])
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
 
       <main className="flex-1 pb-16 md:pb-0">
 
-        {/* ── Hero Carousel ── */}
         <HeroCarousel />
 
-        {/* ── Deals strip ── */}
         <section className="bg-card/70 border-y border-border">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-3">
             <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
@@ -212,7 +129,7 @@ export default function HomePage() {
                 <Link
                   key={deal.label}
                   href="/deals"
-                    className={`shrink-0 flex items-center gap-2 rounded-lg border ${deal.color} px-3 py-1.5 text-xs font-medium text-white/90 hover:brightness-110 transition-all`}
+                  className={`shrink-0 flex items-center gap-2 rounded-lg border ${deal.color} px-3 py-1.5 text-xs font-medium text-white/90 hover:brightness-110 transition-all`}
                 >
                   <span>{deal.label}</span>
                   <span className="text-white/70">·</span>
@@ -223,10 +140,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── Ad Slot 1: Free delivery promo ── */}
         <AdSlot slotId="mid-page-1" />
 
-        {/* ── Shop by Category ── */}
         <section className="bg-card/40 border-y border-border">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-12">
             <div className="flex items-end justify-between mb-6">
@@ -245,56 +160,77 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {categories.map((cat) => {
-                const Icon = cat.icon
-                return (
-                  <Link
-                    key={cat.name}
-                    href={cat.href}
-                    className={`group relative overflow-hidden rounded-2xl border ${cat.border} bg-gradient-to-br ${cat.bg} p-5 hover:scale-[1.02] transition-transform duration-200 active:scale-[0.99]`}
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10">
-                          <Icon className={`h-5 w-5 ${cat.iconColor}`} strokeWidth={1.75} />
+              {categories.length > 0
+                ? categories.map((cat) => {
+                    const style = getCategoryStyle(cat.slug)
+                    const Icon = style.icon
+                    return (
+                      <Link
+                        key={cat.id}
+                        href={`/category/${cat.slug}`}
+                        className={`group relative overflow-hidden rounded-2xl border ${style.border} bg-gradient-to-br ${style.bg} p-5 hover:scale-[1.02] transition-transform duration-200 active:scale-[0.99]`}
+                      >
+                        <div className="space-y-3">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10">
+                            <Icon className={`h-5 w-5 ${style.iconColor}`} strokeWidth={1.75} />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white text-sm leading-tight">
+                              {cat.name}
+                            </h3>
+                            {cat.children && cat.children.length > 0 && (
+                              <p className="text-[11px] text-white/60 mt-0.5">
+                                {cat.children.slice(0, 3).map((c) => c.name).join(", ")}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 text-[11px] text-white/50 group-hover:text-white/80 transition-colors">
+                            <span>Shop now</span>
+                            <ChevronRight className="h-3 w-3" />
+                          </div>
                         </div>
-                        <span
-                          className={`text-[10px] font-semibold rounded-full px-2 py-0.5 ${cat.badgeColor}`}
-                        >
-                          {cat.badge}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white text-sm leading-tight">
-                          {cat.name}
-                        </h3>
-                        <p className="text-[11px] text-white/60 mt-0.5">{cat.description}</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-[11px] text-white/50 group-hover:text-white/80 transition-colors">
-                        <span>Shop now</span>
-                        <ChevronRight className="h-3 w-3" />
+                      </Link>
+                    )
+                  })
+                : Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="rounded-2xl border border-border bg-muted/20 p-5 animate-pulse">
+                      <div className="space-y-3">
+                        <div className="h-11 w-11 rounded-xl bg-muted" />
+                        <div className="h-4 bg-muted rounded w-3/4" />
+                        <div className="h-3 bg-muted rounded w-1/2" />
                       </div>
                     </div>
-                  </Link>
-                )
-              })}
+                  ))
+              }
             </div>
           </div>
         </section>
 
-        {/* ── Near You — fetched from search API ── */}
-        <FeaturedProducts />
+        <FeaturedProducts
+          title="Fresh Near You"
+          subtitle="Based on Austin, TX"
+          sortBy="rating"
+          size={8}
+          viewAllHref="/search?sort=rating"
+        />
 
-        {/* ── Ad Slot 2: Vendor CTA (mid-page dismissible) ── */}
+        <FeaturedProducts
+          title="New Arrivals"
+          subtitle="Recently added products"
+          sortBy="newest"
+          size={8}
+          viewAllHref="/search?sort=newest"
+          icon={<Sparkles className="h-3.5 w-3.5 text-primary" />}
+        />
+
         <AdSlot slotId="mid-page-2" />
 
-        {/* ── Top Stores ── */}
         <section className="bg-card/40 border-y border-border">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-12">
             <div className="flex items-end justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Top Stores Near You</h2>
-                <p className="text-sm text-muted-foreground mt-1">Highest-rated vendors in Austin</p>
+                <h2 className="text-2xl font-bold text-foreground">Top Stores</h2>
+                <p className="text-sm text-muted-foreground mt-1">Discover vendors in your community</p>
               </div>
               <Link
                 href="/stores"
@@ -304,87 +240,80 @@ export default function HomePage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {topStores.map((store, i) => (
-                <Link
-                  key={store.name}
-                  href={`/store/${store.name.toLowerCase().replace(/\s+/g, "-")}`}
-                  className="group relative rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200"
-                >
-                  {/* Store banner */}
-                  <div
-                    className="h-28 relative"
-                    style={{
-                      background: [
-                        "linear-gradient(135deg, #1a2e1a, #0f1f0f)",
-                        "linear-gradient(135deg, #2e1a1a, #1f0f0f)",
-                        "linear-gradient(135deg, #1a1a2e, #0f0f1f)",
-                      ][i % 3],
-                    }}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center opacity-10">
-                      <Store className="h-16 w-16 text-white" />
-                    </div>
-                    {/* Open badge */}
-                    <div className="absolute top-3 right-3">
-                      <span
-                        className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${
-                          store.openNow
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                            : "bg-red-500/20 text-red-400 border border-red-500/30"
-                        }`}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {stores.length > 0
+                ? stores.map((store, i) => (
+                    <Link
+                      key={store.id}
+                      href={`/store/${store.slug || store.id}`}
+                      className="group relative rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200"
+                    >
+                      <div
+                        className="h-28 relative"
+                        style={{
+                          background: store.bannerUrl
+                            ? `url(${store.bannerUrl}) center/cover`
+                            : BANNER_GRADIENTS[i % BANNER_GRADIENTS.length],
+                        }}
                       >
-                        {store.openNow ? "Open" : "Closed"}
-                      </span>
-                    </div>
-                    {/* Store avatar */}
-                    <div className="absolute -bottom-5 left-4 h-12 w-12 rounded-xl bg-card border-2 border-border flex items-center justify-center">
-                      <Store className="h-6 w-6 text-primary" />
-                    </div>
-                  </div>
+                        {!store.bannerUrl && (
+                          <div className="absolute inset-0 flex items-center justify-center opacity-10">
+                            <Store className="h-16 w-16 text-white" />
+                          </div>
+                        )}
+                        <div className="absolute -bottom-5 left-4 h-12 w-12 rounded-xl bg-card border-2 border-border flex items-center justify-center overflow-hidden">
+                          {store.logoUrl ? (
+                            <img src={store.logoUrl} alt={store.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <Store className="h-6 w-6 text-primary" />
+                          )}
+                        </div>
+                      </div>
 
-                  <div className="pt-8 px-4 pb-4 space-y-2">
-                    <div>
-                      <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
-                        {store.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">{store.type}</p>
-                    </div>
+                      <div className="pt-8 px-4 pb-4 space-y-2">
+                        <div>
+                          <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
+                            {store.name}
+                          </h3>
+                          {store.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">{store.description}</p>
+                          )}
+                        </div>
 
-                    <div className="flex items-center gap-3 text-xs">
-                      <span className="flex items-center gap-1 font-medium text-foreground">
-                        <Star className="h-3 w-3 fill-primary text-primary" />
-                        {store.rating}
-                        <span className="text-muted-foreground font-normal">({store.reviews})</span>
-                      </span>
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        {store.distance}
-                      </span>
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {store.deliveryTime}
-                      </span>
+                        <div className="flex items-center gap-3 text-xs">
+                          {store.rating > 0 && (
+                            <span className="flex items-center gap-1 font-medium text-foreground">
+                              <Star className="h-3 w-3 fill-primary text-primary" />
+                              {store.rating.toFixed(1)}
+                              {store.reviewCount > 0 && (
+                                <span className="text-muted-foreground font-normal">({store.reviewCount})</span>
+                              )}
+                            </span>
+                          )}
+                          {store.addressCity && (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              {store.addressCity}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                : Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden animate-pulse">
+                      <div className="h-28 bg-muted" />
+                      <div className="pt-8 px-4 pb-4 space-y-2">
+                        <div className="h-4 bg-muted rounded w-3/4" />
+                        <div className="h-3 bg-muted rounded w-1/2" />
+                      </div>
                     </div>
-
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {store.categories.map((cat) => (
-                        <span
-                          key={cat}
-                          className="text-[10px] rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-muted-foreground"
-                        >
-                          {cat}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  ))
+              }
             </div>
           </div>
         </section>
 
-        {/* ── Trust / Why AfroTransact ── */}
         <section className="mx-auto max-w-[1440px] px-4 sm:px-6 py-16">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
@@ -414,10 +343,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── Ad Slot 3: Referral strip before vendor CTA ── */}
         <AdSlot slotId="bottom-strip" />
 
-        {/* ── Vendor CTA ── */}
         <section className="relative overflow-hidden bg-gradient-to-br from-primary/15 via-card to-secondary/10 border-y border-border">
           <div
             aria-hidden
@@ -443,7 +370,6 @@ export default function HomePage() {
                 minutes, reach thousands of customers in Austin, and grow on your own terms.
               </p>
 
-              {/* Pricing teaser */}
               <div className="grid grid-cols-3 gap-3 max-w-lg mx-auto pt-2">
                 {[
                   { name: "Starter", price: "$29.99", tag: "Most popular" },
