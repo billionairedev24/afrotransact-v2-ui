@@ -34,8 +34,12 @@ const securityHeaders = [
 ]
 
 const nextConfig = {
-  output: 'standalone',
-  outputFileTracingRoot: require('path').join(__dirname, '../'),
+  // Use standalone output for custom server deployments (e.g. Docker), 
+  // but let Vercel handle output optimization automatically.
+  ...(process.env.VERCEL ? {} : { output: 'standalone' }),
+  
+  // Set tracing root only if not on Vercel to avoid manifest path issues.
+  ...(process.env.VERCEL ? {} : { outputFileTracingRoot: require('path').join(__dirname, '../') }),
 
   images: {
     remotePatterns: [

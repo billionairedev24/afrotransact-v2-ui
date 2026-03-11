@@ -125,7 +125,7 @@ export default function SellerDealsPage() {
         getSellerStores(token, seller.id),
       ])
       setDeals(dealsRes.content || [])
-      setProducts((prodsRes.content || []).filter(p => p.status === "ACTIVE"))
+      setProducts((prodsRes.content || []).filter(p => p.status?.toLowerCase() === "active"))
       setStores(storesRes || [])
     } catch { toast.error("Failed to load data") }
   }
