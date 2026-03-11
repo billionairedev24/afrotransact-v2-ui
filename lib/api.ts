@@ -1570,4 +1570,69 @@ export function toggleSellerDeal(token: string, id: string) {
   return api<DealData>(`/api/v1/seller/deals/${id}/toggle`, { method: "POST", token })
 }
 
+// ── Platform Deals (Admin) ──
+
+export interface PlatformDealData {
+  id: string
+  title: string
+  description: string | null
+  content: string | null
+  badgeText: string | null
+  bannerImageUrl: string | null
+  primaryColor: string
+  secondaryColor: string
+  textColor: string
+  ctaText: string | null
+  ctaLink: string | null
+  targetAudience: string
+  enabled: boolean
+  active: boolean
+  startAt: string | null
+  endAt: string | null
+  sortOrder: number
+  createdAt: string
+}
+
+export interface PlatformDealCreateRequest {
+  title: string
+  description?: string
+  content?: string
+  badgeText?: string
+  bannerImageUrl?: string
+  primaryColor?: string
+  secondaryColor?: string
+  textColor?: string
+  ctaText?: string
+  ctaLink?: string
+  targetAudience?: string
+  startAt?: string
+  endAt?: string
+  sortOrder?: number
+}
+
+export function getAdminPlatformDeals(token: string, page = 0, size = 50) {
+  return api<Page<PlatformDealData>>(`/api/v1/admin/platform-deals?page=${page}&size=${size}`, { token })
+}
+
+export function createPlatformDeal(token: string, data: PlatformDealCreateRequest) {
+  return api<PlatformDealData>("/api/v1/admin/platform-deals", { method: "POST", body: data, token })
+}
+
+export function updatePlatformDeal(token: string, id: string, data: Partial<PlatformDealCreateRequest>) {
+  return api<PlatformDealData>(`/api/v1/admin/platform-deals/${id}`, { method: "PUT", body: data, token })
+}
+
+export function deletePlatformDeal(token: string, id: string) {
+  return api<void>(`/api/v1/admin/platform-deals/${id}`, { method: "DELETE", token })
+}
+
+export function togglePlatformDeal(token: string, id: string) {
+  return api<PlatformDealData>(`/api/v1/admin/platform-deals/${id}/toggle`, { method: "POST", token })
+}
+
+export function getPublicPlatformDeals(audience?: string) {
+  const q = audience ? `?audience=${audience}` : ""
+  return api<PlatformDealData[]>(`/api/v1/platform-deals${q}`)
+}
+
 export { API_BASE }

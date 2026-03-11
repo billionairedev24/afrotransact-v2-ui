@@ -26,6 +26,7 @@ import {
   Mail,
   Bell,
   Ticket,
+  Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -53,6 +54,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/reviews",       label: "Reviews",       icon: Star             },
   { href: "/admin/payouts",       label: "Payouts",       icon: Banknote         },
   { href: "/admin/coupons",       label: "Coupons",       icon: Ticket           },
+  { href: "/admin/deals",         label: "Deals",         icon: Sparkles         },
   { href: "/admin/ads",           label: "Ad Slots",      icon: Megaphone        },
   { href: "/admin/email-templates", label: "Email Templates", icon: Mail          },
   { href: "/admin/notification-routing", label: "Alert Routing", icon: Bell     },

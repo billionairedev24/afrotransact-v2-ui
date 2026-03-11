@@ -33,6 +33,21 @@ import { AdSlot } from "@/components/home/AdSlot"
 import { FeaturedProducts } from "@/components/home/FeaturedProducts"
 import { getCategories, getAllStores, getFeaturedDeals, type CategoryRef, type StoreInfo, type DealData } from "@/lib/api"
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+
+interface PlatformDeal {
+  id: string
+  title: string
+  description: string | null
+  badgeText: string | null
+  bannerImageUrl: string | null
+  primaryColor: string
+  secondaryColor: string
+  textColor: string
+  ctaText: string | null
+  ctaLink: string | null
+}
+
 const CATEGORY_STYLE_MAP: Record<string, { icon: typeof Leaf; bg: string; border: string; iconColor: string }> = {
   produce:     { icon: Leaf,    bg: "from-emerald-950 to-emerald-900", border: "border-emerald-800/50", iconColor: "text-emerald-400" },
   spices:      { icon: Flame,   bg: "from-orange-950 to-orange-900",  border: "border-orange-800/50",  iconColor: "text-orange-400"  },
@@ -99,6 +114,7 @@ export default function HomePage() {
   const [categories, setCategories] = useState<CategoryRef[]>([])
   const [stores, setStores] = useState<StoreInfo[]>([])
   const [deals, setDeals] = useState<DealData[]>([])
+  const [platformDeals, setPlatformDeals] = useState<PlatformDeal[]>([])
 
   useEffect(() => {
     getCategories()
@@ -111,6 +127,11 @@ export default function HomePage() {
 
     getFeaturedDeals()
       .then((list) => setDeals(list))
+      .catch(() => {})
+
+    fetch(`${API_BASE}/api/v1/platform-deals`)
+      .then(r => r.ok ? r.json() : [])
+      .then(list => setPlatformDeals(Array.isArray(list) ? list.slice(0, 3) : []))
       .catch(() => {})
   }, [])
 
@@ -151,6 +172,51 @@ export default function HomePage() {
         </section>
 
         <AdSlot slotId="mid-page-1" />
+
+        {platformDeals.length > 0 && (
+          <section className="mx-auto max-w-[1440px] px-4 sm:px-6 py-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {platformDeals.map((deal) => (
+                <div
+                  key={deal.id}
+                  className="group relative rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
+                  style={{
+                    background: deal.bannerImageUrl
+                      ? `url(${deal.bannerImageUrl}) center/cover no-repeat`
+                      : `linear-gradient(135deg, ${deal.secondaryColor}, ${deal.primaryColor}40)`,
+                  }}
+                >
+                  <div
+                    className="relative p-5 min-h-[150px] flex flex-col justify-between"
+                    style={{ background: deal.bannerImageUrl ? "rgba(0,0,0,0.45)" : undefined }}
+                  >
+                    <div>
+                      {deal.badgeText && (
+                        <span className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold mb-2"
+                          style={{ backgroundColor: deal.primaryColor, color: deal.secondaryColor }}>
+                          {deal.badgeText}
+                        </span>
+                      )}
+                      <h3 className="text-lg font-bold leading-snug" style={{ color: deal.textColor }}>{deal.title}</h3>
+                      {deal.description && (
+                        <p className="text-xs opacity-75 mt-1 line-clamp-2" style={{ color: deal.textColor }}>{deal.description}</p>
+                      )}
+                    </div>
+                    {deal.ctaLink && (
+                      <Link
+                        href={deal.ctaLink}
+                        className="mt-3 inline-flex items-center gap-1 text-xs font-bold rounded-lg px-3 py-1.5 self-start hover:scale-105 transition-transform"
+                        style={{ backgroundColor: deal.primaryColor, color: deal.secondaryColor }}
+                      >
+                        {deal.ctaText || "Learn More"} <ChevronRight className="h-3 w-3" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="bg-card/40 border-y border-border">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-12">

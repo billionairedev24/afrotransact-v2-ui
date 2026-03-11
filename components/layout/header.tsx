@@ -93,20 +93,22 @@ export function Header() {
       .catch(() => {})
   }, [])
 
+  const isServicesCategory = (slug: string) => slug.toLowerCase().includes("service")
+
   const navLinks = [
     ...categories.slice(0, 6).map(cat => {
       const style = getCategoryIcon(cat.slug)
-      return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent }
+      return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent, disabled: isServicesCategory(cat.slug) }
     }),
-    { name: "Deals", href: "/deals", icon: Tag, accent: "#ca8a04" },
+    { name: "Deals", href: "/deals", icon: Tag, accent: "#ca8a04", disabled: false },
   ]
 
   const drawerCategories = [
     ...categories.map(cat => {
       const style = getCategoryIcon(cat.slug)
-      return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent }
+      return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent, disabled: isServicesCategory(cat.slug) }
     }),
-    { name: "Deals", href: "/deals", icon: Tag, accent: "#ca8a04" },
+    { name: "Deals", href: "/deals", icon: Tag, accent: "#ca8a04", disabled: false },
   ]
 
   useEffect(() => {
@@ -392,6 +394,19 @@ export function Header() {
                   i >= 5 ? "hidden xl:flex" :
                   i >= 4 ? "hidden lg:flex" :
                   "flex"
+                if (link.disabled) {
+                  return (
+                    <span
+                      key={link.name}
+                      title="Coming Soon"
+                      className={`group items-center gap-1.5 px-3 h-full text-[13px] text-gray-400 whitespace-nowrap cursor-default select-none ${hideClass}`}
+                    >
+                      <Icon className="h-3.5 w-3.5 opacity-40 shrink-0" style={{ color: link.accent }} />
+                      {link.name}
+                      <span className="ml-1 text-[9px] font-semibold bg-gray-200 text-gray-500 rounded px-1 py-0.5 leading-none">Soon</span>
+                    </span>
+                  )
+                }
                 return (
                   <Link
                     key={link.name}
@@ -467,6 +482,19 @@ export function Header() {
           <div className="grid grid-cols-2 gap-1.5">
             {drawerCategories.map((cat) => {
               const Icon = cat.icon
+              if (cat.disabled) {
+                return (
+                  <span
+                    key={cat.name}
+                    title="Coming Soon"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-400 bg-gray-50 cursor-default"
+                  >
+                    <Icon className="h-4 w-4 shrink-0 opacity-40" style={{ color: cat.accent }} />
+                    {cat.name}
+                    <span className="ml-auto text-[9px] font-semibold bg-gray-200 text-gray-500 rounded px-1 py-0.5">Soon</span>
+                  </span>
+                )
+              }
               return (
                 <Link
                   key={cat.name}

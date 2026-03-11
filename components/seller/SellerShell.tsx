@@ -17,6 +17,7 @@ import {
   LogOut,
   Star,
   Ticket,
+  Tag,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/upload",       label: "Media Library",  icon: Upload         },
   { href: "/dashboard/reviews",      label: "Reviews",        icon: Star            },
   { href: "/dashboard/coupons",      label: "Coupons",        icon: Ticket          },
+  { href: "/dashboard/deals",        label: "Deals",          icon: Tag             },
   { href: "/dashboard/payouts",      label: "Payouts",        icon: DollarSign      },
   { href: "/dashboard/subscription", label: "Subscription",   icon: CreditCard      },
   { href: "/dashboard/store",        label: "Store Settings", icon: Settings        },
