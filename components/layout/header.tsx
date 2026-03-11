@@ -30,22 +30,22 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
-import { searchSuggest, type SearchSuggestion } from "@/lib/api"
+import { searchSuggest, getCategories, type SearchSuggestion, type CategoryRef } from "@/lib/api"
 
-const navLinks = [
-  { name: "Fresh Produce",  href: "/category/produce",    icon: Leaf,    accent: "#16a34a" },
-  { name: "Spices & Herbs", href: "/category/spices",     icon: Flame,   accent: "#ea580c" },
-  { name: "Meats & Seafood",href: "/category/meats",      icon: Beef,    accent: "#dc2626" },
-  { name: "Fashion",        href: "/category/fashion",    icon: Shirt,   accent: "#9333ea" },
-  { name: "Pantry & Dry",   href: "/category/pantry",     icon: Package, accent: "#ca8a04" },
-  { name: "Beverages",      href: "/category/beverages",  icon: Wine,    accent: "#0891b2" },
-  { name: "Deals",          href: "/deals",               icon: Tag,     accent: "#ca8a04" },
-]
+const SLUG_ICON_MAP: Record<string, { icon: typeof Leaf; accent: string }> = {
+  produce:     { icon: Leaf,    accent: "#16a34a" },
+  spices:      { icon: Flame,   accent: "#ea580c" },
+  meats:       { icon: Beef,    accent: "#dc2626" },
+  fashion:     { icon: Shirt,   accent: "#9333ea" },
+  pantry:      { icon: Package, accent: "#ca8a04" },
+  beverages:   { icon: Wine,    accent: "#0891b2" },
+  home:        { icon: Home,    accent: "#7c3aed" },
+}
 
-const drawerCategories = [
-  ...navLinks,
-  { name: "Home & Living", href: "/category/home", icon: Home, accent: "#7c3aed" },
-]
+function getCategoryIcon(slug: string) {
+  const key = Object.keys(SLUG_ICON_MAP).find(k => slug.toLowerCase().includes(k))
+  return key ? SLUG_ICON_MAP[key] : { icon: Package, accent: "#6b7280" }
+}
 
 function getGreeting(): string {
   const hour = new Date().getHours()
@@ -84,6 +84,30 @@ export function Header() {
   const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
   const isAdmin = roles.includes("admin")
   const isSeller = roles.includes("seller")
+
+  const [categories, setCategories] = useState<CategoryRef[]>([])
+
+  useEffect(() => {
+    getCategories()
+      .then(cats => setCategories(cats.filter(c => !c.parentId).slice(0, 8)))
+      .catch(() => {})
+  }, [])
+
+  const navLinks = [
+    ...categories.slice(0, 6).map(cat => {
+      const style = getCategoryIcon(cat.slug)
+      return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent }
+    }),
+    { name: "Deals", href: "/deals", icon: Tag, accent: "#ca8a04" },
+  ]
+
+  const drawerCategories = [
+    ...categories.map(cat => {
+      const style = getCategoryIcon(cat.slug)
+      return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent }
+    }),
+    { name: "Deals", href: "/deals", icon: Tag, accent: "#ca8a04" },
+  ]
 
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? "hidden" : ""

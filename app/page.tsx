@@ -31,7 +31,7 @@ import { MobileNav } from "@/components/layout/mobile-nav"
 import { HeroCarousel } from "@/components/home/HeroCarousel"
 import { AdSlot } from "@/components/home/AdSlot"
 import { FeaturedProducts } from "@/components/home/FeaturedProducts"
-import { getCategories, getAllStores, type CategoryRef, type StoreInfo } from "@/lib/api"
+import { getCategories, getAllStores, getFeaturedDeals, type CategoryRef, type StoreInfo, type DealData } from "@/lib/api"
 
 const CATEGORY_STYLE_MAP: Record<string, { icon: typeof Leaf; bg: string; border: string; iconColor: string }> = {
   produce:     { icon: Leaf,    bg: "from-emerald-950 to-emerald-900", border: "border-emerald-800/50", iconColor: "text-emerald-400" },
@@ -64,11 +64,11 @@ const BANNER_GRADIENTS = [
   "linear-gradient(135deg, #1a2e2e, #0f1f1f)",
 ]
 
-const deals = [
-  { label: "Flash Sale", detail: "Spices up to 40% off", color: "bg-orange-900 border-orange-700" },
-  { label: "Fresh Produce Week", detail: "Buy 2 get 1 free", color: "bg-emerald-900 border-emerald-700" },
-  { label: "New Seller Spotlight", detail: "Roots & Culture — free delivery", color: "bg-blue-900 border-blue-700" },
-  { label: "Weekend Bundle", detail: "Starter pack — $24.99", color: "bg-purple-900 border-purple-700" },
+const DEFAULT_DEAL_COLORS = [
+  "bg-orange-900 border-orange-700",
+  "bg-emerald-900 border-emerald-700",
+  "bg-blue-900 border-blue-700",
+  "bg-purple-900 border-purple-700",
 ]
 
 const trustPoints = [
@@ -98,6 +98,7 @@ const trustPoints = [
 export default function HomePage() {
   const [categories, setCategories] = useState<CategoryRef[]>([])
   const [stores, setStores] = useState<StoreInfo[]>([])
+  const [deals, setDeals] = useState<DealData[]>([])
 
   useEffect(() => {
     getCategories()
@@ -106,6 +107,10 @@ export default function HomePage() {
 
     getAllStores()
       .then((s) => setStores(s.slice(0, 6)))
+      .catch(() => {})
+
+    getFeaturedDeals()
+      .then((list) => setDeals(list))
       .catch(() => {})
   }, [])
 
@@ -125,17 +130,22 @@ export default function HomePage() {
                 Today&apos;s Deals
               </span>
               <span className="w-px h-5 bg-border shrink-0" />
-              {deals.map((deal) => (
-                <Link
-                  key={deal.label}
-                  href="/deals"
-                  className={`shrink-0 flex items-center gap-2 rounded-lg border ${deal.color} px-3 py-1.5 text-xs font-medium text-white/90 hover:brightness-110 transition-all`}
-                >
-                  <span>{deal.label}</span>
-                  <span className="text-white/70">·</span>
-                  <span className="text-white/80">{deal.detail}</span>
-                </Link>
-              ))}
+              {(deals.length > 0 ? deals : []).map((deal, idx) => {
+                const color = DEFAULT_DEAL_COLORS[idx % DEFAULT_DEAL_COLORS.length]
+                return (
+                  <Link
+                    key={deal.id}
+                    href={deal.productSlug ? `/product/${deal.productSlug}` : "/deals"}
+                    className={`shrink-0 flex items-center gap-2 rounded-lg border ${color} px-3 py-1.5 text-xs font-medium text-white/90 hover:brightness-110 transition-all`}
+                  >
+                    <span>{deal.badgeText || "Deal"}</span>
+                    <span className="text-white/70">·</span>
+                    <span className="text-white/80">
+                      {deal.title}
+                    </span>
+                  </Link>
+                )
+              })}
             </div>
           </div>
         </section>

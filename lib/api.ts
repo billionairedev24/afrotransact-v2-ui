@@ -1507,4 +1507,67 @@ export function toggleNotificationRecipient(token: string, id: string, active: b
   return api<NotificationRecipient>(`/api/admin/notification-recipients/${id}/toggle`, { method: "PATCH", token, body: { active } })
 }
 
+// ── Deals ──
+
+export interface DealData {
+  id: string
+  storeId: string
+  sellerId: string
+  productId: string
+  title: string
+  description: string | null
+  badgeText: string | null
+  discountPercent: number | null
+  dealPriceCents: number | null
+  originalPriceCents: number | null
+  enabled: boolean
+  active: boolean
+  startAt: string | null
+  endAt: string | null
+  createdAt: string
+  productTitle: string | null
+  productSlug: string | null
+  productImageUrl: string | null
+  storeName: string | null
+}
+
+export interface DealCreateRequest {
+  productId: string
+  title: string
+  description?: string
+  badgeText?: string
+  discountPercent?: number
+  dealPriceCents?: number
+  startAt?: string
+  endAt?: string
+}
+
+export function getActiveDeals() {
+  return api<DealData[]>("/api/v1/deals")
+}
+
+export function getFeaturedDeals() {
+  return api<DealData[]>("/api/v1/deals/featured")
+}
+
+export function getSellerDeals(token: string, page = 0, size = 20) {
+  return api<Page<DealData>>(`/api/v1/seller/deals?page=${page}&size=${size}`, { token })
+}
+
+export function createSellerDeal(token: string, data: DealCreateRequest) {
+  return api<DealData>("/api/v1/seller/deals", { method: "POST", body: data, token })
+}
+
+export function updateSellerDeal(token: string, id: string, data: Partial<DealCreateRequest>) {
+  return api<DealData>(`/api/v1/seller/deals/${id}`, { method: "PUT", body: data, token })
+}
+
+export function deleteSellerDeal(token: string, id: string) {
+  return api<void>(`/api/v1/seller/deals/${id}`, { method: "DELETE", token })
+}
+
+export function toggleSellerDeal(token: string, id: string) {
+  return api<DealData>(`/api/v1/seller/deals/${id}/toggle`, { method: "POST", token })
+}
+
 export { API_BASE }
