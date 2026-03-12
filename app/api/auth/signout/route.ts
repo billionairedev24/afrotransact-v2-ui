@@ -42,19 +42,14 @@ function clearNextAuthCookies(req: NextRequest, response: NextResponse) {
 async function handleSignout(req: NextRequest) {
   const token = await getToken({ req })
 
-  // KEYCLOAK_PUBLIC_ISSUER is the browser-facing HTTPS URL (e.g. https://auth-uat.afrotransact.com/realms/afrotransact).
-  // KEYCLOAK_ISSUER may be the internal K8s cluster URL, which a browser cannot reach.
-  // We MUST use the public URL for the browser redirect or the logout silently fails and
-  // the Keycloak SSO cookie survives, causing the user to be immediately re-authenticated.
+  // KEYCLOAK_ISSUER must be the public HTTPS URL users' browsers can reach
+  // (e.g. https://auth-uat.afrotransact.com/realms/afrotransact).
+  // This is the URL set in the Vercel/deployment environment.
   const publicIssuer =
-    process.env.KEYCLOAK_PUBLIC_ISSUER ||
     process.env.KEYCLOAK_ISSUER ||
     "http://localhost:8180/realms/afrotransact"
 
-  const baseUrl =
-    process.env.NEXTAUTH_URL ||
-    process.env.APP_BASE_URL ||
-    "http://localhost:3001"
+  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001"
 
   const clientId = process.env.KEYCLOAK_CLIENT_ID || "afrotransact-web"
 
