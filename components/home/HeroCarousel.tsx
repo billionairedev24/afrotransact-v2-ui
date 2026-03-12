@@ -150,7 +150,7 @@ const DEFAULT_SLIDES: HeroSlide[] = [
     ],
     ctas: [
       { label: "Visit Store", href: "/stores", primary: true, icon: <Store className="h-4 w-4" /> },
-      { label: "Start Selling Too", href: "/sell", primary: false },
+      { label: "Start Selling Too", href: "/auth/register?role=seller", primary: false },
     ],
     bg: "from-yellow-50 via-white to-white",
     accentBlobs:

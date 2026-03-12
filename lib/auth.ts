@@ -57,7 +57,10 @@ function keycloakRegisterBase(id: string, name: string): OAuthConfig<Record<stri
     clientSecret: kcClientSecret,
     authorization: {
       url: `${kcIssuer}/protocol/openid-connect/registrations`,
-      params: { scope: kcScope },
+      params: { 
+        scope: kcScope,
+        registration_role: "seller" // Default to buyer, can be overridden by signIn params
+      },
     },
     token: `${kcIssuer}/protocol/openid-connect/token`,
     userinfo: `${kcIssuer}/protocol/openid-connect/userinfo`,
@@ -76,7 +79,11 @@ function keycloakRegisterBase(id: string, name: string): OAuthConfig<Record<stri
 }
 
 function KeycloakRegisterProvider(): OAuthConfig<Record<string, unknown>> {
-  return keycloakRegisterBase("keycloak-register", "Keycloak Register")
+  const provider = keycloakRegisterBase("keycloak-register", "Keycloak Register")
+  if (provider.authorization && typeof provider.authorization !== "string") {
+    provider.authorization.params = { ...provider.authorization.params, registration_role: "buyer" }
+  }
+  return provider
 }
 
 /**
@@ -169,8 +176,8 @@ export const authOptions: NextAuthOptions = {
 
         token.registrationRole = claims?.registration_role as string | undefined
 
-        // Seller registered via the dedicated provider → persist to Keycloak
-        // so every future token on ANY device carries registration_role.
+        // If not present in token but registered via seller-specific provider,
+        // we can still fall back to updating Keycloak as a safety measure.
         if (account.provider === "keycloak-register-seller" && !token.registrationRole) {
           const ok = await setRegistrationRoleInKeycloak(user.id as string)
           if (ok) token.registrationRole = "seller"

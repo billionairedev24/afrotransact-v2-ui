@@ -9,8 +9,8 @@ const CONTACT_EMAIL = "sellers@afrotransact.com"
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="space-y-3 scroll-mt-20">
-      <h2 className="text-xl font-bold text-white border-b border-border pb-2">{title}</h2>
-      <div className="text-sm text-gray-300 leading-relaxed space-y-3">{children}</div>
+      <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2">{title}</h2>
+      <div className="text-sm text-gray-600 leading-relaxed space-y-3">{children}</div>
     </section>
   )
 }
@@ -41,17 +41,17 @@ export default function SellerAgreementPage() {
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-4">
           <Store className="h-6 w-6 text-primary" />
-          <span className="text-sm text-gray-400">Legal — Sellers</span>
+          <span className="text-sm text-gray-500">Legal — Sellers</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white">Seller Agreement</h1>
-        <p className="text-gray-400 mt-3 text-sm">
-          Effective Date: <span className="text-white">{EFFECTIVE_DATE}</span>
+        <h1 className="text-3xl sm:text-4xl font-black text-gray-900">Seller Agreement</h1>
+        <p className="text-gray-500 mt-3 text-sm">
+          Effective Date: <span className="font-medium text-gray-900">{EFFECTIVE_DATE}</span>
           {" · "}
           <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>
           {" · "}
           <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
         </p>
-        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-gray-300 leading-relaxed">
+        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-gray-700 leading-relaxed">
           This Seller Agreement (&quot;Agreement&quot;) is a legal contract between you (&quot;Seller&quot;) and{" "}
           {COMPANY} (&quot;{COMPANY_SHORT}&quot;). It supplements our general{" "}
           <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and governs
@@ -71,7 +71,7 @@ export default function SellerAgreementPage() {
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className="block text-xs text-gray-400 hover:text-primary transition-colors py-0.5"
+                className="block text-xs text-gray-500 hover:text-primary transition-colors py-0.5"
               >
                 {item.label}
               </a>
@@ -166,7 +166,7 @@ export default function SellerAgreementPage() {
               Selling on AfroTransact involves two types of fees:
             </p>
             <p>
-              <strong className="text-white">A. Platform Commission:</strong> A percentage of each
+              <strong className="text-gray-900">A. Platform Commission:</strong> A percentage of each
               sale paid to {COMPANY_SHORT} for facilitating the transaction, providing the platform
               infrastructure, payment processing, and customer acquisition. Commission rates are
               determined by your subscription plan:
@@ -174,9 +174,9 @@ export default function SellerAgreementPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 font-semibold text-white pr-4">Plan</th>
-                    <th className="text-right py-2 font-semibold text-white">Commission Rate</th>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 font-semibold text-gray-900 pr-4">Plan</th>
+                    <th className="text-right py-2 font-semibold text-gray-900">Commission Rate</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -185,16 +185,16 @@ export default function SellerAgreementPage() {
                     { plan: "Growth",  rate: "8%"  },
                     { plan: "Pro",     rate: "6%"  },
                   ].map((row) => (
-                    <tr key={row.plan} className="border-b border-border/50">
-                      <td className="py-2 text-gray-300 pr-4">{row.plan}</td>
-                      <td className="py-2 text-right font-semibold text-white">{row.rate}</td>
+                    <tr key={row.plan} className="border-b border-gray-100">
+                      <td className="py-2 text-gray-600 pr-4">{row.plan}</td>
+                      <td className="py-2 text-right font-semibold text-gray-900">{row.rate}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <p>
-              <strong className="text-white">B. Monthly Subscription Fee:</strong> A recurring
+              <strong className="text-gray-900">B. Monthly Subscription Fee:</strong> A recurring
               subscription charged to maintain access to the platform and seller tools. Pricing is
               available at{" "}
               <Link href="/sell/pricing" className="text-primary hover:underline">
@@ -213,24 +213,24 @@ export default function SellerAgreementPage() {
             </p>
             <div className="space-y-3">
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="font-semibold text-white mb-1">Month 1 — Always Free</p>
-                <p className="text-gray-400 text-sm">
+                <p className="font-semibold text-gray-900 mb-1">Month 1 — Always Free</p>
+                <p className="text-gray-500 text-sm">
                   Every new seller receives the first 30 days free, regardless of which plan they select.
                   No credit card is required to start.
                 </p>
               </div>
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="font-semibold text-white mb-1">Month 2 — Free if You Qualify</p>
-                <p className="text-gray-400 text-sm">
+                <p className="font-semibold text-gray-900 mb-1">Month 2 — Free if You Qualify</p>
+                <p className="text-gray-500 text-sm">
                   If you have listed at least{" "}
-                  <strong className="text-white">9 active products</strong> in your store before
+                  <strong className="text-gray-900">9 active products</strong> in your store before
                   your Month 1 trial ends, your free period is automatically extended for another
                   30 days. This threshold is subject to change with notice.
                 </p>
               </div>
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="font-semibold text-white mb-1">Month 3+ — Paid Subscription</p>
-                <p className="text-gray-400 text-sm">
+                <p className="font-semibold text-gray-900 mb-1">Month 3+ — Paid Subscription</p>
+                <p className="text-gray-500 text-sm">
                   After your trial period ends, your selected subscription plan becomes active and
                   billing begins monthly. You will receive an email 7 days before your first charge.
                 </p>
@@ -244,7 +244,7 @@ export default function SellerAgreementPage() {
 
           <Section id="payments" title="8. Payments & Payouts">
             <p>
-              {COMPANY_SHORT} uses <strong className="text-white">Stripe Connect</strong> to manage
+              {COMPANY_SHORT} uses <strong className="text-gray-900">Stripe Connect</strong> to manage
               seller payments and payouts. To receive payouts, you must:
             </p>
             <ul className="list-disc list-inside space-y-1 pl-2">
@@ -253,13 +253,13 @@ export default function SellerAgreementPage() {
               <li>Pass Stripe&apos;s identity verification requirements</li>
             </ul>
             <p>
-              <strong className="text-white">Payout timeline:</strong> After a buyer&apos;s payment is
+              <strong className="text-gray-900">Payout timeline:</strong> After a buyer&apos;s payment is
               confirmed, {COMPANY_SHORT} releases your share (sale amount minus commission) to Stripe.
               Standard Stripe payouts typically arrive in your bank account within 2–5 business days,
               subject to Stripe&apos;s payout schedule and any account holds.
             </p>
             <p>
-              <strong className="text-white">Commission deduction:</strong> Platform commission is
+              <strong className="text-gray-900">Commission deduction:</strong> Platform commission is
               deducted from your payout before transfer. You will receive a detailed breakdown in
               your seller dashboard for each payout.
             </p>
@@ -287,7 +287,7 @@ export default function SellerAgreementPage() {
 
           <Section id="taxes" title="10. Taxes">
             <p>
-              <strong className="text-white">Seller responsibility:</strong> You are solely responsible
+              <strong className="text-gray-900">Seller responsibility:</strong> You are solely responsible
               for determining and collecting any sales tax, VAT, or other applicable taxes on your
               sales, to the extent required by law.
             </p>
@@ -349,7 +349,7 @@ export default function SellerAgreementPage() {
 
           <Section id="termination" title="14. Termination & Suspension">
             <p>
-              <strong className="text-white">By {COMPANY_SHORT}:</strong> We may suspend or terminate
+              <strong className="text-gray-900">By {COMPANY_SHORT}:</strong> We may suspend or terminate
               your seller account immediately, with or without notice, if you:
             </p>
             <ul className="list-disc list-inside space-y-1 pl-2">
@@ -361,7 +361,7 @@ export default function SellerAgreementPage() {
               <li>Provide false information in your seller profile</li>
             </ul>
             <p>
-              <strong className="text-white">By Seller:</strong> You may close your seller account
+              <strong className="text-gray-900">By Seller:</strong> You may close your seller account
               at any time through the dashboard. Closure does not relieve you of obligations for
               outstanding orders, fees, or refunds.
             </p>
@@ -395,8 +395,8 @@ export default function SellerAgreementPage() {
 
           <Section id="contact" title="17. Contact">
             <p>Questions about this Seller Agreement?</p>
-            <div className="rounded-xl border border-border bg-card p-4 space-y-1">
-              <p className="font-semibold text-white">{COMPANY} — Seller Relations</p>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-1">
+              <p className="font-semibold text-gray-900">{COMPANY} — Seller Relations</p>
               <p>Austin, Texas, United States</p>
               <p>
                 Email:{" "}

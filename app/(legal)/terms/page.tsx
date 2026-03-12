@@ -9,8 +9,8 @@ const CONTACT_EMAIL = "legal@afrotransact.com"
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="space-y-3 scroll-mt-20">
-      <h2 className="text-xl font-bold text-white border-b border-border pb-2">{title}</h2>
-      <div className="text-sm text-gray-300 leading-relaxed space-y-3">{children}</div>
+      <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2">{title}</h2>
+      <div className="text-sm text-gray-600 leading-relaxed space-y-3">{children}</div>
     </section>
   )
 }
@@ -42,17 +42,17 @@ export default function TermsPage() {
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-4">
           <Scale className="h-6 w-6 text-primary" />
-          <span className="text-sm text-gray-400">Legal</span>
+          <span className="text-sm text-gray-500">Legal</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white">Terms of Service</h1>
-        <p className="text-gray-400 mt-3 text-sm">
-          Effective Date: <span className="text-white">{EFFECTIVE_DATE}</span>
+        <h1 className="text-3xl sm:text-4xl font-black text-gray-900">Terms of Service</h1>
+        <p className="text-gray-500 mt-3 text-sm">
+          Effective Date: <span className="font-medium text-gray-900">{EFFECTIVE_DATE}</span>
           {" · "}
           <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
           {" · "}
           <Link href="/seller-agreement" className="text-primary hover:underline">Seller Agreement</Link>
         </p>
-        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-gray-300 leading-relaxed">
+        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-gray-700 leading-relaxed">
           Please read these Terms of Service (&quot;Terms&quot;) carefully before using AfroTransact. By accessing
           or using our platform, you agree to be bound by these Terms and our{" "}
           <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
@@ -72,7 +72,7 @@ export default function TermsPage() {
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className="block text-xs text-gray-400 hover:text-white hover:text-primary transition-colors py-0.5"
+                className="block text-xs text-gray-500 hover:text-primary transition-colors py-0.5"
               >
                 {item.label}
               </a>
@@ -86,7 +86,7 @@ export default function TermsPage() {
           <Section id="acceptance" title="1. Acceptance of Terms">
             <p>
               These Terms of Service constitute a legally binding agreement between you and{" "}
-              <strong className="text-white">{COMPANY}</strong> (&quot;{COMPANY_SHORT}&quot;, &quot;we&quot;,
+              <strong className="text-gray-900">{COMPANY}</strong> (&quot;{COMPANY_SHORT}&quot;, &quot;we&quot;,
               &quot;us&quot;, or &quot;our&quot;) governing your access to and use of the{" "}
               afrotransact.com website, mobile applications, and associated services (collectively,
               the &quot;Platform&quot;).
@@ -119,7 +119,7 @@ export default function TermsPage() {
 
           <Section id="eligibility" title="3. Eligibility & Account Registration">
             <p>
-              You must be at least <strong className="text-white">18 years old</strong> to create an
+              You must be at least <strong className="text-gray-900">18 years old</strong> to create an
               account or make purchases on the Platform. By registering, you represent and warrant
               that you meet this age requirement.
             </p>
@@ -152,7 +152,7 @@ export default function TermsPage() {
           <Section id="payments" title="5. Payments & Pricing">
             <p>
               All prices are displayed in US Dollars (USD). {COMPANY_SHORT} uses{" "}
-              <strong className="text-white">Stripe</strong> as its payment processor. By making a
+              <strong className="text-gray-900">Stripe</strong> as its payment processor. By making a
               purchase, you agree to Stripe&apos;s{" "}
               <a href="https://stripe.com/legal/ssa" target="_blank" rel="noopener noreferrer"
                 className="text-primary hover:underline">
@@ -160,7 +160,7 @@ export default function TermsPage() {
               </a>.
             </p>
             <p>
-              <strong className="text-white">Card data security:</strong> Your payment card information
+              <strong className="text-gray-900">Card data security:</strong> Your payment card information
               is transmitted directly to Stripe via a secure, encrypted iframe. {COMPANY_SHORT} does not
               store, process, or have access to your full card number, CVC, or expiry date at any time.
               We receive only a tokenized payment confirmation from Stripe.
@@ -320,7 +320,7 @@ export default function TermsPage() {
               regard to conflict of law principles.
             </p>
             <p>
-              <strong className="text-white">Informal Resolution:</strong> Before initiating any
+              <strong className="text-gray-900">Informal Resolution:</strong> Before initiating any
               formal dispute proceeding, you agree to first contact us at{" "}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
                 {CONTACT_EMAIL}
@@ -328,13 +328,13 @@ export default function TermsPage() {
               and attempt to resolve the dispute informally within 30 days.
             </p>
             <p>
-              <strong className="text-white">Arbitration:</strong> If informal resolution fails, any
+              <strong className="text-gray-900">Arbitration:</strong> If informal resolution fails, any
               disputes shall be resolved by binding arbitration in Austin, Texas under the rules of
               the American Arbitration Association (AAA), except that either party may seek injunctive
               or equitable relief in a court of competent jurisdiction.
             </p>
             <p>
-              <strong className="text-white">Class Action Waiver:</strong> You agree to bring claims
+              <strong className="text-gray-900">Class Action Waiver:</strong> You agree to bring claims
               only in your individual capacity and not as a plaintiff or class member in any
               purported class or representative action.
             </p>
@@ -373,8 +373,8 @@ export default function TermsPage() {
 
           <Section id="contact" title="17. Contact Information">
             <p>If you have questions about these Terms, please contact us:</p>
-            <div className="rounded-xl border border-border bg-card p-4 space-y-1">
-              <p className="font-semibold text-white">{COMPANY}</p>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-1">
+              <p className="font-semibold text-gray-900">{COMPANY}</p>
               <p>Austin, Texas, United States</p>
               <p>
                 Email:{" "}

@@ -432,7 +432,7 @@ export function Header() {
               <div className="flex-1" />
 
               <Link
-                href="/sell"
+                href="/auth/register?role=seller"
                 className="flex items-center gap-1 px-3 h-full text-[13px] text-emerald-600 font-medium whitespace-nowrap hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
               >
                 Start Selling
@@ -581,7 +581,7 @@ export function Header() {
                     </Link>
                     <span className="text-gray-400 mx-1">or</span>
                     <Link
-                      href="/auth/register"
+                      href="/auth/register?role=seller"
                       onClick={() => setMobileMenuOpen(false)}
                       className="font-semibold text-gray-900 hover:text-primary transition-colors"
                     >

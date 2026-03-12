@@ -21,7 +21,7 @@ const footerSections: { title: string; links: FooterLink[] }[] = [
   {
     title: "For Sellers",
     links: [
-      { label: "Start Selling", href: "/sell" },
+      { label: "Start Selling", href: "/auth/register?role=seller" },
       { label: "Seller Dashboard", href: "/dashboard" },
       { label: "Pricing & Plans", href: "/sell/pricing" },
       { label: "Seller Resources", href: "/coming-soon?feature=Seller Resources", comingSoon: true },
