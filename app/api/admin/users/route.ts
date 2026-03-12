@@ -4,12 +4,7 @@ import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
 
-// Server-side route: prefer the internal cluster URL (no NEXT_PUBLIC_ needed).
-// Falls back to NEXT_PUBLIC_API_URL (set in the Next.js env for the browser) then localhost.
-const API_BASE =
-  process.env.API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:8080"
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
 export interface AdminUserDTO {
   id: string
