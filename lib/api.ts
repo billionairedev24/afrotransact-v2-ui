@@ -1636,4 +1636,17 @@ export function getPublicPlatformDeals(audience?: string) {
   return api<PlatformDealData[]>(`/api/v1/platform-deals${q}`)
 }
 
+// ── Search / Elasticsearch ───────────────────────────────────────────────────
+
+/**
+ * Triggers a full reindex of all active products from the product catalog
+ * into Elasticsearch.  Admin-only endpoint.
+ */
+export function triggerSearchReindex(token: string) {
+  return api<{ message: string; indexed: number }>("/api/v1/search/reindex", {
+    method: "POST",
+    token,
+  })
+}
+
 export { API_BASE }
