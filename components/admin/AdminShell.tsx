@@ -127,7 +127,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </button>
         )}
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
         {navItems.map((item) => navLink(item, onClose))}
       </nav>
       <div className="border-t border-gray-200 p-4 space-y-2">
@@ -182,7 +182,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               onClick={() => setSidebarOpen(false)}
             />
             <aside
-              className="absolute inset-y-0 left-0 w-56 border-r border-gray-200 shadow-xl bg-white"
+              className="absolute inset-y-0 left-0 w-64 flex flex-col border-r border-gray-200 shadow-xl bg-white"
             >
               {sidebar(() => setSidebarOpen(false))}
             </aside>
