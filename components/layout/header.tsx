@@ -10,8 +10,6 @@ import {
   MapPin,
   Search,
   ChevronDown,
-  Menu,
-  X,
   Leaf,
   Flame,
   Beef,
@@ -27,8 +25,8 @@ import {
   LayoutDashboard,
   ShieldCheck,
   ArrowRight,
+  X,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
 import { searchSuggest, getCategories, type SearchSuggestion, type CategoryRef } from "@/lib/api"
 
@@ -61,14 +59,17 @@ function getInitials(name?: string | null): string {
   return parts[0][0]?.toUpperCase() ?? "?"
 }
 
+const isServicesCategory = (slug: string) => slug.toLowerCase().includes("service")
+
 export function Header() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const [query, setQuery] = useState("")
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [locationDisplay] = useState("Austin, TX")
   const inputRef = useRef<HTMLInputElement>(null)
+  const mobileInputRef = useRef<HTMLInputElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -93,8 +94,6 @@ export function Header() {
       .catch(() => {})
   }, [])
 
-  const isServicesCategory = (slug: string) => slug.toLowerCase().includes("service")
-
   const navLinks = [
     ...categories.slice(0, 6).map(cat => {
       const style = getCategoryIcon(cat.slug)
@@ -102,19 +101,6 @@ export function Header() {
     }),
     { name: "Deals", href: "/deals", icon: Tag, accent: "#ca8a04", disabled: false },
   ]
-
-  const drawerCategories = [
-    ...categories.map(cat => {
-      const style = getCategoryIcon(cat.slug)
-      return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent, disabled: isServicesCategory(cat.slug) }
-    }),
-    { name: "Deals", href: "/deals", icon: Tag, accent: "#ca8a04", disabled: false },
-  ]
-
-  useEffect(() => {
-    document.body.style.overflow = mobileMenuOpen ? "hidden" : ""
-    return () => { document.body.style.overflow = "" }
-  }, [mobileMenuOpen])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -127,7 +113,14 @@ export function Header() {
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [userMenuOpen])
+  }, [])
+
+  // Auto-focus mobile search input when opened
+  useEffect(() => {
+    if (mobileSearchOpen) {
+      setTimeout(() => mobileInputRef.current?.focus(), 50)
+    }
+  }, [mobileSearchOpen])
 
   function handleQueryChange(value: string) {
     setQuery(value)
@@ -152,13 +145,14 @@ export function Header() {
     e.preventDefault()
     if (query.trim()) {
       router.push(`/search?q=${encodeURIComponent(query.trim())}`)
-      setMobileMenuOpen(false)
+      setShowSuggestions(false)
+      setMobileSearchOpen(false)
     }
   }
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
 
         {/* ── Row 1: Logo · Location · Search · Account · Cart ── */}
         <div className="border-b border-gray-100">
@@ -253,12 +247,21 @@ export function Header() {
                 )}
               </div>
 
-              {/* Spacer — mobile only */}
+              {/* ── Mobile: spacer + search icon ── */}
               <div className="flex-1 md:hidden" />
 
-              {/* ── Auth area ── */}
+              {/* Mobile search icon */}
+              <button
+                className="md:hidden flex items-center justify-center w-9 h-9 rounded text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors shrink-0"
+                onClick={() => setMobileSearchOpen(true)}
+                aria-label="Search"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+
+              {/* ── Auth area — desktop only ── */}
               {isAuthenticated ? (
-                <div className="relative" ref={userMenuRef}>
+                <div className="relative hidden md:block" ref={userMenuRef}>
                   <button
                     onClick={() => setUserMenuOpen((p) => !p)}
                     className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors shrink-0"
@@ -267,63 +270,39 @@ export function Header() {
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-black">
                       {getInitials(userName)}
                     </div>
-                    <ChevronDown className="h-3 w-3 text-gray-400 hidden sm:block" />
+                    <ChevronDown className="h-3 w-3 text-gray-400" />
                   </button>
 
-                  {/* Dropdown */}
+                  {/* Desktop dropdown */}
                   {userMenuOpen && (
                     <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-gray-200 shadow-xl bg-white z-[60] py-2 overflow-hidden">
-                      {/* User info */}
                       <div className="px-4 py-3 border-b border-gray-100">
                         <p className="text-sm font-semibold text-gray-900 truncate">{userName ?? "User"}</p>
                         <p className="text-xs text-gray-500 truncate">{userEmail}</p>
                       </div>
 
                       <div className="py-1">
-                        <Link
-                          href="/account"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
-                        >
+                        <Link href="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
                           <User className="h-4 w-4 text-gray-400" />
                           My Account
                         </Link>
-                        <Link
-                          href="/orders"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
-                        >
+                        <Link href="/orders" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
                           <Package className="h-4 w-4 text-gray-400" />
                           Orders
                         </Link>
-
                         {(isSeller || isAdmin) && (
-                          <Link
-                            href="/dashboard"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
-                          >
+                          <Link href="/dashboard" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
                             <LayoutDashboard className="h-4 w-4 text-gray-400" />
                             Seller Dashboard
                           </Link>
                         )}
-
                         {isAdmin && (
-                          <Link
-                            href="/admin"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-yellow-700 hover:text-yellow-800 hover:bg-yellow-50 transition-colors"
-                          >
+                          <Link href="/admin" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-yellow-700 hover:text-yellow-800 hover:bg-yellow-50 transition-colors">
                             <ShieldCheck className="h-4 w-4" />
                             Admin Panel
                           </Link>
                         )}
-
-                        <Link
-                          href="/account/settings"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
-                        >
+                        <Link href="/account/settings" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
                           <Settings className="h-4 w-4 text-gray-400" />
                           Settings
                         </Link>
@@ -371,15 +350,6 @@ export function Header() {
                 </div>
                 <span className="hidden sm:block text-[13px] font-semibold text-gray-700">Cart</span>
               </Link>
-
-              {/* Hamburger — mobile only */}
-              <button
-                className="md:hidden flex items-center justify-center w-9 h-9 rounded text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors shrink-0"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-              >
-                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
             </div>
           </div>
         </div>
@@ -443,157 +413,106 @@ export function Header() {
         </nav>
       </header>
 
-      {/* ── Mobile drawer ── */}
-      {mobileMenuOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-      <div
-        className={cn(
-          "md:hidden fixed left-0 right-0 top-[58px] z-50 border-b border-gray-200 bg-white transition-transform duration-300 ease-in-out",
-          mobileMenuOpen ? "translate-y-0" : "-translate-y-[110%]"
-        )}
-      >
-        <div className="px-3 py-3 space-y-3">
-          {/* Search */}
-          <form onSubmit={handleSearch} className="flex h-11 rounded-xl overflow-hidden border border-gray-300">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search products, stores…"
-              className="flex-1 px-4 text-sm text-gray-900 placeholder:text-gray-400 bg-white outline-none"
-            />
-            <button type="submit" className="flex items-center justify-center w-11 bg-primary shrink-0" aria-label="Search">
-              <Search className="h-4 w-4 text-black" />
+      {/* ── Mobile Full-Screen Search Overlay ── */}
+      {mobileSearchOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-white flex flex-col">
+          {/* Search bar */}
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-white">
+            <form onSubmit={handleSearch} className="flex flex-1 items-stretch h-11 rounded-xl overflow-hidden border border-gray-300 focus-within:border-primary transition-colors">
+              <input
+                ref={mobileInputRef}
+                type="text"
+                value={query}
+                onChange={(e) => handleQueryChange(e.target.value)}
+                placeholder="Search products, stores, spices…"
+                className="flex-1 px-4 text-sm text-gray-900 placeholder:text-gray-400 bg-white outline-none"
+                autoComplete="off"
+              />
+              <button type="submit" className="flex items-center justify-center w-11 bg-primary shrink-0" aria-label="Search">
+                <Search className="h-4 w-4 text-black" />
+              </button>
+            </form>
+            <button
+              onClick={() => { setMobileSearchOpen(false); setQuery(""); setSuggestions([]); setShowSuggestions(false) }}
+              className="flex items-center justify-center w-10 h-10 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+            >
+              <X className="h-5 w-5" />
             </button>
-          </form>
-
-          {/* Location */}
-          <div className="flex items-center gap-2 text-sm text-gray-500 rounded-lg px-3 py-2 border border-gray-200 bg-gray-50">
-            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span>Delivering to <span className="font-semibold text-gray-900">{locationDisplay}</span></span>
-            <button className="ml-auto text-primary text-xs font-medium">Change</button>
           </div>
 
-          {/* Categories grid */}
-          <div className="grid grid-cols-2 gap-1.5">
-            {drawerCategories.map((cat) => {
-              const Icon = cat.icon
-              if (cat.disabled) {
-                return (
-                  <span
-                    key={cat.name}
-                    title="Coming Soon"
-                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-400 bg-gray-50 cursor-default"
+          {/* Suggestions */}
+          <div className="flex-1 overflow-y-auto">
+            {showSuggestions && suggestions.length > 0 ? (
+              <div className="py-2">
+                {suggestions.map((item, idx) => (
+                  <button
+                    key={`${item.product_id}-${idx}`}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-50"
+                    onClick={() => {
+                      setShowSuggestions(false)
+                      setMobileSearchOpen(false)
+                      setQuery(item.text)
+                      router.push(`/product/${item.product_id}`)
+                    }}
                   >
-                    <Icon className="h-4 w-4 shrink-0 opacity-40" style={{ color: cat.accent }} />
-                    {cat.name}
-                    <span className="ml-auto text-[9px] font-semibold bg-gray-200 text-gray-500 rounded px-1 py-0.5">Soon</span>
-                  </span>
-                )
-              }
-              return (
-                <Link
-                  key={cat.name}
-                  href={cat.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <Icon className="h-4 w-4 shrink-0" style={{ color: cat.accent }} />
-                  {cat.name}
-                </Link>
-              )
-            })}
-          </div>
-
-          {/* Auth area at bottom */}
-          <div className="pt-1 border-t border-gray-200">
-            {isAuthenticated ? (
-              <div className="space-y-1">
-                <div className="flex items-center gap-3 px-3 py-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-black">
-                    {getInitials(userName)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
-                    <p className="text-xs text-gray-500 truncate">{userEmail}</p>
-                  </div>
-                </div>
-                <Link
-                  href="/account"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <User className="h-4 w-4 text-gray-400" />
-                  My Account
-                </Link>
-                <Link
-                  href="/orders"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <Package className="h-4 w-4 text-gray-400" />
-                  Orders
-                </Link>
-                {(isSeller || isAdmin) && (
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 transition-colors"
-                  >
-                    <LayoutDashboard className="h-4 w-4 text-gray-400" />
-                    Seller Dashboard
-                  </Link>
-                )}
-                {isAdmin && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-yellow-700 hover:text-yellow-800 bg-yellow-50 hover:bg-yellow-100 transition-colors"
-                  >
-                    <ShieldCheck className="h-4 w-4" />
-                    Admin Panel
-                  </Link>
-                )}
+                    {item.image_url ? (
+                      <img src={item.image_url} alt="" className="h-12 w-12 rounded-lg object-cover shrink-0 bg-gray-100" />
+                    ) : (
+                      <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                        <Search className="h-5 w-5 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">{item.text}</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {item.category && <span>{item.category}</span>}
+                        {item.price > 0 && <span className="ml-2 text-primary font-semibold">${item.price.toFixed(2)}</span>}
+                      </p>
+                    </div>
+                  </button>
+                ))}
                 <button
-                  onClick={() => { setMobileMenuOpen(false); window.location.href = "/api/auth/signout" }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+                  className="w-full px-4 py-3 text-sm text-primary font-medium text-center hover:bg-gray-50 transition-colors"
+                  onClick={() => {
+                    setShowSuggestions(false)
+                    setMobileSearchOpen(false)
+                    router.push(`/search?q=${encodeURIComponent(query)}`)
+                  }}
                 >
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
+                  See all results for &ldquo;{query}&rdquo;
                 </button>
               </div>
+            ) : query.length > 1 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                <Search className="h-10 w-10 mb-3 opacity-40" />
+                <p className="text-sm">No results for &ldquo;{query}&rdquo;</p>
+              </div>
             ) : (
-              <div className="flex items-center gap-3 rounded-lg px-3 py-3 text-[13px] bg-gray-50">
-                <User className="h-5 w-5 text-primary shrink-0" />
-                <div>
-                  <span className="text-[10px] text-gray-500 block">{getGreeting()}</span>
-                  <span className="leading-tight">
-                    <Link
-                      href="/auth/login"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="font-semibold text-primary hover:text-primary/80 transition-colors"
-                    >
-                      Sign in
-                    </Link>
-                    <span className="text-gray-400 mx-1">or</span>
-                    <Link
-                      href="/auth/register?role=seller"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="font-semibold text-gray-900 hover:text-primary transition-colors"
-                    >
-                      Register
-                    </Link>
-                  </span>
+              <div className="px-4 py-6">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Categories</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {categories.map(cat => {
+                    const style = getCategoryIcon(cat.slug)
+                    const Icon = style.icon
+                    if (isServicesCategory(cat.slug)) return null
+                    return (
+                      <Link
+                        key={cat.slug}
+                        href={`/category/${cat.slug}`}
+                        onClick={() => setMobileSearchOpen(false)}
+                        className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <Icon className="h-4 w-4 shrink-0" style={{ color: style.accent }} />
+                        {cat.name}
+                      </Link>
+                    )
+                  })}
                 </div>
               </div>
             )}
           </div>
         </div>
-      </div>
+      )}
     </>
   )
 }
