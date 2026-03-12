@@ -8,8 +8,8 @@ const CONTACT_EMAIL = "privacy@afrotransact.com"
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="space-y-3 scroll-mt-20">
-      <h2 className="text-xl font-bold text-white border-b border-border pb-2">{title}</h2>
-      <div className="text-sm text-gray-300 leading-relaxed space-y-3">{children}</div>
+      <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2">{title}</h2>
+      <div className="text-sm text-gray-600 leading-relaxed space-y-3">{children}</div>
     </section>
   )
 }
@@ -37,17 +37,17 @@ export default function PrivacyPage() {
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="h-6 w-6 text-primary" />
-          <span className="text-sm text-gray-400">Legal</span>
+          <span className="text-sm text-gray-500">Legal</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white">Privacy Policy</h1>
-        <p className="text-gray-400 mt-3 text-sm">
-          Effective Date: <span className="text-white">{EFFECTIVE_DATE}</span>
+        <h1 className="text-3xl sm:text-4xl font-black text-gray-900">Privacy Policy</h1>
+        <p className="text-gray-500 mt-3 text-sm">
+          Effective Date: <span className="font-medium text-gray-900">{EFFECTIVE_DATE}</span>
           {" · "}
           <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>
           {" · "}
           <Link href="/seller-agreement" className="text-primary hover:underline">Seller Agreement</Link>
         </p>
-        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-gray-300 leading-relaxed">
+        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-gray-700 leading-relaxed">
           Your privacy matters to us. This Privacy Policy explains how {COMPANY} (&quot;AfroTransact&quot;,
           &quot;we&quot;, &quot;us&quot;, &quot;our&quot;) collects, uses, and protects your personal information when you use
           our platform.
@@ -65,7 +65,7 @@ export default function PrivacyPage() {
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className="block text-xs text-gray-400 hover:text-primary transition-colors py-0.5"
+                className="block text-xs text-gray-500 hover:text-primary transition-colors py-0.5"
                 dangerouslySetInnerHTML={{ __html: item.label }}
               />
             ))}
@@ -86,26 +86,26 @@ export default function PrivacyPage() {
           </Section>
 
           <Section id="what-we-collect" title="2. Information We Collect">
-            <p><strong className="text-white">A. Information You Provide</strong></p>
+            <p><strong className="text-gray-900">A. Information You Provide</strong></p>
             <ul className="list-disc list-inside space-y-1 pl-2">
-              <li><strong className="text-white">Account data:</strong> Name, email address, phone number, password (hashed)</li>
-              <li><strong className="text-white">Profile data:</strong> Delivery address(es), profile photo</li>
-              <li><strong className="text-white">Seller data:</strong> Business name, Tax ID (EIN/SSN), store details, bank account information (collected and held by Stripe, not us)</li>
-              <li><strong className="text-white">Communications:</strong> Messages to our support team, order notes</li>
-              <li><strong className="text-white">User content:</strong> Product reviews, ratings, photos you upload</li>
+              <li><strong className="text-gray-900">Account data:</strong> Name, email address, phone number, password (hashed)</li>
+              <li><strong className="text-gray-900">Profile data:</strong> Delivery address(es), profile photo</li>
+              <li><strong className="text-gray-900">Seller data:</strong> Business name, Tax ID (EIN/SSN), store details, bank account information (collected and held by Stripe, not us)</li>
+              <li><strong className="text-gray-900">Communications:</strong> Messages to our support team, order notes</li>
+              <li><strong className="text-gray-900">User content:</strong> Product reviews, ratings, photos you upload</li>
             </ul>
-            <p><strong className="text-white">B. Information Collected Automatically</strong></p>
+            <p><strong className="text-gray-900">B. Information Collected Automatically</strong></p>
             <ul className="list-disc list-inside space-y-1 pl-2">
-              <li><strong className="text-white">Usage data:</strong> Pages visited, searches performed, products viewed, time on platform</li>
-              <li><strong className="text-white">Device data:</strong> IP address, browser type and version, operating system, device identifiers</li>
-              <li><strong className="text-white">Location data:</strong> General location derived from IP address; precise location only if you grant permission</li>
-              <li><strong className="text-white">Cookies and similar technologies:</strong> See Section 6</li>
+              <li><strong className="text-gray-900">Usage data:</strong> Pages visited, searches performed, products viewed, time on platform</li>
+              <li><strong className="text-gray-900">Device data:</strong> IP address, browser type and version, operating system, device identifiers</li>
+              <li><strong className="text-gray-900">Location data:</strong> General location derived from IP address; precise location only if you grant permission</li>
+              <li><strong className="text-gray-900">Cookies and similar technologies:</strong> See Section 6</li>
             </ul>
-            <p><strong className="text-white">C. Information from Third Parties</strong></p>
+            <p><strong className="text-gray-900">C. Information from Third Parties</strong></p>
             <ul className="list-disc list-inside space-y-1 pl-2">
-              <li><strong className="text-white">Stripe:</strong> Payment status confirmations, tokenized payment method identifiers</li>
-              <li><strong className="text-white">Keycloak (Identity Provider):</strong> Authentication tokens, login events</li>
-              <li><strong className="text-white">Social login:</strong> If you connect a Google or Apple account, we receive your name and email</li>
+              <li><strong className="text-gray-900">Stripe:</strong> Payment status confirmations, tokenized payment method identifiers</li>
+              <li><strong className="text-gray-900">Keycloak (Identity Provider):</strong> Authentication tokens, login events</li>
+              <li><strong className="text-gray-900">Social login:</strong> If you connect a Google or Apple account, we receive your name and email</li>
             </ul>
           </Section>
 
@@ -126,29 +126,29 @@ export default function PrivacyPage() {
 
           <Section id="sharing" title="4. Information Sharing">
             <p>
-              <strong className="text-white">We do not sell your personal data.</strong> We share
+              <strong className="text-gray-900">We do not sell your personal data.</strong> We share
               information only in the following circumstances:
             </p>
             <ul className="list-disc list-inside space-y-1 pl-2">
               <li>
-                <strong className="text-white">With sellers:</strong> Your name, delivery address, and
+                <strong className="text-gray-900">With sellers:</strong> Your name, delivery address, and
                 phone number are shared with the seller(s) you order from, solely to fulfill your order
               </li>
               <li>
-                <strong className="text-white">Service providers:</strong> Stripe (payments), Resend
+                <strong className="text-gray-900">Service providers:</strong> Stripe (payments), Resend
                 (email), AWS (hosting), Elasticsearch (search). These processors act on our behalf and
                 are bound by data processing agreements
               </li>
               <li>
-                <strong className="text-white">Legal requirements:</strong> When required by law, court
+                <strong className="text-gray-900">Legal requirements:</strong> When required by law, court
                 order, or government authority
               </li>
               <li>
-                <strong className="text-white">Business transfers:</strong> In the event of a merger,
+                <strong className="text-gray-900">Business transfers:</strong> In the event of a merger,
                 acquisition, or sale of all or substantially all of our assets
               </li>
               <li>
-                <strong className="text-white">With your consent:</strong> For any other purpose with
+                <strong className="text-gray-900">With your consent:</strong> For any other purpose with
                 your explicit consent
               </li>
             </ul>
@@ -156,7 +156,7 @@ export default function PrivacyPage() {
 
           <Section id="payments" title="5. Payment Data & PCI Compliance">
             <p>
-              <strong className="text-white">AfroTransact never stores, processes, or has access to
+              <strong className="text-gray-900">AfroTransact never stores, processes, or has access to
               your payment card details.</strong> All payment information is collected via Stripe&apos;s
               certified PCI DSS Level 1 infrastructure through a secure, encrypted iframe (Stripe
               Elements) that communicates directly between your browser and Stripe.
@@ -182,8 +182,8 @@ export default function PrivacyPage() {
                 { type: "Marketing", desc: "Used to show relevant promotions (only with your consent)." },
               ].map((c) => (
                 <div key={c.type} className="flex gap-3">
-                  <span className="text-white font-semibold shrink-0 w-24">{c.type}</span>
-                  <span className="text-gray-400">{c.desc}</span>
+                  <span className="text-gray-900 font-semibold shrink-0 w-24">{c.type}</span>
+                  <span className="text-gray-500">{c.desc}</span>
                 </div>
               ))}
             </div>
@@ -217,12 +217,12 @@ export default function PrivacyPage() {
           <Section id="rights" title="8. Your Rights & Choices">
             <p>Depending on your jurisdiction, you may have the following rights:</p>
             <ul className="list-disc list-inside space-y-1 pl-2">
-              <li><strong className="text-white">Access:</strong> Request a copy of the personal data we hold about you</li>
-              <li><strong className="text-white">Correction:</strong> Request correction of inaccurate or incomplete data</li>
-              <li><strong className="text-white">Deletion:</strong> Request deletion of your personal data (subject to legal retention requirements)</li>
-              <li><strong className="text-white">Portability:</strong> Receive your data in a structured, machine-readable format</li>
-              <li><strong className="text-white">Opt-out of marketing:</strong> Unsubscribe from marketing emails via the link in any email or in account settings</li>
-              <li><strong className="text-white">Do Not Track:</strong> We respect browser DNT signals for analytics tracking</li>
+              <li><strong className="text-gray-900">Access:</strong> Request a copy of the personal data we hold about you</li>
+              <li><strong className="text-gray-900">Correction:</strong> Request correction of inaccurate or incomplete data</li>
+              <li><strong className="text-gray-900">Deletion:</strong> Request deletion of your personal data (subject to legal retention requirements)</li>
+              <li><strong className="text-gray-900">Portability:</strong> Receive your data in a structured, machine-readable format</li>
+              <li><strong className="text-gray-900">Opt-out of marketing:</strong> Unsubscribe from marketing emails via the link in any email or in account settings</li>
+              <li><strong className="text-gray-900">Do Not Track:</strong> We respect browser DNT signals for analytics tracking</li>
             </ul>
             <p>
               To exercise these rights, contact us at{" "}
@@ -289,7 +289,7 @@ export default function PrivacyPage() {
               <li>Right to limit use of sensitive personal information</li>
             </ul>
             <p>
-              <strong className="text-white">We do not sell personal information</strong> as defined
+              <strong className="text-gray-900">We do not sell personal information</strong> as defined
               under the CCPA. To submit a verifiable consumer request, contact us at{" "}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
                 {CONTACT_EMAIL}
@@ -307,8 +307,8 @@ export default function PrivacyPage() {
 
           <Section id="contact" title="14. Contact Us">
             <p>For privacy-related questions, requests, or concerns:</p>
-            <div className="rounded-xl border border-border bg-card p-4 space-y-1">
-              <p className="font-semibold text-white">{COMPANY} — Privacy Team</p>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-1">
+              <p className="font-semibold text-gray-900">{COMPANY} — Privacy Team</p>
               <p>Austin, Texas, United States</p>
               <p>
                 Email:{" "}
