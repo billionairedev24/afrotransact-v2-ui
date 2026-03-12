@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useCallback } from "react"
-import { useSession, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
 
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 const ACTIVITY_EVENTS = ["mousedown", "keydown", "scroll", "touchstart", "mousemove"] as const
@@ -13,7 +13,9 @@ export function IdleTimeoutProvider({ children }: { children: React.ReactNode })
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      signOut({ callbackUrl: "/auth/login?reason=idle" })
+      // Use the custom signout route to clear both NextAuth cookies
+      // and the Keycloak SSO session, preventing silent re-auth.
+      window.location.href = "/api/auth/signout"
     }, IDLE_TIMEOUT_MS)
   }, [])
 

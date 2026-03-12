@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 
-async function handleSignout(req: NextRequest) {
-  const token = await getToken({ req })
-
-  const issuer =
-    process.env.KEYCLOAK_ISSUER ||
-    "http://localhost:8180/realms/afrotransact"
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001"
-
-  const logoutUrl = new URL(`${issuer}/protocol/openid-connect/logout`)
-  const clientId = process.env.KEYCLOAK_CLIENT_ID || "afrotransact-web"
-  logoutUrl.searchParams.set("client_id", clientId)
-  logoutUrl.searchParams.set("post_logout_redirect_uri", baseUrl)
-  if (token?.idToken) {
-    logoutUrl.searchParams.set("id_token_hint", String(token.idToken))
-  }
-  const redirectTarget = logoutUrl.toString()
-
-  const response = NextResponse.redirect(redirectTarget, { status: 302 })
-
-  // Clear ALL NextAuth cookies on the redirect response directly.
+/**
+ * Clears all NextAuth-related cookies on the response.
+ */
+function clearNextAuthCookies(req: NextRequest, response: NextResponse) {
   // Enumerate the request cookies and expire anything next-auth related.
   for (const cookie of req.cookies.getAll()) {
     if (
@@ -54,7 +38,33 @@ async function handleSignout(req: NextRequest) {
       path: "/",
     })
   }
+}
 
+async function handleSignout(req: NextRequest) {
+  const token = await getToken({ req })
+
+  const issuer =
+    process.env.KEYCLOAK_ISSUER ||
+    "http://localhost:8180/realms/afrotransact"
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || "http://localhost:3001"
+  const clientId = process.env.KEYCLOAK_CLIENT_ID || "afrotransact-web"
+
+  // Build the Keycloak OIDC logout URL.
+  // id_token_hint is critical — without it Keycloak cannot identify the
+  // session to destroy and the SSO browser cookie survives, causing the
+  // user to be silently re-authenticated on the next page load.
+  const logoutUrl = new URL(`${issuer}/protocol/openid-connect/logout`)
+  logoutUrl.searchParams.set("client_id", clientId)
+  logoutUrl.searchParams.set("post_logout_redirect_uri", baseUrl)
+
+  if (token?.idToken) {
+    logoutUrl.searchParams.set("id_token_hint", String(token.idToken))
+  }
+
+  const redirectTarget = logoutUrl.toString()
+  const response = NextResponse.redirect(redirectTarget, { status: 302 })
+
+  clearNextAuthCookies(req, response)
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate")
 
   return response

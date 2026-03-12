@@ -17,7 +17,8 @@
  *   PKCE Enabled                = true  (extra protection if server ever becomes public)
  */
 
-import { NextAuthOptions, TokenSet } from "next-auth"
+import { NextAuthOptions, TokenSet, Session } from "next-auth"
+import type { JWT } from "next-auth/jwt"
 import type { OAuthConfig } from "next-auth/providers/oauth"
 import KeycloakProvider from "next-auth/providers/keycloak"
 
@@ -246,6 +247,28 @@ export const authOptions: NextAuthOptions = {
         })
       } catch {
         // Silently ignore event publishing failures
+      }
+    },
+
+    async signOut(message: { session: Session; token: JWT }) {
+      // Revoke the refresh token server-side so Keycloak's SSO session
+      // is fully terminated even if the browser redirect fails.
+      const token = message.token
+      if (token?.refreshToken) {
+        const issuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
+        try {
+          await fetch(`${issuer}/protocol/openid-connect/logout`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              client_id: optionalEnv("KEYCLOAK_CLIENT_ID", "afrotransact-web"),
+              client_secret: requireEnv("KEYCLOAK_CLIENT_SECRET"),
+              refresh_token: String(token.refreshToken),
+            }),
+          })
+        } catch {
+          // Best-effort — the browser redirect to Keycloak logout is the primary mechanism
+        }
       }
     },
   },
