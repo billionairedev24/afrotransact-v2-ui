@@ -5,7 +5,6 @@ import { getToken } from "next-auth/jwt"
  * Clears all NextAuth-related cookies on the response.
  */
 function clearNextAuthCookies(req: NextRequest, response: NextResponse) {
-  // Enumerate the request cookies and expire anything next-auth related.
   for (const cookie of req.cookies.getAll()) {
     if (
       cookie.name.startsWith("next-auth") ||
@@ -16,13 +15,12 @@ function clearNextAuthCookies(req: NextRequest, response: NextResponse) {
         maxAge: 0,
         path: "/",
         httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
       })
     }
   }
 
-  // Also explicitly delete the well-known cookie names in case the
-  // request jar is empty (e.g. race condition).
   const KNOWN_COOKIES = [
     "next-auth.session-token",
     "next-auth.csrf-token",
@@ -36,6 +34,7 @@ function clearNextAuthCookies(req: NextRequest, response: NextResponse) {
     response.cookies.set(name, "", {
       maxAge: 0,
       path: "/",
+      secure: process.env.NODE_ENV === "production",
     })
   }
 }
@@ -43,17 +42,26 @@ function clearNextAuthCookies(req: NextRequest, response: NextResponse) {
 async function handleSignout(req: NextRequest) {
   const token = await getToken({ req })
 
-  const issuer =
+  // KEYCLOAK_PUBLIC_ISSUER is the browser-facing HTTPS URL (e.g. https://auth-uat.afrotransact.com/realms/afrotransact).
+  // KEYCLOAK_ISSUER may be the internal K8s cluster URL, which a browser cannot reach.
+  // We MUST use the public URL for the browser redirect or the logout silently fails and
+  // the Keycloak SSO cookie survives, causing the user to be immediately re-authenticated.
+  const publicIssuer =
+    process.env.KEYCLOAK_PUBLIC_ISSUER ||
     process.env.KEYCLOAK_ISSUER ||
     "http://localhost:8180/realms/afrotransact"
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || "http://localhost:3001"
+
+  const baseUrl =
+    process.env.NEXTAUTH_URL ||
+    process.env.APP_BASE_URL ||
+    "http://localhost:3001"
+
   const clientId = process.env.KEYCLOAK_CLIENT_ID || "afrotransact-web"
 
-  // Build the Keycloak OIDC logout URL.
-  // id_token_hint is critical — without it Keycloak cannot identify the
-  // session to destroy and the SSO browser cookie survives, causing the
-  // user to be silently re-authenticated on the next page load.
-  const logoutUrl = new URL(`${issuer}/protocol/openid-connect/logout`)
+  // Build the Keycloak OIDC end-session URL.
+  // id_token_hint is critical — without it Keycloak 22+ cannot confirm the client
+  // and the SSO browser cookie survives, causing silent re-authentication.
+  const logoutUrl = new URL(`${publicIssuer}/protocol/openid-connect/logout`)
   logoutUrl.searchParams.set("client_id", clientId)
   logoutUrl.searchParams.set("post_logout_redirect_uri", baseUrl)
 
@@ -62,8 +70,8 @@ async function handleSignout(req: NextRequest) {
   }
 
   const redirectTarget = logoutUrl.toString()
-  const response = NextResponse.redirect(redirectTarget, { status: 302 })
 
+  const response = NextResponse.redirect(redirectTarget, { status: 302 })
   clearNextAuthCookies(req, response)
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate")
 

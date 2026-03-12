@@ -28,11 +28,14 @@ import {
   Hash,
   DollarSign,
   BoxesIcon,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react"
 import {
   getAdminProducts,
   approveProduct,
   rejectProduct,
+  triggerSearchReindex,
   ApiError,
   type Product,
 } from "@/lib/api"
@@ -98,6 +101,24 @@ export default function AdminProductsPage() {
     productName: string
   }>({ open: false, productId: "", productName: "" })
   const [rejectReason, setRejectReason] = useState("")
+
+  const [reindexModal, setReindexModal] = useState(false)
+  const [reindexLoading, setReindexLoading] = useState(false)
+
+  async function handleReindex() {
+    const token = await getAccessToken()
+    if (!token) return
+    setReindexLoading(true)
+    try {
+      const res = await triggerSearchReindex(token)
+      toast.success(`Reindex complete — ${res.indexed ?? "all"} products synced to Elasticsearch`)
+      setReindexModal(false)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Reindex failed")
+    } finally {
+      setReindexLoading(false)
+    }
+  }
 
   const loadProducts = useCallback(async (filterStatus: string) => {
     try {
@@ -340,21 +361,32 @@ export default function AdminProductsPage() {
           </p>
         </div>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option
-              key={opt.value}
-              value={opt.value}
-              className="bg-white text-gray-600"
-            >
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setReindexModal(true)}
+            title="Sync all active products to Elasticsearch"
+            className="inline-flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Sync to Search
+          </button>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option
+                key={opt.value}
+                value={opt.value}
+                className="bg-white text-gray-600"
+              >
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <DataTable
@@ -416,6 +448,56 @@ export default function AdminProductsPage() {
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             )}
             Reject Product
+          </button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* ── Elasticsearch Reindex Confirmation Dialog ──────────────── */}
+      <Dialog open={reindexModal} onClose={() => !reindexLoading && setReindexModal(false)}>
+        <DialogHeader onClose={() => !reindexLoading && setReindexModal(false)}>
+          Sync Products to Elasticsearch
+        </DialogHeader>
+        <DialogBody>
+          <div className="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4 mb-4">
+            <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-orange-800">
+              <p className="font-semibold mb-1">This will re-sync all active products</p>
+              <p className="text-orange-700">
+                The operation fetches every <strong>active</strong> product from the catalog database
+                and indexes it into Elasticsearch. This may take a minute depending on catalog size.
+                Existing search results remain available during the sync.
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500">
+            Use this when Elasticsearch is restarted, data is lost, or search results are out of sync
+            with the product catalog.
+          </p>
+        </DialogBody>
+        <DialogFooter>
+          <button
+            onClick={() => setReindexModal(false)}
+            disabled={reindexLoading}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleReindex}
+            disabled={reindexLoading}
+            className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {reindexLoading ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Syncing…
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-3.5 w-3.5" />
+                Start Sync
+              </>
+            )}
           </button>
         </DialogFooter>
       </Dialog>

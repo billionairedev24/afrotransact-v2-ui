@@ -2,10 +2,10 @@
 
 import { signIn } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
-import { Suspense, useEffect } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Loader2 } from "lucide-react"
 
 function getSellerIntentCallbackUrl(): string | null {
   try {
@@ -23,12 +23,22 @@ function LoginForm() {
   const intentUrl = typeof window !== "undefined" ? getSellerIntentCallbackUrl() : null
   const callbackUrl = intentUrl || searchParams.get("callbackUrl") || "/"
   const error = searchParams.get("error")
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (error === "OAuthCallback" || error === "Callback") {
       signIn("keycloak", { callbackUrl })
     }
   }, [error, callbackUrl])
+
+  async function handleSignIn() {
+    setIsLoading(true)
+    try {
+      await signIn("keycloak", { callbackUrl })
+    } catch {
+      setIsLoading(false)
+    }
+  }
 
   if (error === "OAuthCallback" || error === "Callback") {
     return (
@@ -191,11 +201,21 @@ function LoginForm() {
 
           {/* Keycloak email sign-in */}
           <button
-            onClick={() => signIn("keycloak", { callbackUrl })}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:brightness-110 hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0"
+            onClick={handleSignIn}
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:brightness-110 hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-80 disabled:cursor-wait disabled:translate-y-0"
           >
-            Sign in with email
-            <ArrowRight className="h-4 w-4" />
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Redirecting…
+              </>
+            ) : (
+              <>
+                Sign in with email
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
           </button>
 
           {/* Terms */}

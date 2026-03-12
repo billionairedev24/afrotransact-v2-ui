@@ -2,27 +2,31 @@
 
 import { signIn } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
-import { Suspense } from "react"
+import { Suspense, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Store, ShoppingBag, ArrowRight } from "lucide-react"
+import { Store, ShoppingBag, ArrowRight, Loader2 } from "lucide-react"
 
 function RegisterForm() {
   const searchParams = useSearchParams()
   const role = searchParams.get("role")
   const isSeller = role === "seller"
   const callbackUrl = isSeller ? "/dashboard/onboarding" : "/"
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleEmailRegister = () => {
-    if (isSeller) {
-      // Dedicated provider and custom auth param lets Keycloak capture registration_role
-      // which is then passed back as a user attribute and JWT claim.
-      signIn("keycloak-register-seller", { 
-        callbackUrl,
-        registration_role: "seller" 
-      })
-    } else {
-      signIn("keycloak-register", { callbackUrl })
+  const handleEmailRegister = async () => {
+    setIsLoading(true)
+    try {
+      if (isSeller) {
+        await signIn("keycloak-register-seller", {
+          callbackUrl,
+          registration_role: "seller",
+        })
+      } else {
+        await signIn("keycloak-register", { callbackUrl })
+      }
+    } catch {
+      setIsLoading(false)
     }
   }
 
@@ -235,10 +239,20 @@ function RegisterForm() {
           {/* Email registration */}
           <button
             onClick={handleEmailRegister}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:brightness-110 hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0"
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:brightness-110 hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-80 disabled:cursor-wait disabled:translate-y-0"
           >
-            Register with email
-            <ArrowRight className="h-4 w-4" />
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Redirecting…
+              </>
+            ) : (
+              <>
+                Register with email
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
           </button>
 
           {/* Terms */}
