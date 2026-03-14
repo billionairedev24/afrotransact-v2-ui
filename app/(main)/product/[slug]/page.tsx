@@ -65,19 +65,24 @@ export default function ProductPage() {
           .then((store) => { if (!cancelled) setStoreName(store.name) })
           .catch(() => { if (!cancelled) setStoreName(data.storeId) })
 
-        // 3. Fetch Region & Flags (publicly)
-        const regions = await getRegions("", true)
-        const r = regions.find((r) => r.code === "us-tx-austin") ?? regions[0]
-        if (r && !cancelled) {
-          const [f, deals] = await Promise.all([
-            getFeatureFlags("", r.id),
-            getActiveDeals().catch(() => [])
-          ])
-          if (!cancelled) {
-            setFlags(f)
-            const deal = deals.find(d => d.productId === data.id)
-            setProductDeal(deal || null)
+        // 3. Fetch Region & Flags (Non-critical, gracefully fail)
+        try {
+          const regions = await getRegions("", true).catch(() => [])
+          const r = regions.find((r) => r.code === "us-tx-austin") ?? regions[0]
+          
+          if (r && !cancelled) {
+            const [f, deals] = await Promise.all([
+              getFeatureFlags("", r.id).catch(() => []),
+              getActiveDeals().catch(() => [])
+            ])
+            if (!cancelled) {
+              setFlags(f)
+              const deal = deals.find(d => d.productId === data.id)
+              setProductDeal(deal || null)
+            }
           }
+        } catch (secondaryError) {
+          console.warn("Secondary data fetch failed (flags/deals):", secondaryError)
         }
       } catch (e) {
         if (!cancelled) {

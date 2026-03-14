@@ -1539,6 +1539,21 @@ export interface DealData {
   couponCode?: string
 }
 
+export interface PlatformDealDto {
+  id: string
+  title: string
+  description: string
+  discountPercent?: number
+  dealPriceCents?: number
+  startAt?: string
+  endAt?: string
+}
+
+export interface UnifiedDealsResponse {
+  marketplaceDeals: DealData[]
+  platformDeals: PlatformDealDto[]
+}
+
 export interface DealCreateRequest {
   storeId?: string
   productId?: string
@@ -1551,8 +1566,9 @@ export interface DealCreateRequest {
   endAt?: string
 }
 
-export function getActiveDeals() {
-  return api<DealData[]>("/api/v1/deals")
+export async function getActiveDeals(): Promise<DealData[]> {
+  const res = await api<UnifiedDealsResponse>("/api/v1/deals")
+  return res.marketplaceDeals || []
 }
 
 export function getFeaturedDeals() {
