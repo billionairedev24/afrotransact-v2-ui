@@ -23,7 +23,13 @@ function LoginForm() {
   const intentUrl = typeof window !== "undefined" ? getSellerIntentCallbackUrl() : null
   const callbackUrl = intentUrl || searchParams.get("callbackUrl") || "/"
   const error = searchParams.get("error")
+  const reason = searchParams.get("reason")
   const [isLoading, setIsLoading] = useState(false)
+
+  const REASON_MESSAGES: Record<string, string> = {
+    inactive: "You were signed out due to inactivity.",
+    session_expired: "Your session has expired. Please sign in again.",
+  }
 
   useEffect(() => {
     if (error === "OAuthCallback" || error === "Callback") {
@@ -116,6 +122,13 @@ function LoginForm() {
               Access your account and continue where you left off.
             </p>
           </div>
+
+          {/* Reason message */}
+          {reason && REASON_MESSAGES[reason] && (
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm text-foreground">
+              {REASON_MESSAGES[reason]}
+            </div>
+          )}
 
           {/* Error message */}
           {error && (

@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useRef, useCallback } from "react"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { clearGuestCart } from "@/stores/cart-store"
 import { useCartStore } from "@/stores/cart-store"
 
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
+const IDLE_TIMEOUT_MS = process.env.NODE_ENV === "development" 
+  ? 2 * 60 * 1000  // 2 minutes for local testing
+  : 30 * 60 * 1000 // 30 minutes for production
 const ACTIVITY_EVENTS = ["mousedown", "keydown", "scroll", "touchstart", "mousemove"] as const
 
 export function IdleTimeoutProvider({ children }: { children: React.ReactNode }) {
@@ -17,7 +19,7 @@ export function IdleTimeoutProvider({ children }: { children: React.ReactNode })
     timerRef.current = setTimeout(() => {
       useCartStore.getState().clearCart()
       clearGuestCart()
-      window.location.href = "/api/auth/signout"
+      signOut({ callbackUrl: "/auth/login?reason=inactive" })
     }, IDLE_TIMEOUT_MS)
   }, [])
 

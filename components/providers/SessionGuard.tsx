@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { clearGuestCart } from "@/stores/cart-store"
 import { useCartStore } from "@/stores/cart-store"
 
@@ -22,7 +22,7 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
       handlingRef.current = true
       useCartStore.getState().clearCart()
       clearGuestCart()
-      window.location.href = "/api/auth/signout"
+      signOut({ callbackUrl: "/auth/login?reason=session_expired" })
     }
   }, [session])
 

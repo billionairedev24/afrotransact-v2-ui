@@ -912,7 +912,7 @@ export interface CheckoutRequest {
   zip?: string
   phone?: string
   totalWeightLbs?: number
-  couponCode?: string
+  couponCodes?: string[]
 }
 
 export interface CheckoutResponse {
@@ -1536,6 +1536,7 @@ export interface DealData {
   productSlug: string | null
   productImageUrl: string | null
   storeName: string | null
+  couponCode?: string
 }
 
 export interface DealCreateRequest {

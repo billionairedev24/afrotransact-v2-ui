@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Loader2,
   Tag,
+  Zap,
 } from "lucide-react"
 import {
   Elements,
@@ -40,6 +41,8 @@ import {
   type UserAddress,
   type FeatureFlag,
   getFeatureFlags,
+  getActiveDeals,
+  type DealData,
 } from "@/lib/api"
 
 const stripePromise = loadStripe(
@@ -296,7 +299,7 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
 function ReviewStep({
   address, onNext, onBack, items, subtotal, tax, shipping, total, placing, error: placeError,
   couponCode, couponResult, couponLoading, couponError, onApplyCoupon, onRemoveCoupon, onCouponCodeChange, discount,
-  couponsEnabled,
+  couponsEnabled, availableDeals, appliedDeal, onApplyDeal, onRemoveDeal
 }: {
   address: Record<string, string>
   onNext: () => void
@@ -313,6 +316,10 @@ function ReviewStep({
   onCouponCodeChange: (code: string) => void
   discount: number
   couponsEnabled: boolean
+  availableDeals: DealData[]
+  appliedDeal: DealData | null
+  onApplyDeal: (deal: DealData) => void
+  onRemoveDeal: () => void
 }) {
   return (
     <div className="space-y-5">
@@ -375,6 +382,42 @@ function ReviewStep({
         </div>
       )}
 
+      {/* Available Deals */}
+      {availableDeals.length > 0 && (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-gray-900">Available Deals</span>
+          </div>
+          <div className="space-y-2">
+            {availableDeals.map((deal: DealData) => {
+              const isApplied = appliedDeal?.id === deal.id
+              return (
+                <div key={deal.id} className="flex items-center justify-between rounded-xl border border-primary/20 bg-white p-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{deal.title}</p>
+                    <p className="text-xs text-gray-500">{deal.description || "Limited time offer"}</p>
+                    <p className="text-xs font-bold text-primary mt-0.5">
+                      {deal.discountPercent ? `${deal.discountPercent}% OFF` : deal.dealPriceCents ? `Special Price: ${formatCents(deal.dealPriceCents)}` : "Special Deal"}
+                    </p>
+                  </div>
+                  {isApplied ? (
+                    <button onClick={onRemoveDeal} className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors">Applied</button>
+                  ) : (
+                    <button 
+                      onClick={() => onApplyDeal(deal)}
+                      className="rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      Apply
+                    </button>
+                  )}
+                </div>
+              )
+            }) }
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
         <div className="flex justify-between text-sm text-gray-600">
           <span>Subtotal</span><span>{formatCents(subtotal)}</span>
@@ -389,6 +432,20 @@ function ReviewStep({
           <div className="flex justify-between text-sm">
             <span className="text-green-600">Discount</span>
             <span className="text-green-600 font-medium">-{formatCents(discount)}</span>
+          </div>
+        )}
+        {appliedDeal && (
+          <div className="flex justify-between text-sm text-primary">
+            <span>Deal: {appliedDeal.title}</span>
+            <span className="font-medium">
+              -{formatCents(
+                appliedDeal.discountPercent 
+                  ? Math.round(subtotal * (appliedDeal.discountPercent / 100)) 
+                  : (appliedDeal.originalPriceCents && appliedDeal.dealPriceCents) 
+                    ? appliedDeal.originalPriceCents - appliedDeal.dealPriceCents 
+                    : 0
+              )}
+            </span>
           </div>
         )}
         <div className="my-2 border-t border-gray-200" />
@@ -582,6 +639,8 @@ export default function CheckoutPage() {
   const [region, setRegion] = useState<Region | null>(null)
   const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [authToken, setAuthToken] = useState<string | null>(null)
+  const [allDeals, setAllDeals] = useState<DealData[]>([])
+  const [appliedDeal, setAppliedDeal] = useState<DealData | null>(null)
 
   const subtotal = getSubtotal()
   const taxRate = region?.taxRate ?? 0.0825
@@ -590,7 +649,16 @@ export default function CheckoutPage() {
   const tax = Math.round(subtotal * taxRate)
   const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFlat
   const discount = couponResult?.discountCents ?? 0
-  const total = subtotal + tax + shipping - discount
+  const dealDiscount = appliedDeal 
+    ? (appliedDeal.discountPercent 
+        ? Math.round(subtotal * (appliedDeal.discountPercent / 100))
+        : (appliedDeal.originalPriceCents && appliedDeal.dealPriceCents)
+          ? appliedDeal.originalPriceCents - appliedDeal.dealPriceCents
+          : 0)
+    : 0
+  const total = subtotal + tax + shipping - discount - dealDiscount
+
+  const availableDeals = allDeals.filter(d => cartItems.some(i => i.productId === d.productId))
 
   const couponsEnabled = flags.find((f) => f.key === "coupons_enabled")?.enabled ?? true
 
@@ -616,8 +684,14 @@ export default function CheckoutPage() {
         const r = regions.find((r: Region) => r.code === "us-tx-austin") ?? regions[0]
         if (r) {
           setRegion(r)
-          const f = await getFeatureFlags(token, r.id)
-          if (!cancelled) setFlags(f)
+          const [f, deals] = await Promise.all([
+            getFeatureFlags(token, r.id),
+            getActiveDeals().catch(() => [])
+          ])
+          if (!cancelled) {
+            setFlags(f)
+            setAllDeals(deals)
+          }
         }
       } catch {
         // fall back to hardcoded defaults
@@ -682,6 +756,10 @@ export default function CheckoutPage() {
         return
       }
 
+      const codes: string[] = []
+      if (couponResult) codes.push(couponCode.trim())
+      if (appliedDeal?.couponCode) codes.push(appliedDeal.couponCode)
+
       const result = await apiCheckout(token, {
         regionId: region.id,
         shippingAddressId: address.shippingAddressId || undefined,
@@ -692,7 +770,7 @@ export default function CheckoutPage() {
         state: address.state,
         zip: address.zip,
         phone: address.phone || undefined,
-        couponCode: couponResult ? couponCode.trim() : undefined,
+        couponCodes: codes.length > 0 ? codes : undefined,
       })
 
       setCheckoutResult(result)
@@ -796,6 +874,10 @@ export default function CheckoutPage() {
             onCouponCodeChange={setCouponCode}
             discount={discount}
             couponsEnabled={couponsEnabled}
+            availableDeals={availableDeals}
+            appliedDeal={appliedDeal}
+            onApplyDeal={(deal) => setAppliedDeal(deal)}
+            onRemoveDeal={() => setAppliedDeal(null)}
           />
         )}
         {step === "payment" && (

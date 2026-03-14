@@ -20,6 +20,8 @@ import {
   type ProductVariant,
   type FeatureFlag,
   type Region,
+  getActiveDeals,
+  type DealData,
 } from "@/lib/api"
 
 export default function ProductPage() {
@@ -43,6 +45,7 @@ export default function ProductPage() {
   const removeItem = useCartStore((s) => s.removeItem)
 
   const [flags, setFlags] = useState<FeatureFlag[]>([])
+  const [productDeal, setProductDeal] = useState<DealData | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -66,11 +69,21 @@ export default function ProductPage() {
         const regions = await getRegions("", true)
         const r = regions.find((r) => r.code === "us-tx-austin") ?? regions[0]
         if (r && !cancelled) {
-          const f = await getFeatureFlags("", r.id)
-          if (!cancelled) setFlags(f)
+          const [f, deals] = await Promise.all([
+            getFeatureFlags("", r.id),
+            getActiveDeals().catch(() => [])
+          ])
+          if (!cancelled) {
+            setFlags(f)
+            const deal = deals.find(d => d.productId === data.id)
+            setProductDeal(deal || null)
+          }
         }
-      } catch {
-        if (!cancelled) setError("Product not found")
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Product not found")
+          console.error("Product fetch error:", e)
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -218,7 +231,26 @@ export default function ProductPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{product.title}</h1>
           </div>
 
-          {variant && (
+          {productDeal ? (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-block rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold text-header uppercase tracking-wider">
+                  {productDeal.badgeText || "Special Deal"}
+                </span>
+                {productDeal.discountPercent && (
+                  <span className="text-sm font-bold text-primary">{productDeal.discountPercent}% OFF</span>
+                )}
+              </div>
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-bold text-primary">
+                  ${(productDeal.dealPriceCents ? productDeal.dealPriceCents / 100 : (variant?.price || 0) * (1 - (productDeal.discountPercent || 0) / 100)).toFixed(2)}
+                </span>
+                <span className="text-lg text-muted-foreground line-through">
+                  ${(variant?.price || 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          ) : variant && (
             <div className="flex items-baseline gap-3">
               <span className="text-3xl font-bold text-primary">
                 ${variant.price.toFixed(2)}
