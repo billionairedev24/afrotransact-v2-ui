@@ -10,7 +10,17 @@ import {
 import { cn } from "@/lib/utils"
 import ProductReviews from "@/components/reviews/ProductReviews"
 import { useCartStore } from "@/stores/cart-store"
-import { getProductBySlug, getProductById, getStoreById, type Product, type ProductVariant } from "@/lib/api"
+import {
+  getProductBySlug,
+  getProductById,
+  getStoreById,
+  getRegions,
+  getFeatureFlags,
+  type Product,
+  type ProductVariant,
+  type FeatureFlag,
+  type Region,
+} from "@/lib/api"
 
 export default function ProductPage() {
   const params = useParams()
@@ -32,20 +42,32 @@ export default function ProductPage() {
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeItem = useCartStore((s) => s.removeItem)
 
+  const [flags, setFlags] = useState<FeatureFlag[]>([])
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    const fetchProduct = async () => {
+    const fetchData = async () => {
       try {
+        // 1. Fetch product
         const data = await getProductBySlug(slug).catch(() => getProductById(slug))
-        if (!cancelled) {
-          setProduct(data)
-          setSelectedVariant(data.variants[0] ?? null)
-          getStoreById(data.storeId)
-            .then((store) => { if (!cancelled) setStoreName(store.name) })
-            .catch(() => { if (!cancelled) setStoreName(data.storeId) })
+        if (cancelled) return
+        setProduct(data)
+        setSelectedVariant(data.variants[0] ?? null)
+        
+        // 2. Fetch store name
+        getStoreById(data.storeId)
+          .then((store) => { if (!cancelled) setStoreName(store.name) })
+          .catch(() => { if (!cancelled) setStoreName(data.storeId) })
+
+        // 3. Fetch Region & Flags (publicly)
+        const regions = await getRegions("", true)
+        const r = regions.find((r) => r.code === "us-tx-austin") ?? regions[0]
+        if (r && !cancelled) {
+          const f = await getFeatureFlags("", r.id)
+          if (!cancelled) setFlags(f)
         }
       } catch {
         if (!cancelled) setError("Product not found")
@@ -53,9 +75,11 @@ export default function ProductPage() {
         if (!cancelled) setLoading(false)
       }
     }
-    fetchProduct()
+    fetchData()
     return () => { cancelled = true }
   }, [slug])
+
+  const reviewsEnabled = flags.find((f) => f.key === "reviews_enabled")?.enabled ?? true
 
   const variant = selectedVariant ?? product?.variants[0] ?? null
   const inStock = variant ? variant.stockQuantity > 0 : false
@@ -377,7 +401,7 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {product && (
+      {product && reviewsEnabled && (
         <div className="mt-16 border-t border-border pt-12">
           <ProductReviews productId={product.id} />
         </div>

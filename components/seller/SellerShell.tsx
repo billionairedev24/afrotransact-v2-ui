@@ -20,6 +20,7 @@ import {
   Tag,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useSignOut } from "@/hooks/useSignOut"
 
 const NAV_ITEMS = [
   { href: "/dashboard",              label: "Overview",       icon: LayoutDashboard },
@@ -43,6 +44,7 @@ interface SellerShellProps {
 export function SellerShell({ children, userName, userEmail }: SellerShellProps) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const signOut = useSignOut()
 
   const avatarLetter = userName?.charAt(0)?.toUpperCase() ?? "S"
 
@@ -109,7 +111,7 @@ export function SellerShell({ children, userName, userEmail }: SellerShellProps)
               Back to Marketplace
             </Link>
             <button
-              onClick={() => { window.location.href = "/api/auth/signout" }}
+              onClick={() => { signOut() }}
               className="flex w-full items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
             >
               <LogOut className="h-4 w-4" />
@@ -190,7 +192,7 @@ export function SellerShell({ children, userName, userEmail }: SellerShellProps)
                   Back to Marketplace
                 </Link>
                 <button
-                  onClick={() => { window.location.href = "/api/auth/signout" }}
+                  onClick={() => { signOut() }}
                   className="flex w-full items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />

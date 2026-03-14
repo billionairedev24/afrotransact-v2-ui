@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
+import { clearGuestCart } from "@/stores/cart-store"
+import { useCartStore } from "@/stores/cart-store"
 
 /**
  * Watches the session for RefreshTokenError.
@@ -18,10 +20,8 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
     const err = (session as { error?: string } | null)?.error
     if (err === "RefreshTokenError" && !handlingRef.current) {
       handlingRef.current = true
-      // Redirect to our custom signout route which clears NextAuth cookies
-      // AND redirects to Keycloak's OIDC logout to destroy the SSO session.
-      // Using signOut({ redirect: false }) would only clear the local JWT
-      // but leave the Keycloak browser cookie alive, causing silent re-auth.
+      useCartStore.getState().clearCart()
+      clearGuestCart()
       window.location.href = "/api/auth/signout"
     }
   }, [session])

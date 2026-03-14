@@ -28,6 +28,7 @@ import {
   X,
 } from "lucide-react"
 import { useCartStore } from "@/stores/cart-store"
+import { useSignOut } from "@/hooks/useSignOut"
 import { searchSuggest, getCategories, type SearchSuggestion, type CategoryRef } from "@/lib/api"
 
 const SLUG_ICON_MAP: Record<string, { icon: typeof Leaf; accent: string }> = {
@@ -78,6 +79,7 @@ export function Header() {
   const [showSuggestions, setShowSuggestions] = useState(false)
 
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
+  const signOut = useSignOut()
 
   const isAuthenticated = status === "authenticated"
   const userName = session?.user?.name
@@ -310,7 +312,7 @@ export function Header() {
 
                       <div className="border-t border-gray-100 py-1">
                         <button
-                          onClick={() => { setUserMenuOpen(false); window.location.href = "/api/auth/signout" }}
+                          onClick={() => { setUserMenuOpen(false); signOut() }}
                           className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
                         >
                           <LogOut className="h-4 w-4" />

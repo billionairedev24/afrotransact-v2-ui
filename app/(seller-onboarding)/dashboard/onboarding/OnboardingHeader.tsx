@@ -3,8 +3,16 @@
 import { LogOut, Store } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { clearGuestCart } from "@/stores/cart-store"
+import { useCartStore } from "@/stores/cart-store"
 
 export function OnboardingHeader({ userName }: { userName: string }) {
+  function handleSignOut() {
+    useCartStore.getState().clearCart()
+    clearGuestCart()
+    window.location.href = "/api/auth/signout"
+  }
+
   return (
     <header
       className="sticky top-0 z-40 border-b border-gray-200 px-4 sm:px-6 bg-white/95 backdrop-blur-sm"
@@ -26,15 +34,16 @@ export function OnboardingHeader({ userName }: { userName: string }) {
               {userName}
             </span>
           )}
-          <a
-            href="/api/auth/signout"
+          <button
+            onClick={handleSignOut}
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Sign out</span>
-          </a>
+          </button>
         </div>
       </div>
     </header>
   )
 }
+

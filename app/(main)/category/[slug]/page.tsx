@@ -4,28 +4,36 @@ import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { ChevronRight, Star, MapPin, Leaf, Loader2 } from "lucide-react"
-import { searchProducts, type SearchResult } from "@/lib/api"
-
-const CATEGORY_NAMES: Record<string, string> = {
-  produce: "Fresh Produce",
-  spices: "Spices & Herbs",
-  meats: "Meats & Seafood",
-  baked: "Baked Goods",
-  beverages: "Beverages",
-  fashion: "Fashion",
-  electronics: "Electronics",
-  pantry: "Pantry & Dry Goods",
-  home: "Home & Living",
-}
+import { searchProducts, getCategories, type SearchResult, type CategoryRef } from "@/lib/api"
 
 export default function CategoryPage() {
   const params = useParams()
   const slug = params.slug as string
-  const name = CATEGORY_NAMES[slug] ?? slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-
+  
+  const [name, setName] = useState(slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
   const [products, setProducts] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
+
+  useEffect(() => {
+    // Fetch categories to find the correct name for the slug
+    getCategories()
+      .then((cats) => {
+        const findName = (list: CategoryRef[]): string | null => {
+          for (const c of list) {
+            if (c.slug === slug) return c.name
+            if (c.children) {
+              const childName = findName(c.children)
+              if (childName) return childName
+            }
+          }
+          return null
+        }
+        const found = findName(cats)
+        if (found) setName(found)
+      })
+      .catch(() => {})
+  }, [slug])
 
   useEffect(() => {
     setLoading(true)

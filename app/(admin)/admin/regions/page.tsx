@@ -6,7 +6,7 @@ import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 import {
   MapPin, ToggleLeft, ToggleRight, Plus, ChevronDown, ChevronRight,
-  Loader2, Pencil, Globe, Building2
+  Loader2, Pencil, Globe, Building2, Trash2
 } from "lucide-react"
 import { Dialog, DialogHeader, DialogBody, DialogFooter } from "@/components/ui/Dialog"
 import { RowActions, type RowAction } from "@/components/ui/RowActions"
@@ -14,6 +14,7 @@ import {
   getRegions,
   createRegion,
   updateRegion,
+  deleteRegion,
   type Region,
 } from "@/lib/api"
 
@@ -249,6 +250,7 @@ export default function RegionsPage() {
   const [saving, setSaving] = useState(false)
 
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [deletingRegion, setDeletingRegion] = useState<Region | null>(null)
 
   const fetchRegions = useCallback(async () => {
     const token = await getAccessToken()
@@ -311,7 +313,6 @@ export default function RegionsPage() {
     try {
       if (editingRegion) {
         const updated = await updateRegion(token, editingRegion.id, {
-          code: form.code || editingRegion.code,
           name: form.name,
           country_code: form.country_code,
           state_or_province: form.state_or_province || null,
@@ -362,6 +363,23 @@ export default function RegionsPage() {
       toast.error(err instanceof Error ? err.message : "Failed to toggle")
     } finally {
       setSavingId(null)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deletingRegion) return
+    const token = await getAccessToken()
+    if (!token) return
+    setSaving(true)
+    try {
+      await deleteRegion(token, deletingRegion.id)
+      setRegions((prev) => prev.filter((r) => r.id !== deletingRegion.id))
+      toast.success("Region deleted")
+      setDeletingRegion(null)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -483,6 +501,12 @@ export default function RegionsPage() {
                                 onClick: () => toggleActive(region),
                                 variant: region.active ? "danger" : "default",
                               },
+                              {
+                                label: "Delete Region",
+                                icon: <Trash2 className="text-red-600" />,
+                                onClick: () => setDeletingRegion(region),
+                                variant: "danger",
+                              },
                             ]
 
                             return (
@@ -492,7 +516,8 @@ export default function RegionsPage() {
                                     <MapPin className="h-4 w-4 text-primary shrink-0" />
                                     <div className="min-w-0">
                                       <p className="text-gray-900 font-medium truncate">
-                                        {region.city || region.name || <span className="text-gray-500 italic">Unnamed Region</span>}
+                                      {region.name || region.city || <span className="text-gray-500 italic">Default Region ({region.code})</span>}
+                                      {/* region.city used to be first but name is much more descriptive */}
                                       </p>
                                       <p className="text-gray-500 text-xs font-mono truncate">{region.code || "—"}</p>
                                     </div>
@@ -550,6 +575,40 @@ export default function RegionsPage() {
           >
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {editingRegion ? "Update" : "Create"}
+          </button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingRegion} onClose={() => setDeletingRegion(null)} className="max-w-md">
+        <DialogHeader onClose={() => setDeletingRegion(null)}>
+          Delete Region
+        </DialogHeader>
+        <DialogBody>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete <span className="font-bold text-gray-900">{deletingRegion?.name || deletingRegion?.city}</span>?
+            </p>
+            <div className="rounded-xl bg-red-50 p-3 text-xs text-red-700">
+              <p className="font-semibold">Warning: This action is permanent.</p>
+              <p className="mt-1">Deleting a region will also remove all its associated commission configurations, feature flags, and payment method settings.</p>
+            </div>
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <button
+            onClick={() => setDeletingRegion(null)}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Delete Region
           </button>
         </DialogFooter>
       </Dialog>

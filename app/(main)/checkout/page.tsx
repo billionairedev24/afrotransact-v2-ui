@@ -38,6 +38,8 @@ import {
   type ValidateCouponResponse,
   type Region,
   type UserAddress,
+  type FeatureFlag,
+  getFeatureFlags,
 } from "@/lib/api"
 
 const stripePromise = loadStripe(
@@ -294,6 +296,7 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
 function ReviewStep({
   address, onNext, onBack, items, subtotal, tax, shipping, total, placing, error: placeError,
   couponCode, couponResult, couponLoading, couponError, onApplyCoupon, onRemoveCoupon, onCouponCodeChange, discount,
+  couponsEnabled,
 }: {
   address: Record<string, string>
   onNext: () => void
@@ -309,6 +312,7 @@ function ReviewStep({
   onRemoveCoupon: () => void
   onCouponCodeChange: (code: string) => void
   discount: number
+  couponsEnabled: boolean
 }) {
   return (
     <div className="space-y-5">
@@ -335,39 +339,41 @@ function ReviewStep({
       </div>
 
       {/* Coupon code */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Tag className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-gray-900">Promo Code</span>
-        </div>
-        {couponResult ? (
-          <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-green-700">{couponResult.code}</p>
-              <p className="text-xs text-green-600">-{formatCents(couponResult.discountCents)} off</p>
+      {couponsEnabled && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Tag className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-gray-900">Promo Code</span>
+          </div>
+          {couponResult ? (
+            <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-green-700">{couponResult.code}</p>
+                <p className="text-xs text-green-600">-{formatCents(couponResult.discountCents)} off</p>
+              </div>
+              <button onClick={onRemoveCoupon} className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors">Remove</button>
             </div>
-            <button onClick={onRemoveCoupon} className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors">Remove</button>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={couponCode}
-              onChange={(e) => onCouponCodeChange(e.target.value.toUpperCase())}
-              placeholder="Enter promo code"
-              className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/60 transition-colors"
-            />
-            <button
-              onClick={onApplyCoupon}
-              disabled={!couponCode.trim() || couponLoading}
-              className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
-            >
-              {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
-            </button>
-          </div>
-        )}
-        {couponError && <p className="text-xs text-red-500">{couponError}</p>}
-      </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(e) => onCouponCodeChange(e.target.value.toUpperCase())}
+                placeholder="Enter promo code"
+                className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/60 transition-colors"
+              />
+              <button
+                onClick={onApplyCoupon}
+                disabled={!couponCode.trim() || couponLoading}
+                className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
+              >
+                {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+              </button>
+            </div>
+          )}
+          {couponError && <p className="text-xs text-red-500">{couponError}</p>}
+        </div>
+      )}
 
       <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
         <div className="flex justify-between text-sm text-gray-600">
@@ -574,6 +580,7 @@ export default function CheckoutPage() {
   const clearCart = useCartStore((s) => s.clearCart)
 
   const [region, setRegion] = useState<Region | null>(null)
+  const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [authToken, setAuthToken] = useState<string | null>(null)
 
   const subtotal = getSubtotal()
@@ -584,6 +591,8 @@ export default function CheckoutPage() {
   const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFlat
   const discount = couponResult?.discountCents ?? 0
   const total = subtotal + tax + shipping - discount
+
+  const couponsEnabled = flags.find((f) => f.key === "coupons_enabled")?.enabled ?? true
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -597,7 +606,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!mounted) return
     let cancelled = false
-    async function fetchRegion() {
+    async function fetchRegionAndFlags() {
       try {
         const token = await getAccessToken()
         if (!token || cancelled) return
@@ -605,12 +614,16 @@ export default function CheckoutPage() {
         const regions = await getRegions(token, true)
         if (cancelled) return
         const r = regions.find((r: Region) => r.code === "us-tx-austin") ?? regions[0]
-        if (r) setRegion(r)
+        if (r) {
+          setRegion(r)
+          const f = await getFeatureFlags(token, r.id)
+          if (!cancelled) setFlags(f)
+        }
       } catch {
         // fall back to hardcoded defaults
       }
     }
-    fetchRegion()
+    fetchRegionAndFlags()
     return () => { cancelled = true }
   }, [mounted])
 
@@ -782,6 +795,7 @@ export default function CheckoutPage() {
             onRemoveCoupon={handleRemoveCoupon}
             onCouponCodeChange={setCouponCode}
             discount={discount}
+            couponsEnabled={couponsEnabled}
           />
         )}
         {step === "payment" && (

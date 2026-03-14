@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
+import { useSignOut } from "@/hooks/useSignOut"
 
 function getInitials(name?: string | null): string {
   if (!name) return "?"
@@ -33,6 +34,7 @@ export function MobileNav() {
   const { data: session, status } = useSession()
   const [accountOpen, setAccountOpen] = useState(false)
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
+  const signOut = useSignOut()
 
   const isAuthenticated = status === "authenticated"
   const userName = session?.user?.name
@@ -147,7 +149,7 @@ export function MobileNav() {
 
                   <div className="pt-2 mt-2 border-t border-gray-100">
                     <button
-                      onClick={() => { setAccountOpen(false); window.location.href = "/api/auth/signout" }}
+                      onClick={() => { setAccountOpen(false); signOut() }}
                       className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >
                       <LogOut className="h-5 w-5 shrink-0" />

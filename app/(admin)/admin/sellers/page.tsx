@@ -488,8 +488,8 @@ function ActionDropdown({
   const _isRejected = ob === "rejected"
   const isSuspended = ob === "suspended"
   const canApprove = isSubmitted || ob === "under_review"
-  const canReject = isSubmitted || ob === "needs_action"
-  const canRequestInfo = isSubmitted || ob === "needs_action"
+  const canReject = (isSubmitted || ob === "needs_action") && !isApproved
+  const canRequestInfo = (isSubmitted || ob === "needs_action") && !isApproved
   const canSuspend = isApproved && !isSuspended
   const canRemind = !isApproved && ob !== "rejected"
 
@@ -624,7 +624,8 @@ function DetailPanel({
   }
 
   const st = (detail?.onboardingStatus || "").toLowerCase()
-  const canApprove = st === "submitted" || st === "pending_review" || st === "under_review"
+  const isApproved = st === "approved" || st === "active"
+  const canApprove = (st === "submitted" || st === "pending_review" || st === "under_review") && !isApproved
 
   return (
     <>
@@ -795,12 +796,16 @@ function DetailPanel({
                           {submitting ? "Approving…" : "Approve"}
                         </button>
                       )}
-                      <button onClick={() => setMode("reject")} className="flex-1 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors">
-                        Reject
-                      </button>
-                      <button onClick={() => setMode("request")} className="flex-1 rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors">
-                        Request Info
-                      </button>
+                      {!isApproved && (
+                        <>
+                          <button onClick={() => setMode("reject")} className="flex-1 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors">
+                            Reject
+                          </button>
+                          <button onClick={() => setMode("request")} className="flex-1 rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors">
+                            Request Info
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
 

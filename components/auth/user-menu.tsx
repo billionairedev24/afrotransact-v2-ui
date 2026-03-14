@@ -4,11 +4,13 @@ import { useSession, signIn } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { User, LogOut, Package, Settings, ChevronDown } from "lucide-react"
+import { useSignOut } from "@/hooks/useSignOut"
 
 export function UserMenu() {
   const { data: session, status } = useSession()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const signOut = useSignOut()
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -109,7 +111,7 @@ export function UserMenu() {
 
           <div className="border-t border-border p-1">
             <button
-              onClick={() => { window.location.href = "/api/auth/signout" }}
+              onClick={() => { signOut() }}
               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
             >
               <LogOut className="h-4 w-4" />

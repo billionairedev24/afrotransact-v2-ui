@@ -213,6 +213,9 @@ export interface CartItemDto {
   quantity: number
   unitPriceCents: number
   lineTotalCents: number
+  productTitle?: string
+  variantName?: string
+  imageUrl?: string
 }
 
 export interface CartDto {
@@ -263,6 +266,10 @@ export function mergeCart(
   }[],
 ) {
   return api<CartDto>("/api/v1/cart/merge", { method: "POST", body: items, token })
+}
+
+export function clearServerCart(token: string) {
+  return api<void>("/api/v1/cart", { method: "DELETE", token })
 }
 
 // ── Stores (Seller service) ──

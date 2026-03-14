@@ -29,6 +29,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useSignOut } from "@/hooks/useSignOut"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getAdminProducts, getAdminSellers } from "@/lib/api"
 
@@ -66,6 +67,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const { status: sessionStatus } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [queueCount, setQueueCount] = useState(0)
+  const signOut = useSignOut()
 
   useEffect(() => {
     if (sessionStatus !== "authenticated") return
@@ -140,7 +142,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           Back to Marketplace
         </Link>
         <button
-          onClick={() => { window.location.href = "/api/auth/signout" }}
+          onClick={() => { signOut() }}
           className="flex w-full items-center gap-2 text-sm text-red-600 hover:text-red-700 transition-colors"
         >
           <LogOut className="h-4 w-4" />

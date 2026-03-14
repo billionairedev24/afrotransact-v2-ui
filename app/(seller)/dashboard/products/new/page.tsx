@@ -146,6 +146,20 @@ function FieldError({ msg }: { msg?: string }) {
   return <p className="mt-1 text-xs text-red-600">{msg}</p>
 }
 
+function flattenCategories(cats: CategoryRef[], depth = 0): { id: string; name: string }[] {
+  let res: { id: string; name: string }[] = []
+  for (const c of cats) {
+    res.push({
+      id: c.id,
+      name: "\u00A0\u00A0".repeat(depth) + (depth > 0 ? "\u2514 " : "") + c.name,
+    })
+    if (c.children && c.children.length > 0) {
+      res = res.concat(flattenCategories(c.children, depth + 1))
+    }
+  }
+  return res
+}
+
 /* ------------------------------------------------------------------ */
 /*  Page component                                                     */
 /* ------------------------------------------------------------------ */
@@ -243,6 +257,8 @@ export default function NewProductPage() {
     }
     return e
   }, [name, description, categoryId, weight, variants, price, stockQuantity, compareAtPrice])
+
+  const flatCategories = useMemo(() => flattenCategories(categories), [categories])
 
   function err(field: string): string | undefined {
     if (!submitted && !touched[field]) return undefined
@@ -914,7 +930,7 @@ export default function NewProductPage() {
                 )}
               >
                 <option value="">Select a category</option>
-                {categories.map((cat) => (
+                {flatCategories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
                   </option>

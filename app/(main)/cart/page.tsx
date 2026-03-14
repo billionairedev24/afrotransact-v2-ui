@@ -1,10 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X } from "lucide-react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
+import { clearServerCart } from "@/lib/api"
+import { getAccessToken } from "@/lib/auth-helpers"
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -12,6 +15,7 @@ function formatCents(cents: number) {
 
 export default function CartPage() {
   const router = useRouter()
+  const { status } = useSession()
   const [mounted, setMounted] = useState(false)
 
   const items = useCartStore((s) => s.items)
@@ -21,6 +25,18 @@ export default function CartPage() {
   const getSubtotal = useCartStore((s) => s.getSubtotal)
   const getItemCount = useCartStore((s) => s.getItemCount)
   const getItemsByStore = useCartStore((s) => s.getItemsByStore)
+
+  const handleClearCart = useCallback(async () => {
+    clearCart()
+    if (status === "authenticated") {
+      try {
+        const token = await getAccessToken()
+        if (token) await clearServerCart(token)
+      } catch {
+        // Server clear failed — local state is already cleared
+      }
+    }
+  }, [clearCart, status])
 
   useEffect(() => {
     setMounted(true)
@@ -71,7 +87,7 @@ export default function CartPage() {
           Shopping Cart ({totalQty} {totalQty === 1 ? "item" : "items"})
         </h1>
         <button
-          onClick={clearCart}
+          onClick={handleClearCart}
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-500/10 transition-colors"
         >
           <X className="h-3.5 w-3.5" />

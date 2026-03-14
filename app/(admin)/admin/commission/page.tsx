@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
-import { Save, Percent, Loader2 } from "lucide-react"
+import { Save, Percent, Loader2, Trash2 } from "lucide-react"
 import { getRegions, updateRegion, type Region } from "@/lib/api"
 
 const INPUT_CLASS =
@@ -76,6 +76,30 @@ export default function CommissionPage() {
     }
   }
 
+  const resetCommission = async (region: Region) => {
+    const token = await getAccessToken()
+    if (!token) return
+    
+    setSavingId(region.id)
+    try {
+      const newSettings = { ...region.settings }
+      delete newSettings.commission_rate
+      
+      const updated = await updateRegion(token, region.id, { settings: newSettings })
+      setRegions((prev) => prev.map((r) => (r.id === region.id ? updated : r)))
+      setEdits((prev) => {
+        const next = { ...prev }
+        delete next[region.id]
+        return next
+      })
+      toast.success(`Commission for ${region.name} reset to default`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Reset failed")
+    } finally {
+      setSavingId(null)
+    }
+  }
+
   if (status !== "authenticated") {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
@@ -136,11 +160,23 @@ export default function CommissionPage() {
         {regions.map((region) => (
           <div
             key={region.id}
-            className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm"
+            className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm flex flex-col"
           >
-            <div className="p-5">
-              <p className="text-gray-900 font-medium text-sm">{region.name || region.city || "Unnamed Region"}</p>
-              <p className="text-gray-400 text-xs font-mono mt-0.5">{region.code || "—"}</p>
+            <div className="p-5 flex-1 flex flex-col">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-gray-900 font-medium text-sm">{region.name || region.city || "Default Region"}</p>
+                  <p className="text-gray-400 text-xs font-mono mt-0.5">{region.code || "—"}</p>
+                </div>
+                <button
+                  onClick={() => resetCommission(region)}
+                  disabled={savingId === region.id}
+                  className="rounded-lg p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Reset to default (10%)"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
 
               <div className="flex items-center gap-2 mt-4">
                 <input
