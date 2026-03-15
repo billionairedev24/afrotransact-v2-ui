@@ -43,6 +43,8 @@ import {
   getFeatureFlags,
   getActiveDeals,
   type DealData,
+  type RegionPaymentMethod,
+  getRegionConfig,
 } from "@/lib/api"
 
 const stripePromise = loadStripe(
@@ -186,15 +188,22 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
             {savedAddresses.map((addr) => (
               <button
                 key={addr.id}
-                onClick={() => setSelectedId(addr.id)}
                 className={`w-full rounded-xl border p-4 text-left transition-colors ${
                   selectedId === addr.id
                     ? "border-primary/60 bg-primary/10"
                     : "border-gray-200 bg-gray-50 hover:border-gray-300"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-900">{addr.label || "Address"}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      checked={selectedId === addr.id}
+                      onChange={() => setSelectedId(addr.id)}
+                      className="h-4 w-4 rounded border-gray-300 bg-gray-50 text-primary accent-primary"
+                    />
+                    <span className="text-sm font-medium text-gray-900">{addr.label || "Address"}</span>
+                  </div>
                   {addr.isDefault && (
                     <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Default</span>
                   )}
@@ -238,7 +247,7 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
               onClick={() => setShowNew(false)}
               className="text-sm text-primary hover:text-primary/80 transition-colors"
             >
-              &larr; Use saved address
+              &larr; Choose from your addresses
             </button>
           )}
           <div className="grid grid-cols-2 gap-3">
@@ -478,9 +487,14 @@ function ReviewStep({
 }
 
 function StripePaymentForm({
-  onBack, onComplete, totalCents, clientSecret,
+  onBack, onComplete, totalCents, clientSecret, stripeAvailable, paymentMethods,
 }: {
-  onBack: () => void; onComplete: () => void; totalCents: number; clientSecret: string | null
+  onBack: () => void
+  onComplete: () => void
+  totalCents: number
+  clientSecret: string | null
+  stripeAvailable: boolean
+  paymentMethods: RegionPaymentMethod[]
 }) {
   const stripe   = useStripe()
   const elements = useElements()
@@ -527,21 +541,55 @@ function StripePaymentForm({
     <div className="space-y-5">
       <h2 className="text-lg font-bold text-gray-900">Payment</h2>
 
-      <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-        <ShieldCheck className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-        <p className="text-xs text-gray-600 leading-relaxed">
-          <span className="text-emerald-400 font-semibold">Card data never touches our servers.</span>{" "}
-          Payment details are encrypted and sent directly to Stripe via a secure iframe.
-        </p>
-      </div>
+      {stripeAvailable ? (
+        <>
+          <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+            <ShieldCheck className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
+            <p className="text-xs text-gray-600 leading-relaxed">
+              <span className="text-emerald-400 font-semibold">Card data never touches our servers.</span>{" "}
+              Payment details are encrypted and sent directly to Stripe via a secure iframe.
+            </p>
+          </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Lock className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs text-gray-500 font-medium">Secured by Stripe</span>
+          <div className="rounded-2xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Lock className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs text-gray-500 font-medium">Secured by Stripe</span>
+            </div>
+            <PaymentElement options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }} />
+          </div>
+        </>
+      ) : (
+        <div className="space-y-3 rounded-2xl border border-yellow-500/30 bg-yellow-50 p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <p className="text-sm font-medium text-yellow-800">
+              Card payments via Stripe are not available in this region.
+            </p>
+          </div>
+          {paymentMethods.length > 0 ? (
+            <div className="text-xs text-gray-700 space-y-1">
+              <p className="font-semibold text-gray-800">Configured payment providers for this region:</p>
+              <ul className="list-disc list-inside">
+                {paymentMethods
+                  .filter((m) => m.enabled)
+                  .map((m) => (
+                    <li key={m.id} className="capitalize">
+                      {m.provider}
+                    </li>
+                  ))}
+              </ul>
+              <p className="text-yellow-700/80">
+                Web checkout for these methods is not yet wired up. Please contact support or try again later.
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-700">
+              No payment methods are configured for this region yet. Please contact support or try again later.
+            </p>
+          )}
         </div>
-        <PaymentElement options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }} />
-      </div>
+      )}
 
       <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 flex justify-between text-sm">
         <span className="text-gray-600 font-medium">Total to be charged</span>
@@ -554,7 +602,7 @@ function StripePaymentForm({
 
       <div className="flex gap-3">
         <button onClick={onBack} disabled={processing} className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40">Back</button>
-        <button onClick={handlePay} disabled={processing || !stripe} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-70">
+        <button onClick={handlePay} disabled={processing || !stripe || !stripeAvailable} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed">
           {processing ? (
             <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-[#0f0f10]/30 border-t-[#0f0f10] rounded-full animate-spin" /> Processing…</span>
           ) : (
@@ -573,9 +621,14 @@ function StripePaymentForm({
 }
 
 function PaymentStep({
-  onBack, onComplete, total, clientSecret,
+  onBack, onComplete, total, clientSecret, stripeAvailable, paymentMethods,
 }: {
-  onBack: () => void; onComplete: () => void; total: number; clientSecret: string | null
+  onBack: () => void
+  onComplete: () => void
+  total: number
+  clientSecret: string | null
+  stripeAvailable: boolean
+  paymentMethods: RegionPaymentMethod[]
 }) {
   return (
     <Elements
@@ -588,7 +641,14 @@ function PaymentStep({
         paymentMethodCreation: "manual",
       }}
     >
-      <StripePaymentForm onBack={onBack} onComplete={onComplete} totalCents={total} clientSecret={clientSecret} />
+      <StripePaymentForm
+        onBack={onBack}
+        onComplete={onComplete}
+        totalCents={total}
+        clientSecret={clientSecret}
+        stripeAvailable={stripeAvailable}
+        paymentMethods={paymentMethods}
+      />
     </Elements>
   )
 }
@@ -638,6 +698,7 @@ export default function CheckoutPage() {
 
   const [region, setRegion] = useState<Region | null>(null)
   const [flags, setFlags] = useState<FeatureFlag[]>([])
+  const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
   const [authToken, setAuthToken] = useState<string | null>(null)
   const [allDeals, setAllDeals] = useState<DealData[]>([])
   const [appliedDeal, setAppliedDeal] = useState<DealData | null>(null)
@@ -661,6 +722,12 @@ export default function CheckoutPage() {
   const availableDeals = allDeals.filter(d => cartItems.some(i => i.productId === d.productId))
 
   const couponsEnabled = flags.find((f) => f.key === "coupons_enabled")?.enabled ?? true
+  const stripeFeatureEnabled =
+    flags.find((f) => f.key === "stripe_enabled" || f.key === "stripe")?.enabled ?? true
+  const stripeMethodEnabled = paymentMethods.some(
+    (m) => m.enabled && m.provider.toLowerCase() === "stripe"
+  )
+  const stripeAvailable = stripeFeatureEnabled && stripeMethodEnabled
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -684,13 +751,15 @@ export default function CheckoutPage() {
         const r = regions.find((r: Region) => r.code === "us-tx-austin") ?? regions[0]
         if (r) {
           setRegion(r)
-          const [f, deals] = await Promise.all([
+          const [f, deals, cfg] = await Promise.all([
             getFeatureFlags(token, r.id),
-            getActiveDeals().catch(() => [])
+            getActiveDeals().catch(() => []),
+            getRegionConfig(r.code).catch(() => null),
           ])
           if (!cancelled) {
             setFlags(f)
             setAllDeals(deals)
+            if (cfg) setPaymentMethods(cfg.paymentMethods || [])
           }
         }
       } catch {
@@ -886,6 +955,8 @@ export default function CheckoutPage() {
             onComplete={handlePaymentComplete}
             total={displayTotal}
             clientSecret={checkoutResult?.paymentClientSecret ?? null}
+            stripeAvailable={stripeAvailable}
+            paymentMethods={paymentMethods}
           />
         )}
         {step === "success" && <SuccessStep orderNumber={checkoutResult?.orderNumber ?? ""} />}

@@ -98,6 +98,7 @@ export default function ProductPage() {
   }, [slug])
 
   const reviewsEnabled = flags.find((f) => f.key === "reviews_enabled")?.enabled ?? true
+  const marketplaceEnabled = flags.find((f) => f.key === "marketplace_enabled")?.enabled ?? true
 
   const variant = selectedVariant ?? product?.variants[0] ?? null
   const inStock = variant ? variant.stockQuantity > 0 : false
@@ -154,6 +155,18 @@ export default function ProductPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <h2 className="text-xl font-bold text-foreground mb-2">Product Not Found</h2>
         <p className="text-muted-foreground mb-4">{error || "This product doesn't exist or has been removed."}</p>
+        <Link href="/" className="text-primary hover:underline">Back to home</Link>
+      </div>
+    )
+  }
+
+  if (!marketplaceEnabled) {
+    return (
+      <div className="container py-20 text-center">
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Marketplace not available</h2>
+        <p className="text-gray-500 mb-4">
+          The marketplace is currently disabled for your region. Product pages are not available.
+        </p>
         <Link href="/" className="text-primary hover:underline">Back to home</Link>
       </div>
     )

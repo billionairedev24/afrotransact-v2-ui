@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils"
 import {
   searchProducts,
   getProductById,
+  getRegionConfig,
   type SearchResponse,
   type SearchResult,
 } from "@/lib/api"
@@ -545,6 +546,10 @@ function SearchContent() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<SearchResponse | null>(null)
+  const [features, setFeatures] = useState<Record<string, boolean>>({})
+  const [featuresLoaded, setFeaturesLoaded] = useState(false)
+
+  const marketplaceEnabled = features["marketplace_enabled"] ?? true
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   const query = searchParams.get("q") || ""
@@ -557,6 +562,21 @@ function SearchContent() {
   const hasActiveFilters = !!(category || minPrice || maxPrice)
 
   useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const cfg = await getRegionConfig("us-tx-austin")
+        if (!cancelled) setFeatures(cfg.features || {})
+      } finally {
+        if (!cancelled) setFeaturesLoaded(true)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!featuresLoaded) return
+    if (!marketplaceEnabled) return
     let cancelled = false
     setLoading(true)
 
@@ -597,7 +617,7 @@ function SearchContent() {
     return () => {
       cancelled = true
     }
-  }, [query, category, sortBy, minPrice, maxPrice, page])
+  }, [query, category, sortBy, minPrice, maxPrice, page, featuresLoaded, marketplaceEnabled])
 
   const results = data?.results ?? []
   const totalResults = data?.total ?? 0
@@ -651,6 +671,29 @@ function SearchContent() {
     safeFacets.price_ranges.length > 0 ||
     safeFacets.ratings.length > 0 ||
     safeFacets.stores.length > 0
+
+  if (!featuresLoaded) {
+    return (
+      <div className="container py-16 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-gray-500">Loading marketplace configuration…</p>
+      </div>
+    )
+  }
+
+  if (!marketplaceEnabled) {
+    return (
+      <div className="container py-20 text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Marketplace not available</h1>
+        <p className="text-gray-500 max-w-md mx-auto">
+          The marketplace is currently disabled for your region. Search is unavailable.
+        </p>
+        <Link href="/" className="mt-4 inline-flex items-center gap-2 text-primary hover:underline">
+          <span>Back to home</span>
+        </Link>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">

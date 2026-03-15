@@ -1208,6 +1208,27 @@ export async function getMarketplaceConfig(regionId: string): Promise<Marketplac
   }
 }
 
+// ── Public: Region Config (features & payments) ──
+
+export interface RegionPaymentMethod {
+  id: string
+  regionId: string
+  provider: string
+  enabled: boolean
+  providerConfig: Record<string, unknown> | null
+}
+
+export interface RegionConfig {
+  region: Region
+  features: Record<string, boolean>
+  featureConfigs?: Record<string, unknown>
+  paymentMethods: RegionPaymentMethod[]
+}
+
+export function getRegionConfig(regionCode: string) {
+  return api<RegionConfig>(`/api/v1/config/${regionCode}`)
+}
+
 // ── Admin: Products ──
 
 export function getAdminProducts(token: string, status?: string, page = 0, size = 20) {
