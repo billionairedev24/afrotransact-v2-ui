@@ -57,6 +57,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/coupons",       label: "Coupons",       icon: Ticket           },
   { href: "/admin/deals",         label: "Deals",         icon: Sparkles         },
   { href: "/admin/ads",           label: "Ad Slots",      icon: Megaphone        },
+  { href: "/admin/hero-carousel", label: "Hero Carousel", icon: Sparkles         },
   { href: "/admin/email-templates", label: "Email Templates", icon: Mail          },
   { href: "/admin/notification-routing", label: "Alert Routing", icon: Bell     },
   { href: "/admin/users",         label: "Users",         icon: Users            },

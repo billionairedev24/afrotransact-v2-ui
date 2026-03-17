@@ -106,7 +106,7 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
         const def = addrs.find((a) => a.isDefault)
         if (def) setSelectedId(def.id)
         else if (addrs.length > 0) setSelectedId(addrs[0].id)
-        else setShowNew(true)
+        setShowNew(addrs.length === 0)
       })
       .catch(() => setShowNew(true))
       .finally(() => setLoading(false))
@@ -222,19 +222,20 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowNew(true)}
-              className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              + New Address
-            </button>
+          <div className="flex flex-col gap-2">
             <button
               disabled={!selectedId || !form.fullName}
               onClick={handleUseSaved}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-40"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-40"
             >
               Continue <ChevronRight className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowNew(true)}
+              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors self-start"
+            >
+              + Ship to a new address
             </button>
           </div>
         </>
@@ -244,10 +245,11 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
         <>
           {savedAddresses.length > 0 && (
             <button
+              type="button"
               onClick={() => setShowNew(false)}
-              className="text-sm text-primary hover:text-primary/80 transition-colors"
+              className="mb-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
             >
-              &larr; Choose from your addresses
+              &larr; Back to saved addresses
             </button>
           )}
           <div className="grid grid-cols-2 gap-3">
@@ -721,7 +723,9 @@ export default function CheckoutPage() {
 
   const availableDeals = allDeals.filter(d => cartItems.some(i => i.productId === d.productId))
 
-  const couponsEnabled = flags.find((f) => f.key === "coupons_enabled")?.enabled ?? true
+  // Prefer config-service features for visibility; default to disabled when missing
+  const [configFeatures, setConfigFeatures] = useState<Record<string, boolean>>({})
+  const couponsEnabled = configFeatures["coupons_enabled"] === true
   const stripeFeatureEnabled =
     flags.find((f) => f.key === "stripe_enabled" || f.key === "stripe")?.enabled ?? true
   const stripeMethodEnabled = paymentMethods.some(
@@ -759,7 +763,10 @@ export default function CheckoutPage() {
           if (!cancelled) {
             setFlags(f)
             setAllDeals(deals)
-            if (cfg) setPaymentMethods(cfg.paymentMethods || [])
+            if (cfg) {
+              setPaymentMethods(cfg.paymentMethods || [])
+              setConfigFeatures(cfg.features || {})
+            }
           }
         }
       } catch {
@@ -771,6 +778,7 @@ export default function CheckoutPage() {
   }, [mounted])
 
   async function handleApplyCoupon() {
+    if (!couponsEnabled) return
     if (!couponCode.trim() || !authToken) return
     setCouponLoading(true)
     setCouponError("")

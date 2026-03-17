@@ -23,9 +23,12 @@ import { cn } from "@/lib/utils"
 import {
   searchProducts,
   getProductById,
-  getRegionConfig,
+  getRegions,
+  getFeatureFlags,
   type SearchResponse,
   type SearchResult,
+  type Region,
+  type FeatureFlag,
 } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
@@ -546,10 +549,10 @@ function SearchContent() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<SearchResponse | null>(null)
-  const [features, setFeatures] = useState<Record<string, boolean>>({})
-  const [featuresLoaded, setFeaturesLoaded] = useState(false)
+  const [flags, setFlags] = useState<FeatureFlag[]>([])
+  const [flagsLoaded, setFlagsLoaded] = useState(false)
 
-  const marketplaceEnabled = features["marketplace_enabled"] ?? true
+  const marketplaceEnabled = flags.find((f) => f.key === "marketplace_enabled")?.enabled ?? true
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   const query = searchParams.get("q") || ""
@@ -565,17 +568,20 @@ function SearchContent() {
     let cancelled = false
     ;(async () => {
       try {
-        const cfg = await getRegionConfig("us-tx-austin")
-        if (!cancelled) setFeatures(cfg.features || {})
+        const regions = await getRegions("", true).catch(() => [])
+        const r: Region | undefined = regions.find((r) => r.code === "us-tx-austin") ?? regions[0]
+        if (!r || cancelled) return
+        const f = await getFeatureFlags("", r.id).catch(() => [])
+        if (!cancelled) setFlags(f)
       } finally {
-        if (!cancelled) setFeaturesLoaded(true)
+        if (!cancelled) setFlagsLoaded(true)
       }
     })()
     return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
-    if (!featuresLoaded) return
+    if (!flagsLoaded) return
     if (!marketplaceEnabled) return
     let cancelled = false
     setLoading(true)
@@ -617,7 +623,7 @@ function SearchContent() {
     return () => {
       cancelled = true
     }
-  }, [query, category, sortBy, minPrice, maxPrice, page, featuresLoaded, marketplaceEnabled])
+  }, [query, category, sortBy, minPrice, maxPrice, page, flagsLoaded, marketplaceEnabled])
 
   const results = data?.results ?? []
   const totalResults = data?.total ?? 0
@@ -672,7 +678,7 @@ function SearchContent() {
     safeFacets.ratings.length > 0 ||
     safeFacets.stores.length > 0
 
-  if (!featuresLoaded) {
+  if (!flagsLoaded) {
     return (
       <div className="container py-16 flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -267,6 +267,7 @@ function ProductDetailSheet({
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [variantDrafts, setVariantDrafts] = useState<Record<string, { sku: string; price: string; stock: string }>>({})
 
   const { startUpload } = useUploadThing("productImage")
   const [uploading, setUploading] = useState(false)
@@ -287,6 +288,19 @@ function ProductDetailSheet({
         setCategories(cats)
         setTitle(p.title)
         setDescription(p.description)
+        setVariantDrafts(
+          (p.variants ?? []).reduce(
+            (acc, v) => ({
+              ...acc,
+              [v.id]: {
+                sku: v.sku ?? "",
+                price: String(v.price ?? ""),
+                stock: String(v.stockQuantity ?? 0),
+              },
+            }),
+            {} as Record<string, { sku: string; price: string; stock: string }>,
+          ),
+        )
       })
       .catch(() => toast.error("Failed to load product"))
       .finally(() => setLoading(false))
@@ -302,6 +316,21 @@ function ProductDetailSheet({
         title: title.trim(),
         description: description.trim(),
       })
+
+      // Save variants (stock/price/sku) as part of Save Product
+      for (const v of product.variants ?? []) {
+        const draft = variantDrafts[v.id]
+        if (!draft) continue
+        await updateVariant(token, v.id, {
+          sku: draft.sku,
+          name: v.name,
+          price: parseFloat(draft.price) || 0,
+          stockQuantity: parseInt(draft.stock, 10) || 0,
+        })
+      }
+
+      const refreshed = await getProductById(product.id)
+      setProduct(refreshed)
       setProduct(updated)
       setEditing(false)
       toast.success("Product updated")
@@ -569,7 +598,10 @@ function ProductDetailSheet({
                     variant={v}
                     editing={editing}
                     canDelete={product.variants.length > 1}
-                    onUpdate={(data) => handleUpdateVariant(v.id, data)}
+                    draft={variantDrafts[v.id] ?? { sku: v.sku, price: String(v.price), stock: String(v.stockQuantity) }}
+                    onDraftChange={(next) =>
+                      setVariantDrafts((prev) => ({ ...prev, [v.id]: { ...prev[v.id], ...next } }))
+                    }
                     onDelete={() => handleDeleteVariant(v.id)}
                   />
                 ))}
@@ -588,6 +620,15 @@ function ProductDetailSheet({
                   setEditing(false)
                   setTitle(product.title)
                   setDescription(product.description)
+                  setVariantDrafts(
+                    (product.variants ?? []).reduce(
+                      (acc, v) => ({
+                        ...acc,
+                        [v.id]: { sku: v.sku ?? "", price: String(v.price ?? ""), stock: String(v.stockQuantity ?? 0) },
+                      }),
+                      {} as Record<string, { sku: string; price: string; stock: string }>,
+                    ),
+                  )
                 }}
                 className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
               >
@@ -642,39 +683,17 @@ function VariantCard({
   variant,
   editing,
   canDelete,
-  onUpdate,
+  draft,
+  onDraftChange,
   onDelete,
 }: {
   variant: { id: string; sku: string; name: string; price: number; compareAtPrice: number | null; stockQuantity: number; currency: string; options: string | null }
   editing: boolean
   canDelete: boolean
-  onUpdate: (data: { sku: string; name?: string; price: number; stockQuantity: number }) => void
+  draft: { sku: string; price: string; stock: string }
+  onDraftChange: (next: Partial<{ sku: string; price: string; stock: string }>) => void
   onDelete: () => void
 }) {
-  const [localPrice, setLocalPrice] = useState(variant.price.toString())
-  const [localStock, setLocalStock] = useState(variant.stockQuantity.toString())
-  const [localSku, setLocalSku] = useState(variant.sku)
-  const [dirty, setDirty] = useState(false)
-
-  useEffect(() => {
-    setLocalPrice(variant.price.toString())
-    setLocalStock(variant.stockQuantity.toString())
-    setLocalSku(variant.sku)
-    setDirty(false)
-  }, [variant])
-
-  function markDirty() { setDirty(true) }
-
-  function handleSave() {
-    onUpdate({
-      sku: localSku,
-      name: variant.name,
-      price: parseFloat(localPrice) || 0,
-      stockQuantity: parseInt(localStock, 10) || 0,
-    })
-    setDirty(false)
-  }
-
   const stockColor =
     variant.stockQuantity === 0 ? "text-red-600" : variant.stockQuantity < 20 ? "text-yellow-600" : "text-gray-600"
 
@@ -697,8 +716,8 @@ function VariantCard({
           <div>
             <label className="mb-0.5 block text-[10px] text-gray-500">SKU</label>
             <input
-              value={localSku}
-              onChange={(e) => { setLocalSku(e.target.value); markDirty() }}
+              value={draft.sku}
+              onChange={(e) => onDraftChange({ sku: e.target.value })}
               className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#EAB308] focus:outline-none"
             />
           </div>
@@ -707,8 +726,8 @@ function VariantCard({
             <input
               type="number"
               step="0.01"
-              value={localPrice}
-              onChange={(e) => { setLocalPrice(e.target.value); markDirty() }}
+              value={draft.price}
+              onChange={(e) => onDraftChange({ price: e.target.value })}
               className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#EAB308] focus:outline-none"
             />
           </div>
@@ -716,21 +735,11 @@ function VariantCard({
             <label className="mb-0.5 block text-[10px] text-gray-500">Stock</label>
             <input
               type="number"
-              value={localStock}
-              onChange={(e) => { setLocalStock(e.target.value); markDirty() }}
+              value={draft.stock}
+              onChange={(e) => onDraftChange({ stock: e.target.value })}
               className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#EAB308] focus:outline-none"
             />
           </div>
-          {dirty && (
-            <div className="col-span-3 flex justify-end">
-              <button
-                onClick={handleSave}
-                className="inline-flex items-center gap-1 rounded-md bg-[#EAB308]/20 px-2.5 py-1 text-xs font-medium text-[#EAB308] hover:bg-[#EAB308]/30 transition-colors"
-              >
-                <Save className="h-3 w-3" /> Save variant
-              </button>
-            </div>
-          )}
         </div>
       ) : (
         <div className="flex items-center gap-4 text-sm">

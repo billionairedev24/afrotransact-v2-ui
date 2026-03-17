@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import Link from "next/link"
 import {
   ChevronRight,
@@ -11,6 +11,7 @@ import {
   Star,
   ChevronLeft,
 } from "lucide-react"
+import { useHeroCarouselStore, type HeroCarouselSlideConfig } from "@/stores/useHeroCarouselStore"
 
 export interface HeroSlide {
   id: string
@@ -22,6 +23,7 @@ export interface HeroSlide {
   ctas: { label: string; href: string; primary: boolean; icon?: React.ReactNode }[]
   bg: string
   accentBlobs?: string
+  media?: { type: "image" | "video"; url: string; overlay?: string }
 }
 
 const DEFAULT_SLIDES: HeroSlide[] = [
@@ -199,6 +201,15 @@ const DEFAULT_SLIDES: HeroSlide[] = [
 const INTERVAL_MS = 6000
 
 export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[] }) {
+  const enabledConfigs = useHeroCarouselStore((s) => s.getEnabledSlides())
+
+  const dynamicSlides = useMemo(() => {
+    if (!enabledConfigs?.length) return null
+    return enabledConfigs.map((cfg, idx) => mapConfigToSlide(cfg, idx))
+  }, [enabledConfigs])
+
+  const liveSlides = dynamicSlides && dynamicSlides.length ? dynamicSlides : slides
+
   const [current, setCurrent] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -207,10 +218,10 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
     (idx: number) => {
       if (isAnimating) return
       setIsAnimating(true)
-      setCurrent((idx + slides.length) % slides.length)
+      setCurrent((idx + liveSlides.length) % liveSlides.length)
       setTimeout(() => setIsAnimating(false), 500)
     },
-    [isAnimating, slides.length]
+    [isAnimating, liveSlides.length]
   )
 
   const prev = useCallback(() => go(current - 1), [current, go])
@@ -232,13 +243,44 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
     return () => window.removeEventListener("keydown", onKey)
   }, [prev, next])
 
-  const slide = slides[current]
+  useEffect(() => {
+    // When admin changes slide count, keep index valid
+    setCurrent((c) => Math.min(c, Math.max(0, liveSlides.length - 1)))
+  }, [liveSlides.length])
+
+  const slide = liveSlides[current]
 
   return (
     <section
       className={`relative overflow-hidden min-h-[480px] flex items-center bg-gradient-to-br ${slide.bg}`}
       aria-label="Promotional carousel"
     >
+      {/* Optional media as background */}
+      {slide.media && (
+        <div className="absolute inset-0">
+          {slide.media.type === "video" ? (
+            <video
+              className="absolute inset-0 h-full w-full object-cover"
+              src={slide.media.url}
+              muted
+              playsInline
+              autoPlay
+              loop
+            />
+          ) : (
+            <img
+              src={slide.media.url}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <div
+            className="absolute inset-0"
+            style={{ background: slide.media.overlay ?? "rgba(255,255,255,0.35)" }}
+          />
+        </div>
+      )}
+
       {/* Accent blobs */}
       {slide.accentBlobs && (
         <div
@@ -344,7 +386,7 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
 
       {/* Dot indicators */}
       <div className="absolute bottom-5 left-0 right-0 flex items-center justify-center gap-2 z-10">
-        {slides.map((s, i) => (
+        {liveSlides.map((s, i) => (
           <button
             key={s.id}
             onClick={() => go(i)}
@@ -359,4 +401,50 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
       </div>
     </section>
   )
+}
+
+function mapConfigToSlide(cfg: HeroCarouselSlideConfig, idx: number): HeroSlide {
+  const badgeIcon =
+    idx % 4 === 0 ? <Sparkles className="h-3 w-3" /> :
+    idx % 4 === 1 ? <Tag className="h-3 w-3" /> :
+    idx % 4 === 2 ? <Star className="h-3 w-3" /> :
+    <Gift className="h-3 w-3" />
+
+  const headline = cfg.headline.split("\n").map((line, i) => (
+    <span key={`${cfg.id}-h-${i}`}>
+      {line}
+      {i < cfg.headline.split("\n").length - 1 ? <br /> : null}
+    </span>
+  ))
+
+  const subtext = cfg.subtext.split("\n").map((line, i) => (
+    <span key={`${cfg.id}-s-${i}`}>
+      {line}
+      {i < cfg.subtext.split("\n").length - 1 ? <br /> : null}
+    </span>
+  ))
+
+  const media =
+    cfg.mediaType && cfg.mediaType !== "none" && cfg.mediaUrl
+      ? { type: cfg.mediaType, url: cfg.mediaUrl, overlay: cfg.mediaOverlay }
+      : undefined
+
+  return {
+    id: cfg.id,
+    type: "promo",
+    badge: cfg.badgeText
+      ? { icon: badgeIcon, text: cfg.badgeText, color: cfg.badgeColor || "border-gray-300 bg-white/60 text-gray-700" }
+      : undefined,
+    headline,
+    subtext,
+    ctas: [
+      { label: cfg.primaryCtaLabel, href: cfg.primaryCtaHref, primary: true, icon: <ChevronRight className="h-4 w-4" /> },
+      ...(cfg.secondaryCtaLabel && cfg.secondaryCtaHref
+        ? [{ label: cfg.secondaryCtaLabel, href: cfg.secondaryCtaHref, primary: false, icon: <Store className="h-4 w-4 text-primary" /> }]
+        : []),
+    ],
+    bg: cfg.bg,
+    accentBlobs: cfg.accentBlobs,
+    media,
+  }
 }
