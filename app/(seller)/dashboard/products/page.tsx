@@ -60,6 +60,7 @@ export default function ProductsPage() {
   const [_storeId, setStoreId] = useState<string | null>(null)
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
+  const [detailMode, setDetailMode] = useState<"view" | "edit">("view")
   const [deleteTarget, setDeleteTarget] = useState<FlatProduct | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
@@ -186,9 +187,28 @@ export default function ProductsPage() {
           const row = info.row.original
           const canSubmit = row.status === "draft" || row.status === "rejected"
           const actions: RowAction[] = [
-            { label: "View Details", icon: <Eye />, onClick: () => setSelectedProductId(row.id) },
-            { label: "Submit for Review", icon: <Send />, onClick: () => handleQuickSubmitForReview(row.id), hidden: !canSubmit },
-            { label: "Edit", icon: <Pencil />, onClick: () => setSelectedProductId(row.id) },
+            {
+              label: "View Details",
+              icon: <Eye />,
+              onClick: () => {
+                setDetailMode("view")
+                setSelectedProductId(row.id)
+              },
+            },
+            {
+              label: "Submit for Review",
+              icon: <Send />,
+              onClick: () => handleQuickSubmitForReview(row.id),
+              hidden: !canSubmit,
+            },
+            {
+              label: "Edit",
+              icon: <Pencil />,
+              onClick: () => {
+                setDetailMode("edit")
+                setSelectedProductId(row.id)
+              },
+            },
             { label: "Delete", icon: <Trash2 />, variant: "danger" as const, onClick: () => setDeleteTarget(row) },
           ]
           return <RowActions actions={actions} />
@@ -229,6 +249,7 @@ export default function ProductsPage() {
 
       <ProductDetailSheet
         productId={selectedProductId}
+        mode={detailMode}
         onClose={() => setSelectedProductId(null)}
         onUpdated={loadProducts}
       />
@@ -252,10 +273,12 @@ export default function ProductsPage() {
 
 function ProductDetailSheet({
   productId,
+  mode,
   onClose,
   onUpdated,
 }: {
   productId: string | null
+  mode: "view" | "edit"
   onClose: () => void
   onUpdated: () => void
 }) {
@@ -301,6 +324,8 @@ function ProductDetailSheet({
             {} as Record<string, { sku: string; price: string; stock: string }>,
           ),
         )
+        // Only auto-enable editing when explicitly opened in edit mode
+        setEditing(mode === "edit")
       })
       .catch(() => toast.error("Failed to load product"))
       .finally(() => setLoading(false))

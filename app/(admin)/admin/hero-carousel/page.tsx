@@ -1,11 +1,21 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Eye, EyeOff, MoveDown, MoveUp, Plus, Save, Trash2, X } from "lucide-react"
+import { toast } from "sonner"
 import { HeroCarousel } from "@/components/home/HeroCarousel"
-import { useHeroCarouselStore, type HeroCarouselSlideConfig } from "@/stores/useHeroCarouselStore"
+import { getAccessToken } from "@/lib/auth-helpers"
+import {
+  getAdminHeroSlides,
+  upsertAdminHeroSlide,
+  deleteAdminHeroSlide,
+  type HeroSlideUpsertRequest,
+  type HeroSlideConfig as BackendHeroSlideConfig,
+} from "@/lib/api"
 
-const BLANK: HeroCarouselSlideConfig = {
+type EditableHeroSlide = Omit<BackendHeroSlideConfig, "createdAt" | "updatedAt">
+
+const BLANK: EditableHeroSlide = {
   id: "",
   enabled: true,
   order: 0,
@@ -29,31 +39,31 @@ function SlideModal({
   onClose,
   onSave,
 }: {
-  initial: Partial<HeroCarouselSlideConfig>
+  initial: Partial<EditableHeroSlide>
   onClose: () => void
-  onSave: (slide: HeroCarouselSlideConfig) => void
+  onSave: (slide: EditableHeroSlide) => void
 }) {
-  const [form, setForm] = useState<HeroCarouselSlideConfig>({ ...BLANK, ...initial } as HeroCarouselSlideConfig)
+  const [form, setForm] = useState<EditableHeroSlide>({ ...BLANK, ...initial } as EditableHeroSlide)
   const isEdit = !!initial.id
 
-  const field = (label: string, key: keyof HeroCarouselSlideConfig, placeholder = "") => (
+  const field = (label: string, key: keyof EditableHeroSlide, placeholder = "") => (
     <div>
       <label className="block text-xs text-gray-500 mb-1">{label}</label>
       <input
         value={String(form[key] ?? "")}
-        onChange={(e) => setForm({ ...form, [key]: e.target.value } as HeroCarouselSlideConfig)}
+        onChange={(e) => setForm({ ...form, [key]: e.target.value } as EditableHeroSlide)}
         placeholder={placeholder}
         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
       />
     </div>
   )
 
-  const textarea = (label: string, key: keyof HeroCarouselSlideConfig, placeholder = "") => (
+  const textarea = (label: string, key: keyof EditableHeroSlide, placeholder = "") => (
     <div>
       <label className="block text-xs text-gray-500 mb-1">{label}</label>
       <textarea
         value={String(form[key] ?? "")}
-        onChange={(e) => setForm({ ...form, [key]: e.target.value } as HeroCarouselSlideConfig)}
+        onChange={(e) => setForm({ ...form, [key]: e.target.value } as EditableHeroSlide)}
         placeholder={placeholder}
         rows={3}
         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors resize-none"
@@ -167,11 +177,176 @@ function SlideModal({
 }
 
 export default function AdminHeroCarouselPage() {
-  const { slides, upsertSlide, deleteSlide, toggleSlide, moveSlide } = useHeroCarouselStore()
-  const [modal, setModal] = useState<Partial<HeroCarouselSlideConfig> | null>(null)
+  const [slides, setSlides] = useState<EditableHeroSlide[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState<Partial<EditableHeroSlide> | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
+  // Load from backend
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const token = await getAccessToken()
+        if (!token || cancelled) return
+        const data = await getAdminHeroSlides(token)
+        if (!cancelled)
+          setSlides(
+            data.map(({ createdAt, updatedAt, ...rest }) => rest)
+          )
+      } catch (e) {
+        if (!cancelled) {
+          toast.error(e instanceof Error ? e.message : "Failed to load hero slides")
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  async function refresh() {
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      const data = await getAdminHeroSlides(token)
+      setSlides(
+        data.map(({ createdAt, updatedAt, ...rest }) => rest)
+      )
+    } catch {
+      toast.error("Failed to refresh hero slides")
+    }
+  }
+
+  async function persistSlide(s: EditableHeroSlide) {
+    const token = await getAccessToken()
+    if (!token) return
+    const body: HeroSlideUpsertRequest = {
+      id: s.id,
+      enabled: s.enabled,
+      order: s.order,
+      badgeText: s.badgeText ?? null,
+      badgeColor: s.badgeColor ?? null,
+      headline: s.headline,
+      subtext: s.subtext,
+      primaryCtaLabel: s.primaryCtaLabel,
+      primaryCtaHref: s.primaryCtaHref,
+      secondaryCtaLabel: s.secondaryCtaLabel ?? null,
+      secondaryCtaHref: s.secondaryCtaHref ?? null,
+      bg: s.bg,
+      accentBlobs: s.accentBlobs ?? null,
+      mediaType: s.mediaType ?? "none",
+      mediaUrl: s.mediaUrl ?? null,
+      mediaOverlay: s.mediaOverlay ?? null,
+    }
+    await upsertAdminHeroSlide(token, body)
+  }
+
   const ordered = useMemo(() => [...slides].sort((a, b) => a.order - b.order), [slides])
+  const previewSlides = useMemo(
+    () =>
+      ordered
+        .filter((s) => s.enabled)
+        .map((s, idx) => ({
+          id: s.id,
+          type: "promo" as const,
+          badge: s.badgeText
+            ? {
+                icon: idx % 3 === 0 ? <Eye className="h-3 w-3" /> : idx % 3 === 1 ? <EyeOff className="h-3 w-3" /> : undefined,
+                text: s.badgeText,
+                color: s.badgeColor || "border-primary/30 bg-primary/10 text-primary",
+              }
+            : undefined,
+          headline: s.headline.split(/\r?\n|\\n/g).map((line, i, arr) => (
+            <span key={i}>
+              {line}
+              {i < arr.length - 1 && <br />}
+            </span>
+          )),
+          subtext: s.subtext.split(/\r?\n|\\n/g).map((line, i, arr) => (
+            <span key={i}>
+              {line}
+              {i < arr.length - 1 && <br />}
+            </span>
+          )),
+          stats: undefined,
+          ctas: [
+            {
+              label: s.primaryCtaLabel,
+              href: s.primaryCtaHref,
+              primary: true,
+            },
+            ...(s.secondaryCtaLabel && s.secondaryCtaHref
+              ? [
+                  {
+                    label: s.secondaryCtaLabel,
+                    href: s.secondaryCtaHref,
+                    primary: false as const,
+                  },
+                ]
+              : []),
+          ],
+          bg: s.bg,
+          accentBlobs: s.accentBlobs ?? undefined,
+          media:
+            s.mediaType && s.mediaType !== "none" && s.mediaUrl
+              ? {
+                  type: s.mediaType === "video" ? ("video" as const) : ("image" as const),
+                  url: s.mediaUrl,
+                  overlay: s.mediaOverlay ?? undefined,
+                }
+              : undefined,
+        })),
+    [ordered]
+  )
+
+  async function handleUpsert(slide: EditableHeroSlide) {
+    try {
+      await persistSlide(slide)
+      toast.success("Hero slide saved")
+      await refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save hero slide")
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      await deleteAdminHeroSlide(token, id)
+      toast.success("Hero slide deleted")
+      await refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete hero slide")
+    }
+  }
+
+  async function handleToggle(id: string) {
+    const slide = slides.find((s) => s.id === id)
+    if (!slide) return
+    await handleUpsert({ ...slide, enabled: !slide.enabled })
+  }
+
+  async function handleMove(id: string, dir: "up" | "down") {
+    const idx = ordered.findIndex((s) => s.id === id)
+    if (idx < 0) return
+    const swapWith = dir === "up" ? idx - 1 : idx + 1
+    if (swapWith < 0 || swapWith >= ordered.length) return
+    const a = ordered[idx]
+    const b = ordered[swapWith]
+    try {
+      await Promise.all([
+        persistSlide({ ...a, order: b.order }),
+        persistSlide({ ...b, order: a.order }),
+      ])
+      await refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to reorder slides")
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -192,7 +367,15 @@ export default function AdminHeroCarouselPage() {
       </div>
 
       <div className="rounded-2xl border border-gray-200 overflow-hidden">
-        <HeroCarousel />
+        {loading ? (
+          <div className="py-16 text-center text-gray-500 text-sm">Loading hero slides…</div>
+        ) : previewSlides.length ? (
+          <HeroCarousel slides={previewSlides} />
+        ) : (
+          <div className="py-16 text-center text-gray-500 text-sm">
+            No enabled slides yet. Create one above to see the customer preview.
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">
@@ -211,21 +394,21 @@ export default function AdminHeroCarouselPage() {
 
               <div className="flex items-center gap-2 shrink-0">
                 <button
-                  onClick={() => moveSlide(s.id, "up")}
+                  onClick={() => handleMove(s.id, "up")}
                   className="h-9 w-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50"
                   aria-label="Move up"
                 >
                   <MoveUp className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => moveSlide(s.id, "down")}
+                  onClick={() => handleMove(s.id, "down")}
                   className="h-9 w-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50"
                   aria-label="Move down"
                 >
                   <MoveDown className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => toggleSlide(s.id)}
+                  onClick={() => handleToggle(s.id)}
                   className={`h-9 rounded-xl border px-3 text-sm font-semibold transition-colors ${
                     s.enabled ? "border-emerald-500/30 bg-emerald-50 text-emerald-700" : "border-gray-200 bg-gray-50 text-gray-600"
                   }`}
@@ -256,7 +439,7 @@ export default function AdminHeroCarouselPage() {
                     Cancel
                   </button>
                   <button
-                    onClick={() => { deleteSlide(s.id); setConfirmDelete(null) }}
+                    onClick={() => { handleDelete(s.id); setConfirmDelete(null) }}
                     className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
                   >
                     Delete
@@ -268,13 +451,7 @@ export default function AdminHeroCarouselPage() {
         ))}
       </div>
 
-      {modal && (
-        <SlideModal
-          initial={modal}
-          onClose={() => setModal(null)}
-          onSave={(slide) => upsertSlide(slide)}
-        />
-      )}
+      {modal && <SlideModal initial={modal} onClose={() => setModal(null)} onSave={handleUpsert} />}
     </div>
   )
 }

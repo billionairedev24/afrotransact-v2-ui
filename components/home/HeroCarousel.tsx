@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import {
   ChevronRight,
@@ -11,7 +11,7 @@ import {
   Star,
   ChevronLeft,
 } from "lucide-react"
-import { useHeroCarouselStore, type HeroCarouselSlideConfig } from "@/stores/useHeroCarouselStore"
+import { getPublicHeroSlides, type HeroSlideConfig } from "@/lib/api"
 
 export interface HeroSlide {
   id: string
@@ -26,193 +26,35 @@ export interface HeroSlide {
   media?: { type: "image" | "video"; url: string; overlay?: string }
 }
 
-const DEFAULT_SLIDES: HeroSlide[] = [
-  {
-    id: "brand",
-    type: "brand",
-    badge: {
-      icon: <Sparkles className="h-3 w-3" />,
-      text: "Now in Austin, TX",
-      color: "border-primary/30 bg-primary/10 text-primary",
-    },
-    headline: (
-      <>
-        Every Flavor{" "}
-        <span className="text-primary">of Home,</span>
-        <br />
-        Delivered{" "}
-        <span className="relative">
-          <span className="text-emerald-400">to You.</span>
-          <svg
-            aria-hidden
-            viewBox="0 0 220 12"
-            className="absolute -bottom-2 left-0 w-full"
-            preserveAspectRatio="none"
-          >
-            <path
-              d="M3 9 C40 3, 80 11, 120 5 S180 11, 217 6"
-              stroke="#22c55e"
-              strokeWidth="3"
-              fill="none"
-              strokeLinecap="round"
-              opacity="0.6"
-            />
-          </svg>
-        </span>
-      </>
-    ),
-    subtext: (
-      <>
-        Authentic food, spices, and cultural goods from{" "}
-        <span className="text-gray-900 font-medium">200+ immigrant-owned stores</span> across Austin.
-        Support your neighbors. Taste the world.
-      </>
-    ),
-    stats: [
-      { value: "200+", label: "Verified Stores" },
-      { value: "5,000+", label: "Products" },
-      { value: "5 cities", label: "& growing" },
-    ],
-    ctas: [
-      { label: "Start Shopping", href: "/search", primary: true, icon: <ChevronRight className="h-4 w-4" /> },
-      { label: "Browse Stores", href: "/stores", primary: false, icon: <Store className="h-4 w-4 text-primary" /> },
-    ],
-    bg: "from-emerald-50 via-white to-white",
-    accentBlobs:
-      "radial-gradient(ellipse 80% 60% at 10% 50%, rgba(212,168,83,0.12) 0%, transparent 60%), " +
-      "radial-gradient(ellipse 60% 80% at 90% 30%, rgba(34,197,94,0.08) 0%, transparent 60%)",
-  },
-  {
-    id: "fresh-produce-week",
-    type: "promo",
-    badge: {
-      icon: <Tag className="h-3 w-3" />,
-      text: "Flash Sale · Ends Sunday",
-      color: "border-orange-500/30 bg-orange-500/10 text-orange-400",
-    },
-    headline: (
-      <>
-        Fresh Produce{" "}
-        <span className="text-orange-400">Week</span>
-        <br />
-        <span className="text-3xl sm:text-4xl md:text-5xl">Up to{" "}
-          <span className="text-primary font-black">40% Off</span>
-        </span>
-      </>
-    ),
-    subtext: (
-      <>
-        Plantains, cassava, scotch bonnets, yams and more — direct from{" "}
-        <span className="text-gray-900 font-medium">local immigrant farmers</span> and vendors near you.
-        Buy 2 get 1 free on selected items.
-      </>
-    ),
-    stats: [
-      { value: "40%", label: "Max discount" },
-      { value: "80+", label: "Items on sale" },
-      { value: "Today", label: "Delivery available" },
-    ],
-    ctas: [
-      { label: "Shop the Sale", href: "/deals", primary: true, icon: <Tag className="h-4 w-4" /> },
-      { label: "See All Deals", href: "/deals", primary: false },
-    ],
-    bg: "from-orange-50 via-white to-white",
-    accentBlobs:
-      "radial-gradient(ellipse 70% 70% at 15% 60%, rgba(251,146,60,0.15) 0%, transparent 55%), " +
-      "radial-gradient(ellipse 50% 60% at 85% 20%, rgba(212,168,83,0.10) 0%, transparent 55%)",
-  },
-  {
-    id: "seller-spotlight",
-    type: "seller_spotlight",
-    badge: {
-      icon: <Star className="h-3 w-3" />,
-      text: "Seller Spotlight",
-      color: "border-yellow-500/30 bg-yellow-500/10 text-yellow-400",
-    },
-    headline: (
-      <>
-        <span className="text-yellow-400">Mama&apos;s Market</span>
-        <br />
-        <span className="text-3xl sm:text-4xl">Your Neighborhood&apos;s{" "}
-          <span className="text-gray-900">Favorite Store</span>
-        </span>
-      </>
-    ),
-    subtext: (
-      <>
-        <span className="text-gray-900 font-medium">Amara Okafor</span> left Lagos and built a thriving
-        West African grocery right here in Austin. Over{" "}
-        <span className="text-gray-900 font-medium">312 five-star reviews</span> and growing daily.
-      </>
-    ),
-    stats: [
-      { value: "4.8★", label: "Store rating" },
-      { value: "312", label: "Reviews" },
-      { value: "0.3 mi", label: "From you" },
-    ],
-    ctas: [
-      { label: "Visit Store", href: "/stores", primary: true, icon: <Store className="h-4 w-4" /> },
-      { label: "Start Selling Too", href: "/auth/register?role=seller", primary: false },
-    ],
-    bg: "from-yellow-50 via-white to-white",
-    accentBlobs:
-      "radial-gradient(ellipse 60% 70% at 5% 40%, rgba(234,179,8,0.12) 0%, transparent 55%), " +
-      "radial-gradient(ellipse 50% 50% at 80% 70%, rgba(212,168,83,0.10) 0%, transparent 55%)",
-  },
-  {
-    id: "first-order",
-    type: "offer",
-    badge: {
-      icon: <Gift className="h-3 w-3" />,
-      text: "New customer offer",
-      color: "border-violet-500/30 bg-violet-500/10 text-violet-400",
-    },
-    headline: (
-      <>
-        <span className="text-violet-400">First Order?</span>
-        <br />
-        Free Delivery{" "}
-        <span className="text-gray-900">on Us.</span>
-      </>
-    ),
-    subtext: (
-      <>
-        Create your account today and get{" "}
-        <span className="text-gray-900 font-medium">free delivery on your first order</span> from any
-        store in Austin. No minimum spend required.
-      </>
-    ),
-    stats: [
-      { value: "Free", label: "First delivery" },
-      { value: "25–40", label: "Min delivery" },
-      { value: "$0", label: "Minimum spend" },
-    ],
-    ctas: [
-      { label: "Create Account", href: "/auth/register", primary: true, icon: <ChevronRight className="h-4 w-4" /> },
-      { label: "Learn More", href: "/about", primary: false },
-    ],
-    bg: "from-violet-50 via-white to-white",
-    accentBlobs:
-      "radial-gradient(ellipse 70% 60% at 20% 60%, rgba(139,92,246,0.15) 0%, transparent 55%), " +
-      "radial-gradient(ellipse 50% 50% at 85% 30%, rgba(212,168,83,0.08) 0%, transparent 55%)",
-  },
-]
-
 const INTERVAL_MS = 6000
 
-export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[] }) {
-  const enabledConfigs = useHeroCarouselStore((s) => s.getEnabledSlides())
-
-  const dynamicSlides = useMemo(() => {
-    if (!enabledConfigs?.length) return null
-    return enabledConfigs.map((cfg, idx) => mapConfigToSlide(cfg, idx))
-  }, [enabledConfigs])
-
-  const liveSlides = dynamicSlides && dynamicSlides.length ? dynamicSlides : slides
-
+export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
+  const [liveSlides, setLiveSlides] = useState<HeroSlide[]>(slides ?? [])
   const [current, setCurrent] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Load dynamic slides from config-service; render nothing if backend has none.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const cfg = await getPublicHeroSlides().catch(() => [])
+        if (cancelled) return
+        const enabled = cfg.filter((c) => c.enabled)
+        if (enabled.length) {
+          setLiveSlides(enabled.map((c, idx) => mapConfigToSlide(c, idx)))
+        } else {
+          setLiveSlides([])
+        }
+      } catch {
+        // ignore, keep any passed-in slides (likely admin preview) or nothing
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const go = useCallback(
     (idx: number) => {
@@ -229,9 +71,10 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
 
   // Auto-advance
   useEffect(() => {
+    if (!liveSlides.length) return
     timerRef.current = setInterval(() => next(), INTERVAL_MS)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [next])
+  }, [next, liveSlides.length])
 
   // Keyboard navigation
   useEffect(() => {
@@ -248,7 +91,11 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
     setCurrent((c) => Math.min(c, Math.max(0, liveSlides.length - 1)))
   }, [liveSlides.length])
 
-  const slide = liveSlides[current]
+  if (!liveSlides.length) {
+    return null
+  }
+
+  const slide = liveSlides[current] ?? liveSlides[0]
 
   return (
     <section
@@ -403,48 +250,65 @@ export function HeroCarousel({ slides = DEFAULT_SLIDES }: { slides?: HeroSlide[]
   )
 }
 
-function mapConfigToSlide(cfg: HeroCarouselSlideConfig, idx: number): HeroSlide {
+function mapConfigToSlide(cfg: HeroSlideConfig, idx: number): HeroSlide {
   const badgeIcon =
     idx % 4 === 0 ? <Sparkles className="h-3 w-3" /> :
     idx % 4 === 1 ? <Tag className="h-3 w-3" /> :
     idx % 4 === 2 ? <Star className="h-3 w-3" /> :
     <Gift className="h-3 w-3" />
 
-  const headline = cfg.headline.split("\n").map((line, i) => (
+  // Support both real newlines and literal "\n" from seeded data
+  const headline = (cfg.headline ?? "").split(/\r?\n|\\n/g).map((line, i, arr) => (
     <span key={`${cfg.id}-h-${i}`}>
       {line}
-      {i < cfg.headline.split("\n").length - 1 ? <br /> : null}
+      {i < arr.length - 1 ? <br /> : null}
     </span>
   ))
 
-  const subtext = cfg.subtext.split("\n").map((line, i) => (
+  const subtext = (cfg.subtext ?? "").split(/\r?\n|\\n/g).map((line, i, arr) => (
     <span key={`${cfg.id}-s-${i}`}>
       {line}
-      {i < cfg.subtext.split("\n").length - 1 ? <br /> : null}
+      {i < arr.length - 1 ? <br /> : null}
     </span>
   ))
 
   const media =
     cfg.mediaType && cfg.mediaType !== "none" && cfg.mediaUrl
-      ? { type: cfg.mediaType, url: cfg.mediaUrl, overlay: cfg.mediaOverlay }
+      ? { type: cfg.mediaType, url: cfg.mediaUrl, overlay: cfg.mediaOverlay ?? undefined }
       : undefined
 
   return {
     id: cfg.id,
     type: "promo",
     badge: cfg.badgeText
-      ? { icon: badgeIcon, text: cfg.badgeText, color: cfg.badgeColor || "border-gray-300 bg-white/60 text-gray-700" }
+      ? {
+          icon: badgeIcon,
+          text: cfg.badgeText ?? "",
+          color: cfg.badgeColor || "border-gray-300 bg-white/60 text-gray-700",
+        }
       : undefined,
     headline,
     subtext,
     ctas: [
-      { label: cfg.primaryCtaLabel, href: cfg.primaryCtaHref, primary: true, icon: <ChevronRight className="h-4 w-4" /> },
+      {
+        label: cfg.primaryCtaLabel,
+        href: cfg.primaryCtaHref,
+        primary: true,
+        icon: <ChevronRight className="h-4 w-4" />,
+      },
       ...(cfg.secondaryCtaLabel && cfg.secondaryCtaHref
-        ? [{ label: cfg.secondaryCtaLabel, href: cfg.secondaryCtaHref, primary: false, icon: <Store className="h-4 w-4 text-primary" /> }]
+        ? [
+            {
+              label: cfg.secondaryCtaLabel,
+              href: cfg.secondaryCtaHref,
+              primary: false,
+              icon: <Store className="h-4 w-4 text-primary" />,
+            },
+          ]
         : []),
     ],
     bg: cfg.bg,
-    accentBlobs: cfg.accentBlobs,
+    accentBlobs: cfg.accentBlobs ?? undefined,
     media,
   }
 }

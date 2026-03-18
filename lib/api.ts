@@ -1681,6 +1681,84 @@ export function getPublicPlatformDeals(audience?: string) {
   return api<PlatformDealData[]>(`/api/v1/platform-deals${q}`)
 }
 
+// ── Config: Ads & Hero Carousel (public) ──
+
+export interface AdConfig {
+  id: string
+  type: "banner" | "strip" | "card"
+  enabled: boolean
+  title: string
+  body?: string | null
+  ctaLabel?: string | null
+  ctaHref?: string | null
+  badgeText?: string | null
+  sponsor?: string | null
+  gradient: string
+  accentColor: string
+  dismissible: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface HeroSlideConfig {
+  id: string
+  enabled: boolean
+  order: number
+  badgeText?: string | null
+  badgeColor?: string | null
+  headline: string
+  subtext: string
+  primaryCtaLabel: string
+  primaryCtaHref: string
+  secondaryCtaLabel?: string | null
+  secondaryCtaHref?: string | null
+  bg: string
+  accentBlobs?: string | null
+  mediaType: "none" | "image" | "video"
+  mediaUrl?: string | null
+  mediaOverlay?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export async function getPublicAds(): Promise<AdConfig[]> {
+  const res = await fetch(`${API_BASE}/api/v1/config/ads`)
+  if (!res.ok) return []
+  const data = (await res.json()) as { ads?: AdConfig[] }
+  return data.ads ?? []
+}
+
+export async function getPublicHeroSlides(): Promise<HeroSlideConfig[]> {
+  const res = await fetch(`${API_BASE}/api/v1/config/hero-carousel`)
+  if (!res.ok) return []
+  const data = (await res.json()) as { slides?: HeroSlideConfig[] }
+  return data.slides ?? []
+}
+
+// Admin: Hero carousel
+
+export async function getAdminHeroSlides(token: string): Promise<HeroSlideConfig[]> {
+  const res = await api<{ slides?: HeroSlideConfig[] }>("/api/v1/admin/hero-carousel", { token })
+  return res.slides ?? []
+}
+
+export type HeroSlideUpsertRequest = Omit<HeroSlideConfig, "createdAt" | "updatedAt">
+
+export function upsertAdminHeroSlide(token: string, body: HeroSlideUpsertRequest) {
+  return api<{ status: string }>("/api/v1/admin/hero-carousel", {
+    method: "POST",
+    body,
+    token,
+  })
+}
+
+export function deleteAdminHeroSlide(token: string, id: string) {
+  return api<{ status: string }>(`/api/v1/admin/hero-carousel/${id}`, {
+    method: "DELETE",
+    token,
+  })
+}
+
 // ── Search / Elasticsearch ───────────────────────────────────────────────────
 
 /**
