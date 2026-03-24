@@ -5,6 +5,7 @@ import { Eye, EyeOff, MoveDown, MoveUp, Plus, Save, Trash2, X } from "lucide-rea
 import { toast } from "sonner"
 import { HeroCarousel } from "@/components/home/HeroCarousel"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { useUploadThing } from "@/lib/uploadthing"
 import {
   getAdminHeroSlides,
   upsertAdminHeroSlide,
@@ -34,6 +35,30 @@ const BLANK: EditableHeroSlide = {
   mediaOverlay: "rgba(255,255,255,0.35)",
 }
 
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}){1,2}$/
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace("#", "")
+  if (![3, 6].includes(normalized.length)) return null
+  const full = normalized.length === 3
+    ? normalized.split("").map((c) => c + c).join("")
+    : normalized
+  const n = Number.parseInt(full, 16)
+  if (Number.isNaN(n)) return null
+  return {
+    r: (n >> 16) & 255,
+    g: (n >> 8) & 255,
+    b: n & 255,
+  }
+}
+
+function rgbaFromHex(hex: string, alpha: number): string {
+  const rgb = hexToRgb(hex)
+  const a = Math.max(0, Math.min(1, alpha))
+  if (!rgb) return `rgba(255,255,255,${a.toFixed(2)})`
+  return `rgba(${rgb.r},${rgb.g},${rgb.b},${a.toFixed(2)})`
+}
+
 function SlideModal({
   initial,
   onClose,
@@ -45,6 +70,43 @@ function SlideModal({
 }) {
   const [form, setForm] = useState<EditableHeroSlide>({ ...BLANK, ...initial } as EditableHeroSlide)
   const isEdit = !!initial.id
+  const { startUpload, isUploading } = useUploadThing("heroMedia")
+  const [bgFrom, setBgFrom] = useState("#ecfdf5")
+  const [bgVia, setBgVia] = useState("#ffffff")
+  const [bgTo, setBgTo] = useState("#ffffff")
+  const [overlayHex, setOverlayHex] = useState("#ffffff")
+  const [overlayOpacity, setOverlayOpacity] = useState(0.35)
+
+  useEffect(() => {
+    const raw = String(form.bg ?? "")
+    const match = raw.match(/linear-gradient\([^,]+,\s*([^,]+),\s*([^,]+),\s*([^)]+)\)/i)
+    if (match) {
+      const a = match[1].trim()
+      const b = match[2].trim()
+      const c = match[3].trim()
+      if (HEX_COLOR.test(a)) setBgFrom(a)
+      if (HEX_COLOR.test(b)) setBgVia(b)
+      if (HEX_COLOR.test(c)) setBgTo(c)
+    }
+  }, [form.bg])
+
+  useEffect(() => {
+    const raw = String(form.mediaOverlay ?? "").trim()
+    if (HEX_COLOR.test(raw)) {
+      setOverlayHex(raw)
+      setOverlayOpacity(1)
+      return
+    }
+    const rgba = raw.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*([0-9]*\.?[0-9]+))?\s*\)$/i)
+    if (!rgba) return
+    const r = Math.max(0, Math.min(255, Number(rgba[1])))
+    const g = Math.max(0, Math.min(255, Number(rgba[2])))
+    const b = Math.max(0, Math.min(255, Number(rgba[3])))
+    const a = rgba[4] == null ? 1 : Math.max(0, Math.min(1, Number(rgba[4])))
+    const hex = `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`.toUpperCase()
+    setOverlayHex(hex)
+    setOverlayOpacity(a)
+  }, [form.mediaOverlay])
 
   const field = (label: string, key: keyof EditableHeroSlide, placeholder = "") => (
     <div>
@@ -72,16 +134,34 @@ function SlideModal({
     </div>
   )
 
+  async function handleMediaUpload(files: FileList | null) {
+    if (!files || files.length === 0) return
+    try {
+      const uploaded = await startUpload(Array.from(files))
+      const url = uploaded?.[0]?.ufsUrl || uploaded?.[0]?.url
+      if (!url) {
+        toast.error("Upload finished but no file URL was returned")
+        return
+      }
+      const mediaType = uploaded?.[0]?.type?.startsWith("video/") ? "video" : "image"
+      setForm((prev) => ({ ...prev, mediaUrl: url, mediaType }))
+      toast.success("Media uploaded")
+    } catch {
+      toast.error("Failed to upload media")
+    }
+  }
+
   function handleSave() {
     if (!form.id.trim() || !form.headline.trim() || !form.primaryCtaLabel.trim() || !form.primaryCtaHref.trim()) return
     onSave({
       ...form,
+      bg: `linear-gradient(135deg, ${bgFrom}, ${bgVia}, ${bgTo})`,
       id: form.id.trim(),
       badgeText: form.badgeText?.trim() || undefined,
       badgeColor: form.badgeColor?.trim() || undefined,
       accentBlobs: form.accentBlobs?.trim() || undefined,
       mediaUrl: form.mediaUrl?.trim() || undefined,
-      mediaOverlay: form.mediaOverlay?.trim() || undefined,
+      mediaOverlay: rgbaFromHex(overlayHex, overlayOpacity),
       secondaryCtaLabel: form.secondaryCtaLabel?.trim() || undefined,
       secondaryCtaHref: form.secondaryCtaHref?.trim() || undefined,
     })
@@ -121,7 +201,23 @@ function SlideModal({
 
         <div className="grid grid-cols-2 gap-3">
           {field("Badge text (optional)", "badgeText", "e.g. New · Limited")}
-          {field("Badge style (tailwind classes)", "badgeColor", "border-primary/30 bg-primary/10 text-primary")}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Badge color (hex)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={HEX_COLOR.test(String(form.badgeColor ?? "")) ? String(form.badgeColor) : "#d4a853"}
+                onChange={(e) => setForm({ ...form, badgeColor: e.target.value } as EditableHeroSlide)}
+                className="h-[42px] w-14 rounded-lg border border-gray-200 bg-white p-1"
+              />
+              <input
+                value={String(form.badgeColor ?? "")}
+                onChange={(e) => setForm({ ...form, badgeColor: e.target.value } as EditableHeroSlide)}
+                placeholder="#D4A853"
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
+              />
+            </div>
+          </div>
         </div>
 
         {textarea("Headline *", "headline", "Big headline. Use line breaks.")}
@@ -136,10 +232,25 @@ function SlideModal({
           {field("Secondary CTA href", "secondaryCtaHref", "/stores")}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {field("BG gradient (tailwind)", "bg", "from-emerald-50 via-white to-white")}
-          {field("Accent blobs (CSS background)", "accentBlobs", "radial-gradient(...)")}
+        <div className="space-y-2">
+          <label className="block text-xs text-gray-500">Background gradient colors (hex)</label>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="mb-1 text-[11px] text-gray-500">Start</p>
+              <input type="color" value={bgFrom} onChange={(e) => setBgFrom(e.target.value)} className="h-[42px] w-full rounded-xl border border-gray-200 bg-white p-1" />
+            </div>
+            <div>
+              <p className="mb-1 text-[11px] text-gray-500">Middle</p>
+              <input type="color" value={bgVia} onChange={(e) => setBgVia(e.target.value)} className="h-[42px] w-full rounded-xl border border-gray-200 bg-white p-1" />
+            </div>
+            <div>
+              <p className="mb-1 text-[11px] text-gray-500">End</p>
+              <input type="color" value={bgTo} onChange={(e) => setBgTo(e.target.value)} className="h-[42px] w-full rounded-xl border border-gray-200 bg-white p-1" />
+            </div>
+          </div>
+          <p className="text-[11px] text-gray-400">Stored as CSS gradient string in DB.</p>
         </div>
+        {field("Accent blobs (CSS background)", "accentBlobs", "radial-gradient(...)")}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -154,9 +265,68 @@ function SlideModal({
               <option value="video">Video</option>
             </select>
           </div>
-          {field("Media URL", "mediaUrl", "https://...")}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Media upload (UploadThing)</label>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
+              onChange={(e) => handleMediaUpload(e.target.files)}
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-gray-700 hover:file:bg-gray-200"
+              disabled={isUploading}
+            />
+            <p className="mt-1 text-[11px] text-gray-400">{isUploading ? "Uploading..." : "Upload sets media URL automatically."}</p>
+          </div>
         </div>
-        {field("Media overlay (CSS color)", "mediaOverlay", "rgba(255,255,255,0.35)")}
+        {field("Media URL", "mediaUrl", "https://... (auto-populated from upload)")}
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Media overlay (hex)</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={overlayHex}
+              onChange={(e) => {
+                const hex = e.target.value
+                setOverlayHex(hex)
+                setForm({ ...form, mediaOverlay: rgbaFromHex(hex, overlayOpacity) } as EditableHeroSlide)
+              }}
+              className="h-[42px] w-14 rounded-lg border border-gray-200 bg-white p-1"
+            />
+            <input
+              value={overlayHex}
+              onChange={(e) => {
+                const hex = e.target.value
+                setOverlayHex(hex)
+                if (HEX_COLOR.test(hex.trim())) {
+                  setForm({ ...form, mediaOverlay: rgbaFromHex(hex.trim(), overlayOpacity) } as EditableHeroSlide)
+                } else {
+                  setForm({ ...form, mediaOverlay: hex } as EditableHeroSlide)
+                }
+              }}
+              placeholder="#FFFFFF"
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
+            />
+          </div>
+          <div className="mt-2">
+            <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
+              <span>Overlay opacity</span>
+              <span>{Math.round(overlayOpacity * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(overlayOpacity * 100)}
+              onChange={(e) => {
+                const pct = Number(e.target.value)
+                const alpha = Math.max(0, Math.min(1, pct / 100))
+                setOverlayOpacity(alpha)
+                setForm({ ...form, mediaOverlay: rgbaFromHex(overlayHex, alpha) } as EditableHeroSlide)
+              }}
+              className="w-full accent-primary"
+            />
+            <p className="mt-1 text-[11px] text-gray-400 font-mono">{rgbaFromHex(overlayHex, overlayOpacity)}</p>
+          </div>
+        </div>
 
         <div className="flex gap-3 pt-2">
           <button onClick={onClose} className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm text-gray-600 hover:bg-gray-50">

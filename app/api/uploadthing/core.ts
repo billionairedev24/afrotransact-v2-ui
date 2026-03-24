@@ -52,6 +52,18 @@ export const ourFileRouter = {
       return { url: file.ufsUrl, name: file.name, size: file.size, type: file.type, uploadedBy: metadata.userId }
     }),
 
+  heroMedia: f({
+    "image/png": { maxFileSize: "8MB", maxFileCount: 1 },
+    "image/jpeg": { maxFileSize: "8MB", maxFileCount: 1 },
+    "image/webp": { maxFileSize: "8MB", maxFileCount: 1 },
+    "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
+    "video/webm": { maxFileSize: "32MB", maxFileCount: 1 },
+  })
+    .middleware(authMiddleware)
+    .onUploadComplete(({ metadata, file }) => {
+      return { url: file.ufsUrl, name: file.name, size: file.size, type: file.type, uploadedBy: metadata.userId }
+    }),
+
   sellerDocument: f({
     "image/png": { maxFileSize: "8MB", maxFileCount: 1 },
     "image/jpeg": { maxFileSize: "8MB", maxFileCount: 1 },

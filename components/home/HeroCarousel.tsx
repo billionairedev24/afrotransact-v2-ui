@@ -27,6 +27,8 @@ export interface HeroSlide {
 }
 
 const INTERVAL_MS = 6000
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}){1,2}$/
+const CSS_GRADIENT = /gradient\(/i
 
 export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
   const [liveSlides, setLiveSlides] = useState<HeroSlide[]>(slides ?? [])
@@ -96,10 +98,12 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
   }
 
   const slide = liveSlides[current] ?? liveSlides[0]
+  const isCssGradientBg = CSS_GRADIENT.test(slide.bg) || HEX_COLOR.test(slide.bg.trim())
 
   return (
     <section
-      className={`relative overflow-hidden min-h-[480px] flex items-center bg-gradient-to-br ${slide.bg}`}
+      className={`relative overflow-hidden min-h-[480px] flex items-center ${isCssGradientBg ? "" : `bg-gradient-to-br ${slide.bg}`}`}
+      style={isCssGradientBg ? { background: slide.bg } : undefined}
       aria-label="Promotional carousel"
     >
       {/* Optional media as background */}
@@ -158,7 +162,18 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
           {slide.badge && (
             <div className="flex items-center gap-2">
               <span
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${slide.badge.color}`}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
+                  HEX_COLOR.test(slide.badge.color.trim()) ? "" : slide.badge.color
+                }`}
+                style={
+                  HEX_COLOR.test(slide.badge.color.trim())
+                    ? {
+                        borderColor: slide.badge.color,
+                        color: slide.badge.color,
+                        backgroundColor: `${slide.badge.color}1A`,
+                      }
+                    : undefined
+                }
               >
                 {slide.badge.icon}
                 {slide.badge.text}

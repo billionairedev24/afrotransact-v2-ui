@@ -107,19 +107,20 @@ function PlanCard({
   return (
     <div
       className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border transition-all ${
-        plan.active ? "border-gray-200 bg-gray-50" : "border-gray-100 bg-gray-50 opacity-60"
-      } bg-white`}
+        plan.active ? "border-white/10 bg-white/5" : "border-white/5 bg-white/2 opacity-60"
+      }`}
+      style={{ background: "hsl(0 0% 11%)" }}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-gray-900 text-sm">{plan.name}</span>
+          <span className="font-semibold text-white text-sm">{plan.name}</span>
           {!plan.active && (
             <span className="text-[10px] text-gray-500 bg-gray-500/10 border border-gray-500/20 rounded px-1.5 py-0.5">
               Inactive
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-500 mt-0.5">
+        <p className="text-xs text-gray-400 mt-0.5">
           {plan.priceDisplay}/mo · {plan.maxProducts === -1 ? "∞" : plan.maxProducts} products ·{" "}
           {plan.maxStores} store{plan.maxStores > 1 ? "s" : ""} · {commission}% commission
         </p>
@@ -134,7 +135,7 @@ function PlanCard({
       <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={() => onEdit(plan)}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
         >
           <Edit2 className="h-3 w-3" />
           Edit
@@ -185,14 +186,14 @@ function PlanModal({
     placeholder?: string
   ) => (
     <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs text-gray-400 mb-1">{label}</label>
       {key === "features" ? (
         <textarea
           value={form.features}
           onChange={(e) => update("features", e.target.value)}
           rows={4}
           placeholder="One feature per line"
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors resize-none"
+          className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors resize-none"
         />
       ) : key === "active" ? (
         <label className="flex items-center gap-2 cursor-pointer">
@@ -200,9 +201,9 @@ function PlanModal({
             type="checkbox"
             checked={form.active}
             onChange={(e) => update("active", e.target.checked)}
-            className="rounded border-gray-300"
+            className="rounded border-white/20"
           />
-          <span className="text-sm text-gray-600">Active</span>
+          <span className="text-sm text-gray-300">Active</span>
         </label>
       ) : (
         <input
@@ -216,7 +217,7 @@ function PlanModal({
           }
           placeholder={placeholder}
           disabled={key === "slug" && mode === "edit"}
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         />
       )}
     </div>
@@ -226,16 +227,17 @@ function PlanModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative rounded-2xl border border-gray-200 w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4 bg-white"
+        className="relative rounded-2xl border border-white/15 w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4"
+        style={{ background: "hsl(0 0% 11%)" }}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900">
+          <h3 className="text-lg font-bold text-white">
             {mode === "create" ? "Create Plan" : `Edit Plan — ${plan?.name}`}
           </h3>
           <button
             onClick={onClose}
             disabled={saving}
-            className="text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50"
+            className="text-gray-400 hover:text-white transition-colors disabled:opacity-50"
           >
             <X className="h-5 w-5" />
           </button>
@@ -243,7 +245,7 @@ function PlanModal({
 
         {error && (
           <div className="flex items-center gap-3 rounded-xl border border-red-500/30 p-3 bg-red-500/5">
-            <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+            <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
             <p className="text-sm text-red-300">{error}</p>
           </div>
         )}
@@ -268,7 +270,7 @@ function PlanModal({
           <button
             onClick={onClose}
             disabled={saving}
-            className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            className="flex-1 rounded-xl border border-white/15 py-2.5 text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -403,24 +405,26 @@ export default function AdminSubscriptionPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Subscription Management</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <h1 className="text-2xl font-bold text-white">Subscription Management</h1>
+        <p className="text-gray-400 text-sm mt-1">
           Manage subscription plans and billing configuration
         </p>
       </div>
 
       {error && (
         <div
-          className="flex items-center gap-3 rounded-2xl border border-red-500/30 p-4 bg-white"
+          className="flex items-center gap-3 rounded-2xl border border-red-500/30 p-4"
+          style={{ background: "hsl(0 0% 11%)" }}
         >
-          <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
           <p className="text-sm text-red-300">{error}</p>
         </div>
       )}
 
       {success && (
         <div
-          className="flex items-center gap-3 rounded-2xl border border-emerald-500/30 p-4 bg-white"
+          className="flex items-center gap-3 rounded-2xl border border-emerald-500/30 p-4"
+          style={{ background: "hsl(0 0% 11%)" }}
         >
           <Check className="h-5 w-5 shrink-0 text-emerald-400" />
           <p className="text-sm text-emerald-300">{success}</p>
@@ -430,7 +434,7 @@ export default function AdminSubscriptionPage() {
       {/* Plans */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-900">Subscription Plans</h2>
+          <h2 className="text-base font-semibold text-white">Subscription Plans</h2>
           <button
             onClick={() => setCreateModalOpen(true)}
             disabled={status !== "authenticated" || loading}
@@ -447,9 +451,10 @@ export default function AdminSubscriptionPage() {
           </div>
         ) : sortedPlans.length === 0 ? (
           <div
-            className="rounded-2xl border border-gray-200 p-8 text-center bg-white"
+            className="rounded-2xl border border-white/10 p-8 text-center"
+            style={{ background: "hsl(0 0% 11%)" }}
           >
-            <p className="text-gray-500 text-sm">No plans yet. Create your first plan to get started.</p>
+            <p className="text-gray-400 text-sm">No plans yet. Create your first plan to get started.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -463,13 +468,14 @@ export default function AdminSubscriptionPage() {
       {/* Billing Config */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+          <h2 className="text-base font-semibold text-white flex items-center gap-2">
             <Settings className="h-4 w-4 text-primary" />
             Billing Configuration
           </h2>
         </div>
         <div
-          className="rounded-2xl border border-gray-200 p-5 space-y-4 bg-white"
+          className="rounded-2xl border border-white/10 p-5 space-y-4"
+          style={{ background: "hsl(0 0% 11%)" }}
         >
           {loading ? (
             <div className="flex items-center justify-center py-8">
@@ -482,7 +488,7 @@ export default function AdminSubscriptionPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {Object.entries(billingConfig).map(([key, value]) => (
                   <div key={key}>
-                    <label className="block text-xs text-gray-500 mb-1">
+                    <label className="block text-xs text-gray-400 mb-1">
                       {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                     </label>
                     {CONFIG_DESCRIPTIONS[key] && (
@@ -496,12 +502,12 @@ export default function AdminSubscriptionPage() {
                       onChange={(e) =>
                         setBillingConfig((prev) => ({ ...prev, [key]: e.target.value }))
                       }
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white outline-none focus:border-primary/60 transition-colors"
                     />
                   </div>
                 ))}
               </div>
-              <div className="pt-3 border-t border-gray-200 flex items-center justify-between">
+              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
                 {configSuccess && (
                   <span className="flex items-center gap-1.5 text-sm text-emerald-400">
                     <Check className="h-4 w-4" />
