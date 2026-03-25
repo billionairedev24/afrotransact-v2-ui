@@ -105,6 +105,12 @@ function normalizePreviewData(data: Record<string, unknown> | undefined): Record
   return normalizePreviewValue("", data) as Record<string, unknown>
 }
 
+function normalizeTemplateForPreview(html: string): string {
+  // Go templates can reject mixed numeric kinds in comparisons (e.g. float64 vs int literal).
+  // For preview only, rewrite `{{if gt .SomeCents 0}}` -> `{{if .SomeCents}}` to avoid type mismatch.
+  return html.replace(/\{\{\s*if\s+gt\s+(\.[A-Za-z0-9_]+(?:Cents|Total|Quantity))\s+0(?:\.0+)?\s*\}\}/g, "{{if $1}}")
+}
+
 function collectPreviewDataWarnings(data: Record<string, unknown> | undefined): string[] {
   if (!data) return []
   const warnings: string[] = []
@@ -229,7 +235,7 @@ export default function EmailTemplatesPage() {
       const token = await getAccessToken()
       if (!token) return
       const html = await previewEmailTemplate(token, selected.slug, {
-        html_body: editHTML,
+        html_body: normalizeTemplateForPreview(editHTML),
         data: normalizePreviewData(selected.sample_data),
       })
       setPreviewHTML(html)
@@ -265,7 +271,7 @@ export default function EmailTemplatesPage() {
         sampleData[v.name] = v.sample_value || `{{${v.name}}}`
       })
       const html = await previewRawTemplate(token, {
-        html_body: newHTML,
+        html_body: normalizeTemplateForPreview(newHTML),
         use_layout: newUseLayout,
         variables: newVariables,
         data: sampleData,
