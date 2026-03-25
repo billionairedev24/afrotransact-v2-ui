@@ -64,6 +64,88 @@ const STARTER_HTML = `<h1 style="color:#CA8A04;font-size:24px;margin:0 0 8px;">Y
 
 type ViewMode = "list" | "detail" | "create"
 
+function normalizePreviewValue(key: string, value: unknown): unknown {
+  if (value == null) return value
+
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizePreviewValue("", item))
+  }
+
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>
+    const out: Record<string, unknown> = {}
+    Object.entries(obj).forEach(([k, v]) => {
+      out[k] = normalizePreviewValue(k, v)
+    })
+    return out
+  }
+
+  if (typeof value !== "string") return value
+
+  const raw = value.trim()
+  if (raw === "") return value
+
+  // Go template comparisons (gt/lt) require comparable numeric types.
+  // Coerce known monetary/quantity-like fields from string -> number.
+  const shouldBeNumber =
+    key.endsWith("Cents") ||
+    key === "Quantity" ||
+    key === "quantity" ||
+    key === "Total" ||
+    key === "total"
+
+  if (!shouldBeNumber) return value
+
+  const numeric = Number(raw)
+  return Number.isFinite(numeric) ? numeric : value
+}
+
+function normalizePreviewData(data: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!data) return data
+  return normalizePreviewValue("", data) as Record<string, unknown>
+}
+
+function collectPreviewDataWarnings(data: Record<string, unknown> | undefined): string[] {
+  if (!data) return []
+  const warnings: string[] = []
+
+  function walk(value: unknown, path: string) {
+    if (value == null) return
+    if (Array.isArray(value)) {
+      value.forEach((item, idx) => walk(item, `${path}[${idx}]`))
+      return
+    }
+    if (typeof value === "object") {
+      Object.entries(value as Record<string, unknown>).forEach(([k, v]) => {
+        const next = path ? `${path}.${k}` : k
+        walk(v, next)
+      })
+      return
+    }
+
+    const key = path.split(".").pop() ?? path
+    const shouldBeNumber =
+      key.endsWith("Cents") ||
+      key === "Quantity" ||
+      key === "quantity" ||
+      key === "Total" ||
+      key === "total"
+
+    if (!shouldBeNumber || typeof value !== "string") return
+    const trimmed = value.trim()
+    if (trimmed.length === 0) {
+      warnings.push(`${path}: empty string; expected numeric value`)
+      return
+    }
+    if (!Number.isFinite(Number(trimmed))) {
+      warnings.push(`${path}: "${value}" is not numeric`)
+    }
+  }
+
+  walk(data, "")
+  return warnings
+}
+
 export default function EmailTemplatesPage() {
   const { status } = useSession()
 
@@ -97,6 +179,7 @@ export default function EmailTemplatesPage() {
   ])
   const [newPreviewHTML, setNewPreviewHTML] = useState("")
   const [creating, setCreating] = useState(false)
+  const [previewWarnings, setPreviewWarnings] = useState<string[]>([])
 
   // Send test email state
   const [showSendTest, setShowSendTest] = useState(false)
@@ -147,11 +230,13 @@ export default function EmailTemplatesPage() {
       if (!token) return
       const html = await previewEmailTemplate(token, selected.slug, {
         html_body: editHTML,
-        data: selected.sample_data,
+        data: normalizePreviewData(selected.sample_data),
       })
       setPreviewHTML(html)
+      setPreviewWarnings(collectPreviewDataWarnings(selected.sample_data))
     } catch {
       setPreviewHTML("<p style='color:red;padding:20px;'>Preview render failed — check your template syntax.</p>")
+      setPreviewWarnings(collectPreviewDataWarnings(selected?.sample_data))
     }
   }, [selected, editHTML])
 
@@ -691,6 +776,22 @@ export default function EmailTemplatesPage() {
             {"Use {{.VariableName}} for dynamic values, e.g. {{.OrderNumber}}"}
           </p>
         </div>
+
+        {previewWarnings.length > 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-sm font-semibold text-amber-800">Preview Data Warnings</p>
+            <p className="mt-1 text-xs text-amber-700">
+              Some numeric template variables in sample data are invalid and may break conditions/comparisons.
+            </p>
+            <div className="mt-2 max-h-28 overflow-auto space-y-1">
+              {previewWarnings.map((w) => (
+                <p key={w} className="text-xs font-mono text-amber-800">
+                  - {w}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-gray-200">
