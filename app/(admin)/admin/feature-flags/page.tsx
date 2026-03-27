@@ -6,7 +6,7 @@ import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 import { ToggleRight, ToggleLeft, Loader2, Plus } from "lucide-react"
 import {
-  getRegions,
+  getAdminRegions,
   getFeatureFlags,
   upsertFeatureFlag,
   type Region,
@@ -50,7 +50,7 @@ export default function FeatureFlagsPage() {
       try {
         setRegionsError(null)
         setRegionsLoading(true)
-        const data = await getRegions(token)
+        const data = await getAdminRegions(token)
         if (!cancelled) {
           setRegions(data)
           if (data.length > 0 && !selectedRegionId) {

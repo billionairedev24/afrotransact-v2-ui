@@ -27,7 +27,7 @@ import {
 import { toast } from "sonner"
 import {
   getAdminSellers,
-  getRegions,
+  getAdminRegions,
   getAdminPlans,
   getAdminSellerStats,
   getAdminProducts,
@@ -76,7 +76,7 @@ export default function AdminOverviewPage() {
         const [statsRes, pendingRes, regionsRes, plansRes, productsRes, reviewsRes] = await Promise.allSettled([
           getAdminSellerStats(token),
           getAdminSellers(token, undefined, 0, 5, "submitted"),
-          getRegions(token),
+          getAdminRegions(token),
           getAdminPlans(token),
           getAdminProducts(token, undefined, 0, 1),
           getAdminReviews(token, 1, 1),

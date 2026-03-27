@@ -11,14 +11,14 @@ import {
 import { Dialog, DialogHeader, DialogBody, DialogFooter } from "@/components/ui/Dialog"
 import { RowActions, type RowAction } from "@/components/ui/RowActions"
 import {
-  getRegions,
+  getAdminRegions,
   createRegion,
   updateRegion,
   type Region,
 } from "@/lib/api"
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-primary/60 transition-colors"
+  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60 transition-colors"
 
 type RegionFormData = {
   code: string
@@ -183,9 +183,9 @@ function RegionForm({
           id="region-active"
           checked={form.active}
           onChange={(e) => onChange({ ...form, active: e.target.checked })}
-          className="rounded border-white/20 bg-white/5 text-primary focus:ring-primary"
+          className="rounded border-border bg-background text-primary focus:ring-primary"
         />
-        <label htmlFor="region-active" className="text-sm text-gray-300">Active</label>
+        <label htmlFor="region-active" className="text-sm text-foreground">Active</label>
       </div>
     </div>
   )
@@ -255,7 +255,7 @@ export default function RegionsPage() {
     if (!token) return
     setLoading(true)
     try {
-      const data = await getRegions(token)
+      const data = await getAdminRegions(token)
       setRegions(data)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load regions")
@@ -369,8 +369,8 @@ export default function RegionsPage() {
 
   if (status !== "authenticated") {
     return (
-      <div className="rounded-2xl border border-white/10 p-8 text-center" style={{ background: "hsl(0 0% 11%)" }}>
-        <p className="text-gray-400">Sign in to manage regions.</p>
+      <div className="rounded-2xl border border-border bg-card p-8 text-center">
+        <p className="text-muted-foreground">Sign in to manage regions.</p>
       </div>
     )
   }
@@ -379,8 +379,8 @@ export default function RegionsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Regions</h1>
-          <p className="text-gray-400 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-foreground">Regions</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             {regions.length} region{regions.length !== 1 ? "s" : ""} &middot; {totalActive} active
           </p>
         </div>
@@ -394,16 +394,16 @@ export default function RegionsPage() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 py-16" style={{ background: "hsl(0 0% 11%)" }}>
+        <div className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-card py-16">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <span className="text-gray-400">Loading regions...</span>
+          <span className="text-muted-foreground">Loading regions...</span>
         </div>
       )}
 
       {!loading && regions.length === 0 && (
-        <div className="rounded-2xl border border-white/10 p-12 text-center" style={{ background: "hsl(0 0% 11%)" }}>
-          <MapPin className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400">No regions yet. Add your first region to get started.</p>
+        <div className="rounded-2xl border border-border bg-card p-12 text-center">
+          <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground">No regions yet. Add your first region to get started.</p>
         </div>
       )}
 
@@ -420,14 +420,14 @@ export default function RegionsPage() {
               className="flex items-center gap-2 group w-full text-left"
             >
               {isCountryCollapsed
-                ? <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-white transition-colors" />
-                : <ChevronDown className="h-4 w-4 text-gray-400 group-hover:text-white transition-colors" />
+                ? <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                : <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
               }
               <Globe className="h-4 w-4 text-primary" />
-              <span className="text-base font-semibold text-white">
+              <span className="text-base font-semibold text-foreground">
                 {COUNTRY_NAMES[countryGroup.country] || countryGroup.country}
               </span>
-              <span className="text-xs text-gray-500 ml-1">
+              <span className="text-xs text-muted-foreground ml-1">
                 ({countryRegionCount} region{countryRegionCount !== 1 ? "s" : ""})
               </span>
             </button>
@@ -444,23 +444,23 @@ export default function RegionsPage() {
                     className="flex items-center gap-2 group w-full text-left"
                   >
                     {isStateCollapsed
-                      ? <ChevronRight className="h-3.5 w-3.5 text-gray-500 group-hover:text-white transition-colors" />
-                      : <ChevronDown className="h-3.5 w-3.5 text-gray-500 group-hover:text-white transition-colors" />
+                      ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
                     }
-                    <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-200">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">
                       {stateGroup.state}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-muted-foreground">
                       ({stateGroup.regions.length})
                     </span>
                   </button>
 
                   {!isStateCollapsed && (
-                    <div className="ml-6 rounded-xl border border-white/10" style={{ background: "hsl(0 0% 11%)" }}>
+                    <div className="ml-6 rounded-xl border border-border bg-card">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-white/10 text-xs text-gray-400 uppercase tracking-wider">
+                          <tr className="border-b border-border text-xs text-muted-foreground uppercase tracking-wider">
                             <th className="text-left px-4 py-2.5 font-medium">City / Region</th>
                             <th className="text-right px-4 py-2.5 font-medium">Tax %</th>
                             <th className="text-right px-4 py-2.5 font-medium hidden sm:table-cell">Ship ¢/lb</th>
@@ -469,7 +469,7 @@ export default function RegionsPage() {
                             <th className="w-[50px]" />
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-border">
                           {stateGroup.regions.map((region) => {
                             const actions: RowAction[] = [
                               {
@@ -486,28 +486,28 @@ export default function RegionsPage() {
                             ]
 
                             return (
-                              <tr key={region.id} className="hover:bg-white/[0.02] transition-colors">
+                              <tr key={region.id} className="hover:bg-muted/40 transition-colors">
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <MapPin className="h-4 w-4 text-primary shrink-0" />
                                     <div className="min-w-0">
-                                      <p className="text-white font-medium truncate">
-                                        {region.city || region.name || <span className="text-gray-500 italic">Unnamed Region</span>}
+                                      <p className="text-foreground font-medium truncate">
+                                        {region.city || region.name || <span className="text-muted-foreground italic">Unnamed Region</span>}
                                       </p>
-                                      <p className="text-gray-500 text-xs font-mono truncate">{region.code || "—"}</p>
+                                      <p className="text-muted-foreground text-xs font-mono truncate">{region.code || "—"}</p>
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-4 py-3 text-right text-gray-300 tabular-nums">{region.taxRate}%</td>
-                                <td className="px-4 py-3 text-right text-gray-300 hidden sm:table-cell tabular-nums">{region.shippingRateCentsPerLb}¢</td>
-                                <td className="px-4 py-3 text-right text-gray-300 hidden md:table-cell tabular-nums">
+                                <td className="px-4 py-3 text-right text-foreground tabular-nums">{region.taxRate}%</td>
+                                <td className="px-4 py-3 text-right text-foreground hidden sm:table-cell tabular-nums">{region.shippingRateCentsPerLb}¢</td>
+                                <td className="px-4 py-3 text-right text-foreground hidden md:table-cell tabular-nums">
                                   ${(region.freeShippingThresholdCents / 100).toFixed(0)}
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   {savingId === region.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto" />
                                   ) : (
-                                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${region.active ? "bg-green-500/20 text-green-400" : "bg-white/10 text-gray-400"}`}>
+                                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${region.active ? "bg-green-500/20 text-green-700 dark:text-green-400" : "bg-muted text-muted-foreground"}`}>
                                       {region.active ? "Active" : "Off"}
                                     </span>
                                   )}
@@ -539,7 +539,7 @@ export default function RegionsPage() {
         <DialogFooter>
           <button
             onClick={() => setDialogOpen(false)}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Cancel
           </button>
