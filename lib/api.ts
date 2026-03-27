@@ -1128,25 +1128,23 @@ export async function getRegions(token: string, activeOnly = false): Promise<Reg
 }
 
 export async function getAdminRegions(token: string): Promise<Region[]> {
-  // Canonical regions listing endpoint in this stack is /api/v1/regions.
-  // Write operations are admin-protected by gateway/service middleware.
-  const res = await api<{ regions: RawRegion[] } | RawRegion[]>("/api/v1/regions", { token })
+  const res = await api<{ regions: RawRegion[] } | RawRegion[]>("/api/v1/admin/regions", { token })
   const raw = Array.isArray(res) ? res : (res.regions ?? [])
   return raw.map(mapRegion)
 }
 
 export async function createRegion(token: string, data: Record<string, unknown>): Promise<Region> {
-  const raw = await api<RawRegion>("/api/v1/regions", { method: "POST", body: data, token })
+  const raw = await api<RawRegion>("/api/v1/admin/regions", { method: "POST", body: data, token })
   return mapRegion(raw)
 }
 
 export async function updateRegion(token: string, id: string, data: Record<string, unknown>): Promise<Region> {
-  const raw = await api<RawRegion>(`/api/v1/regions/${id}`, { method: "PUT", body: data, token })
+  const raw = await api<RawRegion>(`/api/v1/admin/regions/${id}`, { method: "PUT", body: data, token })
   return mapRegion(raw)
 }
 
 export function deleteRegion(token: string, id: string) {
-  return api<void>(`/api/v1/regions/${id}`, { method: "DELETE", token })
+  return api<void>(`/api/v1/admin/regions/${id}`, { method: "DELETE", token })
 }
 
 // ── Admin: Feature Flags (Config service) ──
@@ -1178,7 +1176,7 @@ function mapFeature(f: RawFeature): FeatureFlag {
 }
 
 export async function getFeatureFlags(token: string, regionId: string): Promise<FeatureFlag[]> {
-  const res = await api<{ features: RawFeature[] }>(`/api/v1/regions/${regionId}/features`, { token })
+  const res = await api<{ features: RawFeature[] }>(`/api/v1/admin/regions/${regionId}/features`, { token })
   return (res.features ?? []).map(mapFeature)
 }
 
@@ -1187,7 +1185,7 @@ export async function upsertFeatureFlag(
   regionId: string,
   data: { key: string; enabled: boolean }
 ): Promise<FeatureFlag> {
-  await api<{ status: string }>(`/api/v1/regions/${regionId}/features`, {
+  await api<{ status: string }>(`/api/v1/admin/regions/${regionId}/features`, {
     method: "POST",
     body: { feature_key: data.key, enabled: data.enabled },
     token,
