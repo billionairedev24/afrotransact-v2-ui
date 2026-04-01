@@ -20,6 +20,8 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
+import { StripeActionBanner } from "@/components/seller/StripeActionBanner"
+import type { SellerInfo } from "@/lib/api"
 
 const NAV_ITEMS = [
   { href: "/dashboard",              label: "Overview",       icon: LayoutDashboard },
@@ -38,9 +40,10 @@ interface SellerShellProps {
   children: React.ReactNode
   userName?: string
   userEmail?: string
+  seller?: SellerInfo
 }
 
-export function SellerShell({ children, userName, userEmail }: SellerShellProps) {
+export function SellerShell({ children, userName, userEmail, seller }: SellerShellProps) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const signOut = useSignOut()
@@ -190,7 +193,10 @@ export function SellerShell({ children, userName, userEmail }: SellerShellProps)
 
         {/* Main content */}
         <main className="min-w-0 flex-1 lg:pl-60">
-          <div className="mx-auto min-w-0 max-w-6xl p-6 lg:p-8">{children}</div>
+          <div className="mx-auto min-w-0 max-w-6xl p-6 lg:p-8">
+            {seller && <StripeActionBanner seller={seller} />}
+            {children}
+          </div>
         </main>
       </div>
     </div>

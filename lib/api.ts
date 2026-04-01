@@ -361,6 +361,8 @@ export interface SellerInfo {
   stripeAccountId: string | null
   chargesEnabled: boolean
   payoutsEnabled: boolean
+  stripeRequirementsDue: boolean
+  stripeDisabledReason: string | null
   commissionRate: number
   contactEmail: string | null
   createdAt: string
@@ -382,6 +384,25 @@ export function registerSeller(token: string, businessName: string, taxId?: stri
 
 export function getOnboardingLink(token: string) {
   return api<{ url: string; accountId: string }>("/api/v1/seller/me/onboarding", { token })
+}
+
+/** Generates a Stripe ACCOUNT_UPDATE link so the seller can fix pending requirements. */
+export function getStripeUpdateLink(token: string) {
+  return api<{ url: string }>("/api/v1/seller/me/stripe-update-link", { method: "POST", token })
+}
+
+// ── Admin: Payment settings ──
+
+export interface PaymentSettings {
+  settlement_days: number
+}
+
+export function getPaymentSettings(token: string) {
+  return api<PaymentSettings>("/api/v1/settings/payment", { token })
+}
+
+export function updatePaymentSettings(token: string, data: PaymentSettings) {
+  return api<PaymentSettings>("/api/v1/admin/settings/payment", { method: "PUT", body: data, token })
 }
 
 // ── Seller Onboarding (multi-step) ──

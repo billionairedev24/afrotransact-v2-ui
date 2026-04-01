@@ -48,6 +48,7 @@ export default async function SellerLayout({
             <SellerShell
               userName={session.user?.name ?? undefined}
               userEmail={session.user?.email ?? undefined}
+              seller={seller}
             >
               {children}
             </SellerShell>
