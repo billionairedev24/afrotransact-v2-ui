@@ -13,6 +13,11 @@ function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
 }
 
+function looksLikeInternalId(value: string): boolean {
+  const v = value.trim()
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
+}
+
 export default function CartPage() {
   const router = useRouter()
   const { status } = useSession()
@@ -99,7 +104,11 @@ export default function CartPage() {
         {/* ── Cart items column ── */}
         <div className="flex-1 space-y-5">
           {byStoreEntries.map(([storeId, groupItems]) => {
-            const storeName = groupItems[0]?.storeName ?? "Unknown Store"
+            const rawStoreName = groupItems[0]?.storeName?.trim() ?? ""
+            const storeName =
+              rawStoreName && !looksLikeInternalId(rawStoreName)
+                ? rawStoreName
+                : "Store"
             const storeSubtotal = groupItems.reduce((s, i) => s + i.price * i.quantity, 0)
             return (
               <section
