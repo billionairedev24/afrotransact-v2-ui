@@ -65,6 +65,14 @@ interface FlatOrder {
   relevantSubs: SubOrderDto[]
 }
 
+function subOrderCustomerTotal(sub: SubOrderDto): number {
+  if (typeof sub.totalCents === "number") return sub.totalCents
+  const discount = sub.discountCents ?? 0
+  const shipping = sub.shippingCostCents ?? 0
+  const tax = sub.taxCents ?? 0
+  return sub.subtotalCents + shipping + tax - discount
+}
+
 const col = createColumnHelper<FlatOrder>()
 
 export default function SellerOrdersPage() {
@@ -122,12 +130,13 @@ export default function SellerOrdersPage() {
           (sum, so) => sum + so.items.reduce((s, i) => s + i.quantity, 0),
           0,
         )
+        const sellerViewTotal = subs.reduce((sum, so) => sum + subOrderCustomerTotal(so), 0)
         return {
           id: order.id,
           orderNumber: order.orderNumber,
           status: order.status,
           itemsCount,
-          totalCents: order.totalCents,
+          totalCents: sellerViewTotal,
           currency: order.currency,
           fulfillmentStatus: subs[0]?.fulfillmentStatus ?? "—",
           placedAt: order.placedAt || order.createdAt,

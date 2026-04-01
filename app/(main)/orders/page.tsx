@@ -68,6 +68,11 @@ function OrderCard({ order }: { order: OrderDto }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {(order.discountCents ?? 0) > 0 && (
+            <span className="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
+              Discount applied
+            </span>
+          )}
           <span className="text-gray-500 text-[11px] uppercase tracking-wider">
             Order <span className="font-mono text-gray-600">#{order.orderNumber}</span>
           </span>

@@ -281,6 +281,7 @@ function OrderItemRow({
 
 function SubOrderCard({ sub, isDelivered }: { sub: SubOrderDto; isDelivered: boolean }) {
   const [_reviewedProducts, setReviewedProducts] = useState<Set<string>>(new Set())
+  const subDiscount = sub.discountCents ?? 0
 
   return (
     <section className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
@@ -337,8 +338,15 @@ function SubOrderCard({ sub, isDelivered }: { sub: SubOrderDto; isDelivered: boo
       </div>
 
       <div className="border-t border-gray-200 px-5 py-3 flex justify-between text-sm bg-gray-50">
-        <span className="text-gray-500">Subtotal</span>
-        <span className="text-gray-900 font-medium">{formatCents(sub.subtotalCents)}</span>
+        <div className="text-gray-500">Subtotal</div>
+        <div className="text-right">
+          <span className="text-gray-900 font-medium">{formatCents(sub.subtotalCents)}</span>
+          {subDiscount > 0 && (
+            <p className="text-[11px] text-green-600">
+              −{formatCents(subDiscount)} {sub.couponCode ? `(${sub.couponCode})` : "coupon"}
+            </p>
+          )}
+        </div>
       </div>
     </section>
   )
@@ -403,6 +411,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   const _hasDeliveredSubOrder = order.subOrders.some(
     (so) => so.fulfillmentStatus === "delivered" || so.fulfillmentStatus === "completed"
   )
+  const orderDiscount = order.discountCents ?? 0
 
   return (
     <main className="mx-auto max-w-[800px] px-4 sm:px-6 py-8">
@@ -439,6 +448,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
               <span className="text-gray-500">Tax</span>
               <span className="text-gray-900">{formatCents(order.taxCents, order.currency)}</span>
             </div>
+            {orderDiscount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-green-600">
+                  Discount{order.couponCode ? ` (${order.couponCode})` : ""}
+                </span>
+                <span className="text-green-600">−{formatCents(orderDiscount, order.currency)}</span>
+              </div>
+            )}
             <div className="flex justify-between pt-2 border-t border-gray-200">
               <span className="text-gray-900 font-semibold">Total</span>
               <span className="text-gray-900 font-bold">{formatCents(order.totalCents, order.currency)}</span>

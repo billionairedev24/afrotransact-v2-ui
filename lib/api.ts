@@ -851,8 +851,12 @@ export interface SubOrderDto {
   id: string
   storeId: string
   subtotalCents: number
+  discountCents?: number
+  couponCode?: string | null
+  totalCents?: number
   commissionCents: number
   shippingCostCents: number
+  taxCents?: number
   transferAmountCents: number
   fulfillmentStatus: string
   trackingNumber: string | null
@@ -864,6 +868,8 @@ export interface OrderDto {
   orderNumber: string
   status: string
   subtotalCents: number
+  discountCents?: number
+  couponCode?: string | null
   taxCents: number
   shippingCostCents: number
   totalCents: number

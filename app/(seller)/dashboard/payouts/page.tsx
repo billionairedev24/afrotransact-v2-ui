@@ -399,7 +399,7 @@ export default function PayoutsPage() {
           <>
             <div className="hidden grid-cols-[minmax(0,1fr)_90px_90px_90px_90px_100px_100px_44px] gap-1 border-b border-gray-100 px-5 py-2.5 text-[11px] font-medium uppercase tracking-wide text-gray-500 sm:grid">
               <span>Order</span>
-              <span className="text-right">Subtotal</span>
+              <span className="text-right">Net Sales</span>
               <span className="text-right">Fees</span>
               <span className="text-right">Tax</span>
               <span className="text-right">Net Payout</span>
@@ -410,6 +410,7 @@ export default function PayoutsPage() {
             <div className="divide-y divide-gray-100">
               {filtered.map((t) => {
                 const totalFees = t.platformFeeCents + t.stripeFeeCents
+                const netSales = t.subtotalCents - (t.discountCents ?? 0)
                 const isExpanded = expandedRows.has(t.id)
                 const dateStr = t.transferredAt ? formatDate(t.transferredAt) : formatDate(t.createdAt)
 
@@ -447,8 +448,8 @@ export default function PayoutsPage() {
                       </div>
                       <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
                         <div>
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Subtotal</p>
-                          <p className="mt-0.5 text-gray-700">{formatCents(t.subtotalCents)}</p>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Net sales</p>
+                          <p className="mt-0.5 text-gray-700">{formatCents(netSales)}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Fees</p>
@@ -495,7 +496,7 @@ export default function PayoutsPage() {
                             )}
                           </div>
                         </div>
-                        <span className="text-right text-sm text-gray-600">{formatCents(t.subtotalCents)}</span>
+                        <span className="text-right text-sm text-gray-600">{formatCents(netSales)}</span>
                         <span className="text-right text-sm text-red-500">−{formatCents(totalFees)}</span>
                         <span className="text-right text-sm text-gray-500">{formatCents(t.taxCents)}</span>
                         <span className="text-right text-sm font-semibold text-gray-900">{formatCents(t.amountCents)}</span>

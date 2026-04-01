@@ -45,6 +45,14 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
+function subOrderCustomerTotal(sub: OrderDto["subOrders"][number]) {
+  if (typeof sub.totalCents === "number") return sub.totalCents
+  const discount = sub.discountCents ?? 0
+  const shipping = sub.shippingCostCents ?? 0
+  const tax = sub.taxCents ?? 0
+  return sub.subtotalCents + shipping + tax - discount
+}
+
 interface FlatOrder {
   id: string
   orderNumber: string
@@ -251,7 +259,14 @@ function AdminOrderDetailSheet({
                       {sub.fulfillmentStatus.replace(/_/g, " ")}
                     </span>
                   </div>
-                  <span className="text-sm font-medium text-gray-900">{formatCents(sub.subtotalCents, order.currency)}</span>
+                  <div className="text-right">
+                    <span className="text-sm font-medium text-gray-900">{formatCents(subOrderCustomerTotal(sub), order.currency)}</span>
+                    {(sub.discountCents ?? 0) > 0 && (
+                      <p className="text-[11px] text-green-600">
+                        includes −{formatCents(sub.discountCents ?? 0, order.currency)}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {sub.trackingNumber && (
