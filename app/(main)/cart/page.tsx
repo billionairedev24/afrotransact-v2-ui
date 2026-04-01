@@ -13,11 +13,6 @@ function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
 }
 
-function looksLikeInternalId(value: string): boolean {
-  const v = value.trim()
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
-}
-
 export default function CartPage() {
   const router = useRouter()
   const { status } = useSession()
@@ -104,27 +99,11 @@ export default function CartPage() {
         {/* ── Cart items column ── */}
         <div className="flex-1 space-y-5">
           {byStoreEntries.map(([storeId, groupItems]) => {
-            const rawStoreName = groupItems[0]?.storeName?.trim() ?? ""
-            const storeName =
-              rawStoreName && !looksLikeInternalId(rawStoreName)
-                ? rawStoreName
-                : "Store"
-            const storeSubtotal = groupItems.reduce((s, i) => s + i.price * i.quantity, 0)
             return (
               <section
                 key={storeId}
                 className="rounded-2xl border border-gray-200 bg-white overflow-hidden"
               >
-                {/* Store header */}
-                <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-200">
-                  <Store className="h-4 w-4 text-primary shrink-0" />
-                  <span className="font-semibold text-gray-900 text-sm">{storeName}</span>
-                  <span className="ml-auto text-xs text-gray-500">
-                    Subtotal: <span className="text-gray-900 font-medium">{formatCents(storeSubtotal)}</span>
-                  </span>
-                </div>
-
-                {/* Items */}
                 <div className="divide-y divide-gray-100">
                   {groupItems.map((item) => (
                     <div key={item.variantId} className="flex gap-3 sm:gap-4 p-4 sm:p-5">
