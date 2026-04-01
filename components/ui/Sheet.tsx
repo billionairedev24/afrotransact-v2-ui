@@ -36,7 +36,7 @@ export function Sheet({ open, onClose, children, className, side = "right" }: Sh
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div
         className={cn(
-          "absolute top-0 bottom-0 flex w-full max-w-2xl flex-col bg-white border-gray-200 shadow-xl transition-transform duration-300 ease-out",
+          "absolute top-0 bottom-0 flex h-full min-h-0 w-full max-w-full flex-col bg-white border-gray-200 shadow-xl transition-transform duration-300 ease-out sm:max-w-2xl",
           side === "right" ? "right-0 border-l" : "left-0 border-r",
           open
             ? "translate-x-0"
@@ -62,8 +62,8 @@ export function SheetHeader({
   className?: string
 }) {
   return (
-    <div className={cn("flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4", className)}>
-      <h2 className="text-lg font-semibold text-gray-900">{children}</h2>
+    <div className={cn("flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-4 py-4 sm:px-6", className)}>
+      <h2 className="min-w-0 truncate pr-2 text-lg font-semibold text-gray-900">{children}</h2>
       {onClose && (
         <button
           onClick={onClose}
@@ -78,7 +78,7 @@ export function SheetHeader({
 
 export function SheetBody({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex-1 overflow-y-auto px-6 py-5", className)}>
+    <div className={cn("min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6", className)}>
       {children}
     </div>
   )
@@ -86,7 +86,7 @@ export function SheetBody({ children, className }: { children: ReactNode; classN
 
 export function SheetFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4", className)}>
+    <div className={cn("flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6", className)}>
       {children}
     </div>
   )

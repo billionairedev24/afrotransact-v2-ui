@@ -48,18 +48,24 @@ function RowActionMenu({ onView, onEdit, onToggle, onDelete, enabled }: {
     return () => { document.removeEventListener("mousedown", handleClick); window.removeEventListener("scroll", handleScroll, true) }
   }, [open])
 
-  function toggle() {
+  const menuW = 192
+
+  function toggle(e?: React.MouseEvent) {
+    e?.stopPropagation()
     if (open) { setOpen(false); return }
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
-      setPos({ top: r.bottom + 4, left: r.right - 192 })
+      const pad = 8
+      let left = r.right - menuW
+      left = Math.max(pad, Math.min(left, window.innerWidth - menuW - pad))
+      setPos({ top: r.bottom + 4, left })
     }
     setOpen(true)
   }
 
   return (
     <>
-      <button ref={btnRef} onClick={toggle} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+      <button type="button" ref={btnRef} onClick={(ev) => toggle(ev)} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors">
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open && pos && createPortal(
@@ -169,65 +175,107 @@ export default function AdminDealsPage() {
   if (loading) return <div className="flex items-center justify-center min-h-[400px] gap-2 text-gray-500"><Loader2 className="h-5 w-5 animate-spin" /> Loading deals...</div>
 
   return (
-    <div className="max-w-[1100px] mx-auto space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
+    <div className="mx-auto min-w-0 w-full max-w-[1100px] space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-gray-900">Platform Deals</h1>
-          <p className="text-sm text-gray-500 mt-1">Create and manage promotional banners and campaigns to attract sellers and customers.</p>
+          <p className="mt-1 text-sm text-gray-500">Create and manage promotional banners and campaigns to attract sellers and customers.</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-black hover:bg-primary/90 transition-colors">
+        <button type="button" onClick={openCreate} className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-black transition-colors hover:bg-primary/90 sm:w-auto">
           <Plus className="h-4 w-4" /> New Deal
         </button>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white">
-        <div className="px-5 py-4 border-b border-gray-200">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+        <div className="border-b border-gray-200 px-4 py-4 sm:px-5">
           <h2 className="text-base font-semibold text-gray-900">All Platform Deals</h2>
         </div>
 
         {deals.length === 0 ? (
-          <div className="px-5 py-12 text-center text-gray-500 text-sm">No platform deals yet. Create your first promotion.</div>
+          <div className="px-4 py-12 text-center text-sm text-gray-500 sm:px-5">No platform deals yet. Create your first promotion.</div>
         ) : (
           <>
-            <div className="hidden sm:grid grid-cols-[1fr_120px_100px_100px_80px_44px] gap-2 px-5 py-2.5 text-xs text-gray-500 font-medium uppercase tracking-wide border-b border-gray-100">
+            <div className="hidden grid-cols-[minmax(0,1fr)_120px_100px_100px_80px_44px] gap-2 border-b border-gray-100 px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 sm:grid">
               <span>Title</span><span>Audience</span><span>Status</span><span>Dates</span><span className="text-center">Order</span><span />
             </div>
             <div className="divide-y divide-gray-100">
-              {deals.map((d) => (
-                <div key={d.id} className="grid grid-cols-1 sm:grid-cols-[1fr_120px_100px_100px_80px_44px] gap-2 px-5 py-3 items-center hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-8 w-8 rounded-lg shrink-0 flex items-center justify-center" style={{ backgroundColor: d.primaryColor + "20" }}>
-                      <Sparkles className="h-4 w-4" style={{ color: d.primaryColor }} />
+              {deals.map((d) => {
+                const statusEl = d.active ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700"><span className="h-1.5 w-1.5 rounded-full bg-green-500" />Active</span>
+                ) : d.enabled ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-700"><span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />Scheduled</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500"><span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled</span>
+                )
+                const audienceLabel = AUDIENCE_OPTIONS.find(a => a.value === d.targetAudience)?.label || d.targetAudience
+                const datesStr = `${d.startAt ? formatDate(d.startAt) : "Always"}${d.endAt ? ` → ${formatDate(d.endAt)}` : ""}`
+
+                return (
+                  <div key={d.id}>
+                    <div className="space-y-3 px-4 py-4 sm:hidden">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: d.primaryColor + "20" }}>
+                            <Sparkles className="h-4 w-4" style={{ color: d.primaryColor }} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 break-words">{d.title}</p>
+                            {d.badgeText && <p className="text-[11px] text-gray-400">{d.badgeText}</p>}
+                          </div>
+                        </div>
+                        <RowActionMenu
+                          onView={() => setPreview(d)}
+                          onEdit={() => openEdit(d)}
+                          onToggle={() => handleToggle(d)}
+                          onDelete={() => handleDelete(d)}
+                          enabled={d.enabled}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Audience</p>
+                          <p className="mt-0.5 text-xs text-gray-600">{audienceLabel}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Status</p>
+                          <div className="mt-0.5">{statusEl}</div>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Dates</p>
+                          <p className="mt-0.5 text-xs text-gray-500">{datesStr}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Sort</p>
+                          <p className="mt-0.5 text-xs text-gray-400">{d.sortOrder}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{d.title}</p>
-                      {d.badgeText && <p className="text-[11px] text-gray-400 truncate">{d.badgeText}</p>}
+
+                    <div className="hidden grid-cols-[minmax(0,1fr)_120px_100px_100px_80px_44px] items-center gap-2 px-5 py-3 transition-colors hover:bg-gray-50 sm:grid">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: d.primaryColor + "20" }}>
+                          <Sparkles className="h-4 w-4" style={{ color: d.primaryColor }} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-gray-900">{d.title}</p>
+                          {d.badgeText && <p className="truncate text-[11px] text-gray-400">{d.badgeText}</p>}
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500">{audienceLabel}</span>
+                      <div>{statusEl}</div>
+                      <div className="text-[11px] text-gray-500">{datesStr}</div>
+                      <span className="text-center text-xs text-gray-400">{d.sortOrder}</span>
+                      <RowActionMenu
+                        onView={() => setPreview(d)}
+                        onEdit={() => openEdit(d)}
+                        onToggle={() => handleToggle(d)}
+                        onDelete={() => handleDelete(d)}
+                        enabled={d.enabled}
+                      />
                     </div>
                   </div>
-                  <span className="text-xs text-gray-500">{AUDIENCE_OPTIONS.find(a => a.value === d.targetAudience)?.label || d.targetAudience}</span>
-                  <div>
-                    {d.active ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700"><span className="h-1.5 w-1.5 rounded-full bg-green-500" />Active</span>
-                    ) : d.enabled ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-700"><span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />Scheduled</span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500"><span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled</span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-gray-500">
-                    {d.startAt ? formatDate(d.startAt) : "Always"}
-                    {d.endAt ? ` → ${formatDate(d.endAt)}` : ""}
-                  </div>
-                  <span className="text-xs text-gray-400 text-center">{d.sortOrder}</span>
-                  <RowActionMenu
-                    onView={() => setPreview(d)}
-                    onEdit={() => openEdit(d)}
-                    onToggle={() => handleToggle(d)}
-                    onDelete={() => handleDelete(d)}
-                    enabled={d.enabled}
-                  />
-                </div>
-              ))}
+                )
+              })}
             </div>
           </>
         )}

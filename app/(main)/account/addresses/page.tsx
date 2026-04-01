@@ -10,6 +10,7 @@ import {
   updateAddress,
   deleteAddress,
   setDefaultAddress,
+  getUserProfile,
   type UserAddress,
 } from "@/lib/api"
 import {
@@ -36,6 +37,7 @@ export default function AddressesPage() {
     if (!token) return
     try {
       setError(null)
+      await getUserProfile(token)
       const data = await getAddresses(token)
       setAddresses(data)
     } catch (e) {
@@ -64,6 +66,7 @@ export default function AddressesPage() {
       if (editingId) {
         await updateAddress(token, editingId, form)
       } else {
+        await getUserProfile(token)
         await createAddress(token, { ...form, line2: form.line2 || undefined, label: form.label || undefined })
       }
       setShowForm(false)

@@ -26,11 +26,12 @@ import { loadStripe } from "@stripe/stripe-js"
 import { useCartStore } from "@/stores/cart-store"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { toast } from "sonner"
 import {
   checkout as apiCheckout,
   mergeCart,
   getRegions,
-  getAddresses,
+  loadCheckoutShippingContext,
   createAddress,
   getUserProfile,
   validateCoupon,
@@ -93,9 +94,23 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
   const [addressQuery, setAddressQuery] = useState("")
 
   useEffect(() => {
-    if (!token) { setLoading(false); setShowNew(true); return }
-    Promise.all([getUserProfile(token), getAddresses(token)])
-      .then(([profile, addrs]) => {
+    if (!token) {
+      setLoading(false)
+      setShowNew(true)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { profile, addresses: addrs, addressesUnavailable } =
+          await loadCheckoutShippingContext(token)
+        if (cancelled) return
+        if (addressesUnavailable) {
+          toast.message(
+            "Saved addresses could not be loaded. You can enter a shipping address below.",
+            { duration: 6500 },
+          )
+        }
         const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ")
         setForm((prev) => ({
           ...prev,
@@ -107,9 +122,18 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
         if (def) setSelectedId(def.id)
         else if (addrs.length > 0) setSelectedId(addrs[0].id)
         setShowNew(addrs.length === 0)
-      })
-      .catch(() => setShowNew(true))
-      .finally(() => setLoading(false))
+      } catch {
+        if (!cancelled) {
+          setShowNew(true)
+          toast.error("Could not load your account or addresses. Enter a shipping address to continue.")
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [token])
 
   const handleUseSaved = () => {
@@ -130,29 +154,53 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
   const handleSaveNew = async () => {
     if (!token || !form.line1 || !form.city || !form.zip) return
     setSaving(true)
+    const inline = {
+      fullName: form.fullName,
+      line1: form.line1,
+      line2: form.line2,
+      city: form.city,
+      state: form.state,
+      zip: form.zip,
+      phone: form.phone,
+    }
     try {
-      const created = await createAddress(token, {
-        label: "shipping",
-        line1: form.line1,
-        line2: form.line2 || undefined,
-        city: form.city,
-        state: form.state,
-        postalCode: form.zip,
-        countryCode: "US",
-        isDefault: makeDefault || savedAddresses.length === 0,
-      })
-      onNext({
-        shippingAddressId: created.id,
-        fullName: form.fullName,
-        line1: form.line1,
-        line2: form.line2,
-        city: form.city,
-        state: form.state,
-        zip: form.zip,
-        phone: form.phone,
-      })
-    } catch {
-      onNext(form)
+      try {
+        await getUserProfile(token)
+        const created = await createAddress(token, {
+          label: "shipping",
+          line1: form.line1.trim(),
+          line2: form.line2?.trim() || undefined,
+          city: form.city.trim(),
+          state: form.state?.trim() || "",
+          postalCode: form.zip.trim(),
+          countryCode: "US",
+          isDefault: makeDefault || savedAddresses.length === 0,
+        })
+        onNext({
+          shippingAddressId: created.id,
+          ...inline,
+        })
+        return
+      } catch (e) {
+        const addrEndpointDown =
+          e instanceof ApiError && (e.status === 404 || e.status === 502 || e.status === 503)
+        if (!addrEndpointDown) throw e
+        toast.warning(
+          "Could not reach your saved addresses. Continuing with this address for this order only.",
+        )
+        onNext({
+          ...inline,
+          skipProfileSave: "1",
+        })
+      }
+    } catch (e) {
+      const msg =
+        e instanceof ApiError
+          ? e.body
+          : e instanceof Error
+            ? e.message
+            : "Could not save address. Check required fields and try again."
+      toast.error(msg.length > 200 ? `${msg.slice(0, 200)}…` : msg)
     } finally {
       setSaving(false)
     }
@@ -836,6 +884,11 @@ export default function CheckoutPage() {
       if (couponResult) codes.push(couponCode.trim())
       if (appliedDeal?.couponCode) codes.push(appliedDeal.couponCode)
 
+      const wantsSaveProfile =
+        address.skipProfileSave !== "1" &&
+        !address.shippingAddressId &&
+        Boolean(address.line1?.trim() && address.city?.trim() && address.zip?.trim())
+
       const result = await apiCheckout(token, {
         regionId: region.id,
         shippingAddressId: address.shippingAddressId || undefined,
@@ -846,6 +899,7 @@ export default function CheckoutPage() {
         state: address.state,
         zip: address.zip,
         phone: address.phone || undefined,
+        saveAddress: wantsSaveProfile,
         couponCodes: codes.length > 0 ? codes : undefined,
       })
 

@@ -48,7 +48,7 @@ export function SellerShell({ children, userName, userEmail }: SellerShellProps)
   const avatarLetter = userName?.charAt(0)?.toUpperCase() ?? "S"
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen min-w-0 bg-background">
       {/* Mobile header */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card px-4 lg:hidden">
         <button
@@ -65,7 +65,7 @@ export function SellerShell({ children, userName, userEmail }: SellerShellProps)
         <div className="w-5" />
       </header>
 
-      <div className="flex">
+      <div className="flex min-w-0">
         {/* Desktop sidebar */}
         <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:fixed lg:inset-y-0 border-r border-border bg-card">
           <div className="flex h-14 items-center gap-2 border-b border-border px-4">
@@ -189,8 +189,8 @@ export function SellerShell({ children, userName, userEmail }: SellerShellProps)
         )}
 
         {/* Main content */}
-        <main className="flex-1 lg:pl-60">
-          <div className="mx-auto max-w-6xl p-6 lg:p-8">{children}</div>
+        <main className="min-w-0 flex-1 lg:pl-60">
+          <div className="mx-auto min-w-0 max-w-6xl p-6 lg:p-8">{children}</div>
         </main>
       </div>
     </div>

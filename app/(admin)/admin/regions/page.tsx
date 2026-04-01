@@ -59,7 +59,7 @@ function RegionForm({
 }) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="block text-xs font-medium text-gray-400 mb-1.5">Region Code</label>
           <input
@@ -85,7 +85,7 @@ function RegionForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <label className="block text-xs font-medium text-gray-400 mb-1.5">Country Code</label>
           <input
@@ -119,7 +119,7 @@ function RegionForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="block text-xs font-medium text-gray-400 mb-1.5">Currency</label>
           <input
@@ -140,7 +140,7 @@ function RegionForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <label className="block text-xs font-medium text-gray-400 mb-1.5">Tax Rate (%)</label>
           <input
@@ -376,8 +376,8 @@ export default function RegionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="min-w-0 space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Regions</h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -437,7 +437,7 @@ export default function RegionsPage() {
               const isStateCollapsed = collapsed.has(stateKey)
 
               return (
-                <div key={stateGroup.state} className="ml-6 space-y-2">
+                <div key={stateGroup.state} className="ml-0 space-y-2 sm:ml-6">
                   {/* State header */}
                   <button
                     onClick={() => toggleCollapse(stateKey)}
@@ -457,8 +457,9 @@ export default function RegionsPage() {
                   </button>
 
                   {!isStateCollapsed && (
-                    <div className="ml-6 rounded-xl border border-border bg-card">
-                      <table className="w-full text-sm">
+                    <div className="ml-0 rounded-xl border border-border bg-card sm:ml-6">
+                      <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+                      <table className="w-full min-w-max text-sm">
                         <thead>
                           <tr className="border-b border-border text-xs text-muted-foreground uppercase tracking-wider">
                             <th className="text-left px-4 py-2.5 font-medium">City / Region</th>
@@ -520,6 +521,7 @@ export default function RegionsPage() {
                           })}
                         </tbody>
                       </table>
+                      </div>
                     </div>
                   )}
                 </div>

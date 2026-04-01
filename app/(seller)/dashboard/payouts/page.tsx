@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
@@ -63,38 +64,90 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+const PAYOUT_MENU_W = 176
+
 function RowActionMenu({ onView }: { onView: () => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+
+  const updatePos = useCallback(() => {
+    const el = btnRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const pad = 8
+    let left = r.right - PAYOUT_MENU_W
+    left = Math.max(pad, Math.min(left, window.innerWidth - PAYOUT_MENU_W - pad))
+    setPos({ top: r.bottom + 4, left })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos(null)
+      return
+    }
+    updatePos()
+  }, [open, updatePos])
 
   useEffect(() => {
     if (!open) return
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return
+      setOpen(false)
+    }
+    function onResize() {
+      updatePos()
     }
     document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [open])
+    window.addEventListener("resize", onResize)
+    window.addEventListener("scroll", onResize, true)
+    return () => {
+      document.removeEventListener("mousedown", handleClick)
+      window.removeEventListener("resize", onResize)
+      window.removeEventListener("scroll", onResize, true)
+    }
+  }, [open, updatePos])
+
+  const menu =
+    open && pos && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            ref={menuRef}
+            className="fixed z-[200] w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl"
+            style={{ top: pos.top, left: pos.left }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                onView()
+                setOpen(false)
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+            >
+              <Eye className="h-3.5 w-3.5" /> View Breakdown
+            </button>
+          </div>,
+          document.body,
+        )
+      : null
 
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
-        onClick={() => setOpen(!open)}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+        type="button"
+        ref={btnRef}
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((o) => !o)
+        }}
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
-      {open && (
-        <div className="absolute right-0 bottom-full z-50 mb-1 w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
-          <button
-            onClick={() => { onView(); setOpen(false) }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-          >
-            <Eye className="h-3.5 w-3.5" /> View Breakdown
-          </button>
-        </div>
-      )}
-    </div>
+      {menu}
+    </>
   )
 }
 
@@ -261,8 +314,8 @@ export default function PayoutsPage() {
     : "https://dashboard.stripe.com/connect/accounts/overview"
 
   return (
-    <div className="max-w-[960px] mx-auto px-4 sm:px-6 py-8 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="mx-auto min-w-0 w-full max-w-[960px] space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Payouts</h1>
           <p className="text-sm text-gray-500 mt-1">Track your earnings and see exactly where every dollar goes.</p>
@@ -271,7 +324,7 @@ export default function PayoutsPage() {
           href={stripeDashboardUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 sm:w-auto"
         >
           Stripe Dashboard
           <ExternalLink className="h-3.5 w-3.5" />
@@ -279,7 +332,7 @@ export default function PayoutsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {[
           { label: "Total Earnings", value: formatCents(summary?.totalEarningsCents ?? 0), icon: TrendingUp, color: "text-gray-900", iconBg: "bg-gray-100" },
           { label: "Settling", value: formatCents(summary?.pendingSettlementCents ?? 0), sub: "~2 business days", icon: Clock, color: "text-amber-600", iconBg: "bg-amber-50" },
@@ -288,14 +341,14 @@ export default function PayoutsPage() {
         ].map((card) => {
           const Icon = card.icon
           return (
-            <div key={card.label} className="rounded-2xl border border-gray-200 bg-white p-5">
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`p-2 rounded-lg ${card.iconBg}`}>
-                  <Icon className={`h-4 w-4 ${card.color}`} />
+            <div key={card.label} className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3 sm:p-5">
+              <div className="mb-2 flex items-center gap-2 sm:mb-3 sm:gap-3">
+                <div className={`shrink-0 rounded-lg p-1.5 sm:p-2 ${card.iconBg}`}>
+                  <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${card.color}`} />
                 </div>
-                <span className="text-xs text-gray-500 font-medium">{card.label}</span>
+                <span className="min-w-0 text-[10px] font-medium leading-tight text-gray-500 sm:text-xs">{card.label}</span>
               </div>
-              <p className={`text-xl font-bold ${card.color}`}>{card.value}</p>
+              <p className={`truncate text-base font-bold sm:text-xl ${card.color}`}>{card.value}</p>
               {"sub" in card && card.sub && <p className="text-[11px] text-gray-500 mt-1">{card.sub}</p>}
             </div>
           )
@@ -316,14 +369,14 @@ export default function PayoutsPage() {
       </div>
 
       {/* Transfers table */}
-      <div className="rounded-2xl border border-gray-200 bg-white overflow-x-auto">
-        <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between flex-wrap gap-3">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+        <div className="flex flex-col gap-3 border-b border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Transfer History</h2>
             <p className="text-xs text-gray-500 mt-0.5">Click any row to see the full financial breakdown</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-3.5 w-3.5 text-gray-500" />
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <Filter className="h-3.5 w-3.5 shrink-0 text-gray-500" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -344,7 +397,7 @@ export default function PayoutsPage() {
           </div>
         ) : (
           <>
-            <div className="hidden sm:grid grid-cols-[1fr_90px_90px_90px_90px_100px_100px_44px] gap-1 px-5 py-2.5 text-[11px] text-gray-500 font-medium uppercase tracking-wide border-b border-gray-100">
+            <div className="hidden grid-cols-[minmax(0,1fr)_90px_90px_90px_90px_100px_100px_44px] gap-1 border-b border-gray-100 px-5 py-2.5 text-[11px] font-medium uppercase tracking-wide text-gray-500 sm:grid">
               <span>Order</span>
               <span className="text-right">Subtotal</span>
               <span className="text-right">Fees</span>
@@ -358,38 +411,106 @@ export default function PayoutsPage() {
               {filtered.map((t) => {
                 const totalFees = t.platformFeeCents + t.stripeFeeCents
                 const isExpanded = expandedRows.has(t.id)
+                const dateStr = t.transferredAt ? formatDate(t.transferredAt) : formatDate(t.createdAt)
+
                 return (
                   <div key={t.id}>
                     <div
-                      className="grid grid-cols-1 sm:grid-cols-[1fr_90px_90px_90px_90px_100px_100px_44px] gap-1 px-5 py-3.5 items-center hover:bg-gray-50/80 transition-colors cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      className="cursor-pointer px-4 py-4 transition-colors hover:bg-gray-50/80 sm:hidden"
                       onClick={() => toggleExpand(t.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          toggleExpand(t.id)
+                        }
+                      }}
                     >
-                      <div className="min-w-0 flex items-center gap-2">
-                        {isExpanded
-                          ? <ChevronUp className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                          : <ChevronDown className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
-                        <div>
-                          <p className="text-sm text-gray-900 font-mono truncate">
-                            {t.orderId ? t.orderId.substring(0, 8) + "…" : "—"}
-                          </p>
-                          {t.estimatedSettlementAt && t.status === "pending_settlement" && (
-                            <p className="text-[11px] text-gray-400 mt-0.5">Est. {formatDate(t.estimatedSettlementAt)}</p>
-                          )}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          {isExpanded
+                            ? <ChevronUp className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                            : <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-400" />}
+                          <div className="min-w-0">
+                            <p className="font-mono text-sm text-gray-900">
+                              {t.orderId ? `${t.orderId.substring(0, 8)}…` : "—"}
+                            </p>
+                            {t.estimatedSettlementAt && t.status === "pending_settlement" && (
+                              <p className="mt-0.5 text-[11px] text-gray-400">Est. {formatDate(t.estimatedSettlementAt)}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <RowActionMenu onView={() => setSelected(t)} />
                         </div>
                       </div>
-                      <span className="text-sm text-gray-600 text-right">{formatCents(t.subtotalCents)}</span>
-                      <span className="text-sm text-red-500 text-right">−{formatCents(totalFees)}</span>
-                      <span className="text-sm text-gray-500 text-right">{formatCents(t.taxCents)}</span>
-                      <span className="text-sm text-gray-900 font-semibold text-right">{formatCents(t.amountCents)}</span>
-                      <div className="flex justify-center"><StatusBadge status={t.status} /></div>
-                      <span className="text-xs text-gray-500 text-right">{t.transferredAt ? formatDate(t.transferredAt) : formatDate(t.createdAt)}</span>
-                      <RowActionMenu onView={() => setSelected(t)} />
-                    </div>
-                    {isExpanded && (
-                      <div className="px-5 pb-4">
-                        <InlineBreakdown t={t} />
+                      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Subtotal</p>
+                          <p className="mt-0.5 text-gray-700">{formatCents(t.subtotalCents)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Fees</p>
+                          <p className="mt-0.5 text-red-500">−{formatCents(totalFees)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Tax</p>
+                          <p className="mt-0.5 text-gray-600">{formatCents(t.taxCents)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Net payout</p>
+                          <p className="mt-0.5 font-semibold text-gray-900">{formatCents(t.amountCents)}</p>
+                        </div>
+                        <div className="col-span-2 flex flex-wrap items-center justify-between gap-2">
+                          <StatusBadge status={t.status} />
+                          <span className="text-xs text-gray-500">{dateStr}</span>
+                        </div>
                       </div>
-                    )}
+                      <p className="mt-2 text-center text-[11px] text-gray-400">
+                        {isExpanded ? "Tap to hide breakdown" : "Tap row for breakdown"}
+                      </p>
+                      {isExpanded && (
+                        <div className="mt-3 border-t border-gray-100 pt-3">
+                          <InlineBreakdown t={t} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="hidden sm:block">
+                      <div
+                        className="grid grid-cols-[minmax(0,1fr)_90px_90px_90px_90px_100px_100px_44px] cursor-pointer items-center gap-1 px-5 py-3.5 transition-colors hover:bg-gray-50/80"
+                        onClick={() => toggleExpand(t.id)}
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          {isExpanded
+                            ? <ChevronUp className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                            : <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-400" />}
+                          <div className="min-w-0">
+                            <p className="truncate font-mono text-sm text-gray-900">
+                              {t.orderId ? t.orderId.substring(0, 8) + "…" : "—"}
+                            </p>
+                            {t.estimatedSettlementAt && t.status === "pending_settlement" && (
+                              <p className="mt-0.5 text-[11px] text-gray-400">Est. {formatDate(t.estimatedSettlementAt)}</p>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-right text-sm text-gray-600">{formatCents(t.subtotalCents)}</span>
+                        <span className="text-right text-sm text-red-500">−{formatCents(totalFees)}</span>
+                        <span className="text-right text-sm text-gray-500">{formatCents(t.taxCents)}</span>
+                        <span className="text-right text-sm font-semibold text-gray-900">{formatCents(t.amountCents)}</span>
+                        <div className="flex justify-center"><StatusBadge status={t.status} /></div>
+                        <span className="text-right text-xs text-gray-500">{dateStr}</span>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <RowActionMenu onView={() => setSelected(t)} />
+                        </div>
+                      </div>
+                      {isExpanded && (
+                        <div className="px-5 pb-4">
+                          <InlineBreakdown t={t} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )
               })}

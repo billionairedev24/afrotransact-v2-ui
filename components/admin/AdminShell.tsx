@@ -154,7 +154,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen min-w-0 bg-gray-50">
       {/* Mobile header */}
       <header
         className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-gray-200 px-4 lg:hidden bg-white"
@@ -169,7 +169,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <div className="w-5" />
       </header>
 
-      <div className="flex">
+      <div className="flex min-w-0">
         {/* Desktop sidebar */}
         <aside
           className="hidden lg:flex lg:w-56 lg:flex-col lg:fixed lg:inset-y-0 border-r border-gray-200 bg-white"
@@ -193,8 +193,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Content */}
-        <main className="flex-1 lg:pl-56 px-4 sm:px-6 py-8">
-          <div className="max-w-[1100px] mx-auto">{children}</div>
+        <main className="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:pl-56">
+          <div className="mx-auto min-w-0 max-w-[1100px]">{children}</div>
         </main>
       </div>
     </div>

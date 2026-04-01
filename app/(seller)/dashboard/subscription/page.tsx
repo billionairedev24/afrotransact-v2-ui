@@ -204,7 +204,7 @@ export default function SubscriptionPage() {
   const trialDays = subscription?.trialEndsAt ? daysUntil(subscription.trialEndsAt) : 0
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Subscription & Billing</h1>
         <p className="text-gray-500 text-sm mt-1">Manage your AfroTransact seller subscription</p>
@@ -289,7 +289,7 @@ export default function SubscriptionPage() {
 
           {/* Current plan + Billing timeline */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4 shadow-sm">
               <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                 <Package className="h-4 w-4 text-primary" /> Current Plan — {subscription.plan.name}
               </h2>
@@ -313,7 +313,7 @@ export default function SubscriptionPage() {
                   <span className="text-gray-600">{commissionLabel(subscription.plan)} commission</span>
                 </div>
               </div>
-              <div className="pt-3 border-t border-border">
+              <div className="pt-3 border-t border-gray-200">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">Monthly price</span>
                   <span className="font-bold text-gray-900">
@@ -323,7 +323,7 @@ export default function SubscriptionPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4 shadow-sm">
               <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-primary" /> Billing Timeline
               </h2>
@@ -342,7 +342,7 @@ export default function SubscriptionPage() {
                   <p className="text-gray-500">No billing events yet</p>
                 )}
               </div>
-              <div className="pt-3 border-t border-border">
+              <div className="pt-3 border-t border-gray-200">
                 <p className="text-xs text-gray-500 leading-relaxed">
                   You&apos;ll receive an email before your trial ends with billing details.
                 </p>
@@ -351,13 +351,13 @@ export default function SubscriptionPage() {
           </div>
 
           {/* Billing history */}
-          <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
                 <CreditCard className="h-4 w-4 text-primary" /> Billing History
             </h2>
             <div className="space-y-2">
               {subscription.trialStartedAt && (
-                <div className="flex items-center justify-between py-2.5 border-b border-border/50 text-sm">
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-200 text-sm">
                   <div className="flex items-center gap-3">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20">
                       <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -442,7 +442,7 @@ export default function SubscriptionPage() {
 
 function PaymentMethodCard({ seller, paymentInfo }: { seller: SellerInfo | null; paymentInfo: PaymentInfo | null }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
         <ShieldCheck className="h-4 w-4 text-primary" /> Payment & Payout Setup
       </h2>
@@ -504,7 +504,7 @@ function PlanCard({
   return (
     <div
       className={`rounded-2xl border p-5 space-y-4 transition-colors ${
-        isCurrent ? "border-primary/40 bg-primary/5" : "border-border bg-card hover:border-gray-300"
+        isCurrent ? "border-primary/40 bg-primary/5" : "border-gray-200 bg-white hover:border-gray-300 shadow-sm"
       }`}
     >
       <div className="flex items-start justify-between">

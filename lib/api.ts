@@ -911,6 +911,8 @@ export interface CheckoutRequest {
   state?: string
   zip?: string
   phone?: string
+  /** When true and there is no shippingAddressId, order service saves inline fields to the buyer profile after checkout. */
+  saveAddress?: boolean
   totalWeightLbs?: number
   couponCodes?: string[]
 }
@@ -1356,6 +1358,31 @@ export interface UserAddress {
 
 export function getAddresses(token: string) {
   return api<UserAddress[]>("/api/v1/users/me/addresses", { token })
+}
+
+/**
+ * Checkout: ensures buyer profile exists (GET /me), then loads saved addresses.
+ * If the address list endpoint fails (routing/outage), `addresses` is empty and `addressesUnavailable` is true.
+ */
+export async function loadCheckoutShippingContext(token: string): Promise<{
+  profile: UserProfile
+  addresses: UserAddress[]
+  addressesUnavailable: boolean
+}> {
+  const profile = await getUserProfile(token)
+  let addresses: UserAddress[] = []
+  let addressesUnavailable = false
+  try {
+    addresses = await getAddresses(token)
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 502 || e.status === 503)) {
+      addresses = []
+      addressesUnavailable = true
+    } else {
+      throw e
+    }
+  }
+  return { profile, addresses, addressesUnavailable }
 }
 
 export function createAddress(token: string, data: {

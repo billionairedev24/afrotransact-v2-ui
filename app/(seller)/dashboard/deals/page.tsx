@@ -51,14 +51,23 @@ function RowActionMenu({ onEdit, onToggle, onDelete, enabled }: {
     if (open) { setOpen(false); return }
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
-      setPos({ top: r.bottom + 4, left: r.right - 176 })
+      const menuW = 176
+      const pad = 8
+      let left = r.right - menuW
+      left = Math.max(pad, Math.min(left, window.innerWidth - menuW - pad))
+      setPos({ top: r.bottom + 4, left })
     }
     setOpen(true)
   }
 
   return (
     <>
-      <button ref={btnRef} onClick={toggle} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+      <button
+        type="button"
+        ref={btnRef}
+        onClick={(e) => { e.stopPropagation(); toggle() }}
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+      >
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open && pos && createPortal(
@@ -236,13 +245,17 @@ export default function SellerDealsPage() {
   if (loading) return <div className="flex items-center justify-center min-h-[400px] gap-2 text-gray-500"><Loader2 className="h-5 w-5 animate-spin" /> Loading deals...</div>
 
   return (
-    <div className="max-w-[960px] mx-auto px-4 sm:px-6 py-8 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="mx-auto min-w-0 w-full max-w-[960px] space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Deals</h1>
           <p className="text-sm text-gray-500 mt-1">Create store-wide promotions or product-specific deals.</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-black hover:bg-primary/90 transition-colors">
+        <button
+          type="button"
+          onClick={openCreate}
+          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-black hover:bg-primary/90 transition-colors sm:w-auto"
+        >
           <Plus className="h-4 w-4" /> Create Deal
         </button>
       </div>
@@ -259,69 +272,112 @@ export default function SellerDealsPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white">
-        <div className="px-5 py-4 border-b border-gray-200">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+        <div className="border-b border-gray-200 px-4 py-4 sm:px-5">
           <h2 className="text-base font-semibold text-gray-900">Your Deals</h2>
         </div>
 
         {deals.length === 0 ? (
-          <div className="px-5 py-12 text-center text-gray-500 text-sm">
+          <div className="px-4 py-12 text-center text-sm text-gray-500 sm:px-5">
             No deals yet. Create your first deal to attract more customers!
           </div>
         ) : (
           <>
-            <div className="hidden sm:grid grid-cols-[1fr_100px_120px_100px_100px_90px_44px] gap-2 px-5 py-2.5 text-xs text-gray-500 font-medium uppercase tracking-wide border-b border-gray-100">
+            <div className="hidden grid-cols-[minmax(0,1fr)_100px_120px_100px_100px_90px_44px] gap-2 border-b border-gray-100 px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 sm:grid">
               <span>Deal</span><span>Type</span><span>Product</span><span>Price</span><span>Status</span><span className="text-right">Ends</span><span />
             </div>
             <div className="divide-y divide-gray-100">
               {deals.map((d) => {
                 const isStoreWide = !d.productId
+                const typeBadge = isStoreWide ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-700">
+                    <Store className="h-3 w-3" /> Store
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                    <Package className="h-3 w-3" /> Product
+                  </span>
+                )
+                const statusBadge = d.active ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700"><span className="h-1.5 w-1.5 rounded-full bg-green-500" />Active</span>
+                ) : d.enabled ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-700"><span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />Scheduled</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500"><span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled</span>
+                )
+                const priceCell = d.dealPriceCents ? (
+                  <span className="flex flex-wrap items-center gap-1">
+                    <span className="font-semibold text-gray-900">{formatCents(d.dealPriceCents)}</span>
+                    {d.originalPriceCents && <span className="text-xs text-gray-400 line-through">{formatCents(d.originalPriceCents)}</span>}
+                  </span>
+                ) : d.discountPercent ? (
+                  <span className="font-semibold text-primary">{d.discountPercent}% OFF</span>
+                ) : (
+                  "—"
+                )
+
                 return (
-                  <div key={d.id} className="grid grid-cols-1 sm:grid-cols-[1fr_100px_120px_100px_100px_90px_44px] gap-2 px-5 py-3 items-center hover:bg-gray-50 transition-colors">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{d.title}</p>
-                      {d.badgeText && <span className="text-[10px] text-primary font-semibold">{d.badgeText}</span>}
+                  <div key={d.id}>
+                    {/* Mobile: card layout */}
+                    <div className="space-y-3 px-4 py-4 sm:hidden">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 break-words">{d.title}</p>
+                          {d.badgeText && <span className="mt-0.5 inline-block text-[10px] font-semibold text-primary">{d.badgeText}</span>}
+                        </div>
+                        <RowActionMenu
+                          onEdit={() => openEdit(d)}
+                          onToggle={() => handleToggle(d)}
+                          onDelete={() => handleDelete(d)}
+                          enabled={d.enabled ?? false}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Type</p>
+                          <div className="mt-0.5">{typeBadge}</div>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Status</p>
+                          <div className="mt-0.5">{statusBadge}</div>
+                        </div>
+                        <div className="col-span-2 min-w-0">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Product</p>
+                          <p className="mt-0.5 break-words text-xs text-gray-600">
+                            {isStoreWide ? "All products" : (d.productTitle || "—")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Price</p>
+                          <div className="mt-0.5 text-sm">{priceCell}</div>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Ends</p>
+                          <p className="mt-0.5 text-xs text-gray-600">{d.endAt ? formatDate(d.endAt) : "Always"}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      {isStoreWide ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-700">
-                          <Store className="h-3 w-3" /> Store
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
-                          <Package className="h-3 w-3" /> Product
-                        </span>
-                      )}
+
+                    {/* Desktop: table row */}
+                    <div className="hidden grid-cols-[minmax(0,1fr)_100px_120px_100px_100px_90px_44px] items-center gap-2 px-5 py-3 transition-colors hover:bg-gray-50 sm:grid">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-gray-900">{d.title}</p>
+                        {d.badgeText && <span className="text-[10px] font-semibold text-primary">{d.badgeText}</span>}
+                      </div>
+                      <div>{typeBadge}</div>
+                      <span className="truncate text-xs text-gray-500">
+                        {isStoreWide ? "All products" : (d.productTitle || "—")}
+                      </span>
+                      <div className="text-sm">{priceCell}</div>
+                      <div>{statusBadge}</div>
+                      <span className="text-right text-xs text-gray-500">{d.endAt ? formatDate(d.endAt) : "Always"}</span>
+                      <RowActionMenu
+                        onEdit={() => openEdit(d)}
+                        onToggle={() => handleToggle(d)}
+                        onDelete={() => handleDelete(d)}
+                        enabled={d.enabled ?? false}
+                      />
                     </div>
-                    <span className="text-xs text-gray-500 truncate">
-                      {isStoreWide ? "All products" : (d.productTitle || "—")}
-                    </span>
-                    <div className="text-sm">
-                      {d.dealPriceCents ? (
-                        <span className="flex items-center gap-1">
-                          <span className="font-semibold text-gray-900">{formatCents(d.dealPriceCents)}</span>
-                          {d.originalPriceCents && <span className="text-xs text-gray-400 line-through">{formatCents(d.originalPriceCents)}</span>}
-                        </span>
-                      ) : d.discountPercent ? (
-                        <span className="font-semibold text-primary">{d.discountPercent}% OFF</span>
-                      ) : "—"}
-                    </div>
-                    <div>
-                      {d.active ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700"><span className="h-1.5 w-1.5 rounded-full bg-green-500" />Active</span>
-                      ) : d.enabled ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-700"><span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />Scheduled</span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500"><span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled</span>
-                      )}
-                    </div>
-                    <span className="text-xs text-gray-500 text-right">{d.endAt ? formatDate(d.endAt) : "Always"}</span>
-                    <RowActionMenu
-                      onEdit={() => openEdit(d)}
-                      onToggle={() => handleToggle(d)}
-                      onDelete={() => handleDelete(d)}
-                      enabled={d.enabled ?? false}
-                    />
                   </div>
                 )
               })}

@@ -27,8 +27,9 @@ import {
   X,
   Loader2,
   Menu,
-  LayoutGrid,
+  ChevronRight,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useSignOut } from "@/hooks/useSignOut"
@@ -66,6 +67,35 @@ function getInitials(name?: string | null): string {
 
 const isServicesCategory = (slug: string) => slug.toLowerCase().includes("service")
 
+function MobileMenuSectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="border-y border-gray-200/80 bg-gray-50 px-4 py-2.5">
+      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500">{children}</p>
+    </div>
+  )
+}
+
+function MobileMenuRow({
+  href,
+  onClick,
+  children,
+}: {
+  href: string
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="flex min-h-[3.25rem] items-center justify-between gap-3 border-b border-gray-100 px-4 active:bg-gray-50/80"
+    >
+      <span className="min-w-0 flex-1 text-[15px] font-medium leading-snug text-gray-900">{children}</span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" strokeWidth={2} aria-hidden />
+    </Link>
+  )
+}
+
 export function Header() {
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -93,6 +123,9 @@ export function Header() {
   const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
   const isAdmin = roles.includes("admin")
   const isSeller = roles.includes("seller")
+
+  const closeMobileMenu = () => setMobileMenuOpen(false)
+  const firstName = userName?.trim().split(/\s+/)[0] ?? null
 
   const [categories, setCategories] = useState<CategoryRef[]>([])
 
@@ -454,197 +487,155 @@ export function Header() {
         </nav>
       </header>
 
-      {/* ── Mobile slide-out menu (below search overlay z-index when search open) ── */}
+      {/* ── Mobile slide-out menu (Amazon-inspired sheet; omits Search/Cart/Home — already in navbar) ── */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-[45] flex">
           <button
             type="button"
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/50 backdrop-blur-[2px] transition-opacity"
             aria-label="Close menu"
-            onClick={() => setMobileMenuOpen(false)}
+            onClick={closeMobileMenu}
           />
           <nav
-            className="relative h-full w-[min(100%,20rem)] max-w-[100vw] bg-white shadow-xl flex flex-col border-r border-gray-100"
-            aria-label="Mobile"
+            className="relative flex h-full w-[min(22rem,calc(100vw-14px))] max-w-[90vw] flex-col overflow-hidden rounded-r-2xl bg-white shadow-2xl animate-in slide-in-from-left duration-200 ease-out"
+            style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+            aria-label="Main menu"
           >
-            <div className="flex items-center justify-between px-4 h-[58px] border-b border-gray-100 shrink-0">
-              <span className="text-sm font-bold text-gray-900">Menu</span>
-              <button
-                type="button"
-                className="flex items-center justify-center w-10 h-10 rounded-lg text-gray-600 hover:bg-gray-100"
-                aria-label="Close menu"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </button>
+            {/* Greeting strip — not a copy of Amazon; same UX pattern */}
+            <div className="shrink-0 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 px-4 pb-5 pt-4 text-white">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/10">
+                    <User className="h-5 w-5 text-white/90" strokeWidth={1.75} />
+                  </div>
+                  <div className="min-w-0 pt-0.5">
+                    <p className="text-xs font-medium text-white/60">Hello</p>
+                    {isAuthenticated && firstName ? (
+                      <>
+                        <p className="truncate text-lg font-semibold leading-tight text-white">{firstName}</p>
+                        {userEmail ? (
+                          <p className="mt-0.5 truncate text-xs text-white/55">{userEmail}</p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-lg font-semibold leading-tight text-white">there</p>
+                        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/85">
+                          <Link
+                            href="/auth/login"
+                            onClick={closeMobileMenu}
+                            className="font-semibold text-primary underline decoration-primary/50 underline-offset-2 transition-colors hover:text-primary/90"
+                          >
+                            Sign in
+                          </Link>
+                          <span className="text-white/35">·</span>
+                          <Link
+                            href="/auth/register"
+                            onClick={closeMobileMenu}
+                            className="font-medium text-white/80 transition-colors hover:text-white"
+                          >
+                            Create account
+                          </Link>
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="-mr-1 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10"
+                  aria-label="Close menu"
+                  onClick={closeMobileMenu}
+                >
+                  <X className="h-5 w-5" strokeWidth={2} />
+                </button>
+              </div>
+              {isAuthenticated ? (
+                <p className="mt-3 flex items-center gap-1.5 text-xs text-white/50">
+                  <MapPin className="h-3 w-3 shrink-0 text-primary/90" />
+                  <span>Delivering to {locationDisplay}</span>
+                </p>
+              ) : null}
             </div>
-            <div className="flex-1 overflow-y-auto py-2 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
-              <Link
-                href="/"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                <Home className="h-5 w-5 text-gray-500 shrink-0" />
-                Home
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false)
-                  setMobileSearchOpen(true)
-                }}
-                className="flex w-full items-center gap-3 px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 text-left"
-              >
-                <Search className="h-5 w-5 text-gray-500 shrink-0" />
-                Search
-              </button>
-              <Link
-                href="/cart"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                <ShoppingCart className="h-5 w-5 text-gray-500 shrink-0" />
-                Cart
-                {cartReady && cartCount > 0 && (
-                  <span className="ml-auto text-xs font-semibold text-primary">{cartCount}</span>
-                )}
-              </Link>
-              <Link
-                href="/categories"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                <LayoutGrid className="h-5 w-5 text-gray-500 shrink-0" />
-                Categories
-              </Link>
-              <Link
-                href="/stores"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                <Store className="h-5 w-5 text-gray-500 shrink-0" />
-                Stores near me
-              </Link>
-              <Link
-                href="/deals"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                <Tag className="h-5 w-5 text-gray-500 shrink-0" />
-                Deals
-              </Link>
-              <Link
-                href="/search"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                <Package className="h-5 w-5 text-gray-500 shrink-0" />
-                Browse products
-              </Link>
 
-              <div className="my-2 border-t border-gray-100" />
-
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]">
+              <MobileMenuSectionTitle>Shop</MobileMenuSectionTitle>
+              <MobileMenuRow href="/categories" onClick={closeMobileMenu}>
+                All categories
+              </MobileMenuRow>
               {navLinks.map((link) => {
-                const Icon = link.icon
                 if (link.disabled) {
                   return (
-                    <span
+                    <div
                       key={link.name}
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-gray-400 cursor-default"
+                      className="flex min-h-[3.25rem] items-center justify-between gap-3 border-b border-gray-100 px-4 text-[15px] text-gray-400"
                     >
-                      <Icon className="h-5 w-5 shrink-0 opacity-40" style={{ color: link.accent }} />
-                      {link.name}
-                      <span className="ml-auto text-[10px] font-semibold bg-gray-100 text-gray-500 rounded px-1.5 py-0.5">Soon</span>
-                    </span>
+                      <span className="min-w-0 flex-1 truncate">{link.name}</span>
+                      <span className="shrink-0 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                        Soon
+                      </span>
+                    </div>
                   )
                 }
                 return (
-                  <Link
-                    key={link.name}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50"
-                  >
-                    <Icon className="h-5 w-5 shrink-0" style={{ color: link.accent }} />
+                  <MobileMenuRow key={link.name} href={link.href} onClick={closeMobileMenu}>
                     {link.name}
-                  </Link>
+                  </MobileMenuRow>
                 )
               })}
+              <MobileMenuRow href="/stores" onClick={closeMobileMenu}>
+                Stores near you
+              </MobileMenuRow>
+              <MobileMenuRow href="/search" onClick={closeMobileMenu}>
+                Shop all products
+              </MobileMenuRow>
 
-              <div className="px-4 py-2">
-                <StartSellingLink
-                  variant="bare"
-                  className="flex items-center justify-center gap-2 w-full rounded-xl border border-emerald-200 bg-emerald-50 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors"
-                  onNavigate={() => setMobileMenuOpen(false)}
-                >
-                  Start Selling
-                </StartSellingLink>
-              </div>
-
-              <div className="my-2 border-t border-gray-100" />
+              <MobileMenuSectionTitle>For sellers</MobileMenuSectionTitle>
+              <StartSellingLink
+                variant="bare"
+                className={cn(
+                  "flex min-h-[3.25rem] w-full items-center justify-between gap-3 border-b border-emerald-100/80 bg-gradient-to-r from-emerald-50/90 to-white px-4 text-[15px] font-semibold text-emerald-900 active:bg-emerald-50",
+                )}
+                onNavigate={closeMobileMenu}
+              >
+                <span className="min-w-0 flex-1 text-left">Start selling</span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-emerald-600/70" aria-hidden />
+              </StartSellingLink>
 
               {isAuthenticated ? (
-                <div className="px-2 pb-4">
-                  <div className="px-2 py-2 mb-1">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Account</p>
-                    <p className="text-sm font-semibold text-gray-900 truncate mt-1">{userName ?? "User"}</p>
-                    <p className="text-xs text-gray-500 truncate">{userEmail}</p>
-                  </div>
-                  <Link href="/account" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-3 text-sm text-gray-800 hover:bg-gray-50 rounded-lg">
-                    <User className="h-5 w-5 text-gray-500 shrink-0" />
-                    My Account
-                  </Link>
-                  <Link href="/orders" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-3 text-sm text-gray-800 hover:bg-gray-50 rounded-lg">
-                    <Package className="h-5 w-5 text-gray-500 shrink-0" />
-                    Orders
-                  </Link>
+                <>
+                  <MobileMenuSectionTitle>Your account</MobileMenuSectionTitle>
+                  <MobileMenuRow href="/account" onClick={closeMobileMenu}>
+                    Account and profile
+                  </MobileMenuRow>
+                  <MobileMenuRow href="/orders" onClick={closeMobileMenu}>
+                    Your orders
+                  </MobileMenuRow>
                   {(isSeller || isAdmin) && (
-                    <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-3 text-sm text-gray-800 hover:bg-gray-50 rounded-lg">
-                      <LayoutDashboard className="h-5 w-5 text-gray-500 shrink-0" />
-                      Seller Dashboard
-                    </Link>
+                    <MobileMenuRow href="/dashboard" onClick={closeMobileMenu}>
+                      Seller dashboard
+                    </MobileMenuRow>
                   )}
                   {isAdmin && (
-                    <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-3 text-sm text-yellow-800 hover:bg-yellow-50 rounded-lg">
-                      <ShieldCheck className="h-5 w-5 shrink-0" />
-                      Admin Panel
-                    </Link>
+                    <MobileMenuRow href="/admin" onClick={closeMobileMenu}>
+                      Admin
+                    </MobileMenuRow>
                   )}
-                  <Link href="/account/settings" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-3 text-sm text-gray-800 hover:bg-gray-50 rounded-lg">
-                    <Settings className="h-5 w-5 text-gray-500 shrink-0" />
+                  <MobileMenuRow href="/account/settings" onClick={closeMobileMenu}>
                     Settings
-                  </Link>
+                  </MobileMenuRow>
                   <button
                     type="button"
                     onClick={() => {
-                      setMobileMenuOpen(false)
+                      closeMobileMenu()
                       signOut()
                     }}
-                    className="flex w-full items-center gap-3 px-3 py-3 text-sm text-red-600 hover:bg-red-50 rounded-lg text-left"
+                    className="flex min-h-[3.25rem] w-full items-center border-b border-gray-100 px-4 text-left text-[15px] font-medium text-red-600 active:bg-red-50/60"
                   >
-                    <LogOut className="h-5 w-5 shrink-0" />
-                    Sign Out
+                    Sign out
                   </button>
-                </div>
-              ) : (
-                <div className="px-4 pb-6 space-y-2">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">{getGreeting()}</p>
-                  <Link
-                    href="/auth/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block w-full text-center rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white hover:bg-gray-800"
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    href="/auth/register"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block w-full text-center rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
-                  >
-                    Register
-                  </Link>
-                </div>
-              )}
+                </>
+              ) : null}
             </div>
           </nav>
         </div>

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo, useCallback, useRef, useEffect } from "react"
+import { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffect, useId } from "react"
+import { createPortal } from "react-dom"
 import {
   useReactTable,
   getCoreRowModel,
@@ -84,35 +85,108 @@ function downloadCsv(rows: Record<string, unknown>[], filename: string) {
 // Sub-components
 // ---------------------------------------------------------------------------
 
+const COLUMN_MENU_WIDTH = 208 // w-52
+
 function ColumnVisibilityDropdown({
   table,
 }: {
   table: ReturnType<typeof useReactTable<any>>
 }) {
+  const menuDomId = useId()
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
+
+  const updatePosition = useCallback(() => {
+    const el = triggerRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const vw = window.innerWidth
+    const pad = 8
+    let left = rect.right - COLUMN_MENU_WIDTH
+    left = Math.min(left, vw - COLUMN_MENU_WIDTH - pad)
+    left = Math.max(pad, left)
+    setMenuPos({ top: rect.bottom + pad, left })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPos(null)
+      return
+    }
+    updatePosition()
+  }, [open, updatePosition])
 
   useEffect(() => {
+    if (!open) return
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const t = e.target as Node
+      if (triggerRef.current?.contains(t)) return
+      const menu = document.getElementById(menuDomId)
+      if (menu?.contains(t)) return
+      setOpen(false)
+    }
+    function onResize() {
+      updatePosition()
     }
     document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+    window.addEventListener("resize", onResize)
+    window.addEventListener("scroll", onResize, true)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      window.removeEventListener("resize", onResize)
+      window.removeEventListener("scroll", onResize, true)
+    }
+  }, [open, updatePosition, menuDomId])
 
   const toggleable = table
     .getAllLeafColumns()
     .filter((col) => col.getCanHide())
 
+  const menu =
+    open && menuPos && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            id={menuDomId}
+            className="fixed z-[200] max-h-[min(24rem,calc(100vh-6rem))] w-52 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-xl"
+            style={{ top: menuPos.top, left: menuPos.left }}
+            role="menu"
+          >
+            {toggleable.map((col) => {
+              const visible = col.getIsVisible()
+              return (
+                <button
+                  key={col.id}
+                  type="button"
+                  onClick={() => col.toggleVisibility(!visible)}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                >
+                  {visible ? (
+                    <Eye className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5 shrink-0" />
+                  )}
+                  <span className="min-w-0 break-words capitalize">
+                    {typeof col.columnDef.header === "string"
+                      ? col.columnDef.header
+                      : col.id}
+                  </span>
+                </button>
+              )
+            })}
+          </div>,
+          document.body,
+        )
+      : null
+
   return (
-    <div ref={ref} className="relative">
+    <div ref={triggerRef} className="relative">
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
           "inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900",
-          open && "bg-gray-100 text-gray-900"
+          open && "bg-gray-100 text-gray-900",
         )}
       >
         <Eye className="h-4 w-4" />
@@ -121,32 +195,7 @@ function ColumnVisibilityDropdown({
           className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")}
         />
       </button>
-
-      {open && (
-        <div className="absolute right-0 z-50 mt-2 w-52 origin-top-right rounded-xl border border-gray-200 bg-white p-2 shadow-xl animate-in fade-in-0 zoom-in-95">
-          {toggleable.map((col) => {
-            const visible = col.getIsVisible()
-            return (
-              <button
-                key={col.id}
-                onClick={() => col.toggleVisibility(!visible)}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
-              >
-                {visible ? (
-                  <Eye className="h-3.5 w-3.5 text-primary" />
-                ) : (
-                  <EyeOff className="h-3.5 w-3.5" />
-                )}
-                <span className="truncate capitalize">
-                  {typeof col.columnDef.header === "string"
-                    ? col.columnDef.header
-                    : col.id}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {menu}
     </div>
   )
 }
@@ -265,11 +314,11 @@ export function DataTable<TData>({
   const totalRows = table.getFilteredRowModel().rows.length
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 max-w-full space-y-4">
       {/* ── Toolbar ─────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Search */}
-        <div className="relative max-w-sm flex-1">
+        <div className="relative min-w-0 max-w-sm flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
@@ -303,8 +352,8 @@ export function DataTable<TData>({
           )}
         </div>
 
-        {/* Right-side controls */}
-        <div className="flex items-center gap-2">
+        {/* Right-side controls — right-align on mobile so popovers stay in viewport */}
+        <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto sm:justify-start">
           <ColumnVisibilityDropdown table={table} />
 
           {enableExport && (
@@ -320,9 +369,9 @@ export function DataTable<TData>({
         </div>
       </div>
 
-      {/* ── Table ───────────────────────────────────────────────────── */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-sm">
+      {/* ── Table: only this region scrolls horizontally on narrow viewports ─── */}
+      <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border border-gray-200 bg-white [-webkit-overflow-scrolling:touch]">
+        <table className="w-full min-w-max text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id} className="border-b border-gray-200">
@@ -404,9 +453,9 @@ export function DataTable<TData>({
       </div>
 
       {/* ── Pagination ──────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Selection info + page size */}
-        <div className="flex items-center gap-4 text-sm text-gray-500">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
           {enableSelection && (
             <span>
               {table.getFilteredSelectedRowModel().rows.length} of{" "}

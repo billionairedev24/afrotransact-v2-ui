@@ -443,7 +443,7 @@ export default function EmailTemplatesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-32">
+      <div className="flex min-w-0 items-center justify-center py-32">
         <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
       </div>
     )
@@ -452,22 +452,26 @@ export default function EmailTemplatesPage() {
   // ── Create Template View ────────────────────────────────────────────────────
   if (viewMode === "create") {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => { resetCreateForm(); setViewMode("list"); setActiveTab("editor") }}
-            className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-gray-900">Create New Template</h1>
-            <p className="text-sm text-gray-500">Build a custom email template for future notifications.</p>
+      <div className="min-w-0 space-y-6">
+        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <button
+              type="button"
+              onClick={() => { resetCreateForm(); setViewMode("list"); setActiveTab("editor") }}
+              className="shrink-0 rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl font-bold text-gray-900">Create New Template</h1>
+              <p className="text-sm text-gray-500">Build a custom email template for future notifications.</p>
+            </div>
           </div>
           <button
+            type="button"
             onClick={handleCreate}
             disabled={creating || !newSlug || !newName || !newSubject || !newHTML}
-            className="flex items-center gap-1.5 rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 disabled:opacity-50 transition-colors"
+            className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 disabled:opacity-50 transition-colors sm:ml-auto"
           >
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Create Template
@@ -564,21 +568,21 @@ export default function EmailTemplatesPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          <div className="xl:col-span-3">
+        <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-4">
+          <div className="min-w-0 xl:col-span-3">
             {activeTab === "editor" ? (
               <textarea
                 value={newHTML}
                 onChange={e => setNewHTML(e.target.value)}
                 spellCheck={false}
-                className="w-full h-[500px] rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-y transition-colors"
+                className="h-[500px] w-full max-w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-y transition-colors"
               />
             ) : (
-              <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <div className="min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
                 {newPreviewHTML ? (
                   <iframe
                     srcDoc={newPreviewHTML}
-                    className="w-full h-[500px] border-0"
+                    className="h-[500px] w-full max-w-full border-0"
                     title="Email Preview"
                     sandbox="allow-same-origin"
                   />
@@ -596,13 +600,13 @@ export default function EmailTemplatesPage() {
                 value={newText}
                 onChange={e => setNewText(e.target.value)}
                 rows={3}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-y transition-colors"
+                className="w-full max-w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-y transition-colors"
               />
             </div>
           </div>
 
           {/* Variables editor */}
-          <div className="xl:col-span-1 space-y-4">
+          <div className="min-w-0 space-y-4 xl:col-span-1">
             <div className="rounded-lg border border-gray-200 bg-white p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
@@ -677,11 +681,11 @@ export default function EmailTemplatesPage() {
               <h4 className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-2">
                 <Info className="h-3 w-3" /> Template Functions
               </h4>
-              <div className="space-y-1.5 text-xs text-gray-500">
-                <p><code className="text-yellow-700">{"{{formatMoney .AmountCents .Currency}}"}</code><br/>Formats cents to $45.99</p>
-                <p><code className="text-yellow-700">{"{{ctaButton .URL \"Label\"}}"}</code><br/>Gold CTA button</p>
-                <p><code className="text-yellow-700">{"{{if .Var}}…{{end}}"}</code><br/>Conditional block</p>
-                <p><code className="text-yellow-700">{"{{range .Items}}…{{end}}"}</code><br/>Loop over arrays</p>
+              <div className="space-y-1.5 overflow-x-auto text-xs text-gray-500 break-words">
+                <p><code className="break-all text-yellow-700">{"{{formatMoney .AmountCents .Currency}}"}</code><br/>Formats cents to $45.99</p>
+                <p><code className="break-all text-yellow-700">{"{{ctaButton .URL \"Label\"}}"}</code><br/>Gold CTA button</p>
+                <p><code className="break-all text-yellow-700">{"{{if .Var}}…{{end}}"}</code><br/>Conditional block</p>
+                <p><code className="break-all text-yellow-700">{"{{range .Items}}…{{end}}"}</code><br/>Loop over arrays</p>
               </div>
             </div>
           </div>
@@ -693,23 +697,27 @@ export default function EmailTemplatesPage() {
   // ── Detail / Editor View ──────────────────────────────────────────────────
   if (viewMode === "detail" && selected) {
     return (
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => { setSelected(null); setViewMode("list"); setActiveTab("editor") }}
-            className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-gray-900 truncate">{selected.name}</h1>
-            <p className="text-sm text-gray-500">{selected.description}</p>
+        <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <button
+              type="button"
+              onClick={() => { setSelected(null); setViewMode("list"); setActiveTab("editor") }}
+              className="shrink-0 rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-xl font-bold text-gray-900">{selected.name}</h1>
+              <p className="text-sm text-gray-500 break-words">{selected.description}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
             {!selected.is_default && (
               <>
                 <button
+                  type="button"
                   onClick={handleReset}
                   disabled={resetting}
                   className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
@@ -720,6 +728,7 @@ export default function EmailTemplatesPage() {
                 {/* Only custom (non-system-default) templates can be deleted */}
                 {selected.category === "custom" && (
                   <button
+                    type="button"
                     onClick={handleDelete}
                     className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   >
@@ -729,12 +738,14 @@ export default function EmailTemplatesPage() {
               </>
             )}
             <button
+              type="button"
               onClick={() => setShowSendTest(true)}
               className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
             >
               <Send className="h-4 w-4" /> Send Test
             </button>
             <button
+              type="button"
               onClick={handleSave}
               disabled={saving || !hasChanges}
               className="flex items-center gap-1.5 rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 disabled:opacity-50 transition-colors"
@@ -747,25 +758,28 @@ export default function EmailTemplatesPage() {
 
         {/* Send test email modal */}
         {showSendTest && (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
-            <Send className="h-4 w-4 text-blue-600 flex-shrink-0" />
+          <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center">
+            <Send className="h-4 w-4 shrink-0 text-blue-600 sm:mt-0.5" />
             <input
               type="email"
               value={testEmail}
               onChange={e => setTestEmail(e.target.value)}
               placeholder="recipient@example.com"
-              className="flex-1 rounded-md border border-blue-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+              className="min-w-0 flex-1 rounded-md border border-blue-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
             />
-            <button
-              onClick={handleSendTest}
-              disabled={sendingTest || !testEmail}
-              className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {sendingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
-            </button>
-            <button onClick={() => setShowSendTest(false)} className="text-gray-400 hover:text-gray-600">
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
+              <button
+                type="button"
+                onClick={handleSendTest}
+                disabled={sendingTest || !testEmail}
+                className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {sendingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+              </button>
+              <button type="button" onClick={() => setShowSendTest(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -823,21 +837,21 @@ export default function EmailTemplatesPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          <div className="xl:col-span-3">
+        <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-4">
+          <div className="min-w-0 xl:col-span-3">
             {activeTab === "editor" ? (
               <textarea
                 value={editHTML}
                 onChange={e => setEditHTML(e.target.value)}
                 spellCheck={false}
-                className="w-full h-[600px] rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-y transition-colors"
+                className="h-[600px] w-full max-w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-y transition-colors"
               />
             ) : (
-              <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <div className="min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
                 {previewHTML ? (
                   <iframe
                     srcDoc={previewHTML}
-                    className="w-full h-[600px] border-0"
+                    className="h-[600px] w-full max-w-full border-0"
                     title="Email Preview"
                     sandbox="allow-same-origin"
                   />
@@ -855,14 +869,14 @@ export default function EmailTemplatesPage() {
                 value={editText}
                 onChange={e => setEditText(e.target.value)}
                 rows={4}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-y transition-colors"
+                className="w-full max-w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-y transition-colors"
               />
             </div>
           </div>
 
           {/* Variables panel */}
-          <div className="xl:col-span-1">
-            <div className="rounded-lg border border-gray-200 bg-white p-4 sticky top-6">
+          <div className="min-w-0 xl:col-span-1">
+            <div className="sticky top-6 rounded-lg border border-gray-200 bg-white p-4">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 mb-3">
                 <Tag className="h-4 w-4 text-yellow-600" />
                 Available Variables
@@ -877,12 +891,12 @@ export default function EmailTemplatesPage() {
                       navigator.clipboard.writeText(`{{.${v.name}}}`)
                       toast.success(`Copied {{.${v.name}}} to clipboard`)
                     }}
-                    className="block w-full text-left rounded-md border border-gray-100 bg-gray-50 px-3 py-2 hover:bg-yellow-50 hover:border-yellow-200 transition-colors group"
+                    className="block w-full min-w-0 text-left rounded-md border border-gray-100 bg-gray-50 px-3 py-2 hover:bg-yellow-50 hover:border-yellow-200 transition-colors group"
                   >
-                    <code className="text-xs font-mono text-yellow-700 group-hover:text-yellow-800">
+                    <code className="break-all text-xs font-mono text-yellow-700 group-hover:text-yellow-800">
                       {"{{."}{v.name}{"}}"}
                     </code>
-                    <p className="text-xs text-gray-500 mt-0.5">{v.description}</p>
+                    <p className="mt-0.5 break-words text-xs text-gray-500">{v.description}</p>
                     {v.sample_value && (
                       <p className="text-xs text-gray-400 mt-0.5">e.g. {v.sample_value}</p>
                     )}
@@ -894,15 +908,15 @@ export default function EmailTemplatesPage() {
                 <h4 className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-2">
                   <Info className="h-3 w-3" /> Template Functions
                 </h4>
-                <div className="space-y-1.5 text-xs text-gray-500">
-                  <p><code className="text-yellow-700">{"{{formatMoney .AmountCents .Currency}}"}</code><br/>Formats cents to $45.99</p>
-                  <p><code className="text-yellow-700">{"{{ctaButton .URL \"Label\"}}"}</code><br/>Gold CTA button</p>
-                  <p><code className="text-yellow-700">{"{{if .Var}}…{{end}}"}</code><br/>Conditional block</p>
-                  <p><code className="text-yellow-700">{"{{range .Items}}…{{end}}"}</code><br/>Loop over arrays</p>
+                <div className="space-y-1.5 overflow-x-auto text-xs text-gray-500 break-words">
+                  <p><code className="break-all text-yellow-700">{"{{formatMoney .AmountCents .Currency}}"}</code><br/>Formats cents to $45.99</p>
+                  <p><code className="break-all text-yellow-700">{"{{ctaButton .URL \"Label\"}}"}</code><br/>Gold CTA button</p>
+                  <p><code className="break-all text-yellow-700">{"{{if .Var}}…{{end}}"}</code><br/>Conditional block</p>
+                  <p><code className="break-all text-yellow-700">{"{{range .Items}}…{{end}}"}</code><br/>Loop over arrays</p>
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-400 space-y-1">
+              <div className="mt-4 space-y-1 border-t border-gray-100 pt-4 text-xs break-words text-gray-400">
                 <p><span className="font-medium text-gray-500">Slug:</span> {selected.slug}</p>
                 <p><span className="font-medium text-gray-500">Version:</span> {selected.version}</p>
                 <p><span className="font-medium text-gray-500">Layout:</span> {selected.use_layout ? "Shared wrapper" : "Standalone"}</p>
@@ -920,27 +934,28 @@ export default function EmailTemplatesPage() {
 
   // ── List View ─────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Mail className="h-6 w-6 text-yellow-600" />
-            Email Templates
+    <div className="min-w-0 space-y-6">
+      <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
+            <Mail className="h-6 w-6 shrink-0 text-yellow-600" />
+            <span className="min-w-0">Email Templates</span>
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-sm text-gray-500">
             Manage the content of transactional emails. Changes take effect immediately.
           </p>
         </div>
         <button
+          type="button"
           onClick={() => { resetCreateForm(); setViewMode("create"); setActiveTab("editor") }}
-          className="flex items-center gap-1.5 rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 transition-colors"
+          className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 transition-colors"
         >
           <Plus className="h-4 w-4" /> New Template
         </button>
       </div>
 
       {/* Category filter */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <button
           onClick={() => setFilterCategory("")}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
@@ -966,30 +981,31 @@ export default function EmailTemplatesPage() {
       </div>
 
       {/* Template list */}
-      <div className="grid gap-3">
+      <div className="grid min-w-0 gap-3">
         {templates
           .filter(t => t.slug !== "_layout" || filterCategory === "system")
           .map(tpl => (
           <button
             key={tpl.slug}
+            type="button"
             onClick={() => selectTemplate(tpl.slug)}
             disabled={loadingDetail}
-            className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 text-left hover:border-yellow-300 hover:shadow-sm transition-all group"
+            className="group flex min-w-0 w-full max-w-full items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-yellow-300 hover:shadow-sm"
           >
-            <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-yellow-50 transition-colors">
-              <Mail className="h-5 w-5 text-gray-400 group-hover:text-yellow-600 transition-colors" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 transition-colors group-hover:bg-yellow-50">
+              <Mail className="h-5 w-5 text-gray-400 transition-colors group-hover:text-yellow-600" />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-900 truncate">{tpl.name}</span>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_COLORS[tpl.category] ?? "bg-gray-100 text-gray-600"}`}>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="min-w-0 truncate font-medium text-gray-900">{tpl.name}</span>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_COLORS[tpl.category] ?? "bg-gray-100 text-gray-600"}`}>
                   {CATEGORY_LABELS[tpl.category] ?? tpl.category}
                 </span>
                 {!tpl.is_default && (
-                  <span className="rounded-full bg-yellow-100 text-yellow-700 px-2 py-0.5 text-[10px] font-medium">Customized</span>
+                  <span className="shrink-0 rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-700">Customized</span>
                 )}
               </div>
-              <p className="text-sm text-gray-500 truncate mt-0.5">{tpl.description}</p>
+              <p className="mt-0.5 truncate text-sm text-gray-500">{tpl.description}</p>
             </div>
             <div className="flex-shrink-0 text-xs text-gray-400">
               v{tpl.version}

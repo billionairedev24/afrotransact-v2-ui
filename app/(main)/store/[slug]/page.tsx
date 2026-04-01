@@ -29,6 +29,15 @@ function formatPrice(price: number) {
   return `$${price.toFixed(2)}`
 }
 
+/** Any variant with inventory can be sold from quick-add grids. */
+function productHasSellableStock(product: Product): boolean {
+  return product.variants?.some((v) => v.stockQuantity > 0) ?? false
+}
+
+function firstInStockVariant(product: Product) {
+  return product.variants?.find((v) => v.stockQuantity > 0) ?? null
+}
+
 function getAccentColor(store: StoreInfo | null): string {
   if (!store) return FALLBACK_ACCENT
   const color = (store as StoreInfo & { themeColor?: string }).themeColor
@@ -42,9 +51,9 @@ function StoreProductGrid({ products, store }: { products: Product[]; store: Sto
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   function handleAdd(product: Product) {
-    const variant = product.variants?.[0]
+    const variant = firstInStockVariant(product)
     if (!variant) {
-      toast.error("This product has no purchasable variant yet")
+      toast.error("This product is out of stock")
       return
     }
     setLoadingId(product.id)
@@ -67,7 +76,8 @@ function StoreProductGrid({ products, store }: { products: Product[]; store: Sto
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {products.map((product) => {
-        const price = product.variants?.[0]?.price
+        const displayVariant = firstInStockVariant(product) ?? product.variants?.[0]
+        const price = displayVariant?.price
         const imageUrl = product.images?.[0]?.url
         const inCart = cartItems.some((i) => i.productId === product.id)
         return (
@@ -79,7 +89,7 @@ function StoreProductGrid({ products, store }: { products: Product[]; store: Sto
               distance=""
               rating={0}
               imageUrl={imageUrl}
-              inStock={product.variants?.length > 0}
+              inStock={productHasSellableStock(product)}
               inCart={inCart}
               addingToCart={loadingId === product.id}
               onAddToCart={() => handleAdd(product)}
