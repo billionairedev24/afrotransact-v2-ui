@@ -15,7 +15,8 @@ type TilePick = {
 }
 
 type Cell = {
-  href: string
+  imageHref: string
+  categoryHref: string
   label: string
   image: string | null
   tint: "lime" | "peach"
@@ -94,17 +95,19 @@ function buildCells(parent: CategoryRef, tiles: (TilePick | null)[]): Cell[] {
     const tile = tiles[i] ?? tiles.find(Boolean) ?? null
     const img = tile?.image ?? null
     const categoryHref = ch ? `/category/${ch.slug}` : `/category/${parent.slug}`
-    const href = productHref(tile) ?? categoryHref
+    const imageHref = productHref(tile) ?? categoryHref
     if (ch) {
       cells.push({
-        href,
+        imageHref,
+        categoryHref,
         label: ch.name,
         image: img,
         tint: tints[i],
       })
     } else {
       cells.push({
-        href,
+        imageHref,
+        categoryHref,
         label: i === 0 ? "Shop all" : "See more",
         image: img,
         tint: tints[i],
@@ -141,33 +144,39 @@ function CategoryMegaCard({
       ) : (
         <div className="grid grid-cols-2 gap-2 mb-3">
           {cells.map((cell, idx) => (
-            <Link
-              key={`${cell.href}-${idx}`}
-              href={cell.href}
-              className="group rounded-md overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <div
-                className={`aspect-square flex items-center justify-center p-1.5 ${
-                  cell.tint === "peach" ? TINT_PEACH : TINT_LIME
-                }`}
+            <div key={`${cell.categoryHref}-${idx}`} className="rounded-md overflow-hidden">
+              <Link
+                href={cell.imageHref}
+                className="group block rounded-md overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label={`View product image for ${cell.label}`}
               >
-                {cell.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- search/CDN URLs
-                  <img
-                    src={cell.image}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-contain object-center group-hover:scale-[1.02] transition-transform duration-200"
-                  />
-                ) : (
-                  <Package className="h-10 w-10 text-gray-400/70" strokeWidth={1.25} />
-                )}
-              </div>
-              <p className="text-[11px] sm:text-xs text-gray-800 mt-1.5 leading-snug line-clamp-2 px-0.5 group-hover:text-blue-700">
+                <div
+                  className={`aspect-square flex items-center justify-center p-1.5 ${
+                    cell.tint === "peach" ? TINT_PEACH : TINT_LIME
+                  }`}
+                >
+                  {cell.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- search/CDN URLs
+                    <img
+                      src={cell.image}
+                      alt={cell.label}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-contain object-center group-hover:scale-[1.02] transition-transform duration-200"
+                    />
+                  ) : (
+                    <Package className="h-10 w-10 text-gray-400/70" strokeWidth={1.25} />
+                  )}
+                </div>
+              </Link>
+              <Link
+                href={cell.categoryHref}
+                className="block text-[11px] sm:text-xs text-gray-800 mt-1.5 leading-snug line-clamp-2 px-0.5 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                aria-label={`Browse ${cell.label} category`}
+              >
                 {cell.label}
-              </p>
-            </Link>
+              </Link>
+            </div>
           ))}
         </div>
       )}
