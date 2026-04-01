@@ -3,13 +3,12 @@
 import { LogOut, Store } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { purgeCartStorageAndServer } from "@/lib/client-cart-cleanup"
+import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
 
 export function OnboardingHeader({ userName }: { userName: string }) {
   function handleSignOut() {
-    void purgeCartStorageAndServer().finally(() => {
-      window.location.href = "/api/auth/signout"
-    })
+    clearClientCartOnly()
+    window.location.href = "/api/auth/signout"
   }
 
   return (

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react"
 import { useSession, signOut } from "next-auth/react"
-import { purgeCartStorageAndServer } from "@/lib/client-cart-cleanup"
+import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
 
 const IDLE_TIMEOUT_MS = process.env.NODE_ENV === "development" 
   ? 2 * 60 * 1000  // 2 minutes for local testing
@@ -16,9 +16,8 @@ export function IdleTimeoutProvider({ children }: { children: React.ReactNode })
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      void purgeCartStorageAndServer().finally(() => {
-        signOut({ callbackUrl: "/auth/login?reason=inactive" })
-      })
+      clearClientCartOnly()
+      void signOut({ callbackUrl: "/auth/login?reason=inactive" })
     }, IDLE_TIMEOUT_MS)
   }, [])
 

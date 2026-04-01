@@ -30,15 +30,23 @@ function LoginForm() {
     inactive: "You were signed out due to inactivity.",
     session_expired: "Your session has expired. Please sign in again.",
     password_updated: "Your password was updated. Continuing to sign in…",
+    email_verified: "Your email has been verified. Continuing to sign in…",
+    account_updated: "Your account was updated. Continuing to sign in…",
   }
 
   const autoKeycloakSignInStarted = useRef(false)
+
+  const callbackRecoveryReasons = [
+    "password_updated",
+    "email_verified",
+    "account_updated",
+  ] as const
 
   useEffect(() => {
     const shouldAutoSignIn =
       error === "OAuthCallback" ||
       error === "Callback" ||
-      reason === "password_updated"
+      (reason != null && callbackRecoveryReasons.includes(reason as (typeof callbackRecoveryReasons)[number]))
     if (!shouldAutoSignIn || autoKeycloakSignInStarted.current) return
     autoKeycloakSignInStarted.current = true
     void signIn("keycloak", { callbackUrl })
@@ -53,15 +61,20 @@ function LoginForm() {
     }
   }
 
-  if (error === "OAuthCallback" || error === "Callback" || reason === "password_updated") {
+  const isCallbackRecovery =
+    error === "OAuthCallback" ||
+    error === "Callback" ||
+    (reason != null && callbackRecoveryReasons.includes(reason as (typeof callbackRecoveryReasons)[number]))
+
+  if (isCallbackRecovery) {
+    const recoveryMessage =
+      reason != null && reason in REASON_MESSAGES
+        ? REASON_MESSAGES[reason as keyof typeof REASON_MESSAGES]
+        : "Completing sign-in..."
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3 px-4 text-center">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p className="text-sm text-muted-foreground max-w-sm">
-          {reason === "password_updated"
-            ? REASON_MESSAGES.password_updated
-            : "Completing sign-in..."}
-        </p>
+        <p className="text-sm text-muted-foreground max-w-sm">{recoveryMessage}</p>
       </div>
     )
   }

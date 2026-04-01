@@ -15,8 +15,9 @@ const errorMessages: Record<string, { title: string; description: string }> = {
     description: "You do not have permission to access this resource.",
   },
   Verification: {
-    title: "Verification Failed",
-    description: "The verification link may have expired or already been used.",
+    title: "Link invalid or expired",
+    description:
+      "This verification or reset link has expired or was already used. Request a new email from the sign-in page (Forgot password) or register again.",
   },
   OAuthSignin: {
     title: "Sign-in Error",

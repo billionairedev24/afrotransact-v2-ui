@@ -2,16 +2,11 @@
 
 import { clearGuestCart, useCartStore } from "@/stores/cart-store"
 
-/** Clears in-memory cart, guest session storage, and the server cart when a token exists. */
-export async function purgeCartStorageAndServer(): Promise<void> {
+/**
+ * Clears in-memory cart and guest cart storage (session/local).
+ * Does not call the API — the server cart stays intact for the next login.
+ */
+export function clearClientCartOnly(): void {
   useCartStore.getState().clearCart()
   clearGuestCart()
-  try {
-    const { getAccessToken } = await import("@/lib/auth-helpers")
-    const { clearServerCart } = await import("@/lib/api")
-    const token = await getAccessToken()
-    if (token) await clearServerCart(token).catch(() => {})
-  } catch {
-    // non-blocking
-  }
 }

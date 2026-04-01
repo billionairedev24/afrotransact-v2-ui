@@ -3,16 +3,38 @@
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { Loader2, Package } from "lucide-react"
-import { searchProducts, type CategoryRef } from "@/lib/api"
+import { searchProducts, type CategoryRef, type SearchResult } from "@/lib/api"
 
 const TINT_LIME = "bg-[#e8f5c8]"
 const TINT_PEACH = "bg-[#fce5cc]"
+
+type TilePick = {
+  image: string
+  slug: string | null
+  productId: string
+}
 
 type Cell = {
   href: string
   label: string
   image: string | null
   tint: "lime" | "peach"
+}
+
+function firstProductWithImage(results: SearchResult[]): TilePick | null {
+  const r = results.find((x) => x.image_url)
+  if (!r?.image_url) return null
+  return {
+    image: r.image_url,
+    slug: r.slug ?? null,
+    productId: r.product_id,
+  }
+}
+
+function productHref(t: TilePick | null): string | null {
+  if (!t) return null
+  const key = (t.slug && t.slug.trim()) || t.productId
+  return key ? `/product/${encodeURIComponent(key)}` : null
 }
 
 function rootsOnly(cats: CategoryRef[]): CategoryRef[] {
@@ -22,10 +44,10 @@ function rootsOnly(cats: CategoryRef[]): CategoryRef[] {
 }
 
 /**
- * For each of the 4 tiles, load a product image from search filtered by that tile’s category
- * (subcategory name when present, otherwise the parent). Falls back to more products from the parent.
+ * For each of the 4 tiles, pick a product (image + id/slug) from search for that tile’s category.
+ * Pool-fills missing slots from the parent category so the linked product always matches the photo.
  */
-async function fetchTileImagesForParent(parent: CategoryRef): Promise<(string | null)[]> {
+async function fetchTilesForParent(parent: CategoryRef): Promise<(TilePick | null)[]> {
   const children = (parent.children ?? []).slice(0, 4)
   const categoryPerSlot = [0, 1, 2, 3].map((i) => children[i]?.name ?? parent.name)
 
@@ -33,51 +55,56 @@ async function fetchTileImagesForParent(parent: CategoryRef): Promise<(string | 
     categoryPerSlot.map(async (categoryName) => {
       try {
         const res = await searchProducts({ category: categoryName, size: "8" })
-        const url = res.results.find((r) => r.image_url)?.image_url ?? null
-        return url
+        return firstProductWithImage(res.results)
       } catch {
         return null
       }
     }),
   )
 
-  if (fromSlot.every(Boolean)) return fromSlot
-
-  let pool: string[] = []
+  let pool: TilePick[] = []
   try {
-    const res = await searchProducts({ category: parent.name, size: "20" })
-    pool = res.results.map((r) => r.image_url).filter(Boolean) as string[]
+    const res = await searchProducts({ category: parent.name, size: "24" })
+    pool = res.results
+      .filter((r): r is SearchResult & { image_url: string } => Boolean(r.image_url))
+      .map((r) => ({
+        image: r.image_url,
+        slug: r.slug ?? null,
+        productId: r.product_id,
+      }))
   } catch {
     /* ignore */
   }
 
   let j = 0
-  return fromSlot.map((u) => {
-    if (u) return u
+  return fromSlot.map((tile) => {
+    if (tile) return tile
     const next = pool[j++]
     return next ?? pool[0] ?? null
   })
 }
 
-function buildCells(parent: CategoryRef, tileImages: (string | null)[]): Cell[] {
+function buildCells(parent: CategoryRef, tiles: (TilePick | null)[]): Cell[] {
   const children = (parent.children ?? []).slice(0, 4)
   const tints: ("lime" | "peach")[] = ["lime", "lime", "lime", "peach"]
   const cells: Cell[] = []
 
   for (let i = 0; i < 4; i++) {
     const ch = children[i]
-    const img =
-      tileImages[i] ?? tileImages.find((x) => x) ?? null
+    const tile = tiles[i] ?? tiles.find(Boolean) ?? null
+    const img = tile?.image ?? null
+    const categoryHref = ch ? `/category/${ch.slug}` : `/category/${parent.slug}`
+    const href = productHref(tile) ?? categoryHref
     if (ch) {
       cells.push({
-        href: `/category/${ch.slug}`,
+        href,
         label: ch.name,
         image: img,
         tint: tints[i],
       })
     } else {
       cells.push({
-        href: `/category/${parent.slug}`,
+        href,
         label: i === 0 ? "Shop all" : "See more",
         image: img,
         tint: tints[i],
@@ -129,7 +156,9 @@ function CategoryMegaCard({
                   <img
                     src={cell.image}
                     alt=""
-                    className="max-h-full max-w-full object-contain group-hover:scale-[1.03] transition-transform duration-200"
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-contain object-center group-hover:scale-[1.02] transition-transform duration-200"
                   />
                 ) : (
                   <Package className="h-10 w-10 text-gray-400/70" strokeWidth={1.25} />
@@ -170,7 +199,7 @@ export function CategoryShowcaseAmazon({
   className = "",
 }: ShowcaseProps) {
   const roots = useMemo(() => rootsOnly(categories).slice(0, maxParents), [categories, maxParents])
-  const [imagesByParentId, setImagesByParentId] = useState<Record<string, (string | null)[]>>({})
+  const [tilesByParentId, setTilesByParentId] = useState<Record<string, (TilePick | null)[]>>({})
   /** undefined = before first fetch pass; empty Set = images loaded */
   const [loadingIds, setLoadingIds] = useState<Set<string> | undefined>(undefined)
 
@@ -186,17 +215,17 @@ export function CategoryShowcaseAmazon({
       const entries = await Promise.all(
         roots.map(async (parent) => {
           try {
-            const tiles = await fetchTileImagesForParent(parent)
+            const tiles = await fetchTilesForParent(parent)
             return [parent.id, tiles] as const
           } catch {
-            return [parent.id, [null, null, null, null] as (string | null)[]] as const
+            return [parent.id, [null, null, null, null] as (TilePick | null)[]] as const
           }
         }),
       )
       if (cancelled) return
-      const map: Record<string, (string | null)[]> = {}
+      const map: Record<string, (TilePick | null)[]> = {}
       for (const [id, tiles] of entries) map[id] = tiles
-      setImagesByParentId(map)
+      setTilesByParentId(map)
       setLoadingIds(new Set())
     })()
 
@@ -212,10 +241,10 @@ export function CategoryShowcaseAmazon({
       className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 ${className}`}
     >
       {roots.map((parent) => {
-        const imgs = imagesByParentId[parent.id] ?? []
+        const tiles = tilesByParentId[parent.id] ?? []
         const stillLoading =
           loadingIds === undefined || loadingIds.size > 0
-        const cells = stillLoading ? null : buildCells(parent, imgs.length ? imgs : [null, null, null, null])
+        const cells = stillLoading ? null : buildCells(parent, tiles.length ? tiles : [null, null, null, null])
         return (
           <CategoryMegaCard
             key={parent.id}

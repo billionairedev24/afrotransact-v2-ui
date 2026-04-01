@@ -77,25 +77,35 @@ export default function CategoryPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
-          {products.map((product) => (
+          {products.map((product) => {
+            const productPath = (product.slug && product.slug.trim()) || product.product_id
+            return (
             <Link
               key={product.product_id}
-              href={`/product/${product.slug || product.product_id}`}
-              className="group rounded-xl sm:rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200"
+              href={`/product/${encodeURIComponent(productPath)}`}
+              className="group flex flex-col rounded-xl sm:rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 min-w-0"
             >
-              <div className="h-[110px] sm:h-[140px] md:aspect-square bg-gradient-to-br from-muted to-muted/50 relative flex items-center justify-center overflow-hidden">
+              <div className="relative aspect-square w-full shrink-0 bg-muted/50">
                 {product.image_url ? (
-                  <img src={product.image_url} alt={product.title} className="h-full w-full object-cover" />
+                  <img
+                    src={product.image_url}
+                    alt={product.title}
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full object-contain object-center p-2 sm:p-3"
+                  />
                 ) : (
-                  <Leaf className="h-10 w-10 text-muted-foreground/30" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Leaf className="h-10 w-10 text-muted-foreground/30" />
+                  </div>
                 )}
                 {!product.in_stock && (
-                  <span className="absolute top-2 left-2 text-[10px] font-bold rounded-md px-1.5 py-0.5 bg-red-500/90 text-white">
+                  <span className="absolute top-2 left-2 z-[1] text-[10px] font-bold rounded-md px-1.5 py-0.5 bg-red-500/90 text-white">
                     Out of Stock
                   </span>
                 )}
               </div>
-              <div className="p-2 sm:p-3 space-y-1 sm:space-y-1.5">
+              <div className="p-2 sm:p-3 space-y-1 sm:space-y-1.5 min-w-0 flex-1">
                 <h3 className="text-[11px] sm:text-[13px] font-semibold text-card-foreground group-hover:text-primary transition-colors leading-tight line-clamp-2">
                   {product.title}
                 </h3>
@@ -122,7 +132,8 @@ export default function CategoryPage() {
                 </div>
               </div>
             </Link>
-          ))}
+            )
+          })}
         </div>
       )}
     </main>
