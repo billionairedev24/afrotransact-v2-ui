@@ -746,6 +746,7 @@ export default function CheckoutPage() {
   const getSubtotal = useCartStore((s) => s.getSubtotal)
   const clearCart = useCartStore((s) => s.clearCart)
 
+  const [availableRegions, setAvailableRegions] = useState<Region[]>([])
   const [region, setRegion] = useState<Region | null>(null)
   const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
@@ -789,40 +790,61 @@ export default function CheckoutPage() {
     }
   }, [mounted, cartItems.length, step, router])
 
+  // Fetch auth token, all active regions, and deals once on mount.
   useEffect(() => {
     if (!mounted) return
     let cancelled = false
-    async function fetchRegionAndFlags() {
+    async function init() {
       try {
         const token = await getAccessToken()
         if (!token || cancelled) return
         setAuthToken(token)
-        const regions = await getRegions(token, true)
+        const [allRegions, deals] = await Promise.all([
+          getRegions(token, true),
+          getActiveDeals().catch((): DealData[] => []),
+        ])
         if (cancelled) return
-        const r = regions.find((r: Region) => r.code === "us-tx-austin") ?? regions[0]
-        if (r) {
-          setRegion(r)
-          const [f, deals, cfg] = await Promise.all([
-            getRegionFeatures(r.id).catch(() => []),
-            getActiveDeals().catch(() => []),
-            getRegionConfig(r.code).catch(() => null),
-          ])
-          if (!cancelled) {
-            setFlags(f)
-            setAllDeals(deals)
-            if (cfg) {
-              setPaymentMethods(cfg.paymentMethods || [])
-              setConfigFeatures(cfg.features || {})
-            }
-          }
-        }
+        setAvailableRegions(allRegions)
+        setAllDeals(deals)
+        const defaultCode = process.env.NEXT_PUBLIC_DEFAULT_REGION_CODE
+        const initial =
+          (defaultCode ? allRegions.find((r) => r.code === defaultCode) : null) ??
+          allRegions[0]
+        if (initial) setRegion(initial)
       } catch {
         // fall back to hardcoded defaults
       }
     }
-    fetchRegionAndFlags()
+    init()
     return () => { cancelled = true }
   }, [mounted])
+
+  // Re-fetch region-specific config (features, payment methods) whenever the selected region changes.
+  useEffect(() => {
+    if (!region) return
+    let cancelled = false
+    async function loadRegionConfig() {
+      const [f, cfg] = await Promise.all([
+        getRegionFeatures(region.id).catch((): FeatureFlag[] => []),
+        getRegionConfig(region.code).catch(() => null),
+      ])
+      if (cancelled) return
+      setFlags(f)
+      if (cfg) {
+        setPaymentMethods(cfg.paymentMethods || [])
+        setConfigFeatures(cfg.features || {})
+      } else {
+        setPaymentMethods([])
+        setConfigFeatures({})
+      }
+      // Reset any applied coupon — it may not be valid in the new region.
+      setCouponCode("")
+      setCouponResult(null)
+      setCouponError("")
+    }
+    loadRegionConfig()
+    return () => { cancelled = true }
+  }, [region])
 
   async function handleApplyCoupon() {
     if (!couponsEnabled) return
@@ -955,6 +977,24 @@ export default function CheckoutPage() {
   return (
     <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-10">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
+
+      {availableRegions.length > 1 && step !== "success" && (
+        <div className="flex items-center gap-2 mb-6">
+          <MapPin className="h-4 w-4 text-gray-500 shrink-0" />
+          <select
+            value={region?.id ?? ""}
+            onChange={(e) => {
+              const r = availableRegions.find((r) => r.id === e.target.value)
+              if (r) setRegion(r)
+            }}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
+          >
+            {availableRegions.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {step !== "success" && (
         <div className="flex items-center mb-8">

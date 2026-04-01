@@ -1197,11 +1197,15 @@ export async function getRegionFeatures(regionId: string): Promise<FeatureFlag[]
 export async function upsertFeatureFlag(
   token: string,
   regionId: string,
-  data: { key: string; enabled: boolean }
+  data: { key: string; enabled: boolean; config?: Record<string, unknown> | null }
 ): Promise<FeatureFlag> {
+  const body: Record<string, unknown> = { feature_key: data.key, enabled: data.enabled }
+  if (data.config !== undefined) {
+    body.config = data.config
+  }
   await api<{ status: string }>(`/api/v1/admin/regions/${regionId}/features`, {
     method: "POST",
-    body: { feature_key: data.key, enabled: data.enabled },
+    body,
     token,
   })
   // Upsert returns { status: "ok" }, so re-fetch the list and find the flag
