@@ -118,8 +118,7 @@ export default function CartPage() {
                 {/* Items */}
                 <div className="divide-y divide-gray-100">
                   {groupItems.map((item) => (
-                    <div key={item.variantId} className="flex gap-4 p-4 sm:p-5">
-                      {/* Image */}
+                    <div key={item.variantId} className="flex gap-3 sm:gap-4 p-4 sm:p-5">
                       <div
                         className="w-20 h-20 rounded-xl shrink-0 bg-gray-50 flex items-center justify-center overflow-hidden"
                       >
@@ -130,49 +129,56 @@ export default function CartPage() {
                         )}
                       </div>
 
-                      {/* Details */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 font-medium text-sm truncate">{item.title}</p>
-                        <p className="text-gray-500 text-xs mt-0.5">{item.variantName}</p>
-                        <p className="text-primary font-semibold text-sm mt-1">
-                          {formatCents(item.price)}
-                        </p>
+                      <div className="flex-1 min-w-0 flex flex-col gap-2">
+                        <div className="flex justify-between gap-3 items-start">
+                          <div className="min-w-0">
+                            <p className="text-gray-900 font-medium text-sm leading-snug">{item.title}</p>
+                            <p className="text-gray-500 text-xs mt-0.5">{item.variantName}</p>
+                            <p className="text-primary font-semibold text-sm mt-1">
+                              {formatCents(item.price)}
+                            </p>
+                          </div>
+                          <p className="shrink-0 text-gray-900 font-semibold text-sm sm:hidden tabular-nums">
+                            {formatCents(item.price * item.quantity)}
+                          </p>
+                        </div>
 
-                        <div className="flex items-center gap-3 mt-3">
-                          {/* Quantity */}
-                          <div className="flex items-center gap-1 rounded-lg border border-gray-200 overflow-hidden">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex items-center shrink-0 rounded-lg border border-gray-200 overflow-hidden touch-manipulation">
                             <button
+                              type="button"
                               onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
-                              className="flex h-8 w-8 items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                              className="flex min-h-11 min-w-11 sm:min-h-0 sm:h-9 sm:w-9 items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
                               aria-label="Decrease quantity"
                             >
-                              <Minus className="h-3.5 w-3.5" />
+                              <Minus className="h-4 w-4" />
                             </button>
-                            <span className="w-8 text-center text-sm text-gray-900 font-medium">
+                            <span className="min-w-[2.5rem] px-1 text-center text-sm text-gray-900 font-medium tabular-nums">
                               {item.quantity}
                             </span>
                             <button
+                              type="button"
                               onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
-                              className="flex h-8 w-8 items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                              className="flex min-h-11 min-w-11 sm:min-h-0 sm:h-9 sm:w-9 items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
                               aria-label="Increase quantity"
                             >
-                              <Plus className="h-3.5 w-3.5" />
+                              <Plus className="h-4 w-4" />
                             </button>
                           </div>
 
                           <button
+                            type="button"
                             onClick={() => removeItem(item.variantId)}
                             className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 transition-colors"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3.5 w-3.5 shrink-0" />
                             Remove
                           </button>
                         </div>
                       </div>
 
-                      {/* Line total */}
-                      <div className="shrink-0 text-right">
-                        <p className="text-gray-900 font-semibold text-sm">
+                      <div className="hidden sm:block shrink-0 text-right pt-0.5">
+                        <p className="text-gray-900 font-semibold text-sm tabular-nums">
                           {formatCents(item.price * item.quantity)}
                         </p>
                       </div>

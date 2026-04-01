@@ -24,7 +24,7 @@ import {
   searchProducts,
   getProductById,
   getRegions,
-  getFeatureFlags,
+  getRegionFeatures,
   type SearchResponse,
   type SearchResult,
   type Region,
@@ -461,9 +461,9 @@ function SearchResultCard({
   }
 
   return (
-    <div className="group rounded-2xl border border-gray-200 bg-white overflow-hidden hover:border-[#EAB308]/30 hover:shadow-lg transition-all duration-200">
+    <div className="group rounded-xl sm:rounded-2xl border border-gray-200 bg-white overflow-hidden hover:border-[#EAB308]/30 hover:shadow-lg transition-all duration-200">
       <Link href={`/product/${slug}`}>
-        <div className="relative aspect-square overflow-hidden bg-gray-100">
+        <div className="relative h-[120px] sm:h-auto sm:aspect-square overflow-hidden bg-gray-100">
           {item.image_url ? (
             <img
               src={item.image_url}
@@ -472,37 +472,37 @@ function SearchResultCard({
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <Package className="h-12 w-12 text-gray-300" />
+              <Package className="h-8 w-8 sm:h-12 sm:w-12 text-gray-300" />
             </div>
           )}
           {!item.in_stock && (
-            <span className="absolute left-3 top-3 rounded-lg bg-red-500 px-2 py-1 text-[11px] font-bold text-white">
+            <span className="absolute left-1.5 top-1.5 sm:left-3 sm:top-3 rounded-md bg-red-500 px-1.5 py-0.5 text-[9px] sm:text-[11px] font-bold text-white">
               Out of Stock
             </span>
           )}
         </div>
       </Link>
 
-      <div className="p-4 space-y-2">
+      <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
         <Link href={`/product/${slug}`}>
-          <h3 className="text-sm font-medium leading-snug text-gray-900 group-hover:text-[#EAB308] transition-colors line-clamp-2">
+          <h3 className="text-[11px] sm:text-sm font-medium leading-snug text-gray-900 group-hover:text-[#EAB308] transition-colors line-clamp-2">
             {item.title}
           </h3>
         </Link>
 
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-base font-bold text-gray-900">
+        <div className="flex items-baseline gap-1 flex-wrap">
+          <span className="text-sm sm:text-base font-bold text-gray-900">
             ${item.min_price.toFixed(2)}
           </span>
           {item.max_price > item.min_price && (
-            <span className="text-xs text-gray-400">
+            <span className="text-[10px] sm:text-xs text-gray-400">
               – ${item.max_price.toFixed(2)}
             </span>
           )}
         </div>
 
         {item.avg_rating > 0 && (
-          <div className="flex items-center gap-1">
+          <div className="hidden sm:flex items-center gap-1">
             {Array.from({ length: 5 }).map((_, i) => (
               <Star
                 key={i}
@@ -520,19 +520,19 @@ function SearchResultCard({
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500 truncate">
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-[10px] sm:text-xs text-gray-500 truncate">
             {item.store_name}
           </span>
           {item.distance_miles != null && (
-            <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 shrink-0">
-              <MapPin className="h-2.5 w-2.5" />
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium text-gray-500 shrink-0">
+              <MapPin className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
               {item.distance_miles.toFixed(1)} mi
             </span>
           )}
         </div>
 
-        <div className="pt-1">
+        <div className="pt-0.5 sm:pt-1 [&_button]:text-[11px] [&_button]:py-1.5 sm:[&_button]:text-sm sm:[&_button]:py-2">
           <AddToCartButton item={item} />
         </div>
       </div>
@@ -571,7 +571,7 @@ function SearchContent() {
         const regions = await getRegions("", true).catch(() => [])
         const r: Region | undefined = regions.find((r) => r.code === "us-tx-austin") ?? regions[0]
         if (!r || cancelled) return
-        const f = await getFeatureFlags("", r.id).catch(() => [])
+        const f = await getRegionFeatures(r.id).catch(() => [])
         if (!cancelled) setFlags(f)
       } finally {
         if (!cancelled) setFlagsLoaded(true)
@@ -887,7 +887,7 @@ function SearchContent() {
               <div
                 className={cn(
                   viewMode === "grid"
-                    ? "grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
+                    ? "grid grid-cols-2 gap-2.5 sm:gap-5 sm:grid-cols-2 xl:grid-cols-3"
                     : "flex flex-col gap-4"
                 )}
               >

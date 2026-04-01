@@ -10,14 +10,6 @@ import {
   Truck,
   ShieldCheck,
   Users,
-  Leaf,
-  Flame,
-  Beef,
-  Cookie,
-  Cpu,
-  Shirt,
-  Wine,
-  Package,
   TrendingUp,
   Clock,
   Sparkles,
@@ -27,10 +19,11 @@ import {
 
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
-import { MobileNav } from "@/components/layout/mobile-nav"
+import { StartSellingLink } from "@/components/selling/StartSellingLink"
 import { HeroCarousel } from "@/components/home/HeroCarousel"
 import { AdSlot } from "@/components/home/AdSlot"
 import { FeaturedProducts } from "@/components/home/FeaturedProducts"
+import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
 import { getCategories, getAllStores, getFeaturedDeals, type CategoryRef, type StoreInfo, type DealData } from "@/lib/api"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
@@ -46,29 +39,6 @@ interface PlatformDeal {
   textColor: string
   ctaText: string | null
   ctaLink: string | null
-}
-
-const CATEGORY_STYLE_MAP: Record<string, { icon: typeof Leaf; bg: string; border: string; iconColor: string }> = {
-  produce:     { icon: Leaf,    bg: "from-emerald-950 to-emerald-900", border: "border-emerald-800/50", iconColor: "text-emerald-400" },
-  spices:      { icon: Flame,   bg: "from-orange-950 to-orange-900",  border: "border-orange-800/50",  iconColor: "text-orange-400"  },
-  meats:       { icon: Beef,    bg: "from-red-950 to-red-900",        border: "border-red-800/50",     iconColor: "text-red-400"     },
-  baked:       { icon: Cookie,  bg: "from-amber-950 to-amber-900",    border: "border-amber-800/50",   iconColor: "text-amber-400"   },
-  beverages:   { icon: Wine,    bg: "from-sky-950 to-sky-900",        border: "border-sky-800/50",     iconColor: "text-sky-400"     },
-  fashion:     { icon: Shirt,   bg: "from-purple-950 to-purple-900",  border: "border-purple-800/50",  iconColor: "text-purple-400"  },
-  electronics: { icon: Cpu,     bg: "from-blue-950 to-blue-900",      border: "border-blue-800/50",    iconColor: "text-blue-400"    },
-  pantry:      { icon: Package, bg: "from-yellow-950 to-yellow-900",  border: "border-yellow-800/50",  iconColor: "text-yellow-400"  },
-}
-
-const DEFAULT_STYLE = {
-  icon: Package,
-  bg: "from-gray-900 to-gray-800",
-  border: "border-gray-700/50",
-  iconColor: "text-gray-400",
-}
-
-function getCategoryStyle(slug: string) {
-  const key = Object.keys(CATEGORY_STYLE_MAP).find((k) => slug.toLowerCase().includes(k))
-  return key ? CATEGORY_STYLE_MAP[key] : DEFAULT_STYLE
 }
 
 const BANNER_GRADIENTS = [
@@ -118,7 +88,7 @@ export default function HomePage() {
 
   useEffect(() => {
     getCategories()
-      .then((cats) => setCategories(cats.slice(0, 8)))
+      .then(setCategories)
       .catch(() => {})
 
     getAllStores()
@@ -139,7 +109,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
 
-      <main className="flex-1 pb-16 md:pb-0">
+      <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0">
 
         <HeroCarousel />
 
@@ -218,67 +188,42 @@ export default function HomePage() {
           </section>
         )}
 
-        <section className="bg-card/40 border-y border-border">
-          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-12">
-            <div className="flex items-end justify-between mb-6">
+        <section className="bg-[#eaeded] border-y border-gray-200">
+          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-10 sm:py-12">
+            <div className="flex items-end justify-between mb-5 sm:mb-6 gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Shop by Category</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Everything you need, all in one place
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Shop by category</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Explore subcategories with real product photos
                 </p>
               </div>
               <Link
                 href="/categories"
-                className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+                className="text-sm font-medium text-blue-700 hover:text-blue-900 shrink-0 flex items-center gap-1"
               >
                 View all <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {categories.length > 0
-                ? categories.map((cat) => {
-                    const style = getCategoryStyle(cat.slug)
-                    const Icon = style.icon
-                    return (
-                      <Link
-                        key={cat.id}
-                        href={`/category/${cat.slug}`}
-                        className={`group relative overflow-hidden rounded-2xl border ${style.border} bg-gradient-to-br ${style.bg} p-5 hover:scale-[1.02] transition-transform duration-200 active:scale-[0.99]`}
-                      >
-                        <div className="space-y-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10">
-                            <Icon className={`h-5 w-5 ${style.iconColor}`} strokeWidth={1.75} />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-white text-sm leading-tight">
-                              {cat.name}
-                            </h3>
-                            {cat.children && cat.children.length > 0 && (
-                              <p className="text-[11px] text-white/60 mt-0.5">
-                                {cat.children.slice(0, 3).map((c) => c.name).join(", ")}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 text-[11px] text-white/50 group-hover:text-white/80 transition-colors">
-                            <span>Shop now</span>
-                            <ChevronRight className="h-3 w-3" />
-                          </div>
-                        </div>
-                      </Link>
-                    )
-                  })
-                : Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="rounded-2xl border border-border bg-muted/20 p-5 animate-pulse">
-                      <div className="space-y-3">
-                        <div className="h-11 w-11 rounded-xl bg-muted" />
-                        <div className="h-4 bg-muted rounded w-3/4" />
-                        <div className="h-3 bg-muted rounded w-1/2" />
-                      </div>
+            {categories.length > 0 ? (
+              <CategoryShowcaseAmazon categories={categories} maxParents={8} />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm animate-pulse"
+                  >
+                    <div className="h-5 bg-gray-100 rounded w-2/3 mb-3" />
+                    <div className="grid grid-cols-2 gap-2">
+                      {Array.from({ length: 4 }).map((__, j) => (
+                        <div key={j} className="aspect-square bg-gray-100 rounded-md" />
+                      ))}
                     </div>
-                  ))
-              }
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -468,13 +413,10 @@ export default function HomePage() {
               </p>
 
               <div className="flex flex-wrap justify-center gap-3 pt-2">
-                <Link
-                  href="/sell"
-                  className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98]"
-                >
+                <StartSellingLink variant="button">
                   Start Selling Today
                   <ChevronRight className="h-4 w-4" />
-                </Link>
+                </StartSellingLink>
                 <Link
                   href="/sell/pricing"
                   className="inline-flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-white px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-50 transition-all"
@@ -502,7 +444,6 @@ export default function HomePage() {
       </main>
 
       <Footer />
-      <MobileNav />
     </div>
   )
 }

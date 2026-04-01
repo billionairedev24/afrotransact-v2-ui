@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Check, ChevronRight, Gift, ShieldCheck, Sparkles, Store, TrendingUp, Users, Zap } from "lucide-react"
+import { StartSellingLink } from "@/components/selling/StartSellingLink"
 
 const STEPS = [
   { n: "01", title: "Create your account", desc: "Register as a seller in minutes. We'll verify your identity to keep the marketplace trusted." },
@@ -35,9 +36,9 @@ export default function SellPage() {
             Join 200+ immigrant entrepreneurs already selling food, fashion, and cultural goods on AfroTransact.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 justify-center">
-            <Link href="/auth/register?role=seller" className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+            <StartSellingLink variant="button">
               Start Selling — Free <ChevronRight className="h-4 w-4" />
-            </Link>
+            </StartSellingLink>
             <Link href="/sell/pricing" className="inline-flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-gray-50 px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-100 transition-all">
               View Pricing
             </Link>
@@ -93,9 +94,9 @@ export default function SellPage() {
             </span>
           ))}
         </div>
-        <Link href="/auth/register?role=seller" className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all">
+        <StartSellingLink variant="button">
           Create Seller Account <ChevronRight className="h-4 w-4" />
-        </Link>
+        </StartSellingLink>
         <p className="text-xs text-gray-600 mt-4">
           By signing up you agree to our{" "}
           <Link href="/seller-agreement" className="underline hover:text-gray-400">Seller Agreement</Link> and{" "}

@@ -1,22 +1,18 @@
 "use client"
 
 import { useCallback } from "react"
-import { useCartStore } from "@/stores/cart-store"
-import { clearGuestCart } from "@/stores/cart-store"
+import { purgeCartStorageAndServer } from "@/lib/client-cart-cleanup"
 
 /**
- * Returns a signOut function that clears the cart from
- * both Zustand and guest localStorage before redirecting
- * to the server-side sign-out route.
+ * Clears cart state (memory, guest session storage, and server cart when logged in),
+ * then redirects to the server sign-out route.
  */
 export function useSignOut() {
-  const clearCart = useCartStore((s) => s.clearCart)
-
   const signOut = useCallback(() => {
-    clearCart()
-    clearGuestCart()
-    window.location.href = "/api/auth/signout"
-  }, [clearCart])
+    void purgeCartStorageAndServer().finally(() => {
+      window.location.href = "/api/auth/signout"
+    })
+  }, [])
 
   return signOut
 }

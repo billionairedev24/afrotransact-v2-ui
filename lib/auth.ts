@@ -21,6 +21,7 @@ import { NextAuthOptions, TokenSet, Session } from "next-auth"
 import type { JWT } from "next-auth/jwt"
 import type { OAuthConfig } from "next-auth/providers/oauth"
 import KeycloakProvider from "next-auth/providers/keycloak"
+import { setRegistrationRoleSeller } from "@/lib/keycloak-admin"
 
 /** Fail fast at server startup if a required env var is absent. */
 function requireEnv(name: string): string {
@@ -96,49 +97,6 @@ function KeycloakRegisterSellerProvider(): OAuthConfig<Record<string, unknown>> 
   return keycloakRegisterBase("keycloak-register-seller", "Keycloak Register Seller")
 }
 
-/**
- * Set `registration_role=seller` on a Keycloak user via the Admin API.
- * After this, the protocol mapper puts it in every token on any device.
- */
-async function setRegistrationRoleInKeycloak(userId: string): Promise<boolean> {
-  const kcBase = kcIssuer.replace(/\/realms\/.*$/, "")
-  const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
-  const adminUser = optionalEnv("KEYCLOAK_ADMIN_USERNAME", "admin")
-  const adminPass = optionalEnv("KEYCLOAK_ADMIN_PASSWORD", "admin")
-
-  try {
-    const tokenRes = await fetch(`${kcBase}/realms/master/protocol/openid-connect/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "password",
-        client_id: "admin-cli",
-        username: adminUser,
-        password: adminPass,
-      }),
-    })
-    if (!tokenRes.ok) return false
-    const { access_token } = await tokenRes.json()
-
-    const putRes = await fetch(`${kcBase}/admin/realms/${realm}/users/${userId}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ attributes: { registration_role: ["seller"] } }),
-    })
-
-    if (putRes.ok) {
-      console.log(`[auth] Set registration_role=seller in Keycloak for user ${userId}`)
-    }
-    return putRes.ok
-  } catch (e) {
-    console.error("[auth] Failed to set registration_role in Keycloak:", e)
-    return false
-  }
-}
-
 export const authOptions: NextAuthOptions = {
   providers: [
     KeycloakProvider({
@@ -180,7 +138,7 @@ export const authOptions: NextAuthOptions = {
         // If not present in token but registered via seller-specific provider,
         // we can still fall back to updating Keycloak as a safety measure.
         if (account.provider === "keycloak-register-seller" && !token.registrationRole) {
-          const ok = await setRegistrationRoleInKeycloak(user.id as string)
+          const ok = await setRegistrationRoleSeller(user.id as string)
           if (ok) token.registrationRole = "seller"
         }
       }

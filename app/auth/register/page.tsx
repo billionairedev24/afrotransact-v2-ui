@@ -1,18 +1,63 @@
 "use client"
 
-import { signIn } from "next-auth/react"
-import { useSearchParams } from "next/navigation"
-import { Suspense, useState } from "react"
+import { signIn, useSession } from "next-auth/react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { Suspense, useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Store, ShoppingBag, ArrowRight, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 function RegisterForm() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const { data: session, status } = useSession()
   const role = searchParams.get("role")
   const isSeller = role === "seller"
   const callbackUrl = isSeller ? "/dashboard/onboarding" : "/"
   const [isLoading, setIsLoading] = useState(false)
+  const sellerUpgradeStarted = useRef(false)
+
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user) return
+    if (isSeller) return
+    router.replace("/")
+  }, [status, session, isSeller, router])
+
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user || !isSeller) return
+    if (sellerUpgradeStarted.current) return
+    const roles = session.user.roles ?? []
+    if (roles.includes("seller")) {
+      router.replace("/dashboard/onboarding")
+      return
+    }
+    sellerUpgradeStarted.current = true
+    void (async () => {
+      try {
+        const res = await fetch("/api/auth/become-seller", { method: "POST" })
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        if (!res.ok) {
+          toast.error(typeof data.error === "string" ? data.error : "Could not enable seller access.")
+          sellerUpgradeStarted.current = false
+          return
+        }
+        await signIn("keycloak", { callbackUrl: "/dashboard/onboarding" })
+      } catch {
+        toast.error("Something went wrong. Please try again.")
+        sellerUpgradeStarted.current = false
+      }
+    })()
+  }, [status, session, isSeller, router])
+
+  if (status === "authenticated" && isSeller) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Taking you to seller setup…</p>
+      </div>
+    )
+  }
 
   const handleEmailRegister = async () => {
     setIsLoading(true)

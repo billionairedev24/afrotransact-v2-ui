@@ -1180,6 +1180,12 @@ export async function getFeatureFlags(token: string, regionId: string): Promise<
   return (res.features ?? []).map(mapFeature)
 }
 
+/** Storefront-safe: GET /regions/{id}/features (no admin role required). */
+export async function getRegionFeatures(regionId: string): Promise<FeatureFlag[]> {
+  const res = await api<{ features: RawFeature[] }>(`/api/v1/regions/${regionId}/features`)
+  return (res.features ?? []).map(mapFeature)
+}
+
 export async function upsertFeatureFlag(
   token: string,
   regionId: string,
@@ -1231,8 +1237,41 @@ export interface RegionConfig {
   paymentMethods: RegionPaymentMethod[]
 }
 
-export function getRegionConfig(regionCode: string) {
-  return api<RegionConfig>(`/api/v1/config/${regionCode}`)
+interface RawRegionPaymentMethod {
+  id: string
+  region_id: string
+  provider: string
+  enabled: boolean
+  provider_config?: unknown
+}
+
+interface RawRegionConfigPayload {
+  region: RawRegion
+  features: Record<string, boolean>
+  feature_configs?: Record<string, unknown>
+  payment_methods?: RawRegionPaymentMethod[]
+}
+
+function mapRegionPaymentMethod(m: RawRegionPaymentMethod): RegionPaymentMethod {
+  const cfg = m.provider_config
+  return {
+    id: m.id,
+    regionId: m.region_id,
+    provider: m.provider,
+    enabled: m.enabled,
+    providerConfig: cfg && typeof cfg === "object" ? (cfg as Record<string, unknown>) : null,
+  }
+}
+
+/** Maps config-service JSON (snake_case) to app types. */
+export async function getRegionConfig(regionCode: string): Promise<RegionConfig> {
+  const raw = await api<RawRegionConfigPayload>(`/api/v1/config/${regionCode}`)
+  return {
+    region: mapRegion(raw.region),
+    features: raw.features ?? {},
+    featureConfigs: raw.feature_configs,
+    paymentMethods: (raw.payment_methods ?? []).map(mapRegionPaymentMethod),
+  }
 }
 
 // ── Admin: Products ──

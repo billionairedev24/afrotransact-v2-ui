@@ -40,7 +40,7 @@ import {
   type Region,
   type UserAddress,
   type FeatureFlag,
-  getFeatureFlags,
+  getRegionFeatures,
   getActiveDeals,
   type DealData,
   type RegionPaymentMethod,
@@ -728,9 +728,8 @@ export default function CheckoutPage() {
   const couponsEnabled = configFeatures["coupons_enabled"] === true
   const stripeFeatureEnabled =
     flags.find((f) => f.key === "stripe_enabled" || f.key === "stripe")?.enabled ?? true
-  const stripeMethodEnabled = paymentMethods.some(
-    (m) => m.enabled && m.provider.toLowerCase() === "stripe"
-  )
+  const stripeRow = paymentMethods.find((m) => m.provider.toLowerCase() === "stripe")
+  const stripeMethodEnabled = stripeRow ? stripeRow.enabled : paymentMethods.length === 0
   const stripeAvailable = stripeFeatureEnabled && stripeMethodEnabled
 
   useEffect(() => { setMounted(true) }, [])
@@ -756,7 +755,7 @@ export default function CheckoutPage() {
         if (r) {
           setRegion(r)
           const [f, deals, cfg] = await Promise.all([
-            getFeatureFlags(token, r.id),
+            getRegionFeatures(r.id).catch(() => []),
             getActiveDeals().catch(() => []),
             getRegionConfig(r.code).catch(() => null),
           ])

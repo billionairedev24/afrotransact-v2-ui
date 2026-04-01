@@ -266,7 +266,9 @@ export default function SellerOnboardingPage() {
       setSubmitted(true)
     }
     const b = p.businessInfo
-    setBusinessName(b.businessName ?? "")
+    // Backend used to default new sellers to "My Business"; never treat that as a real name.
+    const rawBusinessName = (b.businessName ?? "").trim()
+    setBusinessName(rawBusinessName.toLowerCase() === "my business" ? "" : (b.businessName ?? ""))
     setEntityType(b.entityType ?? "")
     setBusinessType(b.businessType ?? "")
     setTaxId(b.taxId ?? "")

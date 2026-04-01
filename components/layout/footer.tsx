@@ -1,10 +1,13 @@
 import Link from "next/link"
 import { MapPin, Mail, Phone } from "lucide-react"
+import { StartSellingLink } from "@/components/selling/StartSellingLink"
 
 type FooterLink = {
   label: string
   href: string
   comingSoon?: boolean
+  /** Uses logged-in buyer → onboarding flow instead of guest registration. */
+  isStartSelling?: boolean
 }
 
 const footerSections: { title: string; links: FooterLink[] }[] = [
@@ -21,7 +24,7 @@ const footerSections: { title: string; links: FooterLink[] }[] = [
   {
     title: "For Sellers",
     links: [
-      { label: "Start Selling", href: "/auth/register?role=seller" },
+      { label: "Start Selling", href: "/sell", isStartSelling: true },
       { label: "Seller Dashboard", href: "/dashboard" },
       { label: "Pricing & Plans", href: "/sell/pricing" },
       { label: "Seller Resources", href: "/coming-soon?feature=Seller Resources", comingSoon: true },
@@ -69,7 +72,7 @@ const cities = [
 
 export function Footer() {
   return (
-    <footer className="bg-card border-t border-border">
+    <footer className="bg-card border-t border-border pb-[max(1rem,env(safe-area-inset-bottom,0px))] md:pb-0">
       {/* Cities bar */}
       <div className="border-b border-border bg-muted/30">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-3">
@@ -166,17 +169,23 @@ export function Footer() {
               <ul className="space-y-2">
                 {section.links.map((link) => (
                   <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.label}
-                      {link.comingSoon && (
-                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Soon
-                        </span>
-                      )}
-                    </Link>
+                    {link.isStartSelling ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <StartSellingLink variant="footer">{link.label}</StartSellingLink>
+                      </span>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {link.label}
+                        {link.comingSoon && (
+                          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Soon
+                          </span>
+                        )}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -3,8 +3,9 @@
 import { useSession, signIn } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
-import { User, LogOut, Package, Settings, ChevronDown } from "lucide-react"
+import { User, LogOut, Package, Settings, ChevronDown, Store } from "lucide-react"
 import { useSignOut } from "@/hooks/useSignOut"
+import { StartSellingLink } from "@/components/selling/StartSellingLink"
 
 export function UserMenu() {
   const { data: session, status } = useSession()
@@ -38,14 +39,23 @@ export function UserMenu() {
           Sign In
         </button>
         <Link
-          href="/auth/register?role=seller"
-          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 transition-colors hover:bg-accent"
+          href="/auth/register"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
         >
           Register
         </Link>
+        <StartSellingLink
+          variant="bare"
+          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 transition-colors hover:bg-accent"
+        >
+          Start Selling
+        </StartSellingLink>
       </div>
     )
   }
+
+  const roles: string[] = (session.user as { roles?: string[] }).roles ?? []
+  const isSeller = roles.includes("seller")
 
   const initials = session.user.name
     ? session.user.name
@@ -99,6 +109,16 @@ export function UserMenu() {
               <Package className="h-4 w-4 text-muted-foreground" />
               Orders
             </Link>
+            {!isSeller && (
+              <StartSellingLink
+                variant="bare"
+                onNavigate={() => setOpen(false)}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-card-foreground transition-colors hover:bg-muted"
+              >
+                <Store className="h-4 w-4 text-muted-foreground" />
+                Start Selling
+              </StartSellingLink>
+            )}
             <Link
               href="/settings"
               onClick={() => setOpen(false)}

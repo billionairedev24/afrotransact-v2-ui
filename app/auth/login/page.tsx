@@ -2,7 +2,7 @@
 
 import { signIn } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Loader2 } from "lucide-react"
@@ -29,13 +29,20 @@ function LoginForm() {
   const REASON_MESSAGES: Record<string, string> = {
     inactive: "You were signed out due to inactivity.",
     session_expired: "Your session has expired. Please sign in again.",
+    password_updated: "Your password was updated. Continuing to sign in…",
   }
 
+  const autoKeycloakSignInStarted = useRef(false)
+
   useEffect(() => {
-    if (error === "OAuthCallback" || error === "Callback") {
-      signIn("keycloak", { callbackUrl })
-    }
-  }, [error, callbackUrl])
+    const shouldAutoSignIn =
+      error === "OAuthCallback" ||
+      error === "Callback" ||
+      reason === "password_updated"
+    if (!shouldAutoSignIn || autoKeycloakSignInStarted.current) return
+    autoKeycloakSignInStarted.current = true
+    void signIn("keycloak", { callbackUrl })
+  }, [error, reason, callbackUrl])
 
   async function handleSignIn() {
     setIsLoading(true)
@@ -46,11 +53,15 @@ function LoginForm() {
     }
   }
 
-  if (error === "OAuthCallback" || error === "Callback") {
+  if (error === "OAuthCallback" || error === "Callback" || reason === "password_updated") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3 px-4 text-center">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p className="text-sm text-muted-foreground">Completing sign-in...</p>
+        <p className="text-sm text-muted-foreground max-w-sm">
+          {reason === "password_updated"
+            ? REASON_MESSAGES.password_updated
+            : "Completing sign-in..."}
+        </p>
       </div>
     )
   }

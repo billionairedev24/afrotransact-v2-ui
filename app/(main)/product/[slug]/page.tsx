@@ -15,7 +15,7 @@ import {
   getProductById,
   getStoreById,
   getRegions,
-  getFeatureFlags,
+  getRegionFeatures,
   type Product,
   type ProductVariant,
   type FeatureFlag,
@@ -72,7 +72,7 @@ export default function ProductPage() {
           
           if (r && !cancelled) {
             const [f, deals] = await Promise.all([
-              getFeatureFlags("", r.id).catch(() => []),
+              getRegionFeatures(r.id).catch(() => []),
               getActiveDeals().catch(() => [])
             ])
             if (!cancelled) {
@@ -339,21 +339,23 @@ export default function ProductPage() {
                     Remove
                   </button>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center border border-border rounded-md">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="flex items-center shrink-0 self-start border border-border rounded-md touch-manipulation">
                     <button
+                      type="button"
                       onClick={() => updateQuantity(cartItem!.variantId, cartItem!.quantity - 1)}
-                      className="flex h-10 w-10 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                      className="flex min-h-11 min-w-11 sm:h-10 sm:w-10 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                       aria-label="Decrease quantity"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
-                    <span className="flex h-10 w-12 items-center justify-center text-sm font-semibold text-foreground border-x border-border tabular-nums">
+                    <span className="flex min-h-11 min-w-12 sm:h-10 sm:w-12 items-center justify-center text-sm font-semibold text-foreground border-x border-border tabular-nums px-1">
                       {cartItem!.quantity}
                     </span>
                     <button
+                      type="button"
                       onClick={() => variant && updateQuantity(cartItem!.variantId, Math.min(variant.stockQuantity, cartItem!.quantity + 1))}
-                      className="flex h-10 w-10 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                      className="flex min-h-11 min-w-11 sm:h-10 sm:w-10 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                       aria-label="Increase quantity"
                     >
                       <Plus className="h-4 w-4" />
@@ -361,9 +363,9 @@ export default function ProductPage() {
                   </div>
                   <Link
                     href="/cart"
-                    className="flex-1 flex items-center justify-center gap-2 rounded-md h-10 px-6 text-sm font-semibold bg-card border border-border text-foreground hover:bg-muted transition-colors"
+                    className="flex w-full sm:flex-1 min-w-0 items-center justify-center gap-2 rounded-md min-h-11 px-6 text-sm font-semibold bg-card border border-border text-foreground hover:bg-muted transition-colors touch-manipulation"
                   >
-                    <ShoppingCart className="h-4 w-4" />
+                    <ShoppingCart className="h-4 w-4 shrink-0" />
                     View Cart
                   </Link>
                 </div>
@@ -371,20 +373,22 @@ export default function ProductPage() {
             ) : (
               /* Item not in cart — show quantity picker + Add to Cart */
               <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex items-center border border-border rounded-md">
+                <div className="flex items-center shrink-0 self-start border border-border rounded-md touch-manipulation">
                   <button
+                    type="button"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="flex h-12 w-12 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex min-h-12 min-w-12 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                     aria-label="Decrease quantity"
                   >
                     <Minus className="h-4 w-4" />
                   </button>
-                  <span className="flex h-12 w-12 items-center justify-center text-sm font-semibold text-foreground border-x border-border tabular-nums">
+                  <span className="flex min-h-12 min-w-12 items-center justify-center text-sm font-semibold text-foreground border-x border-border tabular-nums">
                     {quantity}
                   </span>
                   <button
+                    type="button"
                     onClick={() => variant && setQuantity(Math.min(variant.stockQuantity, quantity + 1))}
-                    className="flex h-12 w-12 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex min-h-12 min-w-12 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                     aria-label="Increase quantity"
                   >
                     <Plus className="h-4 w-4" />
@@ -392,10 +396,11 @@ export default function ProductPage() {
                 </div>
 
                 <button
+                  type="button"
                   disabled={!inStock}
                   onClick={handleAddToCart}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-2 rounded-md h-12 px-8 text-sm font-semibold transition-all",
+                    "flex-1 min-w-0 flex items-center justify-center gap-2 rounded-md min-h-12 px-8 text-sm font-semibold transition-all touch-manipulation",
                     inStock
                       ? "bg-primary text-primary-foreground hover:bg-accent shadow-lg shadow-primary/25"
                       : "bg-muted text-muted-foreground cursor-not-allowed"

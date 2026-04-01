@@ -217,19 +217,13 @@ export default function DashboardOverview() {
             You haven&apos;t registered as a seller yet. Start selling on AfroTransact by
             creating your seller account — it only takes a few minutes.
           </p>
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 flex justify-center">
             <Link
               href="/sell"
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               <Package className="h-4 w-4" />
               Start Selling
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
-            >
-              Back to Marketplace
             </Link>
           </div>
         </div>

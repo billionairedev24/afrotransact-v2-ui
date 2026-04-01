@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { StartSellingLink } from "@/components/selling/StartSellingLink"
 import {
   Check,
   ChevronRight,
@@ -199,8 +200,9 @@ function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean
       </div>
 
       <div className="p-6 pt-0">
-        <Link
-          href={`/auth/register?role=seller&plan=${plan.slug}`}
+        <StartSellingLink
+          variant="bare"
+          planSlug={plan.slug}
           className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] ${
             plan.badge === "Most Popular"
               ? "bg-primary text-header hover:bg-primary/90 shadow-lg shadow-primary/20"
@@ -209,7 +211,7 @@ function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean
         >
           Start Free Trial
           <ChevronRight className="h-4 w-4" />
-        </Link>
+        </StartSellingLink>
         <p className="text-center text-[11px] text-gray-600 mt-2">
           1st month free · No credit card required
         </p>
@@ -379,13 +381,10 @@ export default function PricingPage() {
           Join 200+ immigrant entrepreneurs already earning on AfroTransact. Your first month is on us.
         </p>
         <div className="flex flex-wrap gap-3 justify-center">
-          <Link
-            href="/auth/register?role=seller"
-            className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
-          >
+          <StartSellingLink variant="button">
             Start Free Trial
             <ChevronRight className="h-4 w-4" />
-          </Link>
+          </StartSellingLink>
           <Link
             href="/sell"
             className="inline-flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-gray-50 px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-100 transition-all"

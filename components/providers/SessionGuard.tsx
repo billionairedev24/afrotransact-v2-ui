@@ -2,8 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { useSession, signOut } from "next-auth/react"
-import { clearGuestCart } from "@/stores/cart-store"
-import { useCartStore } from "@/stores/cart-store"
+import { purgeCartStorageAndServer } from "@/lib/client-cart-cleanup"
 
 /**
  * Watches the session for RefreshTokenError.
@@ -20,9 +19,9 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
     const err = (session as { error?: string } | null)?.error
     if (err === "RefreshTokenError" && !handlingRef.current) {
       handlingRef.current = true
-      useCartStore.getState().clearCart()
-      clearGuestCart()
-      signOut({ callbackUrl: "/auth/login?reason=session_expired" })
+      void purgeCartStorageAndServer().finally(() => {
+        signOut({ callbackUrl: "/auth/login?reason=session_expired" })
+      })
     }
   }, [session])
 

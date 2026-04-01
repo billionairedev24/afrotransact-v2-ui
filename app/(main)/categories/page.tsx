@@ -2,43 +2,70 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { ChevronRight, Package } from "lucide-react"
+import { getCategories, searchProducts, type CategoryRef, type SearchResult } from "@/lib/api"
 import {
-  ChevronRight,
-  Beef,
-  Cookie,
-  Cpu,
-  Flame,
-  Home,
-  Leaf,
-  Package,
-  Shirt,
-  Wine,
-  Loader2,
-} from "lucide-react"
-import { getCategories, type CategoryRef } from "@/lib/api"
+  CategoryShowcaseAmazon,
+  CategoryShowcaseLoading,
+} from "@/components/categories/CategoryShowcaseAmazon"
 
-const STYLE_MAP: Record<string, { icon: typeof Leaf; bg: string; border: string; iconColor: string }> = {
-  produce:     { icon: Leaf,    bg: "from-emerald-950 to-emerald-900", border: "border-emerald-800/50", iconColor: "text-emerald-400" },
-  spices:      { icon: Flame,   bg: "from-orange-950 to-orange-900",  border: "border-orange-800/50",  iconColor: "text-orange-400"  },
-  meats:       { icon: Beef,    bg: "from-red-950 to-red-900",        border: "border-red-800/50",     iconColor: "text-red-400"     },
-  baked:       { icon: Cookie,  bg: "from-amber-950 to-amber-900",    border: "border-amber-800/50",   iconColor: "text-amber-400"   },
-  beverages:   { icon: Wine,    bg: "from-sky-950 to-sky-900",        border: "border-sky-800/50",     iconColor: "text-sky-400"     },
-  fashion:     { icon: Shirt,   bg: "from-purple-950 to-purple-900",  border: "border-purple-800/50",  iconColor: "text-purple-400"  },
-  electronics: { icon: Cpu,     bg: "from-blue-950 to-blue-900",      border: "border-blue-800/50",    iconColor: "text-blue-400"    },
-  pantry:      { icon: Package, bg: "from-yellow-950 to-yellow-900",  border: "border-yellow-800/50",  iconColor: "text-yellow-400"  },
-  home:        { icon: Home,    bg: "from-violet-950 to-violet-900",  border: "border-violet-800/50",  iconColor: "text-violet-400"  },
-}
+function PopularPicksStrip() {
+  const [items, setItems] = useState<SearchResult[]>([])
+  const [loading, setLoading] = useState(true)
 
-const DEFAULT_STYLE = {
-  icon: Package,
-  bg: "from-gray-900 to-gray-800",
-  border: "border-gray-700/50",
-  iconColor: "text-gray-400",
-}
+  useEffect(() => {
+    searchProducts({ size: "20", sort_by: "rating" })
+      .then((r) => setItems(r.results))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
 
-function getStyle(slug: string) {
-  const key = Object.keys(STYLE_MAP).find((k) => slug.toLowerCase().includes(k))
-  return key ? STYLE_MAP[key] : DEFAULT_STYLE
+  if (loading) {
+    return (
+      <section className="mt-10 border-t border-gray-200 pt-8">
+        <div className="h-6 w-48 bg-gray-100 rounded animate-pulse mb-4" />
+        <div className="flex gap-3 overflow-hidden">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-28 w-28 shrink-0 rounded-lg bg-gray-100 animate-pulse" />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  if (items.length === 0) return null
+
+  return (
+    <section className="mt-10 border-t border-gray-200 pt-8">
+      <h2 className="text-lg font-bold text-gray-900 mb-4">Popular picks</h2>
+      <div className="-mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
+          {items.map((p) => {
+            const slug = p.slug || p.product_id
+            return (
+              <Link
+                key={p.product_id}
+                href={`/product/${slug}`}
+                className="shrink-0 w-[104px] sm:w-[120px] snap-start rounded-lg border border-gray-200 bg-white overflow-hidden hover:border-primary/40 hover:shadow-md transition-all"
+              >
+                <div className="aspect-square bg-gray-50 flex items-center justify-center p-1">
+                  {p.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.image_url} alt="" className="max-h-full max-w-full object-contain" />
+                  ) : (
+                    <Package className="h-8 w-8 text-gray-300" />
+                  )}
+                </div>
+                <p className="text-[10px] text-gray-700 line-clamp-2 px-1.5 py-1.5 leading-tight">
+                  {p.title}
+                </p>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export default function CategoriesPage() {
@@ -53,54 +80,36 @@ export default function CategoriesPage() {
   }, [])
 
   return (
-    <main className="mx-auto max-w-[1440px] px-4 sm:px-6 py-10">
-      <div className="flex items-center gap-2 mb-1 text-sm text-gray-500">
-        <Link href="/" className="hover:text-gray-300 transition-colors">Home</Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-gray-900">Categories</span>
-      </div>
-
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-gray-900">All Categories</h1>
-        <p className="text-gray-500 mt-1">Browse everything available from immigrant-owned stores near you</p>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <main className="min-h-[60vh] bg-[#eaeded]">
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-6 sm:py-10">
+        <div className="flex items-center gap-2 mb-1 text-sm text-gray-600">
+          <Link href="/" className="hover:text-gray-900 transition-colors">
+            Home
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+          <span className="text-gray-900 font-medium">Categories</span>
         </div>
-      ) : categories.length === 0 ? (
-        <p className="text-center text-gray-500 py-20">No categories available yet.</p>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">
-          {categories.map((cat) => {
-            const style = getStyle(cat.slug)
-            const Icon = style.icon
-            return (
-              <Link
-                key={cat.id}
-                href={`/category/${cat.slug}`}
-                className={`group relative overflow-hidden rounded-2xl border ${style.border} bg-gradient-to-br ${style.bg} p-5 hover:scale-[1.01] transition-transform duration-200`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10">
-                    <Icon className={`h-6 w-6 ${style.iconColor}`} strokeWidth={1.75} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="font-bold text-white leading-tight">{cat.name}</h2>
-                    {cat.children && cat.children.length > 0 && (
-                      <p className="text-[12px] text-white/60 mt-0.5 line-clamp-1">
-                        {cat.children.map((c) => c.name).join(", ")}
-                      </p>
-                    )}
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-white/30 group-hover:text-white/70 transition-colors shrink-0 mt-0.5" />
-                </div>
-              </Link>
-            )
-          })}
+
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900">Shop by category</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">
+            Browse products from immigrant-owned stores near you
+          </p>
         </div>
-      )}
+
+        {loading ? (
+          <CategoryShowcaseLoading />
+        ) : categories.length === 0 ? (
+          <p className="text-center text-gray-600 py-20 bg-white rounded-lg border border-gray-200">
+            No categories available yet.
+          </p>
+        ) : (
+          <>
+            <CategoryShowcaseAmazon categories={categories} maxParents={16} />
+            <PopularPicksStrip />
+          </>
+        )}
+      </div>
     </main>
   )
 }

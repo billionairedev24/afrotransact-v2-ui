@@ -25,21 +25,38 @@ interface CartState {
   getItemsByStore: () => Map<string, CartItem[]>
 }
 
+/** Per-tab session storage: cleared when the tab/window closes so the next visitor does not inherit a guest cart. */
 const GUEST_CART_KEY = "afrotransact-guest-cart"
 
-/** Save current items to localStorage (guest only). */
+function readGuestCartRaw(): string | null {
+  try {
+    const fromSession = sessionStorage.getItem(GUEST_CART_KEY)
+    if (fromSession) return fromSession
+    const legacy = localStorage.getItem(GUEST_CART_KEY)
+    if (legacy) {
+      sessionStorage.setItem(GUEST_CART_KEY, legacy)
+      localStorage.removeItem(GUEST_CART_KEY)
+      return legacy
+    }
+  } catch {
+    // storage unavailable
+  }
+  return null
+}
+
+/** Save current items to sessionStorage (guest only). */
 export function saveGuestCart(items: CartItem[]) {
   try {
-    localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items))
+    sessionStorage.setItem(GUEST_CART_KEY, JSON.stringify(items))
   } catch {
-    // localStorage full or unavailable — non-critical
+    // storage full or unavailable — non-critical
   }
 }
 
-/** Load guest cart from localStorage. */
+/** Load guest cart from sessionStorage (migrates legacy localStorage once). */
 export function loadGuestCart(): CartItem[] {
   try {
-    const raw = localStorage.getItem(GUEST_CART_KEY)
+    const raw = readGuestCartRaw()
     if (raw) return JSON.parse(raw) as CartItem[]
   } catch {
     // corrupted data — ignore
@@ -47,9 +64,10 @@ export function loadGuestCart(): CartItem[] {
   return []
 }
 
-/** Remove guest cart from localStorage. */
+/** Remove guest cart from session + any legacy localStorage copy. */
 export function clearGuestCart() {
   try {
+    sessionStorage.removeItem(GUEST_CART_KEY)
     localStorage.removeItem(GUEST_CART_KEY)
   } catch {
     // non-critical

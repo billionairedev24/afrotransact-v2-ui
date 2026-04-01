@@ -10,7 +10,6 @@ import {
   Settings,
   Menu,
   X,
-  ChevronLeft,
   DollarSign,
   CreditCard,
   ShoppingCart,
@@ -103,13 +102,6 @@ export function SellerShell({ children, userName, userEmail }: SellerShellProps)
           </nav>
 
           <div className="border-t border-border p-4 space-y-3">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Back to Marketplace
-            </Link>
             <button
               onClick={() => { signOut() }}
               className="flex w-full items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
@@ -184,13 +176,6 @@ export function SellerShell({ children, userName, userEmail }: SellerShellProps)
                 })}
               </nav>
               <div className="border-t border-border p-4 space-y-2">
-                <Link
-                  href="/"
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Back to Marketplace
-                </Link>
                 <button
                   onClick={() => { signOut() }}
                   className="flex w-full items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"

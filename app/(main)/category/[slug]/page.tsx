@@ -76,14 +76,14 @@ export default function CategoryPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
           {products.map((product) => (
             <Link
               key={product.product_id}
               href={`/product/${product.slug || product.product_id}`}
-              className="group rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200"
+              className="group rounded-xl sm:rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200"
             >
-              <div className="aspect-square bg-gradient-to-br from-muted to-muted/50 relative flex items-center justify-center overflow-hidden">
+              <div className="h-[110px] sm:h-[140px] md:aspect-square bg-gradient-to-br from-muted to-muted/50 relative flex items-center justify-center overflow-hidden">
                 {product.image_url ? (
                   <img src={product.image_url} alt={product.title} className="h-full w-full object-cover" />
                 ) : (
@@ -95,25 +95,25 @@ export default function CategoryPage() {
                   </span>
                 )}
               </div>
-              <div className="p-3 space-y-1.5">
-                <h3 className="text-[13px] font-semibold text-card-foreground group-hover:text-primary transition-colors leading-tight line-clamp-2">
+              <div className="p-2 sm:p-3 space-y-1 sm:space-y-1.5">
+                <h3 className="text-[11px] sm:text-[13px] font-semibold text-card-foreground group-hover:text-primary transition-colors leading-tight line-clamp-2">
                   {product.title}
                 </h3>
-                <div className="flex items-center gap-1">
-                  <span className="text-[15px] font-bold text-primary">${product.min_price.toFixed(2)}</span>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-sm sm:text-[15px] font-bold text-primary">${product.min_price.toFixed(2)}</span>
                   {product.max_price > product.min_price && (
-                    <span className="text-[11px] text-muted-foreground">– ${product.max_price.toFixed(2)}</span>
+                    <span className="text-[10px] sm:text-[11px] text-muted-foreground">– ${product.max_price.toFixed(2)}</span>
                   )}
                 </div>
                 {product.avg_rating > 0 && (
-                  <div className="flex items-center gap-1">
+                  <div className="hidden sm:flex items-center gap-1">
                     <Star className="h-3 w-3 fill-primary text-primary" />
                     <span className="text-[11px] font-medium text-foreground">{product.avg_rating.toFixed(1)}</span>
                     <span className="text-[11px] text-muted-foreground">({product.review_count})</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between pt-0.5">
-                  <span className="text-[11px] text-muted-foreground truncate">{product.store_name}</span>
+                <div className="flex items-center justify-between pt-0.5 gap-1">
+                  <span className="text-[10px] sm:text-[11px] text-muted-foreground truncate">{product.store_name}</span>
                   {product.distance_miles != null && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-secondary/10 border border-secondary/20 px-1.5 py-0.5 text-[10px] font-medium text-secondary shrink-0">
                       <MapPin className="h-2.5 w-2.5" />{product.distance_miles.toFixed(1)} mi
