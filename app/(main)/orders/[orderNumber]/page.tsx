@@ -249,7 +249,7 @@ function OrderItemRow({
           <Link href={`/product/${item.slug || item.productId}`} className="text-sm font-medium text-gray-900 hover:text-primary transition-colors line-clamp-1">
             {item.productTitle || "Product"}
           </Link>
-          {item.variantName && <p className="text-xs text-gray-500 mt-0.5">{item.variantName}</p>}
+          {item.variantName && item.variantName.toLowerCase() !== 'default' && <p className="text-xs text-gray-500 mt-0.5">{item.variantName}</p>}
           <p className="text-xs text-gray-500 mt-1">
             Qty: {item.quantity} &middot; {formatCents(item.unitPriceCents)} each
           </p>
