@@ -6,7 +6,6 @@ import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
 import {
-  ExternalLink,
   TrendingUp,
   DollarSign,
   Clock,
@@ -206,7 +205,6 @@ export default function PayoutsPage() {
   const { status } = useSession()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-  const [seller, setSeller] = useState<SellerInfo | null>(null)
   const [storeId, setStoreId] = useState<string | null>(null)
   const [summary, setSummary] = useState<PayoutSummary | null>(null)
   const [transfers, setTransfers] = useState<TransferRecord[]>([])
@@ -235,7 +233,6 @@ export default function PayoutsPage() {
       try {
         const s = await getCurrentSeller(token)
         if (cancelled) return
-        setSeller(s)
 
         const stores = await getSellerStores(token, s.id)
         if (cancelled || stores.length === 0) { setLoading(false); return }
@@ -308,27 +305,11 @@ export default function PayoutsPage() {
     )
   }
 
-  const stripeAccountId = seller?.stripeAccountId
-  const stripeDashboardUrl = stripeAccountId
-    ? `https://dashboard.stripe.com/connect/accounts/${stripeAccountId}`
-    : "https://dashboard.stripe.com/connect/accounts/overview"
-
   return (
     <div className="mx-auto min-w-0 w-full max-w-[960px] space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payouts</h1>
-          <p className="text-sm text-gray-500 mt-1">Track your earnings and see exactly where every dollar goes.</p>
-        </div>
-        <a
-          href={stripeDashboardUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 sm:w-auto"
-        >
-          Stripe Dashboard
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Payouts</h1>
+        <p className="text-sm text-gray-500 mt-1">Track your earnings and see exactly where every dollar goes.</p>
       </div>
 
       {/* Summary cards */}

@@ -119,6 +119,7 @@ export default function ProductPage() {
       quantity,
       imageUrl: product.images[0]?.url,
       slug: product.slug,
+      weightKg: variant.weightKg ?? null,
     })
   }
 
@@ -136,6 +137,7 @@ export default function ProductPage() {
         quantity,
         imageUrl: product.images[0]?.url,
         slug: product.slug,
+        weightKg: variant.weightKg ?? null,
       })
     }
     router.push("/checkout")

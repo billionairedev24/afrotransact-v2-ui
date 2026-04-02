@@ -331,6 +331,7 @@ function AddToCartButton({ item }: { item: SearchResult }) {
         quantity: 1,
         imageUrl: item.image_url || product.images?.[0]?.url,
         slug: product.slug,
+        weightKg: variant.weightKg ?? null,
       })
       toast.success(`${product.title} added to cart`)
     } catch {

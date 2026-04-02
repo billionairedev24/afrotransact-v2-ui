@@ -68,6 +68,7 @@ function StoreProductGrid({ products, store }: { products: Product[]; store: Sto
       quantity: 1,
       imageUrl: product.images?.[0]?.url,
       slug: product.slug,
+      weightKg: variant.weightKg ?? null,
     })
     toast.success(`${product.title} added to cart`)
     setLoadingId(null)

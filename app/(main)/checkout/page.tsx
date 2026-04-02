@@ -358,7 +358,7 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
 function ReviewStep({
   address, onNext, onBack, items, subtotal, tax, shipping, total, placing, error: placeError,
   couponCode, couponResult, couponLoading, couponError, onApplyCoupon, onRemoveCoupon, onCouponCodeChange, discount,
-  couponsEnabled, availableDeals, appliedDeal, onApplyDeal, onRemoveDeal
+  couponsEnabled, availableDeals, appliedDeal, onApplyDeal, onRemoveDeal, shippingByStore
 }: {
   address: Record<string, string>
   onNext: () => void
@@ -379,6 +379,7 @@ function ReviewStep({
   appliedDeal: DealData | null
   onApplyDeal: (deal: DealData) => void
   onRemoveDeal: () => void
+  shippingByStore: Map<string, { storeName: string; shippingCents: number }>
 }) {
   return (
     <div className="space-y-5">
@@ -481,8 +482,15 @@ function ReviewStep({
         <div className="flex justify-between text-sm text-gray-600">
           <span>Subtotal</span><span>{formatCents(subtotal)}</span>
         </div>
-        <div className="flex justify-between text-sm text-gray-600">
-          <span>Shipping</span><span className="text-green-400">{shipping === 0 ? "Free" : formatCents(shipping)}</span>
+        <div className="space-y-1">
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>Shipping</span><span className="text-green-400">{shipping === 0 ? "Free" : formatCents(shipping)}</span>
+          </div>
+          {shippingByStore.size > 1 && Array.from(shippingByStore.entries()).map(([sid, v]) => (
+            <div key={sid} className="flex justify-between text-xs text-gray-400 pl-2">
+              <span>{v.storeName}</span><span>{formatCents(v.shippingCents)}</span>
+            </div>
+          ))}
         </div>
         <div className="flex justify-between text-sm text-gray-600">
           <span>Tax</span><span>{formatCents(tax)}</span>
@@ -756,10 +764,24 @@ export default function CheckoutPage() {
 
   const subtotal = getSubtotal()
   const taxRate = region?.taxRate ?? 0.0825
-  const shippingFlat = region?.shippingRateCentsPerLb ?? 599
+  const shippingRateCentsPerLb = region?.shippingRateCentsPerLb ?? 599
   const freeShippingThreshold = region?.freeShippingThresholdCents ?? 7500
+  const KG_TO_LBS = 2.20462
+  // Group shipping by store, matching backend logic
+  const shippingByStore = new Map<string, { storeName: string; shippingCents: number }>()
+  if (subtotal < freeShippingThreshold) {
+    for (const item of cartItems) {
+      const weightLbs = (item.weightKg ? item.weightKg * KG_TO_LBS : 1.0) * item.quantity
+      const prev = shippingByStore.get(item.storeId)
+      const cents = Math.round(weightLbs * shippingRateCentsPerLb)
+      shippingByStore.set(item.storeId, {
+        storeName: prev?.storeName ?? item.storeName,
+        shippingCents: (prev?.shippingCents ?? 0) + cents,
+      })
+    }
+  }
+  const shipping = Array.from(shippingByStore.values()).reduce((s, v) => s + v.shippingCents, 0)
   const tax = Math.round(subtotal * taxRate)
-  const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFlat
   const discount = couponResult?.discountCents ?? 0
   const dealDiscount = appliedDeal 
     ? (appliedDeal.discountPercent 
@@ -892,6 +914,7 @@ export default function CheckoutPage() {
         productTitle: item.title,
         variantName: item.variantName,
         imageUrl: item.imageUrl,
+        weightKg: item.weightKg ?? null,
       }))
 
       await mergeCart(token, items)
@@ -1048,6 +1071,7 @@ export default function CheckoutPage() {
             appliedDeal={appliedDeal}
             onApplyDeal={(deal) => setAppliedDeal(deal)}
             onRemoveDeal={() => setAppliedDeal(null)}
+            shippingByStore={shippingByStore}
           />
         )}
         {step === "payment" && (

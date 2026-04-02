@@ -241,6 +241,7 @@ export function addToCart(
     productTitle?: string
     variantName?: string
     imageUrl?: string
+    weightKg?: number | null
   },
 ) {
   return api<CartDto>("/api/v1/cart/items", { method: "POST", body: item, token })

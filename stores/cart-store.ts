@@ -11,6 +11,7 @@ export interface CartItem {
   quantity: number
   imageUrl?: string
   slug: string
+  weightKg?: number | null
 }
 
 interface CartState {
