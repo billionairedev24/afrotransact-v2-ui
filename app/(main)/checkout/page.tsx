@@ -826,12 +826,13 @@ export default function CheckoutPage() {
           getActiveDeals().catch((): DealData[] => []),
         ])
         if (cancelled) return
-        setAvailableRegions(allRegions)
+        const validRegions = allRegions.filter((r) => r.code)
+        setAvailableRegions(validRegions)
         setAllDeals(deals)
         const defaultCode = process.env.NEXT_PUBLIC_DEFAULT_REGION_CODE
         const initial =
-          (defaultCode ? allRegions.find((r) => r.code === defaultCode) : null) ??
-          allRegions[0]
+          (defaultCode ? validRegions.find((r) => r.code === defaultCode) : null) ??
+          validRegions[0]
         if (initial) setRegion(initial)
       } catch {
         // fall back to hardcoded defaults
