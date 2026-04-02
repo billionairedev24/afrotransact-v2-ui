@@ -844,11 +844,12 @@ export default function CheckoutPage() {
   // Re-fetch region-specific config (features, payment methods) whenever the selected region changes.
   useEffect(() => {
     if (!region) return
+    const currentRegion = region
     let cancelled = false
     async function loadRegionConfig() {
       const [f, cfg] = await Promise.all([
-        getRegionFeatures(region.id).catch((): FeatureFlag[] => []),
-        getRegionConfig(region.code).catch(() => null),
+        getRegionFeatures(currentRegion.id).catch((): FeatureFlag[] => []),
+        getRegionConfig(currentRegion.code).catch(() => null),
       ])
       if (cancelled) return
       setFlags(f)
