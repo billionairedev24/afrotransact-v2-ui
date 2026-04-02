@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useSession } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   getOrderByNumber,
@@ -24,7 +24,8 @@ function formatCents(cents: number, currency = "USD") {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+  const d = new Date(iso.endsWith("Z") ? iso : iso + "Z")
+  return d.toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" })
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
@@ -360,8 +361,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (sessionStatus === "loading") return
     if (sessionStatus !== "authenticated") {
-      if (sessionStatus !== "loading") setLoading(false)
+      signIn("keycloak", { callbackUrl: `/orders/${orderNumber}` })
       return
     }
     let cancelled = false
@@ -462,6 +464,18 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
             </div>
           </div>
         </div>
+
+        {order.paymentMethod && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+              <CreditCard className="h-3.5 w-3.5" />
+              <span className="uppercase tracking-wider">Payment Method</span>
+            </div>
+            <p className="text-sm text-gray-600">
+              {order.paymentMethod}{order.last4 ? ` ending in ${order.last4}` : ""}
+            </p>
+          </div>
+        )}
 
         {order.shippingAddress && (
           <div className="mt-4 pt-4 border-t border-gray-200">

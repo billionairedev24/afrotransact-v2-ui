@@ -175,7 +175,8 @@ function BreakdownLine({ label, amount, variant = "default", indent = false }: {
 }
 
 function InlineBreakdown({ t }: { t: TransferRecord }) {
-  const discount = t.discountCents ?? 0
+  const isSellerCoupon = t.couponType === "seller"
+  const discount = isSellerCoupon ? (t.discountCents ?? 0) : 0
   const customerPaid = t.subtotalCents + t.shippingCents + t.taxCents - discount
 
   return (
@@ -391,7 +392,8 @@ export default function PayoutsPage() {
             <div className="divide-y divide-gray-100">
               {filtered.map((t) => {
                 const totalFees = t.platformFeeCents + t.stripeFeeCents
-                const netSales = t.subtotalCents - (t.discountCents ?? 0)
+                const sellerDiscount = t.couponType === "seller" ? (t.discountCents ?? 0) : 0
+                const netSales = t.subtotalCents - sellerDiscount
                 const isExpanded = expandedRows.has(t.id)
                 const dateStr = t.transferredAt ? formatDate(t.transferredAt) : formatDate(t.createdAt)
 
@@ -538,7 +540,8 @@ export default function PayoutsPage() {
 
               {/* Full financial breakdown */}
               {(() => {
-                const discount = selected.discountCents ?? 0
+                const isSellerCoupon = selected.couponType === "seller"
+                const discount = isSellerCoupon ? (selected.discountCents ?? 0) : 0
                 const customerPaid = selected.subtotalCents + selected.shippingCents + selected.taxCents - discount
                 return (
                   <div className="space-y-3">

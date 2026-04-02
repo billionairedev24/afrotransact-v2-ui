@@ -892,6 +892,8 @@ export interface OrderDto {
   subtotalCents: number
   discountCents?: number
   couponCode?: string | null
+  paymentMethod?: string | null
+  last4?: string | null
   taxCents: number
   shippingCostCents: number
   totalCents: number
@@ -1498,6 +1500,7 @@ export interface TransferRecord {
   stripeFeeCents: number
   discountCents: number
   couponCode: string | null
+  couponType: string | null
   status: string
   stripeTransferId: string | null
   estimatedSettlementAt: string | null
