@@ -427,12 +427,12 @@ function ReviewStep({
                 value={couponCode}
                 onChange={(e) => onCouponCodeChange(e.target.value.toUpperCase())}
                 placeholder="Enter promo code"
-                className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/60 transition-colors"
+                className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/60 transition-colors"
               />
               <button
                 onClick={onApplyCoupon}
                 disabled={!couponCode.trim() || couponLoading}
-                className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
+                className="shrink-0 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
               >
                 {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
               </button>
