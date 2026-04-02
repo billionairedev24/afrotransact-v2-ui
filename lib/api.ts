@@ -216,6 +216,7 @@ export interface CartItemDto {
   productTitle?: string
   variantName?: string
   imageUrl?: string
+  weightKg?: number | null
 }
 
 export interface CartDto {
@@ -263,7 +264,7 @@ export function mergeCart(
   token: string,
   items: {
     variantId: string; productId: string; storeId: string; quantity: number; unitPriceCents: number;
-    productTitle?: string; variantName?: string; imageUrl?: string;
+    productTitle?: string; variantName?: string; imageUrl?: string; weightKg?: number | null;
   }[],
 ) {
   return api<CartDto>("/api/v1/cart/merge", { method: "POST", body: items, token })

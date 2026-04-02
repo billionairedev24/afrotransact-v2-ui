@@ -29,6 +29,7 @@ interface ServerCartItem {
   productTitle?: string
   variantName?: string
   imageUrl?: string
+  weightKg?: number | null
 }
 
 interface ServerCart {
@@ -48,6 +49,7 @@ function serverItemsToCartItems(serverCart: ServerCart): CartItem[] {
     quantity: si.quantity,
     imageUrl: si.imageUrl,
     slug: si.productId,
+    weightKg: si.weightKg ?? null,
   }))
 }
 
@@ -61,6 +63,7 @@ function cartItemsToMergePayload(items: CartItem[]) {
     productTitle: item.title,
     variantName: item.variantName,
     imageUrl: item.imageUrl,
+    weightKg: item.weightKg ?? undefined,
   }))
 }
 
