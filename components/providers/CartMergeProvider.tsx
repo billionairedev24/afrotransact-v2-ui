@@ -63,7 +63,7 @@ function cartItemsToMergePayload(items: CartItem[]) {
     productTitle: item.title,
     variantName: item.variantName,
     imageUrl: item.imageUrl,
-    weightKg: item.weightKg ?? undefined,
+    weightKg: item.weightKg ?? null,
   }))
 }
 
