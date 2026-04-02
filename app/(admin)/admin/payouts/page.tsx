@@ -344,7 +344,9 @@ export default function AdminPayoutsPage() {
             const discount = selected.discountCents ?? 0
             const isPlatformCoupon = selected.couponType === "platform"
             const isSellerCoupon = selected.couponType === "seller"
-            const customerPaid = selected.subtotalCents + selected.shippingCents + selected.taxCents - discount
+            const orderTotal = selected.subtotalCents + selected.shippingCents + selected.taxCents
+            const customerPaid = orderTotal - discount
+            const platformPaid = isPlatformCoupon ? discount : 0
             return (
             <div className="min-w-0 space-y-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -366,28 +368,29 @@ export default function AdminPayoutsPage() {
               )}
 
               <div className="min-w-0 space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Financial Breakdown</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Payment Breakdown</h3>
                 <div className="space-y-1 rounded-xl border border-gray-200 bg-white p-5">
                   <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-gray-600">Product subtotal</span><span className="shrink-0 text-sm font-mono tabular-nums text-gray-900">{formatCents(selected.subtotalCents)}</span></div>
+                  {selected.shippingCents > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-gray-600">Shipping</span><span className="shrink-0 text-sm font-mono tabular-nums text-gray-900">{formatCents(selected.shippingCents)}</span></div>}
+                  {selected.taxCents > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-gray-600">Tax</span><span className="shrink-0 text-sm font-mono tabular-nums text-gray-900">{formatCents(selected.taxCents)}</span></div>}
                   {discount > 0 && (
                     <div className="flex justify-between gap-3 py-1.5">
                       <span className="text-sm text-green-600">
                         {selected.couponCode ? `Coupon (${selected.couponCode})` : "Coupon savings"}
                         <span className={`ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${isPlatformCoupon ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
-                          {isPlatformCoupon ? "Platform pays" : "Seller pays"}
+                          {isPlatformCoupon ? "Platform coupon" : "Seller coupon"}
                         </span>
                       </span>
                       <span className="shrink-0 text-sm font-mono tabular-nums text-green-600">−{formatCents(discount)}</span>
                     </div>
                   )}
-                  {selected.shippingCents > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-gray-600">Shipping</span><span className="shrink-0 text-sm font-mono tabular-nums text-gray-900">{formatCents(selected.shippingCents)}</span></div>}
-                  {selected.taxCents > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-gray-600">Tax</span><span className="shrink-0 text-sm font-mono tabular-nums text-gray-900">{formatCents(selected.taxCents)}</span></div>}
                   <div className="my-2 border-t border-gray-200" />
                   <div className="flex justify-between gap-3 py-1.5"><span className="text-sm font-semibold text-gray-900">Customer paid</span><span className="shrink-0 text-sm font-mono font-semibold tabular-nums text-gray-900">{formatCents(customerPaid)}</span></div>
+                  {platformPaid > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm font-semibold text-blue-700">Platform paid</span><span className="shrink-0 text-sm font-mono font-semibold tabular-nums text-blue-700">{formatCents(platformPaid)}</span></div>}
+                  {isSellerCoupon && discount > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm font-semibold text-orange-700">Seller coupon discount</span><span className="shrink-0 text-sm font-mono font-semibold tabular-nums text-orange-700">{formatCents(discount)}</span></div>}
                   <div className="my-3 border-t border-dashed border-gray-300" />
                   <p className="pb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">Deductions from seller</p>
                   {discount > 0 && isSellerCoupon && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-red-600">{selected.couponCode ? `Coupon discount (${selected.couponCode})` : "Coupon discount"} <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">Seller pays</span></span><span className="shrink-0 text-sm font-mono tabular-nums text-red-600">−{formatCents(discount)}</span></div>}
-                  {discount > 0 && isPlatformCoupon && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-blue-600">{selected.couponCode ? `Coupon discount (${selected.couponCode})` : "Coupon discount"} <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">Platform absorbs</span></span><span className="shrink-0 text-sm font-mono tabular-nums text-blue-600">{formatCents(discount)}</span></div>}
                   <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-red-600">Platform commission</span><span className="shrink-0 text-sm font-mono tabular-nums text-red-600">−{formatCents(selected.platformFeeCents)}</span></div>
                   {selected.stripeFeeCents > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-red-600">Stripe processing fee</span><span className="shrink-0 text-sm font-mono tabular-nums text-red-600">−{formatCents(selected.stripeFeeCents)}</span></div>}
                   {selected.taxCents > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-red-600">Tax remitted</span><span className="shrink-0 text-sm font-mono tabular-nums text-red-600">−{formatCents(selected.taxCents)}</span></div>}
