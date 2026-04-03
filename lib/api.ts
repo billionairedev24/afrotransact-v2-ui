@@ -17,6 +17,7 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...rest,
     headers,
+    cache: "no-store",
     body: body ? JSON.stringify(body) : undefined,
   })
 
@@ -397,6 +398,10 @@ export function getStripeUpdateLink(token: string) {
 
 export interface PaymentSettings {
   settlement_days: number
+  platform_commission_rate: number
+  auto_payouts_enabled: boolean
+  minimum_payout_amount_cents: number
+  maximum_payout_amount_cents: number
 }
 
 export function getPaymentSettings(token: string) {
