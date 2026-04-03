@@ -21,7 +21,7 @@ import { NextAuthOptions, TokenSet, Session } from "next-auth"
 import type { JWT } from "next-auth/jwt"
 import type { OAuthConfig } from "next-auth/providers/oauth"
 import KeycloakProvider from "next-auth/providers/keycloak"
-import { setRegistrationRoleSeller } from "@/lib/keycloak-admin"
+import { grantSellerEntitlements } from "@/lib/keycloak-admin"
 
 /** Fail fast at server startup if a required env var is absent. */
 function requireEnv(name: string): string {
@@ -135,11 +135,18 @@ export const authOptions: NextAuthOptions = {
 
         token.registrationRole = claims?.registration_role as string | undefined
 
-        // If not present in token but registered via seller-specific provider,
-        // we can still fall back to updating Keycloak as a safety measure.
-        if (account.provider === "keycloak-register-seller" && !token.registrationRole) {
-          const ok = await setRegistrationRoleSeller(user.id as string)
-          if (ok) token.registrationRole = "seller"
+        // Grant seller entitlements (user attribute + realm role) when:
+        // 1. User registered via the seller-specific provider, OR
+        // 2. User has registration_role=seller attribute (from Keycloak) but
+        //    doesn't yet have the seller realm role (e.g. logged in after
+        //    email verification via the regular keycloak provider).
+        const roles = token.roles as string[] | undefined
+        const needsSellerGrant =
+          account.provider === "keycloak-register-seller" ||
+          (token.registrationRole === "seller" && !roles?.includes("seller"))
+        if (needsSellerGrant) {
+          const { registrationOk, realmRoleOk } = await grantSellerEntitlements(user.id as string)
+          if (registrationOk || realmRoleOk) token.registrationRole = "seller"
         }
       }
 
