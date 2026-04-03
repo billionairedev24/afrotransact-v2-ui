@@ -30,15 +30,18 @@ function LoginForm() {
     inactive: "You were signed out due to inactivity.",
     session_expired: "Your session has expired. Please sign in again.",
     password_updated: "Your password was updated. Continuing to sign in…",
-    email_verified: "Your email has been verified. Continuing to sign in…",
+    email_verified: "Your email has been verified! Click below to sign in to your account.",
     account_updated: "Your account was updated. Continuing to sign in…",
   }
 
   const autoKeycloakSignInStarted = useRef(false)
 
+  // Only password_updated and account_updated auto-trigger sign-in.
+  // email_verified intentionally does NOT auto-sign-in — doing so immediately
+  // can re-enter Keycloak before the logout-after-verify-email required action
+  // is fully cleared, causing an infinite verification loop.
   const callbackRecoveryReasons = [
     "password_updated",
-    "email_verified",
     "account_updated",
   ] as const
 
@@ -65,6 +68,37 @@ function LoginForm() {
     error === "OAuthCallback" ||
     error === "Callback" ||
     (reason != null && callbackRecoveryReasons.includes(reason as (typeof callbackRecoveryReasons)[number]))
+
+  // email_verified is a special case: show a page with a manual sign-in button
+  // instead of auto-signing in, to prevent the verification loop.
+  if (reason === "email_verified") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-6 px-4 text-center">
+        <div className="w-full max-w-[380px] rounded-2xl border border-border bg-card p-8 shadow-sm space-y-5">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 mx-auto">
+            <svg className="h-7 w-7 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-xl font-bold text-foreground">Email verified!</h1>
+            <p className="text-sm text-muted-foreground">Your email has been confirmed. You can now sign in to your account.</p>
+          </div>
+          <button
+            onClick={handleSignIn}
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-110 disabled:opacity-80 disabled:cursor-wait"
+          >
+            {isLoading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" />Signing in&hellip;</>
+            ) : (
+              <>Continue to sign in<ArrowRight className="h-4 w-4" /></>
+            )}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (isCallbackRecovery) {
     const recoveryMessage =
