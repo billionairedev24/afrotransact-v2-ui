@@ -21,6 +21,8 @@ import {
   updateStore,
   type StoreDetail,
 } from "@/lib/api"
+import { useSellerMe, useSellerStores } from "@/hooks/use-seller-stats"
+import { useQueryClient } from "@tanstack/react-query"
 import { useUploadThing } from "@/lib/uploadthing"
 
 const inputClass =
@@ -40,7 +42,7 @@ type FormData = {
   bannerUrl: string
 }
 
-function storeToForm(store: StoreDetail | null): FormData {
+function storeToForm(store: any): FormData {
   if (!store) {
     return {
       name: "",
@@ -148,44 +150,24 @@ function ImageUploadField({
 }
 
 export default function StoreSettingsPage() {
-  const { status } = useSession()
+  const { status: sessionStatus } = useSession()
+  const queryClient = useQueryClient()
+  const { data: seller, isLoading: sellerLoading } = useSellerMe()
+  const { data: stores = [], isLoading: storesLoading } = useSellerStores(seller?.id)
+  const store = stores[0]
 
-  const [loading, setLoading] = useState(true)
+  const loading = sellerLoading || storesLoading
   const [saving, setSaving] = useState(false)
-  const [store, setStore] = useState<StoreDetail | null>(null)
   const [form, setForm] = useState<FormData>(storeToForm(null))
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
 
   useEffect(() => {
-    if (status !== "authenticated") {
-      setLoading(false)
-      return
+    if (store) {
+      setForm(storeToForm(store))
     }
-    let cancelled = false
-    async function load() {
-      const token = await getAccessToken()
-      if (!token) return
-      try {
-        const seller = await getCurrentSeller(token)
-        const stores = await getSellerStores(token, seller.id)
-        const existingStore = stores.length > 0 ? stores[0] : null
-        if (!cancelled) {
-          setStore(existingStore)
-          setForm(storeToForm(existingStore))
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load store")
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [status])
+  }, [store])
 
   function update<K extends keyof FormData>(field: K, value: FormData[K]) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -224,9 +206,7 @@ export default function StoreSettingsPage() {
           logoUrl: form.logoUrl.trim() || null,
           bannerUrl: form.bannerUrl.trim() || null,
         }
-        const updated = await updateStore(token, store.id, payload)
-        setStore(updated)
-        setForm(storeToForm(updated))
+        await updateStore(token, store.id, payload)
         setSuccess(true)
       } else {
         const createPayload = {
@@ -239,17 +219,15 @@ export default function StoreSettingsPage() {
           deliveryRadiusMiles: radius,
         }
         const created = await createStore(token, createPayload)
-        let finalStore = created
         if (form.logoUrl.trim() || form.bannerUrl.trim()) {
-          finalStore = await updateStore(token, created.id, {
+          await updateStore(token, created.id, {
             logoUrl: form.logoUrl.trim() || null,
             bannerUrl: form.bannerUrl.trim() || null,
           })
         }
-        setStore(finalStore)
-        setForm(storeToForm(finalStore))
         setSuccess(true)
       }
+      queryClient.invalidateQueries({ queryKey: ["seller"] })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save store")
     } finally {

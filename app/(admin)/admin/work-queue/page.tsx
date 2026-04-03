@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
+import { useQueryClient } from "@tanstack/react-query"
+import { useWorkQueueLists } from "@/hooks/use-admin-stats"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 import {
@@ -64,10 +66,12 @@ function formatPrice(dollars: number) {
 
 export default function WorkQueuePage() {
   const { status: sessionStatus } = useSession()
+  const queryClient = useQueryClient()
+  const { data: queue, isLoading: loading } = useWorkQueueLists()
+  const pendingProducts = queue?.products ?? []
+  const pendingSellers = queue?.sellers ?? []
+
   const [tab, setTab] = useState<TabKey>("all")
-  const [pendingProducts, setPendingProducts] = useState<Product[]>([])
-  const [pendingSellers, setPendingSellers] = useState<SellerInfo[]>([])
-  const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -84,30 +88,9 @@ export default function WorkQueuePage() {
   }>({ open: false, type: "product", id: "", name: "" })
   const [rejectReason, setRejectReason] = useState("")
 
-  const loadQueue = useCallback(async () => {
-    try {
-      setLoading(true)
-      const token = await getAccessToken()
-      if (!token) return
-
-      const [productsRes, sellersRes] = await Promise.all([
-        getAdminProducts(token, "pending_review", 0, 100).catch(() => ({ content: [] as Product[], totalElements: 0, totalPages: 0, number: 0, size: 0 })),
-        getAdminSellers(token, undefined, 0, 100, "submitted").catch(() => ({ content: [] as SellerInfo[], totalElements: 0, totalPages: 0, number: 0, size: 0 })),
-      ])
-
-      setPendingProducts(productsRes.content)
-      setPendingSellers(sellersRes.content)
-    } catch {
-      toast.error("Failed to load work queue")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (sessionStatus === "authenticated") loadQueue()
-    else setLoading(false)
-  }, [sessionStatus, loadQueue])
+  const invalidateQueue = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["admin"] })
+  }, [queryClient])
 
   async function handleApproveProduct(product: Product) {
     const token = await getAccessToken()
@@ -117,7 +100,7 @@ export default function WorkQueuePage() {
       await approveProduct(token, product.id)
       toast.success(`"${product.title}" approved`)
       if (selectedProduct?.id === product.id) setSelectedProduct(null)
-      await loadQueue()
+      invalidateQueue()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to approve")
     } finally {
@@ -132,7 +115,7 @@ export default function WorkQueuePage() {
     try {
       await reviewAdminSeller(token, seller.id, "approve")
       toast.success(`"${seller.businessName}" approved`)
-      await loadQueue()
+      invalidateQueue()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to approve")
     } finally {
@@ -173,7 +156,7 @@ export default function WorkQueuePage() {
       toast.success(`"${rejectModal.name}" rejected`)
       setRejectModal({ open: false, type: "product", id: "", name: "" })
       if (selectedProduct?.id === rejectModal.id) setSelectedProduct(null)
-      await loadQueue()
+      invalidateQueue()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to reject")
     } finally {
@@ -405,7 +388,7 @@ export default function WorkQueuePage() {
             await reviewAdminSeller(token, selectedSeller.id, "approve")
             toast.success(`"${selectedSeller.businessName}" approved`)
             setSelectedSeller(null)
-            await loadQueue()
+            invalidateQueue()
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Failed to approve")
           } finally {
@@ -424,7 +407,7 @@ export default function WorkQueuePage() {
             await reviewAdminSeller(token, selectedSeller.id, "request_info", undefined, notes)
             toast.success("Information requested from seller")
             setSelectedSeller(null)
-            await loadQueue()
+            invalidateQueue()
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Failed")
           } finally {

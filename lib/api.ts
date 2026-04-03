@@ -377,10 +377,10 @@ export function getCurrentSeller(token: string) {
   return api<SellerInfo>("/api/v1/seller/me", { token })
 }
 
-export function registerSeller(token: string, businessName: string, taxId?: string) {
+export function registerSeller(token: string, businessName: string, taxId?: string, contactEmail?: string) {
   return api<SellerInfo>("/api/v1/seller/register", {
     method: "POST",
-    body: { businessName, taxId },
+    body: { businessName, taxId, contactEmail },
     token,
   })
 }

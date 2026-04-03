@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Loader2,
   Eye,
+  CreditCard,
 } from "lucide-react"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
@@ -226,7 +227,7 @@ function AdminOrderDetailSheet({
       <SheetBody className="space-y-6">
         {order && (
           <>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Order Status</p>
                 <span className={`mt-1 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadge(order.status).className}`}>
@@ -236,6 +237,16 @@ function AdminOrderDetailSheet({
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Placed</p>
                 <p className="mt-1 text-sm text-gray-600">{formatDate(order.placedAt)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Payment</p>
+                <div className="mt-1 flex items-center gap-1.5 overflow-hidden">
+                   <CreditCard className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                   <p className="text-sm text-gray-900 truncate">
+                     {order.raw.paymentMethod || "Stripe"}
+                     {order.raw.last4 ? ` •••• ${order.raw.last4}` : ""}
+                   </p>
+                </div>
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Total</p>

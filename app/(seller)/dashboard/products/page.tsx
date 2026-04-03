@@ -356,7 +356,6 @@ function ProductDetailSheet({
 
       const refreshed = await getProductById(product.id)
       setProduct(refreshed)
-      setProduct(updated)
       setEditing(false)
       toast.success("Product updated")
       onUpdated()

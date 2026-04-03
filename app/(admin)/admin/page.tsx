@@ -37,6 +37,15 @@ import {
 } from "@/lib/api"
 import { getAccessToken } from "@/lib/auth-helpers"
 
+import { 
+  useAdminOverviewStats,
+  useAdminRecentSellers,
+  useAdminRegions,
+  useAdminPlans,
+  useWorkQueueCounts,
+  useAdminRecentReviews
+} from "@/hooks/use-admin-stats"
+
 const CARD_BG = "#FFFFFF"
 
 const QUICK_LINKS = [
@@ -51,58 +60,14 @@ const QUICK_LINKS = [
 ]
 
 export default function AdminOverviewPage() {
-  const { status } = useSession()
+  const { data: sellerStats, isLoading: statsLoading } = useAdminOverviewStats()
+  const { data: pendingApps = [], isLoading: appsLoading } = useAdminRecentSellers()
+  const { data: regions = [], isLoading: regionsLoading } = useAdminRegions()
+  const { data: plans = [], isLoading: plansLoading } = useAdminPlans()
+  const { data: qCounts, isLoading: countsLoading } = useWorkQueueCounts()
+  const { data: reviews, isLoading: reviewsLoading } = useAdminRecentReviews()
 
-  const [loading, setLoading] = useState(true)
-  const [sellerStats, setSellerStats] = useState<OnboardingStats | null>(null)
-  const [pendingApps, setPendingApps] = useState<SellerInfo[]>([])
-  const [totalProducts, setTotalProducts] = useState<number | null>(null)
-  const [regionCount, setRegionCount] = useState<number | null>(null)
-  const [planCount, setPlanCount] = useState<number | null>(null)
-  const [reviewCount, setReviewCount] = useState<number | null>(null)
-  const [avgRating, setAvgRating] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (status !== "authenticated") { setLoading(false); return }
-
-    let cancelled = false
-
-    async function fetchData() {
-      try {
-        setLoading(true)
-        const token = await getAccessToken()
-        if (!token || cancelled) return
-
-        const [statsRes, pendingRes, regionsRes, plansRes, productsRes, reviewsRes] = await Promise.allSettled([
-          getAdminSellerStats(token),
-          getAdminSellers(token, undefined, 0, 5, "submitted"),
-          getAdminRegions(token),
-          getAdminPlans(token),
-          getAdminProducts(token, undefined, 0, 1),
-          getAdminReviews(token, 1, 1),
-        ])
-
-        if (cancelled) return
-
-        if (statsRes.status === "fulfilled") setSellerStats(statsRes.value)
-        if (pendingRes.status === "fulfilled") setPendingApps(pendingRes.value.content)
-        if (regionsRes.status === "fulfilled") setRegionCount(regionsRes.value.length)
-        if (plansRes.status === "fulfilled") setPlanCount(plansRes.value.length)
-        if (productsRes.status === "fulfilled") setTotalProducts(productsRes.value.totalElements)
-        if (reviewsRes.status === "fulfilled") {
-          setReviewCount(reviewsRes.value.review_count ?? reviewsRes.value.total ?? 0)
-          setAvgRating(reviewsRes.value.avg_rating ?? 0)
-        }
-      } catch (e) {
-        if (!cancelled) toast.error(e instanceof Error ? e.message : "Failed to load admin data")
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    fetchData()
-    return () => { cancelled = true }
-  }, [status])
+  const loading = statsLoading || appsLoading || regionsLoading || plansLoading || countsLoading || reviewsLoading
 
   if (loading) {
     return (
@@ -112,6 +77,12 @@ export default function AdminOverviewPage() {
       </div>
     )
   }
+
+  const reviewCount = reviews?.review_count ?? reviews?.total ?? 0
+  const avgRating = reviews?.avg_rating ?? 0
+  const totalProducts = qCounts?.products ?? 0 // Note: This could be expanded to total products if needed
+  const regionCount = regions.length
+  const planCount = plans.length
 
   const totalSellers = sellerStats?.totalSellers ?? 0
   const approvedSellers = sellerStats?.approved ?? 0

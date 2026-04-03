@@ -3,11 +3,14 @@
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react"
 import { createPortal } from "react-dom"
 import { useSession } from "next-auth/react"
+import { useQueryClient } from "@tanstack/react-query"
+import { 
+  useAdminSellers, 
+  useAdminOverviewStats,
+  useAdminSellerDetail 
+} from "@/hooks/use-admin-stats"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
-  getAdminSellers,
-  getAdminSellerStats,
-  getAdminSellerDetail,
   reviewAdminSeller,
   triggerOnboardingReminders,
   sendSellerReminder,
@@ -103,18 +106,21 @@ const PAGE_SIZE = 15
 
 export default function AdminSellersPage() {
   const { status: sessionStatus } = useSession()
+  const queryClient = useQueryClient()
 
-  const [stats, setStats] = useState<OnboardingStats | null>(null)
-  const [statsLoading, setStatsLoading] = useState(true)
-  const [sellers, setSellers] = useState<AdminSellerRow[]>([])
-  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("all")
   const [page, setPage] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
-  const [totalElements, setTotalElements] = useState(0)
+  
+  const { data: stats, isLoading: statsLoading } = useAdminOverviewStats()
+  const { data: sellersRes, isLoading: sellersLoading } = useAdminSellers(activeTab, page, PAGE_SIZE)
+  
+  const sellers = (sellersRes?.content || []) as AdminSellerRow[]
+  const totalPages = sellersRes?.totalPages || 0
+  const totalElements = sellersRes?.totalElements || 0
 
-  const [selectedDetail, setSelectedDetail] = useState<AdminSellerDetail | null>(null)
-  const [detailLoading, setDetailLoading] = useState(false)
+  const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null)
+  const { data: selectedDetail, isLoading: detailLoading } = useAdminSellerDetail(selectedSellerId)
+  
   const [panelAction, setPanelAction] = useState<ActionMode>("none")
   const [triggeringReminders, setTriggeringReminders] = useState(false)
 
@@ -140,77 +146,30 @@ export default function AdminSellersPage() {
     }
   }
 
-  const loadStats = useCallback(async () => {
-    try {
-      setStatsLoading(true)
-      const token = await getAccessToken()
-      if (!token) return
-      setStats(await getAdminSellerStats(token))
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to load stats")
-    } finally {
-      setStatsLoading(false)
-    }
-  }, [])
-
-  const loadSellers = useCallback(async (status: string, pg: number) => {
-    try {
-      setLoading(true)
-      const token = await getAccessToken()
-      if (!token) return
-      const res = await getAdminSellers(token, undefined, pg, PAGE_SIZE, status === "all" ? undefined : status)
-      setSellers(res.content as unknown as AdminSellerRow[])
-      setTotalPages(res.totalPages)
-      setTotalElements(res.totalElements)
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to load sellers")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (sessionStatus === "authenticated") {
-      loadStats()
-      loadSellers(activeTab, page)
-    } else {
-      setLoading(false)
-      setStatsLoading(false)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus])
+  const invalidateSellers = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["admin"] })
+  }, [queryClient])
 
   function changeTab(tab: string) {
     setActiveTab(tab)
     setPage(0)
-    loadSellers(tab, 0)
   }
 
   function changePage(p: number) {
     setPage(p)
-    loadSellers(activeTab, p)
   }
 
   async function openDetail(sellerId: string, mode: ActionMode = "none") {
     setPanelAction(mode)
-    setDetailLoading(true)
-    setSelectedDetail(null)
-    try {
-      const token = await getAccessToken()
-      if (!token) return
-      setSelectedDetail(await getAdminSellerDetail(token, sellerId))
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to load seller details")
-    } finally {
-      setDetailLoading(false)
-    }
+    setSelectedSellerId(sellerId)
   }
 
   function closeDetail() {
-    setSelectedDetail(null)
-    setDetailLoading(false)
+    setSelectedSellerId(null)
     setPanelAction("none")
   }
+
+  const loading = sellersLoading || (sessionStatus === "loading")
 
   async function handleReview(sellerId: string, action: string, reason?: string, adminNotes?: string) {
     try {
@@ -220,8 +179,7 @@ export default function AdminSellersPage() {
       const labels: Record<string, string> = { approve: "Approved", reject: "Rejected", request_info: "Requested info from" }
       toast.success(`${labels[action] ?? action} seller successfully`)
       closeDetail()
-      loadStats()
-      loadSellers(activeTab, page)
+      invalidateSellers()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Review action failed")
     }
@@ -401,7 +359,7 @@ export default function AdminSellersPage() {
 
       {/* Detail Slide-Over */}
       <DetailPanel
-        detail={selectedDetail}
+        detail={selectedDetail || null}
         loading={detailLoading}
         initialMode={panelAction}
         onClose={closeDetail}

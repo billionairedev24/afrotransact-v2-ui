@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getAdminProducts, getAdminSellers } from "@/lib/api"
+import { useWorkQueueCounts } from "@/hooks/use-admin-stats"
 
 interface NavItem {
   href: string
@@ -68,25 +69,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { status: sessionStatus } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [queueCount, setQueueCount] = useState(0)
+  const { data: qStats } = useWorkQueueCounts()
+  const queueCount = qStats?.total ?? 0
   const signOut = useSignOut()
-
-  useEffect(() => {
-    if (sessionStatus !== "authenticated") return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const token = await getAccessToken()
-        if (!token || cancelled) return
-        const [products, sellers] = await Promise.all([
-          getAdminProducts(token, "pending_review", 0, 1).catch(() => ({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 0 })),
-          getAdminSellers(token, undefined, 0, 1, "submitted").catch(() => ({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 0 })),
-        ])
-        if (!cancelled) setQueueCount(products.totalElements + sellers.totalElements)
-      } catch { /* ignore */ }
-    })()
-    return () => { cancelled = true }
-  }, [sessionStatus])
 
   const navItems: NavItem[] = BASE_NAV_ITEMS.map((item) =>
     item.href === "/admin/work-queue" ? { ...item, badge: queueCount } : item
