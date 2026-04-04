@@ -233,7 +233,7 @@ export default function AdminPayoutsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Platform Payouts</h1>
           <p className="mt-1 text-sm text-gray-500">Manage and monitor all seller payout settlements.</p>
         </div>
-        <button
+        {/*<button NOT NEEDED IN PAYOUTS PAGE
           type="button"
           onClick={triggerOnboardingReminders}
           disabled={triggeringReminders}
@@ -241,7 +241,7 @@ export default function AdminPayoutsPage() {
         >
           {triggeringReminders ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
           Send Onboarding Reminders
-        </button>
+        </button>*/}
       </div>
 
       <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 sm:gap-4">
