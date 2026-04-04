@@ -44,9 +44,23 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   suspended:      { label: "Suspended",      color: "text-red-400",    bg: "bg-red-500/10 border-red-500/20",     icon: <AlertTriangle className="h-4 w-4" /> },
 }
 
+function getOrdinalSuffix(day: number): string {
+  if (day > 3 && day < 21) return 'th';
+  switch (day % 10) {
+    case 1:  return "st";
+    case 2:  return "nd";
+    case 3:  return "rd";
+    default: return "th";
+  }
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—"
-  return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+  const date = new Date(iso)
+  const day = date.getDate()
+  const month = date.toLocaleDateString("en-US", { month: "long" })
+  const year = date.getFullYear()
+  return `${day}${getOrdinalSuffix(day)} ${month}, ${year}`
 }
 
 function daysUntil(iso: string | null): number {
@@ -266,7 +280,14 @@ export default function SubscriptionPage() {
                     <span className="text-xs text-gray-500">{subscription.plan.name} Plan</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {subscription.statusMessage ?? `${subscription.plan.name} plan`}
+                    {(() => {
+                      const s = String(subscription.status || "").toLowerCase();
+                      if (s.includes("trial") && subscription.trialEndsAt) {
+                        const label = s.includes("extended") ? "Extended trial" : "Trial";
+                        return `${label} active until ${formatDate(subscription.trialEndsAt)}`;
+                      }
+                      return subscription.statusMessage ?? `${subscription.plan.name} plan`;
+                    })()}
                   </p>
                 </div>
               </div>

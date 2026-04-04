@@ -673,6 +673,8 @@ export interface SubscriptionPlan {
   slug: string
   description: string | null
   priceCentsPerMonth: number
+  billingInterval: string
+  billingCount: number
   priceDisplay: string
   maxProducts: number
   maxStores: number
@@ -1069,7 +1071,7 @@ export function getAdminPlans(token: string) {
   return api<SubscriptionPlan[]>("/api/v1/admin/subscription/plans", { token })
 }
 
-export function createPlan(token: string, data: Record<string, unknown>) {
+export function createAdminPlan(token: string, data: Partial<SubscriptionPlan>) {
   return api<SubscriptionPlan>("/api/v1/admin/subscription/plans", {
     method: "POST",
     body: data,
@@ -1077,7 +1079,7 @@ export function createPlan(token: string, data: Record<string, unknown>) {
   })
 }
 
-export function updatePlan(token: string, planId: string, data: Record<string, unknown>) {
+export function updateAdminPlan(token: string, planId: string, data: Partial<SubscriptionPlan>) {
   return api<SubscriptionPlan>(`/api/v1/admin/subscription/plans/${planId}`, {
     method: "PUT",
     body: data,

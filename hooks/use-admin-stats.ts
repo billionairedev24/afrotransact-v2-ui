@@ -9,9 +9,7 @@ import {
   getAdminReviews,
   getAdminSellerDetail,
   type Product,
-  type SellerInfo,
-  type OnboardingStats,
-  type AdminSellerDetail
+  type SellerInfo
 } from "@/lib/api";
 
 /**

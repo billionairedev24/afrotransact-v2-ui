@@ -17,8 +17,8 @@ import {
 import {
   getAdminPlans,
   getBillingConfig,
-  createPlan,
-  updatePlan,
+  createAdminPlan,
+  updateAdminPlan,
   updateBillingConfig,
   type SubscriptionPlan,
 } from "@/lib/api"
@@ -37,6 +37,8 @@ type PlanFormData = {
   slug: string
   description: string
   priceCentsPerMonth: number
+  billingInterval: string
+  billingCount: number
   maxProducts: number
   maxStores: number
   commissionRateOverride: string
@@ -53,6 +55,8 @@ function planToFormData(plan?: SubscriptionPlan | null): PlanFormData {
       slug: "",
       description: "",
       priceCentsPerMonth: 0,
+      billingInterval: "month",
+      billingCount: 1,
       maxProducts: 50,
       maxStores: 1,
       commissionRateOverride: "",
@@ -67,6 +71,8 @@ function planToFormData(plan?: SubscriptionPlan | null): PlanFormData {
     slug: plan.slug,
     description: plan.description ?? "",
     priceCentsPerMonth: plan.priceCentsPerMonth,
+    billingInterval: plan.billingInterval || "month",
+    billingCount: plan.billingCount || 1,
     maxProducts: plan.maxProducts,
     maxStores: plan.maxStores,
     commissionRateOverride: plan.commissionRateOverride != null ? String(plan.commissionRateOverride) : "",
@@ -77,12 +83,14 @@ function planToFormData(plan?: SubscriptionPlan | null): PlanFormData {
   }
 }
 
-function formDataToApiPayload(form: PlanFormData): Record<string, unknown> {
+function formDataToApiPayload(form: PlanFormData): Partial<SubscriptionPlan> {
   return {
     name: form.name,
     slug: form.slug,
     description: form.description || null,
     priceCentsPerMonth: form.priceCentsPerMonth,
+    billingInterval: form.billingInterval,
+    billingCount: form.billingCount,
     maxProducts: form.maxProducts,
     maxStores: form.maxStores,
     commissionRateOverride: form.commissionRateOverride ? Number(form.commissionRateOverride) : null,
@@ -96,8 +104,10 @@ function formDataToApiPayload(form: PlanFormData): Record<string, unknown> {
   }
 }
 
-function formatPlanPricePerMonth(cents: number) {
-  return `$${(cents / 100).toFixed(2)}/mo`
+function formatPlanPrice(cents: number, interval: string, count: number) {
+  const unit = interval === "year" ? "yr" : interval === "month" ? "mo" : interval === "week" ? "wk" : "day"
+  const suffix = count === 1 ? unit : `${count} ${unit}s`
+  return `$${(cents / 100).toFixed(2)}/${suffix}`
 }
 
 function PlanCard({
@@ -126,7 +136,7 @@ function PlanCard({
           )}
         </div>
         <p className="mt-0.5 text-xs text-gray-600">
-          {formatPlanPricePerMonth(plan.priceCentsPerMonth)} · {plan.maxProducts === -1 ? "∞" : plan.maxProducts} products ·{" "}
+          {plan.priceDisplay || formatPlanPrice(plan.priceCentsPerMonth, plan.billingInterval, plan.billingCount)} · {plan.maxProducts === -1 ? "∞" : plan.maxProducts} products ·{" "}
           {plan.maxStores} store{plan.maxStores > 1 ? "s" : ""} · {commission}% commission
         </p>
         {plan.features?.length ? (
@@ -201,6 +211,17 @@ function PlanModal({
           placeholder="One feature per line"
           className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20"
         />
+      ) : key === "billingInterval" ? (
+        <select
+          value={form.billingInterval}
+          onChange={(e) => update("billingInterval", e.target.value)}
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20"
+        >
+          <option value="month">Monthly</option>
+          <option value="year">Yearly</option>
+          <option value="week">Weekly</option>
+          <option value="day">Daily</option>
+        </select>
       ) : key === "active" ? (
         <label className="flex cursor-pointer items-center gap-2">
           <input
@@ -260,7 +281,9 @@ function PlanModal({
           {field("Plan Name", "name")}
           {field("Slug", "slug", "text", "e.g. starter")}
           {field("Description", "description", "text", "Optional")}
-          {field("Price (cents/month)", "priceCentsPerMonth", "number")}
+          {field("Billing Interval", "billingInterval")}
+          {field("Billing Count", "billingCount", "number")}
+          {field("Total Price (cents)", "priceCentsPerMonth", "number")}
           {field("Max Products (-1 = unlimited)", "maxProducts", "number")}
           {field("Max Stores", "maxStores", "number")}
           {field("Commission Override (%)", "commissionRateOverride", "text", "Leave empty for default")}
@@ -356,7 +379,7 @@ export default function AdminSubscriptionPage() {
     setPlanError(null)
     setSavingPlan(true)
     try {
-      const created = await createPlan(token, formDataToApiPayload(form))
+      const created = await createAdminPlan(token, formDataToApiPayload(form))
       setPlans((prev) => [...prev, created])
       setCreateModalOpen(false)
       toast.success("Plan created successfully")
@@ -373,7 +396,7 @@ export default function AdminSubscriptionPage() {
     setPlanError(null)
     setSavingPlan(true)
     try {
-      const updated = await updatePlan(
+      const updated = await updateAdminPlan(
         token,
         editingPlan.id,
         formDataToApiPayload(form)
