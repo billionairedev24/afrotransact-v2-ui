@@ -11,22 +11,31 @@ import {
   CheckCircle,
   Truck,
   XCircle,
-  Loader2,
   ShoppingBag,
   ChevronRight,
   ChevronLeft,
   ReceiptText,
   Star,
+  AlertTriangle,
 } from "lucide-react"
 import { getBuyerOrders, type OrderDto } from "@/lib/api"
+import { getStatusStyle } from "@/lib/status-config"
+import { OrderCardSkeleton } from "@/components/ui/Skeleton"
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
-  pending:    { label: "Pending",    color: "text-yellow-400", bg: "bg-yellow-500/15", icon: Clock },
-  paid:       { label: "Paid",       color: "text-blue-400",   bg: "bg-blue-500/15",   icon: CheckCircle },
-  processing: { label: "Processing", color: "text-blue-400",   bg: "bg-blue-500/15",   icon: Package },
-  shipped:    { label: "Shipped",    color: "text-purple-400", bg: "bg-purple-500/15", icon: Truck },
-  delivered:  { label: "Delivered",  color: "text-green-400",  bg: "bg-green-500/15",  icon: CheckCircle },
-  cancelled:  { label: "Cancelled",  color: "text-red-600",    bg: "bg-red-500/15",    icon: XCircle },
+const STATUS_ICONS: Record<string, typeof Clock> = {
+  pending:    Clock,
+  awaiting_payment: AlertTriangle,
+  payment_failed: XCircle,
+  paid:       CheckCircle,
+  confirmed:  CheckCircle,
+  processing: Package,
+  packaged:   Package,
+  dispatched: Truck,
+  shipped:    Truck,
+  out_for_delivery: Truck,
+  delivered:  CheckCircle,
+  completed:  CheckCircle,
+  cancelled:  XCircle,
 }
 
 function formatCents(cents: number, currency = "USD") {
@@ -43,8 +52,8 @@ function formatDate(iso: string) {
 }
 
 function OrderCard({ order }: { order: OrderDto }) {
-  const cfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending
-  const StatusIcon = cfg.icon
+  const cfg = getStatusStyle(order.status)
+  const StatusIcon = STATUS_ICONS[order.status.toLowerCase()] ?? Clock
   const allItems = order.subOrders.flatMap((so) => so.items)
   const totalItems = allItems.reduce((sum, i) => sum + i.quantity, 0)
   const placedDate = order.placedAt || order.createdAt
@@ -81,7 +90,7 @@ function OrderCard({ order }: { order: OrderDto }) {
 
       {/* Status bar */}
       <div className="flex items-center gap-2 px-4 sm:px-5 py-2.5 border-b border-gray-200">
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${cfg.bg} ${cfg.color}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${cfg.bg} ${cfg.text}`}>
           <StatusIcon className="h-3.5 w-3.5" />
           {cfg.label}
         </span>
@@ -230,10 +239,10 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-3xl px-4 sm:px-6 py-20">
-        <div className="flex flex-col items-center justify-center gap-3 py-20">
-          <Loader2 className="h-7 w-7 animate-spin text-primary" />
-          <span className="text-sm text-gray-500">Loading your orders...</span>
+      <main className="mx-auto max-w-3xl px-4 sm:px-6 py-8">
+        <div className="h-9 w-36 bg-gray-100 rounded-lg animate-pulse mb-6" />
+        <div className="space-y-4">
+          {[1, 2, 3].map((k) => <OrderCardSkeleton key={k} />)}
         </div>
       </main>
     )

@@ -8,6 +8,7 @@ import {
   Eye,
   CreditCard,
 } from "lucide-react"
+import { getStatusStyle } from "@/lib/status-config"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions, type RowAction } from "@/components/ui/RowActions"
@@ -20,22 +21,9 @@ import {
   type OrderDto,
 } from "@/lib/api"
 
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  pending:              { label: "Pending",              className: "bg-yellow-500/20 text-yellow-400" },
-  paid:                 { label: "Paid",                 className: "bg-blue-500/20 text-blue-400" },
-  processing:           { label: "Processing",           className: "bg-purple-500/20 text-purple-400" },
-  packaged:             { label: "Packaged",             className: "bg-blue-500/20 text-blue-400" },
-  dispatched:           { label: "Dispatched",           className: "bg-indigo-500/20 text-indigo-400" },
-  delivered:            { label: "Delivered",            className: "bg-green-500/20 text-green-400" },
-  completed:            { label: "Completed",            className: "bg-green-500/20 text-green-400" },
-  cancelled:            { label: "Cancelled",            className: "bg-red-500/20 text-red-600" },
-  delivery_exception:   { label: "Exception",            className: "bg-red-500/20 text-red-600" },
-  returned:             { label: "Returned",             className: "bg-orange-500/20 text-orange-400" },
-}
-
 function statusBadge(status: string) {
-  const key = status.toLowerCase()
-  return STATUS_BADGE[key] ?? { label: status.replace(/_/g, " "), className: "bg-gray-100 text-gray-500" }
+  const s = getStatusStyle(status)
+  return { label: s.label, className: `${s.bg} ${s.text}` }
 }
 
 function formatCents(cents: number, currency = "USD") {

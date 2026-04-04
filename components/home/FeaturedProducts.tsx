@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Star, MapPin, Leaf, ChevronRight, Sparkles } from "lucide-react"
+import { Star, MapPin, Leaf, ChevronRight } from "lucide-react"
 import { searchProducts, type SearchResult } from "@/lib/api"
+import { ProductCardSkeleton } from "@/components/ui/Skeleton"
 
 interface Props {
   title?: string
@@ -48,13 +49,7 @@ export function FeaturedProducts({
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-xl sm:rounded-2xl border border-border bg-card overflow-hidden animate-pulse">
-              <div className="h-[120px] sm:aspect-square bg-muted" />
-              <div className="p-2 sm:p-3 space-y-2">
-                <div className="h-3 sm:h-4 bg-muted rounded w-3/4" />
-                <div className="h-2.5 sm:h-3 bg-muted rounded w-1/2" />
-              </div>
-            </div>
+            <ProductCardSkeleton key={i} />
           ))}
         </div>
       </section>
@@ -92,7 +87,7 @@ export function FeaturedProducts({
           >
             <div className="h-[120px] sm:h-auto sm:aspect-square bg-gradient-to-br from-muted to-muted/50 relative overflow-hidden flex items-center justify-center">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.title} className="h-full w-full object-cover" />
+                <img src={product.image_url} alt={product.title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 <Leaf className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/30" />
               )}

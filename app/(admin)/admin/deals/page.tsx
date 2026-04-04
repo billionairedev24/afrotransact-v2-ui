@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { createPortal } from "react-dom"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
 import {
-  Loader2, AlertCircle, Plus, Sparkles, MoreHorizontal, Eye, Pencil,
-  Trash2, ToggleLeft, ToggleRight, Clock, ExternalLink, Palette,
+  Loader2, Plus, Sparkles, Eye, Pencil, Trash2,
+  ToggleLeft, ToggleRight, ExternalLink, Palette,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -15,6 +14,9 @@ import {
   deletePlatformDeal, togglePlatformDeal,
   type PlatformDealData, type PlatformDealCreateRequest,
 } from "@/lib/api"
+import { DataTable } from "@/components/ui/DataTable"
+import { RowActions } from "@/components/ui/RowActions"
+import { createColumnHelper } from "@tanstack/react-table"
 
 function formatDate(iso: string | null) {
   if (!iso) return "—"
@@ -28,60 +30,7 @@ const AUDIENCE_OPTIONS = [
   { value: "CUSTOMERS", label: "Customers" },
 ]
 
-function RowActionMenu({ onView, onEdit, onToggle, onDelete, enabled }: {
-  onView: () => void; onEdit: () => void; onToggle: () => void; onDelete: () => void; enabled: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const btnRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
-          btnRef.current && !btnRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    function handleScroll() { setOpen(false) }
-    document.addEventListener("mousedown", handleClick)
-    window.addEventListener("scroll", handleScroll, true)
-    return () => { document.removeEventListener("mousedown", handleClick); window.removeEventListener("scroll", handleScroll, true) }
-  }, [open])
-
-  const menuW = 192
-
-  function toggle(e?: React.MouseEvent) {
-    e?.stopPropagation()
-    if (open) { setOpen(false); return }
-    if (btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect()
-      const pad = 8
-      let left = r.right - menuW
-      left = Math.max(pad, Math.min(left, window.innerWidth - menuW - pad))
-      setPos({ top: r.bottom + 4, left })
-    }
-    setOpen(true)
-  }
-
-  return (
-    <>
-      <button type="button" ref={btnRef} onClick={(ev) => toggle(ev)} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors">
-        <MoreHorizontal className="h-4 w-4" />
-      </button>
-      {open && pos && createPortal(
-        <div ref={menuRef} className="fixed z-[9999] w-48 rounded-xl border border-gray-200 bg-white py-1 shadow-xl" style={{ top: pos.top, left: pos.left }}>
-          <button onClick={() => { onView(); setOpen(false) }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"><Eye className="h-3.5 w-3.5" /> Preview</button>
-          <button onClick={() => { onEdit(); setOpen(false) }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"><Pencil className="h-3.5 w-3.5" /> Edit</button>
-          <button onClick={() => { onToggle(); setOpen(false) }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">
-            {enabled ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />} {enabled ? "Disable" : "Enable"}
-          </button>
-          <button onClick={() => { onDelete(); setOpen(false) }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
-        </div>,
-        document.body
-      )}
-    </>
-  )
-}
+const col = createColumnHelper<PlatformDealData>()
 
 const EMPTY_FORM: PlatformDealCreateRequest = {
   title: "", description: "", content: "", badgeText: "", bannerImageUrl: "",
@@ -99,20 +48,20 @@ export default function AdminDealsPage() {
   const [saving, setSaving] = useState(false)
   const [preview, setPreview] = useState<PlatformDealData | null>(null)
 
-  async function loadDeals() {
+  const loadDeals = useCallback(async () => {
     const token = await getAccessToken()
     if (!token) return
     try {
-      const res = await getAdminPlatformDeals(token)
+      const res = await getAdminPlatformDeals(token, 0, 100)
       setDeals(res.content || [])
     } catch { toast.error("Failed to load deals") }
-  }
+  }, [])
 
   useEffect(() => {
     if (status !== "authenticated") return
     setLoading(true)
     loadDeals().finally(() => setLoading(false))
-  }, [status])
+  }, [status, loadDeals])
 
   function openCreate() {
     setEditing(null)
@@ -151,7 +100,7 @@ export default function AdminDealsPage() {
     setSaving(false)
   }
 
-  async function handleToggle(d: PlatformDealData) {
+  const handleToggle = useCallback(async (d: PlatformDealData) => {
     const token = await getAccessToken()
     if (!token) return
     try {
@@ -159,9 +108,9 @@ export default function AdminDealsPage() {
       toast.success(d.enabled ? "Deal disabled" : "Deal enabled")
       loadDeals()
     } catch { toast.error("Failed to toggle deal") }
-  }
+  }, [loadDeals])
 
-  async function handleDelete(d: PlatformDealData) {
+  const handleDelete = useCallback(async (d: PlatformDealData) => {
     if (!confirm(`Delete "${d.title}"?`)) return
     const token = await getAccessToken()
     if (!token) return
@@ -170,9 +119,107 @@ export default function AdminDealsPage() {
       toast.success("Deal deleted")
       loadDeals()
     } catch { toast.error("Failed to delete deal") }
-  }
+  }, [loadDeals])
 
-  if (loading) return <div className="flex items-center justify-center min-h-[400px] gap-2 text-gray-500"><Loader2 className="h-5 w-5 animate-spin" /> Loading deals...</div>
+  const columns = useMemo(() => [
+    col.accessor("title", {
+      header: "Title",
+      cell: info => {
+        const d = info.row.original
+        return (
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: d.primaryColor + "20" }}>
+              <Sparkles className="h-4 w-4" style={{ color: d.primaryColor }} />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-gray-900">{d.title}</p>
+              {d.badgeText && <p className="truncate text-[11px] text-gray-400">{d.badgeText}</p>}
+            </div>
+          </div>
+        )
+      },
+    }),
+    col.accessor("targetAudience", {
+      header: "Audience",
+      cell: info => <span className="text-sm text-gray-600">{AUDIENCE_OPTIONS.find(a => a.value === info.getValue())?.label || info.getValue()}</span>,
+    }),
+    col.accessor("active", {
+      header: "Status",
+      cell: info => {
+        const d = info.row.original
+        if (d.active) return (
+          <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />Active
+          </span>
+        )
+        if (d.enabled) return (
+          <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />Scheduled
+          </span>
+        )
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
+            <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled
+          </span>
+        )
+      },
+    }),
+    col.display({
+      id: "dates",
+      header: "Dates",
+      cell: ({ row }) => {
+        const d = row.original
+        const start = d.startAt ? formatDate(d.startAt) : "Always"
+        const end = d.endAt ? ` → ${formatDate(d.endAt)}` : ""
+        return <span className="text-xs text-gray-500 whitespace-nowrap">{start}{end}</span>
+      },
+    }),
+    col.accessor("sortOrder", {
+      header: "Order",
+      cell: info => <span className="text-center text-xs text-gray-400 tabular-nums">{info.getValue()}</span>,
+    }),
+    col.display({
+      id: "actions",
+      header: "",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const d = row.original
+        return (
+          <RowActions actions={[
+            {
+              label: "Preview",
+              icon: <Eye className="h-4 w-4" />,
+              onClick: () => setPreview(d),
+            },
+            {
+              label: "Edit",
+              icon: <Pencil className="h-4 w-4" />,
+              onClick: () => openEdit(d),
+            },
+            {
+              label: d.enabled ? "Disable" : "Enable",
+              icon: d.enabled
+                ? <ToggleRight className="h-4 w-4 text-emerald-500" />
+                : <ToggleLeft className="h-4 w-4" />,
+              onClick: () => handleToggle(d),
+            },
+            {
+              label: "Delete",
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => handleDelete(d),
+              variant: "danger",
+            },
+          ]} />
+        )
+      },
+    }),
+  ], [handleToggle, handleDelete])
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[400px] gap-2 text-gray-500">
+      <Loader2 className="h-5 w-5 animate-spin" /> Loading deals...
+    </div>
+  )
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-[1100px] space-y-6">
@@ -181,105 +228,24 @@ export default function AdminDealsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Platform Deals</h1>
           <p className="mt-1 text-sm text-gray-500">Create and manage promotional banners and campaigns to attract sellers and customers.</p>
         </div>
-        <button type="button" onClick={openCreate} className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-black transition-colors hover:bg-primary/90 sm:w-auto">
+        <button
+          type="button"
+          onClick={openCreate}
+          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-black transition-colors hover:bg-primary/90 sm:w-auto"
+        >
           <Plus className="h-4 w-4" /> New Deal
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-        <div className="border-b border-gray-200 px-4 py-4 sm:px-5">
-          <h2 className="text-base font-semibold text-gray-900">All Platform Deals</h2>
-        </div>
-
-        {deals.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-500 sm:px-5">No platform deals yet. Create your first promotion.</div>
-        ) : (
-          <>
-            <div className="hidden grid-cols-[minmax(0,1fr)_120px_100px_100px_80px_44px] gap-2 border-b border-gray-100 px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 sm:grid">
-              <span>Title</span><span>Audience</span><span>Status</span><span>Dates</span><span className="text-center">Order</span><span />
-            </div>
-            <div className="divide-y divide-gray-100">
-              {deals.map((d) => {
-                const statusEl = d.active ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700"><span className="h-1.5 w-1.5 rounded-full bg-green-500" />Active</span>
-                ) : d.enabled ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-700"><span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />Scheduled</span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500"><span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled</span>
-                )
-                const audienceLabel = AUDIENCE_OPTIONS.find(a => a.value === d.targetAudience)?.label || d.targetAudience
-                const datesStr = `${d.startAt ? formatDate(d.startAt) : "Always"}${d.endAt ? ` → ${formatDate(d.endAt)}` : ""}`
-
-                return (
-                  <div key={d.id}>
-                    <div className="space-y-3 px-4 py-4 sm:hidden">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: d.primaryColor + "20" }}>
-                            <Sparkles className="h-4 w-4" style={{ color: d.primaryColor }} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-900 break-words">{d.title}</p>
-                            {d.badgeText && <p className="text-[11px] text-gray-400">{d.badgeText}</p>}
-                          </div>
-                        </div>
-                        <RowActionMenu
-                          onView={() => setPreview(d)}
-                          onEdit={() => openEdit(d)}
-                          onToggle={() => handleToggle(d)}
-                          onDelete={() => handleDelete(d)}
-                          enabled={d.enabled}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Audience</p>
-                          <p className="mt-0.5 text-xs text-gray-600">{audienceLabel}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Status</p>
-                          <div className="mt-0.5">{statusEl}</div>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Dates</p>
-                          <p className="mt-0.5 text-xs text-gray-500">{datesStr}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Sort</p>
-                          <p className="mt-0.5 text-xs text-gray-400">{d.sortOrder}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="hidden grid-cols-[minmax(0,1fr)_120px_100px_100px_80px_44px] items-center gap-2 px-5 py-3 transition-colors hover:bg-gray-50 sm:grid">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: d.primaryColor + "20" }}>
-                          <Sparkles className="h-4 w-4" style={{ color: d.primaryColor }} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-gray-900">{d.title}</p>
-                          {d.badgeText && <p className="truncate text-[11px] text-gray-400">{d.badgeText}</p>}
-                        </div>
-                      </div>
-                      <span className="text-xs text-gray-500">{audienceLabel}</span>
-                      <div>{statusEl}</div>
-                      <div className="text-[11px] text-gray-500">{datesStr}</div>
-                      <span className="text-center text-xs text-gray-400">{d.sortOrder}</span>
-                      <RowActionMenu
-                        onView={() => setPreview(d)}
-                        onEdit={() => openEdit(d)}
-                        onToggle={() => handleToggle(d)}
-                        onDelete={() => handleDelete(d)}
-                        enabled={d.enabled}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
-      </div>
+      <DataTable
+        columns={columns}
+        data={deals}
+        loading={loading}
+        searchPlaceholder="Search deals…"
+        searchColumn="title"
+        exportFilename="deals"
+        emptyMessage="No platform deals yet. Create your first promotion."
+      />
 
       {/* Create / Edit Sheet */}
       <Sheet open={showForm} onClose={() => setShowForm(false)}>
@@ -341,7 +307,6 @@ export default function AdminDealsPage() {
               </div>
             </div>
 
-            {/* Live Banner Preview */}
             {form.title && (
               <div>
                 <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Preview</label>

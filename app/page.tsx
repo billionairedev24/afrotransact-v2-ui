@@ -25,6 +25,7 @@ import { AdSlot } from "@/components/home/AdSlot"
 import { FeaturedProducts } from "@/components/home/FeaturedProducts"
 import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
 import { getCategories, getAllStores, getFeaturedDeals, type CategoryRef, type StoreInfo, type DealData } from "@/lib/api"
+import { StoreCardSkeleton } from "@/components/ui/Skeleton"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 
@@ -322,13 +323,7 @@ export default function HomePage() {
                     </Link>
                   ))
                 : Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden animate-pulse">
-                      <div className="h-28 bg-muted" />
-                      <div className="pt-8 px-4 pb-4 space-y-2">
-                        <div className="h-4 bg-muted rounded w-3/4" />
-                        <div className="h-3 bg-muted rounded w-1/2" />
-                      </div>
-                    </div>
+                    <StoreCardSkeleton key={i} />
                   ))
               }
             </div>

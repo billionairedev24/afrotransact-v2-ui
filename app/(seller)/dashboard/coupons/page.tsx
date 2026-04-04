@@ -1,33 +1,20 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
-  getSellerCoupons,
-  createSellerCoupon,
-  updateSellerCoupon,
-  deleteSellerCoupon,
+  getSellerCoupons, createSellerCoupon, updateSellerCoupon, deleteSellerCoupon,
 } from "@/lib/api"
 import type { CouponData, CouponCreateRequest } from "@/lib/api"
 import { toast } from "sonner"
-import {
-  Plus,
-  Ticket,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  Pencil,
-  Trash2,
-  X,
-} from "lucide-react"
-
-const PAGE_SIZE = 10
+import { Plus, Ticket, Pencil, Trash2, X } from "lucide-react"
+import { DataTable } from "@/components/ui/DataTable"
+import { RowActions } from "@/components/ui/RowActions"
+import { createColumnHelper } from "@tanstack/react-table"
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-  })
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
 function fmtValue(type: string, value: number) {
@@ -35,23 +22,22 @@ function fmtValue(type: string, value: number) {
   return `$${(value / 100).toFixed(2)}`
 }
 
+const col = createColumnHelper<CouponData>()
+
 export default function SellerCouponsPage() {
   const { status: sessionStatus } = useSession()
   const [coupons, setCoupons] = useState<CouponData[]>([])
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<CouponData | null>(null)
 
-  const loadCoupons = useCallback(async (pg: number) => {
+  const loadCoupons = useCallback(async () => {
     try {
       setLoading(true)
       const token = await getAccessToken()
       if (!token) return
-      const res = await getSellerCoupons(token, pg, PAGE_SIZE)
+      const res = await getSellerCoupons(token, 0, 100)
       setCoupons(res.content)
-      setTotalPages(res.totalPages)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to load coupons")
     } finally {
@@ -60,8 +46,8 @@ export default function SellerCouponsPage() {
   }, [])
 
   useEffect(() => {
-    if (sessionStatus === "authenticated") loadCoupons(page)
-  }, [sessionStatus, page, loadCoupons])
+    if (sessionStatus === "authenticated") loadCoupons()
+  }, [sessionStatus, loadCoupons])
 
   async function handleCreate(data: CouponCreateRequest) {
     const token = await getAccessToken()
@@ -69,7 +55,7 @@ export default function SellerCouponsPage() {
     await createSellerCoupon(token, data)
     toast.success("Coupon created")
     setShowForm(false)
-    loadCoupons(page)
+    loadCoupons()
   }
 
   async function handleUpdate(id: string, data: Partial<CouponCreateRequest>) {
@@ -78,106 +64,131 @@ export default function SellerCouponsPage() {
     await updateSellerCoupon(token, id, data)
     toast.success("Coupon updated")
     setEditing(null)
-    loadCoupons(page)
+    loadCoupons()
   }
 
-  async function handleDelete(id: string) {
+  const handleDelete = useCallback(async (id: string) => {
     if (!confirm("Delete this coupon?")) return
     const token = await getAccessToken()
     if (!token) return
     await deleteSellerCoupon(token, id)
     toast.success("Coupon deleted")
-    loadCoupons(page)
-  }
+    loadCoupons()
+  }, [loadCoupons])
+
+  const columns = useMemo(() => [
+    col.accessor("code", {
+      header: "Code",
+      cell: info => <span className="font-mono font-semibold text-gray-900">{info.getValue()}</span>,
+    }),
+    col.accessor("type", {
+      header: "Type",
+      cell: info => <span className="capitalize text-gray-600">{info.getValue().replace("_", " ")}</span>,
+    }),
+    col.accessor("value", {
+      header: "Value",
+      cell: info => (
+        <span className="font-semibold text-gray-900">{fmtValue(info.row.original.type, info.getValue())}</span>
+      ),
+    }),
+    col.accessor("scope", {
+      header: "Scope",
+      cell: info => <span className="capitalize text-gray-600">{info.getValue().replace(/_/g, " ")}</span>,
+    }),
+    col.accessor("usageCount", {
+      header: "Usage",
+      cell: info => {
+        const c = info.row.original
+        return <span className="tabular-nums text-gray-600">{c.usageCount}{c.usageLimit ? `/${c.usageLimit}` : ""}</span>
+      },
+    }),
+    col.accessor("expiresAt", {
+      header: "Expires",
+      cell: info => <span className="whitespace-nowrap text-gray-600">{fmtDate(info.getValue())}</span>,
+    }),
+    col.accessor("active", {
+      header: "Status",
+      cell: info => {
+        const c = info.row.original
+        const label = c.active ? "Active" : c.enabled ? "Expired" : "Disabled"
+        const cls = c.active
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+          : c.enabled
+          ? "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
+          : "bg-gray-100 text-gray-500"
+        return (
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
+            {label}
+          </span>
+        )
+      },
+    }),
+    col.display({
+      id: "actions",
+      header: "",
+      enableHiding: false,
+      cell: ({ row }) => (
+        <RowActions actions={[
+          {
+            label: "Edit",
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: () => { setEditing(row.original); setShowForm(false) },
+          },
+          {
+            label: "Delete",
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => handleDelete(row.original.id),
+            variant: "danger",
+          },
+        ]} />
+      ),
+    }),
+  ], [handleDelete])
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Coupons</h1>
           <p className="text-sm text-gray-500 mt-1">Create and manage discount coupons for your products.</p>
         </div>
         <button
           onClick={() => { setEditing(null); setShowForm(true) }}
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-primary/90"
         >
-          <Plus className="h-4 w-4" />
-          Create Coupon
+          <Plus className="h-4 w-4" /> Create Coupon
         </button>
       </div>
 
+      {/* Inline form */}
       {(showForm || editing) && (
         <CouponForm
           coupon={editing}
-          onSubmit={editing
-            ? (d) => handleUpdate(editing.id, d)
-            : handleCreate
-          }
+          onSubmit={editing ? (d) => handleUpdate(editing.id, d) : handleCreate}
           onCancel={() => { setShowForm(false); setEditing(null) }}
         />
       )}
 
-      <div className="rounded-xl border border-gray-200 bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                {["Code", "Type", "Value", "Scope", "Usage", "Expires", "Status", ""].map(h => (
-                  <th key={h || "actions"} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center"><Loader2 className="h-5 w-5 animate-spin text-gray-400 mx-auto" /></td></tr>
-              ) : coupons.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center">
-                    <Ticket className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No coupons yet. Create your first coupon to get started.</p>
-                  </td>
-                </tr>
-              ) : (
-                coupons.map(c => (
-                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3"><span className="text-sm font-mono font-medium text-gray-900">{c.code}</span></td>
-                    <td className="px-4 py-3 text-sm text-gray-600 capitalize">{c.type.replace("_", " ")}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">{fmtValue(c.type, c.value)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 capitalize">{c.scope.replace("_", " ")}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{c.usageCount}{c.usageLimit ? `/${c.usageLimit}` : ""}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{fmtDate(c.expiresAt)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${c.active ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-500"}`}>
-                        {c.active ? "Active" : c.enabled ? "Expired" : "Disabled"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setEditing(c)} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={() => handleDelete(c.id)} className="rounded-lg p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* Table */}
+      {!loading && coupons.length === 0 && !showForm && !editing ? (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
+          <Ticket className="mx-auto h-10 w-10 text-gray-300" />
+          <p className="mt-3 text-sm font-medium text-gray-900">No coupons yet</p>
+          <p className="mt-1 text-xs text-gray-500">Create your first coupon to start offering discounts.</p>
         </div>
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-            <p className="text-xs text-gray-500">Page {page + 1} of {totalPages}</p>
-            <div className="flex gap-1">
-              <button onClick={() => setPage(p => p - 1)} disabled={page === 0} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-              <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 transition-colors"><ChevronRight className="h-4 w-4" /></button>
-            </div>
-          </div>
-        )}
-      </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={coupons}
+          loading={loading}
+          searchPlaceholder="Search coupons…"
+          searchColumn="code"
+          enableExport
+          exportFilename="coupons"
+          emptyMessage="No coupons match your search."
+        />
+      )}
     </div>
   )
 }
@@ -229,7 +240,7 @@ function CouponForm({
   const inputCls = "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/50"
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">{coupon ? "Edit Coupon" : "Create Coupon"}</h3>
         <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><X className="h-4 w-4" /></button>
@@ -282,7 +293,7 @@ function CouponForm({
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>
-        <button type="submit" disabled={submitting} className="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors">
+        <button type="submit" disabled={submitting} className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-50 transition-colors">
           {submitting ? "Saving…" : coupon ? "Update" : "Create"}
         </button>
       </div>

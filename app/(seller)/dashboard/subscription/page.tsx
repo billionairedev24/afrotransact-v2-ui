@@ -19,6 +19,7 @@ import {
   X,
   Zap,
 } from "lucide-react"
+import { getStatusStyle } from "@/lib/status-config"
 import { toast } from "sonner"
 import { Dialog, DialogHeader, DialogBody, DialogFooter, ConfirmDialog } from "@/components/ui/Dialog"
 import {
@@ -35,13 +36,15 @@ import {
   type PaymentInfo,
 } from "@/lib/api"
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  trial:          { label: "Trial",          color: "text-sky-400",    bg: "bg-sky-500/10 border-sky-500/20",     icon: <Clock className="h-4 w-4" />        },
-  trial_extended: { label: "Trial Extended", color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", icon: <Zap className="h-4 w-4" />         },
-  active:         { label: "Active",         color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", icon: <Check className="h-4 w-4" />        },
-  past_due:       { label: "Payment Due",   color: "text-red-400",    bg: "bg-red-500/10 border-red-500/20",     icon: <AlertTriangle className="h-4 w-4" /> },
-  cancelled:      { label: "Cancelled",      color: "text-gray-400",   bg: "bg-gray-500/10 border-gray-500/20",   icon: <X className="h-4 w-4" />             },
-  suspended:      { label: "Suspended",      color: "text-red-400",    bg: "bg-red-500/10 border-red-500/20",     icon: <AlertTriangle className="h-4 w-4" /> },
+const SUBSCRIPTION_ICONS: Record<string, React.ReactNode> = {
+  trial:          <Clock className="h-4 w-4" />,
+  trial_extended: <Zap className="h-4 w-4" />,
+  active:         <Check className="h-4 w-4" />,
+  past_due:       <AlertTriangle className="h-4 w-4" />,
+  grace_period:   <AlertTriangle className="h-4 w-4" />,
+  cancelled:      <X className="h-4 w-4" />,
+  suspended:      <AlertTriangle className="h-4 w-4" />,
+  expired:        <X className="h-4 w-4" />,
 }
 
 function getOrdinalSuffix(day: number): string {
@@ -213,7 +216,10 @@ export default function SubscriptionPage() {
     )
   }
 
-  const statusCfg = subscription ? (STATUS_CONFIG[subscription.status] ?? STATUS_CONFIG.active) : null
+  const _statusStyle = subscription ? getStatusStyle(subscription.status) : null
+  const statusCfg = _statusStyle
+    ? { ..._statusStyle, bg: _statusStyle.bgBorder, color: _statusStyle.text, icon: SUBSCRIPTION_ICONS[subscription!.status] ?? <Check className="h-4 w-4" /> }
+    : null
   const billingTimeline = buildBillingTimeline(subscription)
   const trialDays = subscription?.trialEndsAt ? daysUntil(subscription.trialEndsAt) : 0
 
