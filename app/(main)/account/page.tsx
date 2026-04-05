@@ -45,7 +45,7 @@ const menuItems = [
     bg: "rgba(245,158,11,0.08)",
   },
   {
-    href: "/account/notifications",
+    href: "/account/settings#notifications",
     label: "Notifications",
     desc: "Control what emails you receive",
     icon: Bell,
@@ -55,7 +55,7 @@ const menuItems = [
   {
     href: "/account/settings",
     label: "Account Settings",
-    desc: "Name, email & password",
+    desc: "Password, notifications & more",
     icon: Settings,
     accent: "#8b5cf6",
     bg: "rgba(139,92,246,0.08)",

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useSession } from "next-auth/react"
-import { ClipboardList, Loader2, Truck, Package, CheckCircle2 } from "lucide-react"
+import { ClipboardList, Loader2, Truck, Package, CheckCircle2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions, type RowAction } from "@/components/ui/RowActions"
@@ -28,11 +28,14 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 }
 
 const FULFILLMENT_BADGE: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-  pending:    { label: "Pending",    className: "bg-yellow-50 text-yellow-700", icon: <Package className="h-3.5 w-3.5" /> },
-  processing: { label: "Processing", className: "bg-purple-50 text-purple-700", icon: <Package className="h-3.5 w-3.5" /> },
-  packaged:   { label: "Packaged",   className: "bg-blue-50 text-blue-700",     icon: <Package className="h-3.5 w-3.5" /> },
-  dispatched: { label: "Dispatched", className: "bg-indigo-50 text-indigo-700", icon: <Truck className="h-3.5 w-3.5" /> },
-  delivered:  { label: "Delivered",  className: "bg-green-50 text-green-700",   icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+  pending:             { label: "Pending",          className: "bg-yellow-50 text-yellow-700",  icon: <Package className="h-3.5 w-3.5" /> },
+  processing:          { label: "Processing",       className: "bg-purple-50 text-purple-700",  icon: <Package className="h-3.5 w-3.5" /> },
+  packaged:            { label: "Packaged",         className: "bg-blue-50 text-blue-700",      icon: <Package className="h-3.5 w-3.5" /> },
+  dispatched:          { label: "Dispatched",       className: "bg-indigo-50 text-indigo-700",  icon: <Truck className="h-3.5 w-3.5" /> },
+  out_for_delivery:    { label: "Out for Delivery", className: "bg-sky-50 text-sky-700",        icon: <Truck className="h-3.5 w-3.5" /> },
+  delivered:           { label: "Delivered",        className: "bg-green-50 text-green-700",    icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+  delivery_exception:  { label: "Exception",        className: "bg-red-50 text-red-700",        icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+  returned:            { label: "Returned",         className: "bg-orange-50 text-orange-700",  icon: <Package className="h-3.5 w-3.5" /> },
 }
 
 function statusBadge(status: string) {
@@ -353,7 +356,18 @@ function OrderDetailModal({
         )}
 
         {/* Fulfillment update */}
-        {subOrderId && currentFulfillment !== "delivered" && (
+        {/* Once dispatched the delivery team takes over — show read-only notice */}
+        {subOrderId && ["out_for_delivery", "delivery_exception"].includes(currentFulfillment) && (
+          <div className="flex items-start gap-2 rounded-xl border border-sky-100 bg-sky-50 px-4 py-3">
+            <Truck className="h-4 w-4 shrink-0 text-sky-400 mt-0.5" />
+            <p className="text-xs text-sky-700">
+              <span className="font-semibold">Order is with the delivery team.</span>{" "}
+              Further status updates are handled by our logistics team.
+            </p>
+          </div>
+        )}
+
+        {subOrderId && !["delivered", "returned", "out_for_delivery", "delivery_exception"].includes(currentFulfillment) && (
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Update Fulfillment Status</p>
             <div className="flex flex-wrap gap-2">

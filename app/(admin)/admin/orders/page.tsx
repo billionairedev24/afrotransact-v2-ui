@@ -7,6 +7,8 @@ import {
   Loader2,
   Eye,
   CreditCard,
+  Package,
+  Truck,
 } from "lucide-react"
 import { getStatusStyle } from "@/lib/status-config"
 import { toast } from "sonner"
@@ -56,7 +58,15 @@ interface FlatOrder {
 
 const col = createColumnHelper<FlatOrder>()
 
-const ADMIN_STATUSES = ["processing", "packaged", "dispatched", "delivered", "delivery_exception", "returned"] as const
+// Statuses only the admin/delivery team can set.
+// "processing" and "packaged" are seller-only — they are shown read-only here.
+const ADMIN_STATUSES = [
+  { value: "dispatched",         label: "Dispatched",         variant: "normal"  },
+  { value: "out_for_delivery",   label: "Out for Delivery",   variant: "normal"  },
+  { value: "delivered",          label: "Delivered",          variant: "normal"  },
+  { value: "delivery_exception", label: "Delivery Exception", variant: "danger"  },
+  { value: "returned",           label: "Returned",           variant: "danger"  },
+] as const
 
 export default function AdminOrdersPage() {
   const { status } = useSession()
@@ -298,24 +308,40 @@ function AdminOrderDetailSheet({
                   </table>
                 </div>
 
-                {sub.fulfillmentStatus !== "delivered" && sub.fulfillmentStatus !== "returned" && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Update Fulfillment</p>
+                {/* Seller-managed steps — read-only for admin */}
+                {(sub.fulfillmentStatus === "pending" || sub.fulfillmentStatus === "processing" || sub.fulfillmentStatus === "packaged") && (
+                  <div className="flex items-start gap-2 rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2.5">
+                    <Package className="h-3.5 w-3.5 shrink-0 text-indigo-400 mt-0.5" />
+                    <p className="text-xs text-indigo-700">
+                      <span className="font-semibold">Seller is preparing this order.</span>{" "}
+                      Processing and packaging steps are managed by the seller. Fulfillment buttons will appear once the seller dispatches.
+                    </p>
+                  </div>
+                )}
+
+                {/* Admin delivery controls */}
+                {sub.fulfillmentStatus !== "delivered" && sub.fulfillmentStatus !== "returned" &&
+                  sub.fulfillmentStatus !== "pending" && sub.fulfillmentStatus !== "processing" && sub.fulfillmentStatus !== "packaged" && (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-3.5 w-3.5 text-gray-400" />
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Delivery Controls</p>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {ADMIN_STATUSES.map((s) => (
                         <button
-                          key={s}
-                          disabled={!!updating || s === sub.fulfillmentStatus}
-                          onClick={() => handleUpdateStatus(sub.id, s)}
+                          key={s.value}
+                          disabled={!!updating || s.value === sub.fulfillmentStatus}
+                          onClick={() => handleUpdateStatus(sub.id, s.value)}
                           className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40
-                            ${s === sub.fulfillmentStatus
+                            ${s.value === sub.fulfillmentStatus
                               ? "border-primary/40 bg-primary/10 text-primary"
-                              : s === "delivery_exception" || s === "returned"
-                                ? "border-red-500/30 text-red-600 hover:bg-red-500/10"
+                              : s.variant === "danger"
+                                ? "border-red-200 text-red-600 hover:bg-red-50"
                                 : "border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                         >
-                          {updating === sub.id + s ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                          {s.replace(/_/g, " ")}
+                          {updating === sub.id + s.value ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                          {s.label}
                         </button>
                       ))}
                     </div>
@@ -323,7 +349,7 @@ function AdminOrderDetailSheet({
                       type="text"
                       value={trackingInput}
                       onChange={(e) => setTrackingInput(e.target.value)}
-                      placeholder="Tracking number (optional)"
+                      placeholder="Tracking / reference number (optional)"
                       className="h-8 w-full rounded-lg border border-gray-200 bg-transparent px-3 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                     />
                   </div>
