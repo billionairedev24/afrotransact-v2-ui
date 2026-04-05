@@ -47,8 +47,11 @@
     --chart-5: 200 80% 50%;
 
     --success: 142 71% 35%;
-    --warning: 48 96% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
     --info: 200 80% 50%;
+    --info-foreground: 0 0% 100%;
     --proximity-badge: 142 71% 35%;
 
     /* Header & hero — light theme */
@@ -100,9 +103,12 @@
     --chart-4: 0 84% 60%;
     --chart-5: 200 80% 50%;
 
-    --success: 142 71% 35%;
-    --warning: 48 96% 53%;
+    --success: 142 71% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 0%;
     --info: 200 80% 50%;
+    --info-foreground: 0 0% 100%;
     --proximity-badge: 142 71% 35%;
 
     --header: 0 0% 8%;

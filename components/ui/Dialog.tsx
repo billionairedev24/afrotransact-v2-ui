@@ -38,7 +38,7 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
       />
       <div
         className={cn(
-          "relative w-full max-w-lg rounded-2xl border border-gray-200 bg-gray-50 shadow-xl animate-in fade-in-0 zoom-in-95 duration-200",
+          "relative w-full max-w-lg rounded-2xl border border-border bg-card shadow-xl animate-in fade-in-0 zoom-in-95 duration-200",
           className
         )}
       >
@@ -56,12 +56,12 @@ export function DialogHeader({
   onClose?: () => void
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-      <h2 className="text-lg font-semibold text-gray-900">{children}</h2>
+    <div className="flex items-center justify-between border-b border-border px-6 py-4">
+      <h2 className="text-lg font-semibold text-foreground">{children}</h2>
       {onClose && (
         <button
           onClick={onClose}
-          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -80,7 +80,7 @@ export function DialogBody({ children, className }: { children: ReactNode; class
 
 export function DialogFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4", className)}>
+    <div className={cn("flex items-center justify-end gap-3 border-t border-border px-6 py-4", className)}>
       {children}
     </div>
   )
@@ -109,20 +109,20 @@ export function ConfirmDialog({
 }) {
   const btnClass =
     variant === "danger"
-      ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-      : "bg-primary/20 text-primary hover:bg-primary/30"
+      ? "bg-destructive/15 text-destructive hover:bg-destructive/25"
+      : "bg-primary/15 text-primary hover:bg-primary/25"
 
   return (
     <Dialog open={open} onClose={onClose} className="max-w-md">
       <DialogHeader onClose={onClose}>{title}</DialogHeader>
       <DialogBody>
-        <p className="text-sm text-gray-400">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </DialogBody>
       <DialogFooter>
         <button
           onClick={onClose}
           disabled={loading}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+          className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           {cancelLabel}
         </button>

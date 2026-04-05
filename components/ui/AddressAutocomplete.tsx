@@ -166,13 +166,13 @@ export function AddressAutocomplete({
   if (error) {
     return (
       <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors ${className}`}
+          className={`w-full rounded-xl border border-border bg-muted pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 transition-colors ${className}`}
         />
       </div>
     )
@@ -188,7 +188,7 @@ export function AddressAutocomplete({
         placeholder={loaded ? placeholder : "Loading address lookup…"}
         disabled={disabled || !loaded}
         autoComplete="off"
-        className={`w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors ${className}`}
+        className={`w-full rounded-xl border border-border bg-muted pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 transition-colors ${className}`}
       />
     </div>
   )

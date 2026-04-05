@@ -148,7 +148,7 @@ function ColumnVisibilityDropdown({
       ? createPortal(
           <div
             id={menuDomId}
-            className="fixed z-[200] max-h-[min(24rem,calc(100vh-6rem))] w-52 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-xl"
+            className="fixed z-[200] max-h-[min(24rem,calc(100vh-6rem))] w-52 overflow-y-auto rounded-xl border border-border bg-popover p-2 shadow-xl"
             style={{ top: menuPos.top, left: menuPos.left }}
             role="menu"
           >
@@ -159,7 +159,7 @@ function ColumnVisibilityDropdown({
                   key={col.id}
                   type="button"
                   onClick={() => col.toggleVisibility(!visible)}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   {visible ? (
                     <Eye className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -185,8 +185,8 @@ function ColumnVisibilityDropdown({
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900",
-          open && "bg-gray-100 text-gray-900",
+          "inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground",
+          open && "bg-muted/80 text-foreground",
         )}
       >
         <Eye className="h-4 w-4" />
@@ -204,10 +204,10 @@ function SkeletonRows({ cols, rows }: { cols: number; rows: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, r) => (
-        <tr key={r} className="border-b border-gray-100">
+        <tr key={r} className="border-b border-border">
           {Array.from({ length: cols }).map((_, c) => (
             <td key={c} className="px-4 py-3">
-              <div className="h-4 w-full animate-pulse rounded bg-gray-100" />
+              <div className="h-4 w-full animate-pulse rounded bg-muted" />
             </td>
           ))}
         </tr>
@@ -247,7 +247,7 @@ export function DataTable<TData>({
           type="checkbox"
           checked={table.getIsAllPageRowsSelected()}
           onChange={table.getToggleAllPageRowsSelectedHandler()}
-          className="h-4 w-4 rounded border-gray-300 bg-transparent accent-primary cursor-pointer"
+          className="h-4 w-4 rounded border-input bg-transparent accent-primary cursor-pointer"
         />
       ),
       cell: ({ row }) => (
@@ -256,7 +256,7 @@ export function DataTable<TData>({
           checked={row.getIsSelected()}
           disabled={!row.getCanSelect()}
           onChange={row.getToggleSelectedHandler()}
-          className="h-4 w-4 rounded border-gray-300 bg-transparent accent-primary cursor-pointer"
+          className="h-4 w-4 rounded border-input bg-transparent accent-primary cursor-pointer"
         />
       ),
       enableSorting: false,
@@ -319,7 +319,7 @@ export function DataTable<TData>({
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Search */}
         <div className="relative min-w-0 max-w-sm flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder={searchPlaceholder}
@@ -332,7 +332,7 @@ export function DataTable<TData>({
                 setGlobalFilter(v)
               }
             }}
-            className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-9 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
+            className="h-10 w-full rounded-lg border border-border bg-muted pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
           />
           {(searchColumn
             ? (table.getColumn(searchColumn)?.getFilterValue() as string)
@@ -345,7 +345,7 @@ export function DataTable<TData>({
                   setGlobalFilter("")
                 }
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-900 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -360,7 +360,7 @@ export function DataTable<TData>({
             <button
               onClick={handleExport}
               disabled={totalRows === 0}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
             >
               <Download className="h-4 w-4" />
               Export
@@ -370,11 +370,11 @@ export function DataTable<TData>({
       </div>
 
       {/* ── Table: only this region scrolls horizontally on narrow viewports ─── */}
-      <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border border-gray-200 bg-white [-webkit-overflow-scrolling:touch]">
+      <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border border-border bg-card [-webkit-overflow-scrolling:touch]">
         <table className="w-full min-w-max text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="border-b border-gray-200">
+              <tr key={hg.id} className="border-b border-border">
                 {hg.headers.map((header) => {
                   const sortable = header.column.getCanSort()
                   const sorted = header.column.getIsSorted()
@@ -384,8 +384,8 @@ export function DataTable<TData>({
                       colSpan={header.colSpan}
                       style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                       className={cn(
-                        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500",
-                        sortable && "cursor-pointer select-none hover:text-gray-900 transition-colors"
+                        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                        sortable && "cursor-pointer select-none hover:text-foreground transition-colors"
                       )}
                       onClick={sortable ? header.column.getToggleSortingHandler() : undefined}
                     >
@@ -424,7 +424,7 @@ export function DataTable<TData>({
                   colSpan={table.getVisibleLeafColumns().length}
                   className="px-4 py-16 text-center"
                 >
-                  <div className="flex flex-col items-center gap-2 text-gray-500">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Filter className="h-8 w-8 opacity-40" />
                     <p className="text-sm">{emptyMessage}</p>
                   </div>
@@ -435,12 +435,12 @@ export function DataTable<TData>({
                 <tr
                   key={row.id}
                   data-selected={row.getIsSelected() || undefined}
-                  className="border-b border-gray-100 transition-colors hover:bg-gray-50 data-[selected]:bg-primary/5"
+                  className="border-b border-border transition-colors hover:bg-muted/50 data-[selected]:bg-primary/5"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="px-4 py-3 text-sm text-gray-600"
+                      className="px-4 py-3 text-sm text-foreground/80"
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
@@ -455,7 +455,7 @@ export function DataTable<TData>({
       {/* ── Pagination ──────────────────────────────────────────────── */}
       <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Selection info + page size */}
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
           {enableSelection && (
             <span>
               {table.getFilteredSelectedRowModel().rows.length} of{" "}
@@ -467,10 +467,10 @@ export function DataTable<TData>({
             <select
               value={table.getState().pagination.pageSize}
               onChange={(e) => table.setPageSize(Number(e.target.value))}
-              className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-600 outline-none focus:border-primary/50"
+              className="rounded-md border border-border bg-muted px-2 py-1 text-sm text-foreground outline-none focus:border-primary/50"
             >
               {[10, 20, 30, 50, 100].map((size) => (
-                <option key={size} value={size} className="bg-white text-gray-600">
+                <option key={size} value={size}>
                   {size}
                 </option>
               ))}
@@ -480,21 +480,21 @@ export function DataTable<TData>({
 
         {/* Page navigation */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             Page {pageIndex + 1} of {pageCount || 1}
           </span>
           <div className="flex gap-1">
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-30"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-30"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

@@ -50,9 +50,18 @@ const config: Config = {
         'sidebar-primary': 'hsl(var(--sidebar-primary))',
         'sidebar-accent': 'hsl(var(--sidebar-accent))',
         'sidebar-border': 'hsl(var(--sidebar-border))',
-        success: 'hsl(var(--success))',
-        warning: 'hsl(var(--warning))',
-        info: 'hsl(var(--info))',
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))',
+        },
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          foreground: 'hsl(var(--info-foreground))',
+        },
         'proximity-badge': 'hsl(var(--proximity-badge))',
         header: 'hsl(var(--header))',
         'header-border': 'hsl(var(--header-border))',

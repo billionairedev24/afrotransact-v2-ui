@@ -81,7 +81,7 @@ export function ProductCard({
           <Link
             href={cartHref}
             onClick={(e) => e.stopPropagation()}
-            className="mt-1 flex w-full items-center justify-center gap-2 rounded-md bg-emerald-500/15 border border-emerald-500/20 px-3 py-2 text-xs font-medium text-emerald-400 hover:bg-emerald-500/25 transition-colors"
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-md bg-success/15 border border-success/20 px-3 py-2 text-xs font-medium text-success hover:bg-success/25 transition-colors"
           >
             <Check className="h-3.5 w-3.5" />
             In Cart

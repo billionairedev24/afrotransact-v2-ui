@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import {
+  AlertTriangle,
   ClipboardList,
   Loader2,
   Eye,
@@ -201,14 +202,26 @@ function AdminOrderDetailSheet({
 }) {
   const [updating, setUpdating] = useState<string | null>(null)
   const [trackingInput, setTrackingInput] = useState("")
+  const [exceptionNoteInput, setExceptionNoteInput] = useState("")
+  const [pendingExceptionSubId, setPendingExceptionSubId] = useState<string | null>(null)
 
   async function handleUpdateStatus(subOrderId: string, newStatus: string) {
+    if (newStatus === "delivery_exception" && !exceptionNoteInput.trim()) {
+      setPendingExceptionSubId(subOrderId)
+      return
+    }
     setUpdating(subOrderId + newStatus)
     try {
       const token = await getAccessToken()
       if (!token) return
-      await updateSubOrderStatus(token, subOrderId, newStatus, trackingInput || undefined)
+      await updateSubOrderStatus(
+        token, subOrderId, newStatus,
+        trackingInput || undefined,
+        newStatus === "delivery_exception" ? exceptionNoteInput || undefined : undefined,
+      )
       toast.success(`Fulfillment updated to ${newStatus.replace(/_/g, " ")}`)
+      setExceptionNoteInput("")
+      setPendingExceptionSubId(null)
       await onUpdated()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update status")
@@ -281,6 +294,15 @@ function AdminOrderDetailSheet({
                 {sub.trackingNumber && (
                   <p className="text-xs text-gray-500">Tracking: <span className="text-gray-900 font-mono">{sub.trackingNumber}</span></p>
                 )}
+                {sub.fulfillmentStatus === "delivery_exception" && sub.exceptionNote && (
+                  <div className="flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2.5">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-500 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-red-700">Exception Note</p>
+                      <p className="text-xs text-red-600 mt-0.5">{sub.exceptionNote}</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="overflow-hidden rounded-lg border border-gray-200">
                   <table className="w-full text-sm">
@@ -352,6 +374,40 @@ function AdminOrderDetailSheet({
                       placeholder="Tracking / reference number (optional)"
                       className="h-8 w-full rounded-lg border border-gray-200 bg-transparent px-3 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                     />
+                    {/* Exception note — required when setting delivery_exception */}
+                    {pendingExceptionSubId === sub.id && (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                          <p className="text-xs font-semibold text-red-700">Exception note required</p>
+                        </div>
+                        <p className="text-xs text-red-600">Describe what happened so the customer can be properly informed.</p>
+                        <textarea
+                          autoFocus
+                          rows={3}
+                          value={exceptionNoteInput}
+                          onChange={(e) => setExceptionNoteInput(e.target.value)}
+                          placeholder="e.g. Package was returned to depot — address could not be located."
+                          className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:border-red-400 focus:outline-none resize-none"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            disabled={!exceptionNoteInput.trim() || !!updating}
+                            onClick={() => handleUpdateStatus(sub.id, "delivery_exception")}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-40"
+                          >
+                            {updating === sub.id + "delivery_exception" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                            Confirm Exception
+                          </button>
+                          <button
+                            onClick={() => { setPendingExceptionSubId(null); setExceptionNoteInput("") }}
+                            className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -27,7 +27,7 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
 
   const REASON_MESSAGES: Record<string, string> = {
-    inactive: "You were signed out due to inactivity.",
+    // "inactive" has its own dedicated screen (rendered above) — not listed here
     session_expired: "Your session has expired. Please sign in again.",
     password_updated: "Your password was updated. Continuing to sign in…",
     email_verified: "Your email has been verified! Click below to sign in to your account.",
@@ -68,6 +68,38 @@ function LoginForm() {
     error === "OAuthCallback" ||
     error === "Callback" ||
     (reason != null && callbackRecoveryReasons.includes(reason as (typeof callbackRecoveryReasons)[number]))
+
+  // inactive: show a dedicated screen with a lock icon instead of an inline banner
+  if (reason === "inactive") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-6 px-4 text-center">
+        <div className="w-full max-w-[380px] rounded-2xl border border-border bg-card p-8 shadow-sm space-y-5">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 mx-auto">
+            <svg className="h-7 w-7 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25z" />
+            </svg>
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-bold text-foreground">You&apos;ve been signed out</h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              For your security, you were automatically signed out due to inactivity. Please sign in to continue.
+            </p>
+          </div>
+          <button
+            onClick={handleSignIn}
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-110 disabled:opacity-80 disabled:cursor-wait"
+          >
+            {isLoading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" />Signing in&hellip;</>
+            ) : (
+              <>Sign in<ArrowRight className="h-4 w-4" /></>
+            )}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // email_verified is a special case: show a page with a manual sign-in button
   // instead of auto-signing in, to prevent the verification loop.

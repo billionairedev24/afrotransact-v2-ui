@@ -107,7 +107,7 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
           <div className="border-t border-border p-4 space-y-3">
             <button
               onClick={() => { signOut() }}
-              className="flex w-full items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
+              className="flex w-full items-center gap-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
             >
               <LogOut className="h-4 w-4" />
               Sign Out
@@ -181,7 +181,7 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
               <div className="border-t border-border p-4 space-y-2">
                 <button
                   onClick={() => { signOut() }}
-                  className="flex w-full items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
+                  className="flex w-full items-center gap-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
                   Sign Out

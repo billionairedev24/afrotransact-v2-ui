@@ -890,6 +890,7 @@ export interface SubOrderDto {
   transferAmountCents: number
   fulfillmentStatus: string
   trackingNumber: string | null
+  exceptionNote: string | null
   items: OrderItemDto[]
 }
 
@@ -933,9 +934,11 @@ export function updateSubOrderStatus(
   subOrderId: string,
   status: string,
   trackingNumber?: string,
+  exceptionNote?: string,
 ) {
   const params = new URLSearchParams({ status })
   if (trackingNumber) params.set("trackingNumber", trackingNumber)
+  if (exceptionNote) params.set("exceptionNote", exceptionNote)
   return api<OrderDto>(`/api/v1/orders/sub-orders/${subOrderId}/status?${params}`, { method: "PUT", token })
 }
 
