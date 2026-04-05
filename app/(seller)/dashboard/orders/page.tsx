@@ -27,12 +27,31 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   cancelled:  { label: "Cancelled",  className: "bg-red-50 text-red-700" },
 }
 
+const FULFILLMENT_BADGE: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+  pending:    { label: "Pending",    className: "bg-yellow-50 text-yellow-700", icon: <Package className="h-3.5 w-3.5" /> },
+  processing: { label: "Processing", className: "bg-purple-50 text-purple-700", icon: <Package className="h-3.5 w-3.5" /> },
+  packaged:   { label: "Packaged",   className: "bg-blue-50 text-blue-700",     icon: <Package className="h-3.5 w-3.5" /> },
+  dispatched: { label: "Dispatched", className: "bg-indigo-50 text-indigo-700", icon: <Truck className="h-3.5 w-3.5" /> },
+  delivered:  { label: "Delivered",  className: "bg-green-50 text-green-700",   icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+}
+
 function statusBadge(status: string) {
   const key = status.toLowerCase()
   return (
     STATUS_BADGE[key] ?? {
       label: status.replace(/_/g, " "),
       className: "bg-gray-100 text-gray-500",
+    }
+  )
+}
+
+function fulfillmentBadge(status: string) {
+  const key = status.toLowerCase()
+  return (
+    FULFILLMENT_BADGE[key] ?? {
+      label: status.replace(/_/g, " "),
+      className: "bg-gray-100 text-gray-500",
+      icon: null,
     }
   )
 }
@@ -193,12 +212,13 @@ export default function SellerOrdersPage() {
       col.accessor("fulfillmentStatus", {
         header: "Fulfillment",
         cell: (info) => {
-          const b = statusBadge(info.getValue())
+          const b = fulfillmentBadge(info.getValue())
           return (
             <span
-              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${b.className}`}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${b.className}`}
             >
-              {info.getValue().replace(/_/g, " ")}
+              {b.icon}
+              {b.label}
             </span>
           )
         },
@@ -260,13 +280,6 @@ export default function SellerOrdersPage() {
 }
 
 const SELLER_STATUSES = ["processing", "packaged", "dispatched"] as const
-const FULFILLMENT_BADGE: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-  pending:    { label: "Pending",    className: "bg-yellow-50 text-yellow-700", icon: <Package className="h-3.5 w-3.5" /> },
-  processing: { label: "Processing", className: "bg-purple-50 text-purple-700", icon: <Package className="h-3.5 w-3.5" /> },
-  packaged:   { label: "Packaged",   className: "bg-blue-50 text-blue-700",     icon: <Package className="h-3.5 w-3.5" /> },
-  dispatched: { label: "Dispatched", className: "bg-indigo-50 text-indigo-700", icon: <Truck className="h-3.5 w-3.5" /> },
-  delivered:  { label: "Delivered",  className: "bg-green-50 text-green-700",   icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
-}
 
 function OrderDetailModal({
   order,

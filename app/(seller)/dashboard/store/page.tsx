@@ -242,7 +242,7 @@ export default function StoreSettingsPage() {
     setSuccess(false)
   }
 
-  if (status !== "authenticated" && !loading) {
+  if (sessionStatus !== "authenticated" && !loading) {
     return (
       <div className="space-y-6">
         <div className="rounded-lg border border-border bg-card p-8 text-center">
