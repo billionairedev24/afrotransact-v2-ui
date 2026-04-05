@@ -32,7 +32,7 @@ async function getAdminToken(): Promise<string | null> {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "client_credentials",
-        client_id: env("KEYCLOAK_ADMIN_API_CLIENT_ID", "afrotransact-admin-api"),
+        client_id: "afrotransact-admin-api",
         client_secret: env("KEYCLOAK_ADMIN_API_SECRET", "afrotransact-admin-api-secret"),
       }),
     })
@@ -76,7 +76,7 @@ async function verifyCurrentPassword(
   // Dedicated internal client with Direct Access Grants ON.
   // Falls back to the web client so dev environments work out of the box
   // (enable Direct Access Grants on afrotransact-web in local Keycloak only).
-  const clientId = env("KEYCLOAK_VERIFY_CLIENT_ID", env("KEYCLOAK_CLIENT_ID", "afrotransact-web"))
+  const clientId = "afrotransact-internal"
   const clientSecret = env("KEYCLOAK_VERIFY_CLIENT_SECRET", env("KEYCLOAK_CLIENT_SECRET", ""))
 
   // Extract preferred_username from the current access token (most reliable)
@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 3: Send security notification email (best-effort — never fails the request)
-    void sendPasswordChangedEmail(adminToken, session.user.id, session.user.email, kcBase, realm)
+    void sendPasswordChangedEmail(accessToken ?? "", session.user.id, session.user.email, adminToken, kcBase, realm)
 
     return NextResponse.json({ ok: true })
   } catch (err) {
@@ -212,20 +212,24 @@ export async function POST(req: NextRequest) {
  * Either way this is fire-and-forget; failure is logged but never bubbles up.
  */
 async function sendPasswordChangedEmail(
-  adminToken: string,
+  userAccessToken: string,
   userId: string,
   email: string,
+  adminToken: string,
   kcBase: string,
   realm: string,
 ) {
   const apiBase = env("NEXT_PUBLIC_API_URL", "http://localhost:8080")
   const appUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
-  // Attempt 1: our backend notification endpoint
+  // Attempt 1: our backend notification endpoint (authenticated as the user)
   try {
     const res = await fetch(`${apiBase}/api/v1/users/me/notify/password-changed`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userAccessToken}`,
+      },
       body: JSON.stringify({ email }),
     })
     if (res.ok) return

@@ -29,7 +29,7 @@ async function getAdminToken(): Promise<string | null> {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "client_credentials",
-        client_id: env("KEYCLOAK_ADMIN_API_CLIENT_ID", "afrotransact-admin-api"),
+        client_id: "afrotransact-admin-api",
         client_secret: env("KEYCLOAK_ADMIN_API_SECRET", "afrotransact-admin-api-secret"),
       }),
     })
