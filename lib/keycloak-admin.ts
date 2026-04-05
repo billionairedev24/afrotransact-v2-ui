@@ -7,27 +7,37 @@ function optionalEnv(name: string, fallback: string): string {
   return process.env[name] || fallback
 }
 
+/**
+ * Obtains an admin token via the afrotransact-admin-api service account
+ * (client_credentials grant, afrotransact realm). Scoped to manage-users only.
+ * No master realm credentials are used.
+ */
 async function getKeycloakAdminAccessToken(): Promise<string | null> {
   const kcIssuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
-  const kcBase = kcIssuer.replace(/\/realms\/.*$/, "")
-  const adminUser = optionalEnv("KEYCLOAK_ADMIN_USERNAME", "admin")
-  const adminPass = optionalEnv("KEYCLOAK_ADMIN_PASSWORD", "admin")
 
   try {
-    const tokenRes = await fetch(`${kcBase}/realms/master/protocol/openid-connect/token`, {
+    const tokenRes = await fetch(`${kcIssuer}/protocol/openid-connect/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        grant_type: "password",
-        client_id: "admin-cli",
-        username: adminUser,
-        password: adminPass,
+        grant_type: "client_credentials",
+        client_id: optionalEnv("KEYCLOAK_ADMIN_API_CLIENT_ID", "afrotransact-admin-api"),
+        client_secret: optionalEnv("KEYCLOAK_ADMIN_API_SECRET", "afrotransact-admin-api-secret"),
       }),
     })
-    if (!tokenRes.ok) return null
+    if (!tokenRes.ok) {
+      if (process.env.NODE_ENV === "development") {
+        const t = await tokenRes.text().catch(() => "")
+        console.error("[keycloak-admin] Admin token fetch failed", tokenRes.status, t.slice(0, 200))
+      }
+      return null
+    }
     const { access_token } = (await tokenRes.json()) as { access_token?: string }
     return access_token ?? null
-  } catch {
+  } catch (err) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[keycloak-admin] Admin token fetch error", err)
+    }
     return null
   }
 }
@@ -53,7 +63,7 @@ export async function setRegistrationRoleSeller(userId: string): Promise<boolean
   const access_token = await getKeycloakAdminAccessToken()
   if (!access_token) {
     if (process.env.NODE_ENV === "development") {
-      console.error("[keycloak-admin] No admin token — check KEYCLOAK_ISSUER, KEYCLOAK_ADMIN_USERNAME, KEYCLOAK_ADMIN_PASSWORD, and that Keycloak master admin login works.")
+      console.error("[keycloak-admin] No admin token — check KEYCLOAK_ADMIN_API_CLIENT_ID, KEYCLOAK_ADMIN_API_SECRET, and that the afrotransact-admin-api service account exists with manage-users role.")
     }
     return false
   }

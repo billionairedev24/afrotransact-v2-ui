@@ -16,24 +16,32 @@ function env(name: string, fallback: string) {
   return process.env[name] || fallback
 }
 
+/**
+ * Obtains an admin token via the afrotransact-admin-api service account
+ * (client_credentials grant). Scoped to manage-users in the afrotransact
+ * realm only — no master realm credentials in the application process.
+ */
 async function getAdminToken(): Promise<string | null> {
   const kcIssuer = env("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
-  const kcBase = kcIssuer.replace(/\/realms\/.*$/, "")
   try {
-    const res = await fetch(`${kcBase}/realms/master/protocol/openid-connect/token`, {
+    const res = await fetch(`${kcIssuer}/protocol/openid-connect/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        grant_type: "password",
-        client_id: "admin-cli",
-        username: env("KEYCLOAK_ADMIN_USERNAME", "admin"),
-        password: env("KEYCLOAK_ADMIN_PASSWORD", "admin"),
+        grant_type: "client_credentials",
+        client_id: env("KEYCLOAK_ADMIN_API_CLIENT_ID", "afrotransact-admin-api"),
+        client_secret: env("KEYCLOAK_ADMIN_API_SECRET", "afrotransact-admin-api-secret"),
       }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      console.error("[close-account] Admin token fetch failed", res.status, text.slice(0, 200))
+      return null
+    }
     const { access_token } = (await res.json()) as { access_token?: string }
     return access_token ?? null
-  } catch {
+  } catch (err) {
+    console.error("[close-account] Admin token fetch error", err)
     return null
   }
 }

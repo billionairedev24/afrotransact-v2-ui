@@ -18,46 +18,110 @@ function env(name: string, fallback: string) {
   return process.env[name] || fallback
 }
 
+/**
+ * Obtains an admin token via the afrotransact-admin-api service account
+ * (client_credentials grant). This is scoped to manage-users in the
+ * afrotransact realm only — no master realm credentials ever leave the
+ * Keycloak server, and no username/password is stored in the app.
+ */
 async function getAdminToken(): Promise<string | null> {
-  const kcIssuer = env("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
-  const kcBase = kcIssuer.replace(/\/realms\/.*$/, "")
-  try {
-    const res = await fetch(`${kcBase}/realms/master/protocol/openid-connect/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "password",
-        client_id: "admin-cli",
-        username: env("KEYCLOAK_ADMIN_USERNAME", "admin"),
-        password: env("KEYCLOAK_ADMIN_PASSWORD", "admin"),
-      }),
-    })
-    if (!res.ok) return null
-    const { access_token } = (await res.json()) as { access_token?: string }
-    return access_token ?? null
-  } catch {
-    return null
-  }
-}
-
-async function verifyCurrentPassword(username: string, password: string): Promise<boolean> {
   const kcIssuer = env("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
   try {
     const res = await fetch(`${kcIssuer}/protocol/openid-connect/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        grant_type: "password",
-        client_id: env("KEYCLOAK_CLIENT_ID", "afrotransact-web"),
-        client_secret: env("KEYCLOAK_CLIENT_SECRET", ""),
-        username,
-        password,
+        grant_type: "client_credentials",
+        client_id: env("KEYCLOAK_ADMIN_API_CLIENT_ID", "afrotransact-admin-api"),
+        client_secret: env("KEYCLOAK_ADMIN_API_SECRET", "afrotransact-admin-api-secret"),
       }),
     })
-    return res.ok
-  } catch {
-    return false
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      console.error("[set-password] Admin token fetch failed", res.status, text.slice(0, 200))
+      return null
+    }
+    const { access_token } = (await res.json()) as { access_token?: string }
+    return access_token ?? null
+  } catch (err) {
+    console.error("[set-password] Admin token fetch error", err)
+    return null
   }
+}
+
+/**
+ * Verifies the current password via ROPC against a dedicated internal
+ * Keycloak client (`KEYCLOAK_VERIFY_CLIENT_ID`).
+ *
+ * Use a separate internal client — NOT the public `afrotransact-web` client —
+ * so the user-facing client never needs Direct Access Grants enabled.
+ *
+ * Keycloak setup for the verify client:
+ *   Client ID:             afrotransact-internal  (or whatever you name it)
+ *   Access Type:           confidential
+ *   Standard Flow:         OFF
+ *   Direct Access Grants:  ON   ← only this client needs it
+ *
+ * We try preferred_username first (extracted from the current access token),
+ * then fall back to email, because Keycloak's ROPC `username` field must
+ * match the Keycloak account username, not necessarily the email address.
+ */
+async function verifyCurrentPassword(
+  email: string,
+  password: string,
+  accessToken?: string,
+): Promise<boolean> {
+  const kcIssuer = env("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
+
+  // Dedicated internal client with Direct Access Grants ON.
+  // Falls back to the web client so dev environments work out of the box
+  // (enable Direct Access Grants on afrotransact-web in local Keycloak only).
+  const clientId = env("KEYCLOAK_VERIFY_CLIENT_ID", env("KEYCLOAK_CLIENT_ID", "afrotransact-web"))
+  const clientSecret = env("KEYCLOAK_VERIFY_CLIENT_SECRET", env("KEYCLOAK_CLIENT_SECRET", ""))
+
+  // Extract preferred_username from the current access token (most reliable)
+  let preferredUsername: string | undefined
+  if (accessToken) {
+    try {
+      const payload = JSON.parse(
+        Buffer.from(accessToken.split(".")[1], "base64url").toString(),
+      )
+      preferredUsername = payload.preferred_username as string | undefined
+    } catch {
+      // ignore — fall back to email
+    }
+  }
+
+  // Try preferred_username first, then email
+  const candidates = [...new Set([preferredUsername, email].filter(Boolean))] as string[]
+
+  for (const username of candidates) {
+    try {
+      const res = await fetch(`${kcIssuer}/protocol/openid-connect/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "password",
+          client_id: clientId,
+          client_secret: clientSecret,
+          username,
+          password,
+        }),
+      })
+
+      if (res.ok) return true
+
+      const errBody = await res.text().catch(() => "")
+      console.warn(
+        `[set-password] ROPC verify failed (client="${clientId}", username="${username}"): HTTP ${res.status}`,
+        errBody.slice(0, 300),
+      )
+    } catch (err) {
+      console.warn(`[set-password] ROPC verify error (username="${username}"):`, err)
+    }
+  }
+
+  return false
 }
 
 export async function POST(req: NextRequest) {
@@ -85,8 +149,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "New password must be different from the current password" }, { status: 400 })
   }
 
-  // Step 1: Verify current password
-  const valid = await verifyCurrentPassword(session.user.email, currentPassword)
+  // Step 1: Verify current password via ROPC — passes the access token so we
+  // can extract preferred_username, which is what Keycloak expects in the
+  // `username` field (not necessarily the email address).
+  const accessToken = (session as { accessToken?: string }).accessToken
+  const valid = await verifyCurrentPassword(session.user.email, currentPassword, accessToken)
   if (!valid) {
     return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 })
   }
