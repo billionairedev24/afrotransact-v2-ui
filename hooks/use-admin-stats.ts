@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { getAccessToken } from "@/lib/auth-helpers";
-import { 
-  getAdminProducts, 
-  getAdminSellers, 
+import {
+  getAdminProducts,
+  getAdminSellers,
   getAdminSellerStats,
   getAdminRegions,
   getAdminPlans,
   getAdminReviews,
   getAdminSellerDetail,
+  getAdminAnalytics,
   type Product,
   type SellerInfo
 } from "@/lib/api";
@@ -160,5 +161,20 @@ export function useAdminSellerDetail(sellerId: string | null) {
       return getAdminSellerDetail(token, sellerId);
     },
     enabled: !!sellerId,
+  });
+}
+
+/**
+ * Returns admin platform analytics (revenue, commissions, trends) for the given time range.
+ */
+export function useAdminAnalytics(days = 30) {
+  return useQuery({
+    queryKey: ["admin", "analytics", days],
+    queryFn: async () => {
+      const token = await getAccessToken();
+      if (!token) throw new Error("No token");
+      return getAdminAnalytics(token, days);
+    },
+    staleTime: 5 * 60 * 1000,
   });
 }

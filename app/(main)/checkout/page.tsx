@@ -27,6 +27,7 @@ import { useCartStore } from "@/stores/cart-store"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import {
   checkout as apiCheckout,
   mergeCart,
@@ -194,13 +195,8 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
         })
       }
     } catch (e) {
-      const msg =
-        e instanceof ApiError
-          ? e.body
-          : e instanceof Error
-            ? e.message
-            : "Could not save address. Check required fields and try again."
-      toast.error(msg.length > 200 ? `${msg.slice(0, 200)}…` : msg)
+      logError(e, "saving address")
+      toast.error("Could not save address. Check required fields and try again.")
     } finally {
       setSaving(false)
     }
@@ -877,7 +873,8 @@ export default function CheckoutPage() {
         setCouponError(result.error || "Invalid coupon code")
       }
     } catch (e) {
-      setCouponError(e instanceof Error ? e.message : "Could not validate coupon")
+      logError(e, "validating coupon")
+      setCouponError("Could not validate coupon")
     } finally {
       setCouponLoading(false)
     }
@@ -951,7 +948,8 @@ export default function CheckoutPage() {
         router.push("/auth/login?callbackUrl=/checkout")
         return
       }
-      setPlaceError(e instanceof ApiError ? e.body : e instanceof Error ? e.message : "Checkout failed. Please try again.")
+      logError(e, "checkout")
+      setPlaceError("Checkout failed. Please try again.")
     } finally {
       setPlacing(false)
     }

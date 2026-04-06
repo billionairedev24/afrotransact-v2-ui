@@ -1895,4 +1895,87 @@ export function triggerSearchReindex(token: string) {
   })
 }
 
+// ── Analytics ────────────────────────────────────────────────────────────────
+
+export interface AdminAnalyticsDailyPoint {
+  day: string
+  revenueCents: number
+  commissionCents: number
+  orderCount: number
+}
+
+export interface AdminAnalyticsStatusCount {
+  status: string
+  count: number
+  revenueCents: number
+}
+
+export interface AdminAnalyticsRegionRevenue {
+  regionId: string
+  revenueCents: number
+  orderCount: number
+}
+
+export interface AdminAnalyticsStoreRevenue {
+  storeId: string
+  revenueCents: number
+  orderCount: number
+}
+
+export interface AdminAnalyticsResponse {
+  totalRevenueCents: number
+  totalCommissionCents: number
+  totalOrders: number
+  avgOrderValueCents: number
+  totalDiscountCents: number
+  revenueByDay: AdminAnalyticsDailyPoint[]
+  ordersByStatus: AdminAnalyticsStatusCount[]
+  revenueByRegion: AdminAnalyticsRegionRevenue[]
+  topStores: AdminAnalyticsStoreRevenue[]
+}
+
+export interface SellerAnalyticsDailyPoint {
+  day: string
+  revenueCents: number
+  orderCount: number
+}
+
+export interface SellerAnalyticsStatusCount {
+  status: string
+  count: number
+}
+
+export interface SellerAnalyticsProductRevenue {
+  productId: string
+  productTitle: string
+  revenueCents: number
+  unitsSold: number
+  orderCount: number
+}
+
+export interface SellerAnalyticsResponse {
+  totalRevenueCents: number
+  totalOrders: number
+  avgOrderValueCents: number
+  fulfillmentRate: number
+  revenueByDay: SellerAnalyticsDailyPoint[]
+  fulfillmentByStatus: SellerAnalyticsStatusCount[]
+  topProducts: SellerAnalyticsProductRevenue[]
+}
+
+export function getAdminAnalytics(token: string, days = 30): Promise<AdminAnalyticsResponse> {
+  return api<AdminAnalyticsResponse>(`/api/v1/analytics/admin?days=${days}`, { token })
+}
+
+export function getSellerAnalytics(
+  token: string,
+  storeIds: string[],
+  days = 30,
+): Promise<SellerAnalyticsResponse> {
+  const params = new URLSearchParams()
+  storeIds.forEach((id) => params.append("storeIds", id))
+  params.set("days", String(days))
+  return api<SellerAnalyticsResponse>(`/api/v1/analytics/seller?${params.toString()}`, { token })
+}
+
 export { API_BASE }

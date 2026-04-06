@@ -27,6 +27,7 @@ import {
   Bell,
   Ticket,
   Sparkles,
+  BarChart2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
@@ -44,6 +45,7 @@ interface NavItem {
 
 const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/admin",               label: "Overview",      icon: LayoutDashboard, exact: true },
+  { href: "/admin/analytics",    label: "Analytics",     icon: BarChart2        },
   { href: "/admin/work-queue",    label: "Work Queue",    icon: ClipboardList    },
   { href: "/admin/categories",    label: "Categories",    icon: FolderTree       },
   { href: "/admin/sellers",       label: "Sellers",       icon: Store            },

@@ -33,6 +33,7 @@ import {
   type ProductImage,
   type CategoryRef,
 } from "@/lib/api"
+import { logError } from "@/lib/errors"
 import { useUploadThing } from "@/lib/uploadthing"
 
 /* ------------------------------------------------------------------ */
@@ -347,7 +348,8 @@ export default function EditProductPage() {
         }))
       setExistingImages(imgs)
     } catch (e) {
-      setGlobalError(e instanceof Error ? e.message : "Failed to load product")
+      logError(e, "loading product for edit")
+      setGlobalError("Failed to load product")
     } finally {
       setLoading(false)
     }
@@ -408,10 +410,11 @@ export default function EditProductPage() {
         throw new Error("Upload returned no results")
       }
     } catch (e) {
+      logError(e, "uploading product image")
       setNewImages((prev) =>
         prev.map((i) =>
           i.id === img.id
-            ? { ...i, status: "error" as const, error: e instanceof Error ? e.message : "Upload failed" }
+            ? { ...i, status: "error" as const, error: "Upload failed" }
             : i,
         ),
       )
@@ -706,7 +709,8 @@ export default function EditProductPage() {
       setNewImages([])
       await loadData()
     } catch (e) {
-      setGlobalError(e instanceof Error ? e.message : "Failed to update product")
+      logError(e, "updating product")
+      setGlobalError("Failed to update product")
     } finally {
       setSaving(false)
     }
@@ -725,7 +729,8 @@ export default function EditProductPage() {
       await deleteProduct(token, id)
       router.push("/dashboard/products")
     } catch (e) {
-      setGlobalError(e instanceof Error ? e.message : "Failed to delete product")
+      logError(e, "deleting product")
+      setGlobalError("Failed to delete product")
       setDeleting(false)
     }
   }

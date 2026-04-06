@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useWorkQueueLists } from "@/hooks/use-admin-stats"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import {
   Loader2,
   Package,
@@ -102,7 +103,8 @@ export default function WorkQueuePage() {
       if (selectedProduct?.id === product.id) setSelectedProduct(null)
       invalidateQueue()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to approve")
+      logError(e, "approving product")
+      toast.error("Failed to approve")
     } finally {
       setActionLoading(null)
     }
@@ -117,7 +119,8 @@ export default function WorkQueuePage() {
       toast.success(`"${seller.businessName}" approved`)
       invalidateQueue()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to approve")
+      logError(e, "approving seller")
+      toast.error("Failed to approve")
     } finally {
       setActionLoading(null)
     }
@@ -158,7 +161,8 @@ export default function WorkQueuePage() {
       if (selectedProduct?.id === rejectModal.id) setSelectedProduct(null)
       invalidateQueue()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to reject")
+      logError(e, "rejecting item")
+      toast.error("Failed to reject")
     } finally {
       setActionLoading(null)
     }
@@ -390,7 +394,8 @@ export default function WorkQueuePage() {
             setSelectedSeller(null)
             invalidateQueue()
           } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Failed to approve")
+            logError(e, "approving seller from detail")
+            toast.error("Failed to approve")
           } finally {
             setActionLoading(null)
           }
@@ -409,7 +414,8 @@ export default function WorkQueuePage() {
             setSelectedSeller(null)
             invalidateQueue()
           } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Failed")
+            logError(e, "requesting info from seller")
+            toast.error("Failed")
           } finally {
             setActionLoading(null)
           }

@@ -34,6 +34,7 @@ import {
   type StoreDetail,
   type MediaItem,
 } from "@/lib/api"
+import { logError } from "@/lib/errors"
 import { useUploadThing } from "@/lib/uploadthing"
 
 /* ------------------------------------------------------------------ */
@@ -297,7 +298,8 @@ export default function NewProductPage() {
         setMaxTags(mktCfg.maxProductTags)
       }
     } catch (e) {
-      setGlobalError(e instanceof Error ? e.message : "Failed to load data")
+      logError(e, "loading product form data")
+      setGlobalError("Failed to load data")
     } finally {
       setLoading(false)
     }
@@ -353,10 +355,11 @@ export default function NewProductPage() {
         throw new Error("Upload returned no results")
       }
     } catch (e) {
+      logError(e, "uploading product image")
       setImages((prev) =>
         prev.map((i) =>
           i.id === img.id
-            ? { ...i, status: "error" as const, error: e instanceof Error ? e.message : "Upload failed" }
+            ? { ...i, status: "error" as const, error: "Upload failed" }
             : i,
         ),
       )
@@ -661,7 +664,8 @@ export default function NewProductPage() {
 
       router.push("/dashboard/products")
     } catch (e) {
-      setGlobalError(e instanceof Error ? e.message : "Failed to create product")
+      logError(e, "creating product")
+      setGlobalError("Failed to create product")
     } finally {
       setSaving(false)
     }

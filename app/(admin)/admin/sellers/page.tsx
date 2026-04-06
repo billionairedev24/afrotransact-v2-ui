@@ -18,6 +18,7 @@ import {
 } from "@/lib/api"
 import type { OnboardingStats, AdminSellerDetail } from "@/lib/api"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import {
   Store,
   Users,
@@ -181,7 +182,8 @@ export default function AdminSellersPage() {
       closeDetail()
       invalidateSellers()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Review action failed")
+      logError(e, "reviewing seller")
+      toast.error("Review action failed")
     }
   }
 
@@ -317,8 +319,9 @@ export default function AdminSellersPage() {
                                 if (!token) return
                                 await sendSellerReminder(token, s.id)
                                 toast.success(`Reminder sent to ${s.businessName}`)
-                              } catch (e: any) {
-                                toast.error(e?.message || "Failed to send reminder")
+                              } catch (e: unknown) {
+                                logError(e, "sending seller reminder")
+                                toast.error("Failed to send reminder")
                               }
                             }}
                           />

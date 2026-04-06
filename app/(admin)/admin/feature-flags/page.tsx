@@ -60,7 +60,8 @@ export default function FeatureFlagsPage() {
         }
       } catch (e) {
         if (!cancelled) {
-          setRegionsError(e instanceof Error ? e.message : "Failed to load regions")
+          logError(e, "loading regions")
+          setRegionsError("Failed to load regions")
         }
       } finally {
         if (!cancelled) setRegionsLoading(false)
@@ -90,7 +91,8 @@ export default function FeatureFlagsPage() {
         if (!cancelled) setFlags(Array.isArray(data) ? data : [])
       } catch (e) {
         if (!cancelled) {
-          setFlagsError(e instanceof Error ? e.message : "Failed to load feature flags")
+          logError(e, "loading feature flags")
+          setFlagsError("Failed to load feature flags")
         }
       } finally {
         if (!cancelled) setFlagsLoading(false)

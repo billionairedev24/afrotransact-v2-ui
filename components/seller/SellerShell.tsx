@@ -17,6 +17,7 @@ import {
   Star,
   Ticket,
   Tag,
+  BarChart2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
@@ -25,6 +26,7 @@ import type { SellerInfo } from "@/lib/api"
 
 const NAV_ITEMS = [
   { href: "/dashboard",              label: "Overview",       icon: LayoutDashboard },
+  { href: "/dashboard/analytics",   label: "Analytics",      icon: BarChart2       },
   { href: "/dashboard/products",     label: "Products",       icon: Package         },
   { href: "/dashboard/orders",       label: "Orders",        icon: ShoppingCart    },
   { href: "/dashboard/upload",       label: "Media Library",  icon: Upload         },
