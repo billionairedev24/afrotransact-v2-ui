@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Eye, EyeOff, MoveDown, MoveUp, Plus, Save, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import { HeroCarousel } from "@/components/home/HeroCarousel"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useUploadThing } from "@/lib/uploadthing"
@@ -365,8 +366,9 @@ export default function AdminHeroCarouselPage() {
             data.map(({ createdAt, updatedAt, ...rest }) => rest)
           )
       } catch (e) {
+        logError(e, "loading hero slides")
         if (!cancelled) {
-          toast.error(e instanceof Error ? e.message : "Failed to load hero slides")
+          toast.error("Failed to load hero slides")
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -478,7 +480,8 @@ export default function AdminHeroCarouselPage() {
       toast.success("Hero slide saved")
       await refresh()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save hero slide")
+      logError(e, "saving hero slide")
+      toast.error("Failed to save hero slide")
     }
   }
 
@@ -490,7 +493,8 @@ export default function AdminHeroCarouselPage() {
       toast.success("Hero slide deleted")
       await refresh()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete hero slide")
+      logError(e, "deleting hero slide")
+      toast.error("Failed to delete hero slide")
     }
   }
 
@@ -514,7 +518,8 @@ export default function AdminHeroCarouselPage() {
       ])
       await refresh()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to reorder slides")
+      logError(e, "reordering slides")
+      toast.error("Failed to reorder slides")
     }
   }
 

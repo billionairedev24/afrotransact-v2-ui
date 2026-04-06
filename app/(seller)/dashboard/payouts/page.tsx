@@ -26,6 +26,7 @@ import {
   type PayoutSummary,
   type TransferRecord,
 } from "@/lib/api"
+import { logError } from "@/lib/errors"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
 import { createColumnHelper } from "@tanstack/react-table"
@@ -116,7 +117,8 @@ export default function PayoutsPage() {
         setSummary(sum)
         setTransfers(payoutsRes.content || [])
       } catch (e: unknown) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load payouts")
+        logError(e, "loading payouts")
+        if (!cancelled) setError("Failed to load payouts")
       } finally {
         if (!cancelled) setLoading(false)
       }

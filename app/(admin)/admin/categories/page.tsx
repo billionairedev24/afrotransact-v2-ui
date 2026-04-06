@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   getCategories,
@@ -57,7 +58,8 @@ export default function AdminCategoriesPage() {
       const data = await getCategories()
       setCategories(data)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to load categories")
+      logError(e, "loading categories")
+      toast.error("Failed to load categories")
     } finally {
       setLoading(false)
     }
@@ -127,7 +129,8 @@ export default function AdminCategoriesPage() {
       closeDialog()
       await loadCategories()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed")
+      logError(e, "saving category")
+      toast.error("Save failed")
     } finally {
       setSaving(false)
     }
@@ -149,7 +152,8 @@ export default function AdminCategoriesPage() {
       setDeleteTarget(null)
       await loadCategories()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed")
+      logError(e, "deleting category")
+      toast.error("Delete failed")
     } finally {
       setDeleting(false)
     }

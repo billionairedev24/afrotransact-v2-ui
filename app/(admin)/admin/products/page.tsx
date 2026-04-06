@@ -39,6 +39,7 @@ import {
   ApiError,
   type Product,
 } from "@/lib/api"
+import { logError } from "@/lib/errors"
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All Statuses" },
@@ -114,7 +115,8 @@ export default function AdminProductsPage() {
       toast.success(`Reindex complete — ${res.indexed ?? "all"} products synced to Elasticsearch`)
       setReindexModal(false)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Reindex failed")
+      logError(e, "reindexing products")
+      toast.error("Reindex failed")
     } finally {
       setReindexLoading(false)
     }
@@ -132,7 +134,8 @@ export default function AdminProductsPage() {
       if (e instanceof ApiError && e.status === 404) {
         setApiNotReady(true)
       } else {
-        toast.error(e instanceof Error ? e.message : "Failed to load products")
+        logError(e, "loading products")
+        toast.error("Failed to load products")
       }
     } finally {
       setLoading(false)
@@ -154,7 +157,8 @@ export default function AdminProductsPage() {
       if (viewProduct?.id === product.id) setViewProduct(null)
       await loadProducts(statusFilter)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to approve product")
+      logError(e, "approving product")
+      toast.error("Failed to approve product")
     } finally {
       setActionLoading(null)
     }
@@ -181,7 +185,8 @@ export default function AdminProductsPage() {
       if (viewProduct?.id === rejectModal.productId) setViewProduct(null)
       await loadProducts(statusFilter)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to reject product")
+      logError(e, "rejecting product")
+      toast.error("Failed to reject product")
     } finally {
       setActionLoading(null)
     }

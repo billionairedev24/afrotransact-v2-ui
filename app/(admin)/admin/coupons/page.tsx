@@ -10,6 +10,7 @@ import {
   toggleAdminCoupon,
 } from "@/lib/api"
 import type { CouponData, CouponCreateRequest } from "@/lib/api"
+import { logError } from "@/lib/errors"
 import { toast } from "sonner"
 import { Plus, Ticket, Pencil, ToggleLeft, ToggleRight, X } from "lucide-react"
 import { DataTable } from "@/components/ui/DataTable"
@@ -42,7 +43,8 @@ export default function AdminCouponsPage() {
       const res = await getAdminCoupons(token, 0, 200)
       setCoupons(res.content)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to load coupons")
+      logError(e, "loading coupons")
+      toast.error("Failed to load coupons")
     } finally {
       setLoading(false)
     }
@@ -248,7 +250,8 @@ function CouponForm({
         expiresAt: new Date(expiresAt).toISOString(),
       })
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save coupon")
+      logError(e, "saving coupon")
+      toast.error("Failed to save coupon")
     } finally {
       setSubmitting(false)
     }

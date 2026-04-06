@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import { ToggleRight, ToggleLeft, Loader2, Plus } from "lucide-react"
 import {
   getAdminRegions,
@@ -115,7 +116,8 @@ export default function FeatureFlagsPage() {
       )
       toast.success(`${humanizeKey(flag.key)} ${!flag.enabled ? "enabled" : "disabled"}`)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update flag")
+      logError(e, "updating feature flag")
+      toast.error("Failed to update flag")
     } finally {
       setSaving(null)
     }
@@ -139,7 +141,8 @@ export default function FeatureFlagsPage() {
       setNewFlagKey("")
       toast.success("Feature flag created")
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create flag")
+      logError(e, "creating feature flag")
+      toast.error("Failed to create flag")
     } finally {
       setAdding(false)
     }

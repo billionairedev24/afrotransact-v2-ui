@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { getStatusStyle } from "@/lib/status-config"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import { Dialog, DialogHeader, DialogBody, DialogFooter, ConfirmDialog } from "@/components/ui/Dialog"
 import {
   getSubscription,
@@ -129,7 +130,8 @@ export default function SubscriptionPage() {
       setSeller(sellerRes)
       setPaymentInfo(payInfo)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load subscription")
+      logError(e, "loading subscription")
+      setError("Failed to load subscription")
     } finally {
       setLoading(false)
     }
@@ -153,7 +155,8 @@ export default function SubscriptionPage() {
       setSubscription(sub)
       toast.success("Free trial started!")
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to start trial")
+      logError(e, "starting trial")
+      setError("Failed to start trial")
     } finally {
       setTrialLoading(false)
     }
@@ -170,7 +173,8 @@ export default function SubscriptionPage() {
       setConfirmCancel(false)
       toast.success("Subscription cancellation requested")
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to cancel subscription")
+      logError(e, "cancelling subscription")
+      setError("Failed to cancel subscription")
     } finally {
       setCancelLoading(false)
     }
@@ -186,7 +190,8 @@ export default function SubscriptionPage() {
       setChangePlanOpen(false)
       toast.success(`Plan changed to ${sub.plan.name}`)
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to change plan")
+      logError(e, "changing plan")
+      toast.error("Failed to change plan")
     } finally {
       setChangePlanLoading(null)
     }

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import {
   Bell,
   Loader2,
@@ -62,7 +63,8 @@ export default function NotificationRoutingPage() {
       setEventTypes(types ?? [])
       setRecipients(recs ?? [])
     } catch (e: unknown) {
-      toast.error("Failed to load data: " + (e instanceof Error ? e.message : "Unknown error"))
+      logError(e, "loading notification routing data")
+      toast.error("Failed to load data")
     } finally {
       setLoading(false)
     }
@@ -92,7 +94,8 @@ export default function NotificationRoutingPage() {
       setShowAdd(false)
       loadData()
     } catch (e: unknown) {
-      toast.error("Add failed: " + (e instanceof Error ? e.message : "Unknown error"))
+      logError(e, "adding notification recipient")
+      toast.error("Add failed")
     } finally {
       setAdding(false)
     }
@@ -108,7 +111,8 @@ export default function NotificationRoutingPage() {
       toast.success("Recipient removed")
       loadData()
     } catch (e: unknown) {
-      toast.error("Remove failed: " + (e instanceof Error ? e.message : "Unknown error"))
+      logError(e, "removing notification recipient")
+      toast.error("Remove failed")
     }
   }
 
@@ -122,7 +126,8 @@ export default function NotificationRoutingPage() {
       )
       toast.success(r.active ? "Paused" : "Activated")
     } catch (e: unknown) {
-      toast.error("Toggle failed: " + (e instanceof Error ? e.message : "Unknown error"))
+      logError(e, "toggling notification recipient")
+      toast.error("Toggle failed")
     }
   }
 

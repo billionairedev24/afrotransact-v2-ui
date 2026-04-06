@@ -23,6 +23,7 @@ import {
   getActiveDeals,
   type DealData,
 } from "@/lib/api"
+import { logError } from "@/lib/errors"
 
 export default function ProductPage() {
   const params = useParams()
@@ -85,9 +86,9 @@ export default function ProductPage() {
           console.warn("Secondary data fetch failed (flags/deals):", secondaryError)
         }
       } catch (e) {
+        logError(e, "loading product")
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Product not found")
-          console.error("Product fetch error:", e)
+          setError("Product not found")
         }
       } finally {
         if (!cancelled) setLoading(false)

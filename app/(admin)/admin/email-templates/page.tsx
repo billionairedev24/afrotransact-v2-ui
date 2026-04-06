@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { logError } from "@/lib/errors"
 import { toast } from "sonner"
 import {
   Mail,
@@ -198,8 +199,9 @@ export default function EmailTemplatesPage() {
       if (!token) return
       const list = await getEmailTemplates(token, filterCategory || undefined)
       setTemplates(list ?? [])
-    } catch (e: any) {
-      toast.error("Failed to load templates: " + e.message)
+    } catch (e: unknown) {
+      logError(e, "loading email templates")
+      toast.error("Failed to load templates")
     } finally {
       setLoading(false)
     }
@@ -222,8 +224,9 @@ export default function EmailTemplatesPage() {
       setActiveTab("editor")
       setPreviewHTML("")
       setViewMode("detail")
-    } catch (e: any) {
-      toast.error("Failed to load template: " + e.message)
+    } catch (e: unknown) {
+      logError(e, "loading email template")
+      toast.error("Failed to load template")
     } finally {
       setLoadingDetail(false)
     }
@@ -310,8 +313,9 @@ export default function EmailTemplatesPage() {
       toast.success("Template saved")
       setSelected({ ...selected, subject_template: editSubject, html_body: editHTML, text_body: editText, is_default: false })
       loadTemplates()
-    } catch (e: any) {
-      toast.error("Save failed: " + e.message)
+    } catch (e: unknown) {
+      logError(e, "saving email template")
+      toast.error("Save failed")
     } finally {
       setSaving(false)
     }
@@ -331,8 +335,9 @@ export default function EmailTemplatesPage() {
       setEditText(tpl.text_body || "")
       toast.success("Template reset to default")
       loadTemplates()
-    } catch (e: any) {
-      toast.error("Reset failed: " + e.message)
+    } catch (e: unknown) {
+      logError(e, "resetting email template")
+      toast.error("Reset failed")
     } finally {
       setResetting(false)
     }
@@ -362,8 +367,9 @@ export default function EmailTemplatesPage() {
       resetCreateForm()
       setViewMode("list")
       loadTemplates()
-    } catch (e: any) {
-      toast.error("Create failed: " + e.message)
+    } catch (e: unknown) {
+      logError(e, "creating email template")
+      toast.error("Create failed")
     } finally {
       setCreating(false)
     }
@@ -384,8 +390,9 @@ export default function EmailTemplatesPage() {
       setSelected(null)
       setViewMode("list")
       loadTemplates()
-    } catch (e: any) {
-      toast.error("Delete failed: " + e.message)
+    } catch (e: unknown) {
+      logError(e, "deleting email template")
+      toast.error("Delete failed")
     }
   }
 
@@ -398,8 +405,9 @@ export default function EmailTemplatesPage() {
       const result = await sendTestEmail(token, selected.slug, { to: testEmail })
       toast.success(`Test email sent to ${result.to}`)
       setShowSendTest(false)
-    } catch (e: any) {
-      toast.error("Send test failed: " + e.message)
+    } catch (e: unknown) {
+      logError(e, "sending test email")
+      toast.error("Send test failed")
     } finally {
       setSendingTest(false)
     }

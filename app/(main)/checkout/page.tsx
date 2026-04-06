@@ -482,15 +482,8 @@ function ReviewStep({
         <div className="flex justify-between text-sm text-gray-600">
           <span>Subtotal</span><span>{formatCents(subtotal)}</span>
         </div>
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Shipping</span><span className="text-green-400">{shipping === 0 ? "Free" : formatCents(shipping)}</span>
-          </div>
-          {shippingByStore.size > 1 && Array.from(shippingByStore.entries()).map(([sid, v]) => (
-            <div key={sid} className="flex justify-between text-xs text-gray-400 pl-2">
-              <span>{v.storeName}</span><span>{formatCents(v.shippingCents)}</span>
-            </div>
-          ))}
+        <div className="flex justify-between text-sm text-gray-600">
+          <span>Shipping</span><span className="text-green-400">{shipping === 0 ? "Free" : formatCents(shipping)}</span>
         </div>
         <div className="flex justify-between text-sm text-gray-600">
           <span>Tax</span><span>{formatCents(tax)}</span>
@@ -948,6 +941,7 @@ export default function CheckoutPage() {
         phone: address.phone || undefined,
         saveAddress: wantsSaveProfile,
         couponCodes: codes.length > 0 ? codes : undefined,
+        dealId: appliedDeal?.id,
       })
 
       setCheckoutResult(result)

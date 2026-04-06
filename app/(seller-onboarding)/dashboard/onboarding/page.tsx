@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { useSession, signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import {
   Building2,
   Store,
@@ -482,7 +483,8 @@ export default function SellerOnboardingPage() {
       if (p) { hydrateFromProgress(p); toast.success("Business info saved") }
       return !!p
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save business info")
+      logError(e, "saving business info")
+      toast.error("Failed to save business info")
       return false
     } finally {
       setSaving(false)
@@ -560,7 +562,8 @@ export default function SellerOnboardingPage() {
       if (p) { hydrateFromProgress(p); toast.success("Store info saved") }
       return !!p
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save store info")
+      logError(e, "saving store info")
+      toast.error("Failed to save store info")
       return false
     } finally {
       setSaving(false)
@@ -582,7 +585,8 @@ export default function SellerOnboardingPage() {
       )
       if (p) { hydrateFromProgress(p); toast.success("Document uploaded") }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save document")
+      logError(e, "saving document")
+      toast.error("Failed to save document")
     }
   }
 
@@ -591,7 +595,8 @@ export default function SellerOnboardingPage() {
       const p = await withToken((t) => removeOnboardingDocument(t, docId))
       if (p) { hydrateFromProgress(p); toast.success("Document removed") }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to remove document")
+      logError(e, "removing document")
+      toast.error("Failed to remove document")
     }
   }
 
@@ -607,7 +612,8 @@ export default function SellerOnboardingPage() {
       if (p) { hydrateFromProgress(p); toast.success("Subscription plan saved") }
       return !!p
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save subscription")
+      logError(e, "saving subscription")
+      toast.error("Failed to save subscription")
       return false
     } finally {
       setSaving(false)
@@ -634,7 +640,8 @@ export default function SellerOnboardingPage() {
       }
       return true
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to set up Stripe")
+      logError(e, "setting up Stripe")
+      toast.error("Failed to set up Stripe")
       return false
     } finally {
       setSaving(false)
@@ -650,7 +657,8 @@ export default function SellerOnboardingPage() {
         toast.success("Payment method saved")
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save payment method")
+      logError(e, "saving payment method")
+      toast.error("Failed to save payment method")
     } finally {
       setSaving(false)
     }
@@ -686,7 +694,8 @@ export default function SellerOnboardingPage() {
         toast.success("Application submitted for review!")
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Submission failed")
+      logError(e, "submitting onboarding")
+      toast.error("Submission failed")
     } finally {
       setSubmitting(false)
     }
@@ -1505,7 +1514,8 @@ function StoreStep({
         toast.success("Logo uploaded")
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Logo upload failed")
+      logError(e, "uploading logo")
+      toast.error("Logo upload failed")
     }
   }
 
@@ -1518,7 +1528,8 @@ function StoreStep({
         toast.success("Banner uploaded")
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Banner upload failed")
+      logError(e, "uploading banner")
+      toast.error("Banner upload failed")
     }
   }
 
@@ -1671,7 +1682,8 @@ function DocumentsStep({
         onDocumentUploaded(docType, resolveUrl(uploaded), uploaded.name, uploaded.size, uploaded.type ?? "application/octet-stream")
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed")
+      logError(e, "uploading document")
+      toast.error("Upload failed")
     } finally {
       setUploadingSlot(null)
     }

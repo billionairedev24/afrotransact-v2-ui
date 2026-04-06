@@ -113,11 +113,11 @@ async function verifyCurrentPassword(
 
       const errBody = await res.text().catch(() => "")
       console.warn(
-        `[set-password] ROPC verify failed (client="${clientId}", username="${username}"): HTTP ${res.status}`,
+        `[set-password] ROPC verify failed (client="${clientId}"): HTTP ${res.status}`,
         errBody.slice(0, 300),
       )
     } catch (err) {
-      console.warn(`[set-password] ROPC verify error (username="${username}"):`, err)
+      console.warn(`[set-password] ROPC verify error:`, err)
     }
   }
 

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getAdminReviews, type ProductReviewsResponse, type Review } from "@/lib/api"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import {
   Star,
   MessageCircle,
@@ -134,7 +135,8 @@ export default function AdminReviewsPage() {
       const res = await getAdminReviews(token, p, pageSize)
       setData(res)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to load reviews")
+      logError(e, "loading reviews")
+      toast.error("Failed to load reviews")
     } finally {
       setLoading(false)
     }

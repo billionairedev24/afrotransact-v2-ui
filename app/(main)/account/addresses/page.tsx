@@ -13,6 +13,7 @@ import {
   getUserProfile,
   type UserAddress,
 } from "@/lib/api"
+import { logError } from "@/lib/errors"
 import {
   MapPin, Plus, Pencil, Trash2, Star, Loader2, AlertCircle, X, ChevronLeft,
 } from "lucide-react"
@@ -41,7 +42,8 @@ export default function AddressesPage() {
       const data = await getAddresses(token)
       setAddresses(data)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load addresses")
+      logError(e, "loading addresses")
+      setError("Failed to load addresses")
     } finally {
       setLoading(false)
     }
@@ -74,7 +76,8 @@ export default function AddressesPage() {
       setForm(EMPTY)
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Save failed")
+      logError(e, "saving address")
+      setError("Save failed")
     } finally {
       setSaving(false)
     }
@@ -88,7 +91,8 @@ export default function AddressesPage() {
       await deleteAddress(token, id)
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed")
+      logError(e, "deleting address")
+      setError("Delete failed")
     }
   }
 
@@ -99,7 +103,8 @@ export default function AddressesPage() {
       await setDefaultAddress(token, id)
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to set default")
+      logError(e, "setting default address")
+      setError("Failed to set default")
     }
   }
 

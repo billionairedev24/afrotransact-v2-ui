@@ -14,6 +14,7 @@ import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Shee
 import { ConfirmDialog } from "@/components/ui/Dialog"
 import { createColumnHelper } from "@tanstack/react-table"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { logError } from "@/lib/errors"
 import {
   getCurrentSeller,
   getSellerStores,
@@ -116,7 +117,8 @@ export default function ProductsPage() {
       setDeleteTarget(null)
       await loadProducts()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete product")
+      logError(e, "deleting product")
+      toast.error("Failed to delete product")
     } finally {
       setDeleteLoading(false)
     }
@@ -130,7 +132,8 @@ export default function ProductsPage() {
       toast.success("Product submitted for review")
       await loadProducts()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to submit")
+      logError(e, "submitting product for review")
+      toast.error("Failed to submit")
     }
   }, [loadProducts])
 
@@ -360,7 +363,8 @@ function ProductDetailSheet({
       toast.success("Product updated")
       onUpdated()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update product")
+      logError(e, "updating product")
+      toast.error("Failed to update product")
     } finally {
       setSaving(false)
     }
@@ -377,7 +381,8 @@ function ProductDetailSheet({
       toast.success("Product submitted for review")
       onUpdated()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to submit for review")
+      logError(e, "submitting product for review")
+      toast.error("Failed to submit for review")
     } finally {
       setSaving(false)
     }
@@ -407,7 +412,8 @@ function ProductDetailSheet({
         toast.success("Image added")
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to upload image")
+      logError(e, "uploading image")
+      toast.error("Failed to upload image")
     } finally {
       setUploading(false)
     }
@@ -424,7 +430,8 @@ function ProductDetailSheet({
       onUpdated()
       toast.success("Image removed")
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to remove image")
+      logError(e, "removing image")
+      toast.error("Failed to remove image")
     }
   }
 
@@ -442,7 +449,8 @@ function ProductDetailSheet({
       onUpdated()
       toast.success("Variant updated")
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update variant")
+      logError(e, "updating variant")
+      toast.error("Failed to update variant")
     }
   }
 
@@ -460,7 +468,8 @@ function ProductDetailSheet({
       onUpdated()
       toast.success("Variant deleted")
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete variant")
+      logError(e, "deleting variant")
+      toast.error("Failed to delete variant")
     }
   }
 

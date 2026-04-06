@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { createPortal } from "react-dom"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import { DataTable } from "@/components/ui/DataTable"
 import { Sheet, SheetHeader, SheetBody } from "@/components/ui/Sheet"
 import { createColumnHelper } from "@tanstack/react-table"
@@ -155,7 +156,8 @@ export default function UsersPage() {
       const data: AdminUser[] = await res.json()
       setUsers(data)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to load users")
+      logError(e, "loading users")
+      toast.error("Failed to load users")
     } finally {
       setLoading(false)
     }

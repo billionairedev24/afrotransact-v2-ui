@@ -19,6 +19,7 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { getBuyerOrders, type OrderDto } from "@/lib/api"
+import { logError } from "@/lib/errors"
 import { getStatusStyle } from "@/lib/status-config"
 import { OrderCardSkeleton } from "@/components/ui/Skeleton"
 
@@ -209,7 +210,8 @@ export default function OrdersPage() {
         setTotalPages(res.totalPages ?? Math.ceil((res.totalElements ?? 0) / PAGE_SIZE))
         setTotalElements(res.totalElements ?? 0)
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load orders")
+        logError(e, "loading orders")
+        if (!cancelled) setError("Failed to load orders")
       } finally {
         if (!cancelled) setLoading(false)
       }

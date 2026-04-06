@@ -30,6 +30,8 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     } catch {
       if (text) userMessage = text
     }
+    // Log every API error at source so it's always captured regardless of how the caller handles it
+    console.error(`[API] ${opts.method ?? "GET"} ${path} → ${res.status}`, userMessage)
     throw new ApiError(res.status, userMessage, path)
   }
 
@@ -956,6 +958,9 @@ export interface CheckoutRequest {
   saveAddress?: boolean
   totalWeightLbs?: number
   couponCodes?: string[]
+  /** Applied deal ID. Order service uses this to apply the deal discount directly from catalog
+   *  (fallback for when the deal's Kafka-created coupon hasn't been consumed yet). */
+  dealId?: string
 }
 
 export interface CheckoutResponse {

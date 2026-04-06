@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 import {
   Check,
   Edit2,
@@ -361,7 +362,8 @@ export default function AdminSubscriptionPage() {
         setBillingConfig(configRes ?? {})
       } catch (e) {
         if (cancelled) return
-        setError(e instanceof Error ? e.message : "Failed to load subscription data")
+        logError(e, "loading subscription data")
+        setError("Failed to load subscription data")
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -384,7 +386,8 @@ export default function AdminSubscriptionPage() {
       setCreateModalOpen(false)
       toast.success("Plan created successfully")
     } catch (e) {
-      setPlanError(e instanceof Error ? e.message : "Failed to create plan")
+      logError(e, "creating plan")
+      setPlanError("Failed to create plan")
     } finally {
       setSavingPlan(false)
     }
@@ -407,7 +410,8 @@ export default function AdminSubscriptionPage() {
       setEditingPlan(null)
       toast.success("Plan updated successfully")
     } catch (e) {
-      setPlanError(e instanceof Error ? e.message : "Failed to update plan")
+      logError(e, "updating plan")
+      setPlanError("Failed to update plan")
     } finally {
       setSavingPlan(false)
     }
@@ -425,7 +429,8 @@ export default function AdminSubscriptionPage() {
       setConfigSuccess(true)
       setTimeout(() => setConfigSuccess(false), 3000)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save billing config")
+      logError(e, "saving billing config")
+      setError("Failed to save billing config")
     } finally {
       setSavingConfig(false)
     }

@@ -359,6 +359,7 @@ export default function AdminSellersPage() {
 
       {/* Detail Slide-Over */}
       <DetailPanel
+        open={selectedSellerId !== null}
         detail={selectedDetail || null}
         loading={detailLoading}
         initialMode={panelAction}
@@ -545,12 +546,14 @@ function DdItem({ icon, children, onClick, className = "" }: { icon: React.React
 /* ─── Detail Slide-Over Panel ────────────────────────────────────────────── */
 
 function DetailPanel({
+  open,
   detail,
   loading,
   initialMode,
   onClose,
   onReview,
 }: {
+  open: boolean
   detail: AdminSellerDetail | null
   loading: boolean
   initialMode: ActionMode
@@ -561,6 +564,9 @@ function DetailPanel({
   const [reason, setReason] = useState("")
   const [message, setMessage] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     setMode(initialMode)
@@ -568,8 +574,6 @@ function DetailPanel({
     setMessage("")
     setSubmitting(false)
   }, [detail?.id, initialMode])
-
-  const open = detail !== null || loading
 
   async function submit(action: string, text?: string) {
     if (!detail) return
@@ -585,11 +589,11 @@ function DetailPanel({
   const isApproved = st === "approved" || st === "active"
   const canApprove = (st === "submitted" || st === "pending_review" || st === "under_review") && !isApproved
 
-  return (
+  const panel = (
     <>
-      {open && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onClose} />}
+      {open && <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm" onClick={onClose} />}
       <div
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-lg transform transition-transform duration-300 ease-out bg-white ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed inset-0 left-auto z-[201] w-full max-w-lg transform transition-transform duration-300 ease-out bg-white ${open ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
@@ -828,6 +832,9 @@ function DetailPanel({
       </div>
     </>
   )
+
+  if (!mounted) return null
+  return createPortal(panel, document.body)
 }
 
 /* ─── Shared micro-components ────────────────────────────────────────────── */

@@ -18,6 +18,7 @@ import {
   CreditCard, MapPin, Star, MessageSquare, BadgeCheck,
 } from "lucide-react"
 import { toast } from "sonner"
+import { logError } from "@/lib/errors"
 
 function formatCents(cents: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100)
@@ -374,7 +375,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
         const data = await getOrderByNumber(token, orderNumber)
         if (!cancelled) setOrder(data)
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load order")
+        logError(e, "loading order")
+        if (!cancelled) setError("Failed to load order")
       } finally {
         if (!cancelled) setLoading(false)
       }

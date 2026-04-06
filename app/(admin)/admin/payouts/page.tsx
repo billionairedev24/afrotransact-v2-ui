@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner"
 import { API_BASE } from "@/lib/api"
 import type { TransferRecord } from "@/lib/api"
+import { logError } from "@/lib/errors"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
 import { createColumnHelper } from "@tanstack/react-table"
@@ -94,7 +95,8 @@ export default function AdminPayoutsPage() {
         setTransfers(data.content || [])
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load payouts")
+      logError(e, "loading payouts")
+      setError("Failed to load payouts")
     }
   }, [])
 
