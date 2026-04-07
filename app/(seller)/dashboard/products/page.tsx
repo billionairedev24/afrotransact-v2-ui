@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useSession } from "next-auth/react"
 import {
   Plus, Package, Eye, Pencil, Trash2, Loader2, ImageIcon, Save, X,
-  Upload, Star, AlertCircle, Send,
+  Upload, Star, AlertCircle, Send, FileSpreadsheet,
 } from "lucide-react"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
@@ -230,14 +230,24 @@ export default function ProductsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
           <p className="mt-1 text-sm text-gray-500">Manage your product catalog</p>
         </div>
-        <Link
-          href="/dashboard/products/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Product
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/dashboard/products/bulk-import"
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Bulk Import
+          </Link>
+          <Link
+            href="/dashboard/products/new"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Product
+          </Link>
+        </div>
       </div>
+
 
       <DataTable
         columns={columns}

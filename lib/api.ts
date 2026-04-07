@@ -1912,14 +1912,40 @@ export interface AdminAnalyticsStatusCount {
 
 export interface AdminAnalyticsRegionRevenue {
   regionId: string
+  /** Resolved from config.regions when available */
+  regionName?: string
   revenueCents: number
   orderCount: number
 }
 
 export interface AdminAnalyticsStoreRevenue {
   storeId: string
+  /** Resolved from seller.stores when available */
+  storeName?: string
   revenueCents: number
   orderCount: number
+}
+
+export interface AdminAnalyticsPlatformHealth {
+  totalSellers: number
+  approvedSellers: number
+  pendingSellerApplications: number
+  activeStores: number
+  totalProducts: number
+  activeProducts: number
+  draftProducts: number
+  storesWithActiveCatalog: number
+  successfulPayments: number
+  failedPayments: number
+  pendingTransfers: number
+  pendingTransferAmountCents: number
+  paidTransferAmountCents: number
+  totalReviews?: number
+  avgRating?: number
+  reviewsLast30Days?: number
+  totalRecipients?: number
+  activeRecipients?: number
+  templateCount?: number
 }
 
 export interface AdminAnalyticsResponse {
@@ -1932,6 +1958,7 @@ export interface AdminAnalyticsResponse {
   ordersByStatus: AdminAnalyticsStatusCount[]
   revenueByRegion: AdminAnalyticsRegionRevenue[]
   topStores: AdminAnalyticsStoreRevenue[]
+  platformHealth?: AdminAnalyticsPlatformHealth
 }
 
 export interface SellerAnalyticsDailyPoint {
@@ -1963,19 +1990,308 @@ export interface SellerAnalyticsResponse {
   topProducts: SellerAnalyticsProductRevenue[]
 }
 
-export function getAdminAnalytics(token: string, days = 30): Promise<AdminAnalyticsResponse> {
-  return api<AdminAnalyticsResponse>(`/api/v1/analytics/admin?days=${days}`, { token })
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null
 }
 
-export function getSellerAnalytics(
+function pickNum(o: Record<string, unknown>, camel: string, snake: string): number {
+  const v = o[camel] ?? o[snake]
+  if (typeof v === "number" && Number.isFinite(v)) return v
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v)
+  return 0
+}
+
+function pickStr(o: Record<string, unknown>, camel: string, snake: string): string {
+  const v = o[camel] ?? o[snake]
+  if (typeof v === "string") return v
+  if (v != null && typeof v !== "object") return String(v)
+  return ""
+}
+
+function pickArr(o: Record<string, unknown>, camel: string, snake: string): unknown[] {
+  const a = o[camel] ?? o[snake]
+  return Array.isArray(a) ? a : []
+}
+
+function normalizeAdminAnalytics(raw: unknown): AdminAnalyticsResponse {
+  const o = asRecord(raw) ?? {}
+  const mapDay = (row: unknown): AdminAnalyticsDailyPoint => {
+    const r = asRecord(row) ?? {}
+    return {
+      day: pickStr(r, "day", "day"),
+      revenueCents: pickNum(r, "revenueCents", "revenue_cents"),
+      commissionCents: pickNum(r, "commissionCents", "commission_cents"),
+      orderCount: pickNum(r, "orderCount", "order_count"),
+    }
+  }
+  const mapStatus = (row: unknown): AdminAnalyticsStatusCount => {
+    const r = asRecord(row) ?? {}
+    return {
+      status: pickStr(r, "status", "status"),
+      count: pickNum(r, "count", "count"),
+      revenueCents: pickNum(r, "revenueCents", "revenue_cents"),
+    }
+  }
+  const mapRegion = (row: unknown): AdminAnalyticsRegionRevenue => {
+    const r = asRecord(row) ?? {}
+    const regionName =
+      pickStr(r, "regionName", "region_name") ||
+      pickStr(r, "regionLabel", "region_label")
+    return {
+      regionId: pickStr(r, "regionId", "region_id"),
+      regionName: regionName || undefined,
+      revenueCents: pickNum(r, "revenueCents", "revenue_cents"),
+      orderCount: pickNum(r, "orderCount", "order_count"),
+    }
+  }
+  const mapStore = (row: unknown): AdminAnalyticsStoreRevenue => {
+    const r = asRecord(row) ?? {}
+    const storeName =
+      pickStr(r, "storeName", "store_name") ||
+      pickStr(r, "storeLabel", "store_label")
+    return {
+      storeId: pickStr(r, "storeId", "store_id"),
+      storeName: storeName || undefined,
+      revenueCents: pickNum(r, "revenueCents", "revenue_cents"),
+      orderCount: pickNum(r, "orderCount", "order_count"),
+    }
+  }
+  return {
+    totalRevenueCents: pickNum(o, "totalRevenueCents", "total_revenue_cents"),
+    totalCommissionCents: pickNum(o, "totalCommissionCents", "total_commission_cents"),
+    totalOrders: pickNum(o, "totalOrders", "total_orders"),
+    avgOrderValueCents: pickNum(o, "avgOrderValueCents", "avg_order_value_cents"),
+    totalDiscountCents: pickNum(o, "totalDiscountCents", "total_discount_cents"),
+    revenueByDay: pickArr(o, "revenueByDay", "revenue_by_day").map(mapDay),
+    ordersByStatus: pickArr(o, "ordersByStatus", "orders_by_status").map(mapStatus),
+    revenueByRegion: pickArr(o, "revenueByRegion", "revenue_by_region").map(mapRegion),
+    topStores: pickArr(o, "topStores", "top_stores").map(mapStore),
+  }
+}
+
+function mapSellerAnalyticsDay(row: unknown): SellerAnalyticsDailyPoint {
+  const r = asRecord(row) ?? {}
+  return {
+    day: pickStr(r, "day", "day"),
+    revenueCents: pickNum(r, "revenueCents", "revenue_cents"),
+    orderCount: pickNum(r, "orderCount", "order_count"),
+  }
+}
+
+function mapSellerAnalyticsFulfillment(row: unknown): SellerAnalyticsStatusCount {
+  const r = asRecord(row) ?? {}
+  return {
+    status: pickStr(r, "status", "status"),
+    count: pickNum(r, "count", "count"),
+  }
+}
+
+function mapSellerAnalyticsProduct(row: unknown): SellerAnalyticsProductRevenue {
+  const r = asRecord(row) ?? {}
+  return {
+    productId: pickStr(r, "productId", "product_id"),
+    productTitle: pickStr(r, "productTitle", "product_title"),
+    revenueCents: pickNum(r, "revenueCents", "revenue_cents"),
+    unitsSold: pickNum(r, "unitsSold", "units_sold"),
+    orderCount: pickNum(r, "orderCount", "order_count"),
+  }
+}
+
+function normalizeSellerAnalytics(raw: unknown): SellerAnalyticsResponse {
+  const o = asRecord(raw) ?? {}
+  return {
+    totalRevenueCents: pickNum(o, "totalRevenueCents", "total_revenue_cents"),
+    totalOrders: pickNum(o, "totalOrders", "total_orders"),
+    avgOrderValueCents: pickNum(o, "avgOrderValueCents", "avg_order_value_cents"),
+    fulfillmentRate: pickNum(o, "fulfillmentRate", "fulfillment_rate"),
+    revenueByDay: pickArr(o, "revenueByDay", "revenue_by_day").map(mapSellerAnalyticsDay),
+    fulfillmentByStatus: pickArr(o, "fulfillmentByStatus", "fulfillment_by_status").map(
+      mapSellerAnalyticsFulfillment,
+    ),
+    topProducts: pickArr(o, "topProducts", "top_products").map(mapSellerAnalyticsProduct),
+  }
+}
+
+export async function getAdminAnalytics(
+  token: string,
+  startDate: string,
+  endDate: string,
+): Promise<AdminAnalyticsResponse> {
+  const raw = await api<unknown>(
+    `/api/v1/analytics/admin?startDate=${startDate}&endDate=${endDate}`,
+    { token },
+  )
+  return normalizeAdminAnalytics(raw)
+}
+
+export interface SellerAnalyticsSnapshot {
+  totalSellers: number
+  approvedSellers: number
+  pendingSellerApplications: number
+  activeStores: number
+}
+
+export interface CatalogAnalyticsSnapshot {
+  totalProducts: number
+  activeProducts: number
+  draftProducts: number
+  storesWithActiveCatalog: number
+}
+
+export interface PaymentAnalyticsSnapshot {
+  successfulPayments: number
+  failedPayments: number
+  pendingTransfers: number
+  pendingTransferAmountCents: number
+  paidTransferAmountCents: number
+}
+
+export interface ReviewAnalyticsSnapshot {
+  totalReviews: number
+  avgRating: number
+  verifiedReviews: number
+  reviewsLast30Days: number
+}
+
+export interface NotificationAnalyticsSnapshot {
+  totalRecipients: number
+  activeRecipients: number
+  templateCount: number
+  customTemplateCount: number
+}
+
+function normalizeSellerSnapshot(raw: unknown): SellerAnalyticsSnapshot {
+  const o = asRecord(raw) ?? {}
+  return {
+    totalSellers: pickNum(o, "totalSellers", "total_sellers"),
+    approvedSellers: pickNum(o, "approvedSellers", "approved_sellers"),
+    pendingSellerApplications: pickNum(o, "pendingSellerApplications", "pending_seller_applications"),
+    activeStores: pickNum(o, "activeStores", "active_stores"),
+  }
+}
+
+function normalizeCatalogSnapshot(raw: unknown): CatalogAnalyticsSnapshot {
+  const o = asRecord(raw) ?? {}
+  return {
+    totalProducts: pickNum(o, "totalProducts", "total_products"),
+    activeProducts: pickNum(o, "activeProducts", "active_products"),
+    draftProducts: pickNum(o, "draftProducts", "draft_products"),
+    storesWithActiveCatalog: pickNum(o, "storesWithActiveCatalog", "stores_with_active_catalog"),
+  }
+}
+
+function normalizePaymentSnapshot(raw: unknown): PaymentAnalyticsSnapshot {
+  const o = asRecord(raw) ?? {}
+  return {
+    successfulPayments: pickNum(o, "successfulPayments", "successful_payments"),
+    failedPayments: pickNum(o, "failedPayments", "failed_payments"),
+    pendingTransfers: pickNum(o, "pendingTransfers", "pending_transfers"),
+    pendingTransferAmountCents: pickNum(o, "pendingTransferAmountCents", "pending_transfer_amount_cents"),
+    paidTransferAmountCents: pickNum(o, "paidTransferAmountCents", "paid_transfer_amount_cents"),
+  }
+}
+
+function normalizeReviewSnapshot(raw: unknown): ReviewAnalyticsSnapshot {
+  const o = asRecord(raw) ?? {}
+  return {
+    totalReviews: pickNum(o, "totalReviews", "total_reviews"),
+    avgRating: pickNum(o, "avgRating", "avg_rating"),
+    verifiedReviews: pickNum(o, "verifiedReviews", "verified_reviews"),
+    reviewsLast30Days: pickNum(o, "reviewsLast30Days", "reviews_last_30_days"),
+  }
+}
+
+function normalizeNotificationSnapshot(raw: unknown): NotificationAnalyticsSnapshot {
+  const o = asRecord(raw) ?? {}
+  return {
+    totalRecipients: pickNum(o, "totalRecipients", "total_recipients"),
+    activeRecipients: pickNum(o, "activeRecipients", "active_recipients"),
+    templateCount: pickNum(o, "templateCount", "template_count"),
+    customTemplateCount: pickNum(o, "customTemplateCount", "custom_template_count"),
+  }
+}
+
+export async function getAdminSellerAnalyticsSnapshot(token: string) {
+  const raw = await api<unknown>("/api/v1/admin/sellers/analytics", { token })
+  return normalizeSellerSnapshot(raw)
+}
+
+export async function getAdminCatalogAnalyticsSnapshot(token: string) {
+  const raw = await api<unknown>("/api/v1/products/admin/analytics", { token })
+  return normalizeCatalogSnapshot(raw)
+}
+
+export async function getAdminPaymentAnalyticsSnapshot(token: string) {
+  const raw = await api<unknown>("/api/v1/admin/payments/analytics", { token })
+  return normalizePaymentSnapshot(raw)
+}
+
+export async function getAdminReviewAnalyticsSnapshot(token: string) {
+  const raw = await api<unknown>("/api/v1/reviews/admin/analytics", { token })
+  return normalizeReviewSnapshot(raw)
+}
+
+export async function getAdminNotificationAnalyticsSnapshot(token: string) {
+  const raw = await api<unknown>("/api/v1/admin/notification-analytics", { token })
+  return normalizeNotificationSnapshot(raw)
+}
+
+export async function getSellerAnalytics(
   token: string,
   storeIds: string[],
-  days = 30,
+  startDate: string,
+  endDate: string,
 ): Promise<SellerAnalyticsResponse> {
   const params = new URLSearchParams()
   storeIds.forEach((id) => params.append("storeIds", id))
-  params.set("days", String(days))
-  return api<SellerAnalyticsResponse>(`/api/v1/analytics/seller?${params.toString()}`, { token })
+  params.set("startDate", startDate)
+  params.set("endDate", endDate)
+  const raw = await api<unknown>(`/api/v1/analytics/seller?${params.toString()}`, { token })
+  return normalizeSellerAnalytics(raw)
+}
+
+// ── Analytics visibility (config — separate from per-region feature flags) ─
+
+export interface AnalyticsAvailability {
+  adminAnalyticsEnabled: boolean
+  sellerAnalyticsEnabled: boolean
+}
+
+interface RawAnalyticsAvailability {
+  admin_analytics_enabled: boolean
+  seller_analytics_enabled: boolean
+}
+
+function mapAnalyticsAvailability(r: RawAnalyticsAvailability): AnalyticsAvailability {
+  return {
+    adminAnalyticsEnabled: r.admin_analytics_enabled,
+    sellerAnalyticsEnabled: r.seller_analytics_enabled,
+  }
+}
+
+/** Public read — sidebars and analytics routes (no token). */
+export async function getAnalyticsAvailability(): Promise<AnalyticsAvailability> {
+  const raw = await api<RawAnalyticsAvailability>("/api/v1/config/analytics")
+  return mapAnalyticsAvailability(raw)
+}
+
+export async function getAdminAnalyticsSettings(token: string): Promise<AnalyticsAvailability> {
+  const raw = await api<RawAnalyticsAvailability>("/api/v1/admin/config/analytics", { token })
+  return mapAnalyticsAvailability(raw)
+}
+
+export async function putAdminAnalyticsSettings(
+  token: string,
+  s: AnalyticsAvailability,
+): Promise<void> {
+  await api<{ status: string }>("/api/v1/admin/config/analytics", {
+    method: "PUT",
+    body: {
+      admin_analytics_enabled: s.adminAnalyticsEnabled,
+      seller_analytics_enabled: s.sellerAnalyticsEnabled,
+    },
+    token,
+  })
 }
 
 export { API_BASE }

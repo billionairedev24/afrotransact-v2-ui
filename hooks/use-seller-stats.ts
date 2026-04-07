@@ -35,17 +35,20 @@ export function useSellerStores(sellerId?: string) {
 }
 
 /**
- * Returns seller analytics for the given store IDs and time range.
+ * Returns seller analytics for the given store IDs and date range.
+ * Both startDate and endDate must be ISO date strings (YYYY-MM-DD).
  */
-export function useSellerAnalytics(storeIds: string[], days = 30) {
+export function useSellerAnalytics(storeIds: string[], startDate: string, endDate: string, enabled = true) {
   return useQuery({
-    queryKey: ["seller", "analytics", storeIds, days],
+    // v2: bust cached responses from earlier buggy backend deployments
+    queryKey: ["seller", "analytics", "v2", storeIds, startDate, endDate],
     queryFn: async () => {
       const token = await getAccessToken();
       if (!token) throw new Error("No token");
-      return getSellerAnalytics(token, storeIds, days);
+      return getSellerAnalytics(token, storeIds, startDate, endDate);
     },
-    enabled: storeIds.length > 0,
-    staleTime: 5 * 60 * 1000,
+    enabled: enabled && storeIds.length > 0 && !!startDate && !!endDate,
+    staleTime: 30 * 1000,
+    refetchOnMount: "always",
   });
 }

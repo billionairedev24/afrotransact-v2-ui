@@ -9,6 +9,11 @@ import {
   getAdminReviews,
   getAdminSellerDetail,
   getAdminAnalytics,
+  getAdminCatalogAnalyticsSnapshot,
+  getAdminNotificationAnalyticsSnapshot,
+  getAdminPaymentAnalyticsSnapshot,
+  getAdminReviewAnalyticsSnapshot,
+  getAdminSellerAnalyticsSnapshot,
   type Product,
   type SellerInfo
 } from "@/lib/api";
@@ -165,16 +170,76 @@ export function useAdminSellerDetail(sellerId: string | null) {
 }
 
 /**
- * Returns admin platform analytics (revenue, commissions, trends) for the given time range.
+ * Returns admin platform analytics (revenue, commissions, trends) for the given date range.
+ * Both startDate and endDate must be ISO date strings (YYYY-MM-DD).
  */
-export function useAdminAnalytics(days = 30) {
+export function useAdminAnalytics(startDate: string, endDate: string, enabled = true) {
   return useQuery({
-    queryKey: ["admin", "analytics", days],
+    // v2: bust cached responses from earlier buggy backend deployments
+    queryKey: ["admin", "analytics", "v2", startDate, endDate],
     queryFn: async () => {
       const token = await getAccessToken();
       if (!token) throw new Error("No token");
-      return getAdminAnalytics(token, days);
+      const base = await getAdminAnalytics(token, startDate, endDate);
+      const [seller, catalog, payment, review, notification] = await Promise.allSettled([
+        getAdminSellerAnalyticsSnapshot(token),
+        getAdminCatalogAnalyticsSnapshot(token),
+        getAdminPaymentAnalyticsSnapshot(token),
+        getAdminReviewAnalyticsSnapshot(token),
+        getAdminNotificationAnalyticsSnapshot(token),
+      ]);
+
+      const warnings: string[] = [];
+      const sellerData = seller.status === "fulfilled" ? seller.value : null;
+      const catalogData = catalog.status === "fulfilled" ? catalog.value : null;
+      const paymentData = payment.status === "fulfilled" ? payment.value : null;
+      const reviewData = review.status === "fulfilled" ? review.value : null;
+      const notificationData = notification.status === "fulfilled" ? notification.value : null;
+      if (!sellerData) warnings.push("seller");
+      if (!catalogData) warnings.push("catalog");
+      if (!paymentData) warnings.push("payment");
+      if (!reviewData) warnings.push("review");
+      if (!notificationData) warnings.push("notification");
+
+      const warningLabels: Record<string, string> = {
+        seller: "Seller service",
+        catalog: "Product catalog",
+        payment: "Payments",
+        review: "Reviews",
+        notification: "Notifications",
+      }
+      const platformHealthWarnings =
+        warnings.length > 0 ? warnings.map((w) => warningLabels[w] ?? w) : []
+
+      return {
+        ...base,
+        platformHealth: {
+          totalSellers: sellerData?.totalSellers ?? 0,
+          approvedSellers: sellerData?.approvedSellers ?? 0,
+          pendingSellerApplications: sellerData?.pendingSellerApplications ?? 0,
+          activeStores: sellerData?.activeStores ?? 0,
+          totalProducts: catalogData?.totalProducts ?? 0,
+          activeProducts: catalogData?.activeProducts ?? 0,
+          draftProducts: catalogData?.draftProducts ?? 0,
+          storesWithActiveCatalog: catalogData?.storesWithActiveCatalog ?? 0,
+          successfulPayments: paymentData?.successfulPayments ?? 0,
+          failedPayments: paymentData?.failedPayments ?? 0,
+          pendingTransfers: paymentData?.pendingTransfers ?? 0,
+          pendingTransferAmountCents: paymentData?.pendingTransferAmountCents ?? 0,
+          paidTransferAmountCents: paymentData?.paidTransferAmountCents ?? 0,
+          totalReviews: reviewData?.totalReviews ?? 0,
+          avgRating: reviewData?.avgRating ?? 0,
+          reviewsLast30Days: reviewData?.reviewsLast30Days ?? 0,
+          totalRecipients: notificationData?.totalRecipients ?? 0,
+          activeRecipients: notificationData?.activeRecipients ?? 0,
+          templateCount: notificationData?.templateCount ?? 0,
+        },
+        platformHealthWarnings,
+      };
     },
-    staleTime: 5 * 60 * 1000,
+    // Analytics should reflect recent ops; keep it fresh.
+    enabled: enabled && !!startDate && !!endDate,
+    staleTime: 30 * 1000,
+    refetchOnMount: "always",
   });
 }

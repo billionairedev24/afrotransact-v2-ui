@@ -34,6 +34,7 @@ import { useSignOut } from "@/hooks/useSignOut"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getAdminProducts, getAdminSellers } from "@/lib/api"
 import { useWorkQueueCounts } from "@/hooks/use-admin-stats"
+import { useAdminAnalyticsNavVisible } from "@/hooks/use-analytics-settings"
 
 interface NavItem {
   href: string
@@ -74,9 +75,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const { data: qStats } = useWorkQueueCounts()
   const queueCount = qStats?.total ?? 0
   const signOut = useSignOut()
+  const showAdminAnalytics = useAdminAnalyticsNavVisible()
 
-  const navItems: NavItem[] = BASE_NAV_ITEMS.map((item) =>
-    item.href === "/admin/work-queue" ? { ...item, badge: queueCount } : item
+  const navItems: NavItem[] = BASE_NAV_ITEMS.filter(
+    (item) => showAdminAnalytics || item.href !== "/admin/analytics",
+  ).map((item) =>
+    item.href === "/admin/work-queue" ? { ...item, badge: queueCount } : item,
   )
 
   const navLink = (item: NavItem, onClick?: () => void) => {
@@ -181,8 +185,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Content */}
-        <main className="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:pl-56">
-          <div className="mx-auto min-w-0 max-w-[1100px]">{children}</div>
+        <main className="min-w-0 flex-1 lg:pl-56">
+          <div className="mx-auto min-w-0 max-w-[1100px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>
     </div>

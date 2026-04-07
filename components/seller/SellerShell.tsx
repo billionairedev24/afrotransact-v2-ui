@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
 import { StripeActionBanner } from "@/components/seller/StripeActionBanner"
 import type { SellerInfo } from "@/lib/api"
+import { useSellerAnalyticsNavVisible } from "@/hooks/use-analytics-settings"
 
 const NAV_ITEMS = [
   { href: "/dashboard",              label: "Overview",       icon: LayoutDashboard },
@@ -49,6 +50,10 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const signOut = useSignOut()
+  const showSellerAnalytics = useSellerAnalyticsNavVisible()
+  const navItems = NAV_ITEMS.filter(
+    (item) => showSellerAnalytics || item.href !== "/dashboard/analytics",
+  )
 
   const avatarLetter = userName?.charAt(0)?.toUpperCase() ?? "S"
 
@@ -84,7 +89,7 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
           </div>
 
           <nav className="flex-1 px-3 py-4 space-y-1">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const Icon = item.icon
               const active =
                 pathname === item.href || pathname.startsWith(item.href + "/")
@@ -157,7 +162,7 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
                 </button>
               </div>
               <nav className="px-3 py-4 space-y-1">
-                {NAV_ITEMS.map((item) => {
+                {navItems.map((item) => {
                   const Icon = item.icon
                   const active =
                     pathname === item.href ||
@@ -195,7 +200,7 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
 
         {/* Main content */}
         <main className="min-w-0 flex-1 lg:pl-60">
-          <div className="mx-auto min-w-0 max-w-6xl p-6 lg:p-8">
+          <div className="mx-auto min-w-0 max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             {seller && <StripeActionBanner seller={seller} />}
             {children}
           </div>
