@@ -2182,12 +2182,19 @@ function normalizeCatalogSnapshot(raw: unknown): CatalogAnalyticsSnapshot {
 
 function normalizePaymentSnapshot(raw: unknown): PaymentAnalyticsSnapshot {
   const o = asRecord(raw) ?? {}
+  const pendingSettlementCents = pickNum(o, "pendingSettlementCents", "pending_settlement_cents")
+  const readyForTransferCents = pickNum(o, "readyForTransferCents", "ready_for_transfer_cents")
+  const transferredCents = pickNum(o, "transferredCents", "transferred_cents")
+  const pendingAmountFromSummary = pendingSettlementCents + readyForTransferCents
+  const paidAmountFromSummary = transferredCents
   return {
     successfulPayments: pickNum(o, "successfulPayments", "successful_payments"),
     failedPayments: pickNum(o, "failedPayments", "failed_payments"),
     pendingTransfers: pickNum(o, "pendingTransfers", "pending_transfers"),
-    pendingTransferAmountCents: pickNum(o, "pendingTransferAmountCents", "pending_transfer_amount_cents"),
-    paidTransferAmountCents: pickNum(o, "paidTransferAmountCents", "paid_transfer_amount_cents"),
+    pendingTransferAmountCents:
+      pickNum(o, "pendingTransferAmountCents", "pending_transfer_amount_cents") || pendingAmountFromSummary,
+    paidTransferAmountCents:
+      pickNum(o, "paidTransferAmountCents", "paid_transfer_amount_cents") || paidAmountFromSummary,
   }
 }
 
@@ -2222,7 +2229,7 @@ export async function getAdminCatalogAnalyticsSnapshot(token: string) {
 }
 
 export async function getAdminPaymentAnalyticsSnapshot(token: string) {
-  const raw = await api<unknown>("/api/v1/admin/payments/analytics", { token })
+  const raw = await api<unknown>("/api/v1/admin/payouts/summary", { token })
   return normalizePaymentSnapshot(raw)
 }
 

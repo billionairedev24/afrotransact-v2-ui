@@ -20,7 +20,7 @@ export async function POST() {
     return NextResponse.json(
       {
         error:
-          "Could not update your account in Keycloak. For local dev: run Keycloak, set KEYCLOAK_ADMIN_USERNAME / KEYCLOAK_ADMIN_PASSWORD (master admin), ensure KEYCLOAK_ISSUER matches your realm, create a realm role named `seller`, and check the Next.js server log for [keycloak-admin] details.",
+          "Could not update your account in Keycloak. Check server env for KEYCLOAK_ADMIN_API_CLIENT_ID / KEYCLOAK_ADMIN_API_SECRET (preferred) or KEYCLOAK_ADMIN_USERNAME / KEYCLOAK_ADMIN_PASSWORD fallback, ensure KEYCLOAK_ISSUER and KEYCLOAK_REALM are correct, and verify the `seller` realm role exists.",
       },
       { status: 503 },
     )

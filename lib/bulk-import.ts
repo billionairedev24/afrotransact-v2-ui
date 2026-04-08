@@ -121,16 +121,50 @@ export function resolveImageGroup(
 //  Category flattening + lookup
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Normalizes spreadsheet / API text so category matching survives Excel quirks (NBSP, etc.). */
+export function normalizeCategoryKey(raw: string): string {
+  return raw
+    .trim()
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u2000-\u200a\u202f\u205f\u3000]/g, " ")
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+}
+
+function registerCategoryAliases(map: Map<string, string>, id: string, name: string, slug?: string | null) {
+  const nk = normalizeCategoryKey(name)
+  if (nk) map.set(nk, id)
+  const s = slug?.trim()
+  if (s) {
+    map.set(s.toLowerCase(), id)
+    const fromSlug = normalizeCategoryKey(s.replace(/-/g, " "))
+    if (fromSlug && fromSlug !== nk) map.set(fromSlug, id)
+  }
+}
+
 export function flattenCategories(cats: CategoryRef[]): Map<string, string> {
   const map = new Map<string, string>()
   function walk(nodes: CategoryRef[]) {
     for (const c of nodes) {
-      map.set(c.name.trim().toLowerCase(), c.id)
+      registerCategoryAliases(map, c.id, c.name, c.slug)
       if (c.children?.length) walk(c.children)
     }
   }
   walk(cats)
   return map
+}
+
+/** Display names in catalog order — use for the Categories sheet (exact API names). */
+export function collectCategoryDisplayNames(cats: CategoryRef[]): string[] {
+  const out: string[] = []
+  function walk(nodes: CategoryRef[]) {
+    for (const c of nodes) {
+      out.push(c.name.trim())
+      if (c.children?.length) walk(c.children)
+    }
+  }
+  walk(cats)
+  return out
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -160,13 +194,13 @@ export function generateTemplate(
   const wb = XLSX.utils.book_new()
 
   // ── Products sheet ──────────────────────────────────────────────────────────
-  const flatCats = flattenCategories(categories)
-  const firstCat = [...flatCats.keys()][0] ?? "skincare"
+  const displayNames = collectCategoryDisplayNames(categories)
+  const firstCat = displayNames[0] ?? "Skincare"
 
   const sampleRow = [
     "Organic Shea Butter",
     "Rich moisturizing shea butter sourced from West Africa. Perfect for dry skin and hair.",
-    firstCat.charAt(0).toUpperCase() + firstCat.slice(1),
+    firstCat,
     "19.99",
     "24.99",
     "50",
@@ -228,9 +262,7 @@ export function generateTemplate(
   XLSX.utils.book_append_sheet(wb, wsInst, "Instructions")
 
   // ── Categories sheet ────────────────────────────────────────────────────────
-  const catRows = [...flatCats.keys()].map((name) => [
-    name.charAt(0).toUpperCase() + name.slice(1),
-  ])
+  const catRows = displayNames.map((name) => [name])
   const wsCat = XLSX.utils.aoa_to_sheet([["category_name"], ...catRows])
   wsCat["!cols"] = [{ wch: 30 }]
   XLSX.utils.book_append_sheet(wb, wsCat, "Categories")
@@ -312,7 +344,7 @@ export function validateRows(
       errors.push("Description must be at least 10 characters")
 
     // Category
-    const catKey = row.category.trim().toLowerCase()
+    const catKey = normalizeCategoryKey(row.category)
     const categoryId = categoryMap.get(catKey) ?? null
     if (!row.category) {
       errors.push("Category is required")

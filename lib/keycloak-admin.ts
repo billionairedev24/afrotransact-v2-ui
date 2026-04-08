@@ -7,6 +7,30 @@ function optionalEnv(name: string, fallback: string): string {
   return process.env[name] || fallback
 }
 
+async function requestAdminToken(
+  tokenUrl: string,
+  params: URLSearchParams,
+  logLabel: string,
+): Promise<string | null> {
+  try {
+    const tokenRes = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params,
+    })
+    if (!tokenRes.ok) {
+      const t = await tokenRes.text().catch(() => "")
+      console.error(`[keycloak-admin] ${logLabel} failed`, tokenRes.status, t.slice(0, 300))
+      return null
+    }
+    const { access_token } = (await tokenRes.json()) as { access_token?: string }
+    return access_token ?? null
+  } catch (err) {
+    console.error(`[keycloak-admin] ${logLabel} error`, err)
+    return null
+  }
+}
+
 /**
  * Obtains an admin token via the afrotransact-admin-api service account
  * (client_credentials grant, afrotransact realm). Scoped to manage-users only.
@@ -14,32 +38,46 @@ function optionalEnv(name: string, fallback: string): string {
  */
 async function getKeycloakAdminAccessToken(): Promise<string | null> {
   const kcIssuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
+  const tokenUrl = `${kcIssuer}/protocol/openid-connect/token`
 
-  try {
-    const tokenRes = await fetch(`${kcIssuer}/protocol/openid-connect/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
+  // Preferred: service-account client credentials.
+  const adminApiClientId = optionalEnv("KEYCLOAK_ADMIN_API_CLIENT_ID", "afrotransact-admin-api")
+  const adminApiSecret = process.env.KEYCLOAK_ADMIN_API_SECRET
+  if (adminApiSecret) {
+    const token = await requestAdminToken(
+      tokenUrl,
+      new URLSearchParams({
         grant_type: "client_credentials",
-        client_id: "afrotransact-admin-api",
-        client_secret: optionalEnv("KEYCLOAK_ADMIN_API_SECRET", "afrotransact-admin-api-secret"),
+        client_id: adminApiClientId,
+        client_secret: adminApiSecret,
       }),
-    })
-    if (!tokenRes.ok) {
-      if (process.env.NODE_ENV === "development") {
-        const t = await tokenRes.text().catch(() => "")
-        console.error("[keycloak-admin] Admin token fetch failed", tokenRes.status, t.slice(0, 200))
-      }
-      return null
-    }
-    const { access_token } = (await tokenRes.json()) as { access_token?: string }
-    return access_token ?? null
-  } catch (err) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[keycloak-admin] Admin token fetch error", err)
-    }
-    return null
+      `Admin token (client_credentials:${adminApiClientId})`,
+    )
+    if (token) return token
+  } else {
+    console.error("[keycloak-admin] KEYCLOAK_ADMIN_API_SECRET is not set.")
   }
+
+  // Fallback: admin username/password (useful in environments where service-account is not configured yet).
+  const adminUsername = process.env.KEYCLOAK_ADMIN_USERNAME
+  const adminPassword = process.env.KEYCLOAK_ADMIN_PASSWORD
+  if (adminUsername && adminPassword) {
+    const adminClientId = optionalEnv("KEYCLOAK_ADMIN_CLIENT_ID", "admin-cli")
+    const params = new URLSearchParams({
+      grant_type: "password",
+      client_id: adminClientId,
+      username: adminUsername,
+      password: adminPassword,
+    })
+    const adminClientSecret = process.env.KEYCLOAK_ADMIN_CLIENT_SECRET
+    if (adminClientSecret) params.set("client_secret", adminClientSecret)
+    return requestAdminToken(tokenUrl, params, `Admin token (password:${adminClientId})`)
+  }
+
+  console.error(
+    "[keycloak-admin] No admin token method available. Set KEYCLOAK_ADMIN_API_SECRET (preferred) or KEYCLOAK_ADMIN_USERNAME/KEYCLOAK_ADMIN_PASSWORD.",
+  )
+  return null
 }
 
 type KcUser = Record<string, unknown>
@@ -62,9 +100,9 @@ export async function setRegistrationRoleSeller(userId: string): Promise<boolean
   const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
   const access_token = await getKeycloakAdminAccessToken()
   if (!access_token) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[keycloak-admin] No admin token — check KEYCLOAK_ADMIN_API_CLIENT_ID, KEYCLOAK_ADMIN_API_SECRET, and that the afrotransact-admin-api service account exists with manage-users role.")
-    }
+    console.error(
+      "[keycloak-admin] No admin token — check KEYCLOAK_ADMIN_API_CLIENT_ID/KEYCLOAK_ADMIN_API_SECRET or KEYCLOAK_ADMIN_USERNAME/KEYCLOAK_ADMIN_PASSWORD.",
+    )
     return false
   }
 
@@ -73,10 +111,8 @@ export async function setRegistrationRoleSeller(userId: string): Promise<boolean
       headers: { Authorization: `Bearer ${access_token}` },
     })
     if (!getRes.ok) {
-      if (process.env.NODE_ENV === "development") {
-        const t = await getRes.text().catch(() => "")
-        console.error("[keycloak-admin] GET user failed", getRes.status, t.slice(0, 200))
-      }
+      const t = await getRes.text().catch(() => "")
+      console.error("[keycloak-admin] GET user failed", getRes.status, t.slice(0, 300))
       return false
     }
     const user = (await getRes.json()) as KcUser
@@ -94,15 +130,13 @@ export async function setRegistrationRoleSeller(userId: string): Promise<boolean
       },
       body: JSON.stringify(body),
     })
-    if (!putRes.ok && process.env.NODE_ENV === "development") {
+    if (!putRes.ok) {
       const t = await putRes.text().catch(() => "")
       console.error("[keycloak-admin] PUT user failed", putRes.status, t.slice(0, 300))
     }
     return putRes.ok
   } catch (e) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[keycloak-admin] setRegistrationRoleSeller", e)
-    }
+    console.error("[keycloak-admin] setRegistrationRoleSeller", e)
     return false
   }
 }
@@ -123,13 +157,11 @@ export async function addRealmRoleToUser(userId: string, roleName: string): Prom
       { headers: { Authorization: `Bearer ${access_token}` } },
     )
     if (!roleRes.ok) {
-      if (process.env.NODE_ENV === "development") {
-        const t = await roleRes.text().catch(() => "")
-        console.error(
-          `[keycloak-admin] Realm role "${roleName}" missing or not readable (${roleRes.status}). Create it in Keycloak: Realm → Roles → Add role. `,
-          t.slice(0, 200),
-        )
-      }
+      const t = await roleRes.text().catch(() => "")
+      console.error(
+        `[keycloak-admin] Realm role "${roleName}" missing or not readable (${roleRes.status}). Create it in Keycloak: Realm -> Roles -> Add role.`,
+        t.slice(0, 300),
+      )
       return false
     }
     const role = (await roleRes.json()) as { id: string; name: string }
@@ -145,7 +177,7 @@ export async function addRealmRoleToUser(userId: string, roleName: string): Prom
         body: JSON.stringify([{ id: role.id, name: role.name }]),
       },
     )
-    if (!mapRes.ok && process.env.NODE_ENV === "development") {
+    if (!mapRes.ok) {
       const t = await mapRes.text().catch(() => "")
       console.error("[keycloak-admin] POST role-mappings/realm failed", mapRes.status, t.slice(0, 300))
     }

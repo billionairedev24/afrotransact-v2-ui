@@ -46,6 +46,7 @@ export const ourFileRouter = {
     "image/png": { maxFileSize: "8MB", maxFileCount: 10 },
     "image/jpeg": { maxFileSize: "8MB", maxFileCount: 10 },
     "image/webp": { maxFileSize: "8MB", maxFileCount: 10 },
+    "image/gif": { maxFileSize: "8MB", maxFileCount: 10 },
   })
     .middleware(authMiddleware)
     .onUploadComplete(({ metadata, file }) => {
