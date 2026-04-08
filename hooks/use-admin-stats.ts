@@ -18,6 +18,11 @@ import {
   type SellerInfo
 } from "@/lib/api";
 
+function looksLikeUuid(value: string | undefined): boolean {
+  if (!value) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
+}
+
 /**
  * Returns the count of items in the work queue (pending products + submitted seller applications).
  */
@@ -180,8 +185,9 @@ export function useAdminAnalytics(startDate: string, endDate: string, enabled = 
     queryFn: async () => {
       const token = await getAccessToken();
       if (!token) throw new Error("No token");
-      const base = await getAdminAnalytics(token, startDate, endDate);
-      const [seller, catalog, payment, review, notification] = await Promise.allSettled([
+      const [base, regions, seller, catalog, payment, review, notification] = await Promise.allSettled([
+        getAdminAnalytics(token, startDate, endDate),
+        getAdminRegions(token),
         getAdminSellerAnalyticsSnapshot(token),
         getAdminCatalogAnalyticsSnapshot(token),
         getAdminPaymentAnalyticsSnapshot(token),
@@ -189,7 +195,12 @@ export function useAdminAnalytics(startDate: string, endDate: string, enabled = 
         getAdminNotificationAnalyticsSnapshot(token),
       ]);
 
+      if (base.status !== "fulfilled") {
+        throw base.reason instanceof Error ? base.reason : new Error("Failed to load admin analytics");
+      }
+
       const warnings: string[] = [];
+      const regionsData = regions.status === "fulfilled" ? regions.value : [];
       const sellerData = seller.status === "fulfilled" ? seller.value : null;
       const catalogData = catalog.status === "fulfilled" ? catalog.value : null;
       const paymentData = payment.status === "fulfilled" ? payment.value : null;
@@ -211,8 +222,20 @@ export function useAdminAnalytics(startDate: string, endDate: string, enabled = 
       const platformHealthWarnings =
         warnings.length > 0 ? warnings.map((w) => warningLabels[w] ?? w) : []
 
+      const regionNameById = new Map(regionsData.map((r) => [r.id, r.name]));
+      const revenueByRegion = base.value.revenueByRegion.map((row) => {
+        const currentName = row.regionName?.trim();
+        const shouldReplaceName = !currentName || currentName === row.regionId || looksLikeUuid(currentName);
+        const resolvedName = regionNameById.get(row.regionId);
+        return {
+          ...row,
+          regionName: shouldReplaceName ? (resolvedName ?? row.regionName) : row.regionName,
+        };
+      });
+
       return {
-        ...base,
+        ...base.value,
+        revenueByRegion,
         platformHealth: {
           totalSellers: sellerData?.totalSellers ?? 0,
           approvedSellers: sellerData?.approvedSellers ?? 0,

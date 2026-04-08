@@ -6,7 +6,7 @@ import { ClipboardList, Loader2, Truck, Package, CheckCircle2, AlertTriangle } f
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions, type RowAction } from "@/components/ui/RowActions"
-import { Dialog, DialogHeader, DialogBody } from "@/components/ui/Dialog"
+import { Sheet, SheetHeader, SheetBody } from "@/components/ui/Sheet"
 import { createColumnHelper } from "@tanstack/react-table"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
@@ -295,12 +295,9 @@ function OrderDetailModal({
 }) {
   const [updating, setUpdating] = useState(false)
   const [trackingInput, setTrackingInput] = useState("")
-
-  if (!order) return null
-
-  const allItems = order.relevantSubs.flatMap((sub) => sub.items)
-  const currentFulfillment = order.relevantSubs[0]?.fulfillmentStatus ?? "pending"
-  const subOrderId = order.relevantSubs[0]?.id
+  const allItems = order ? order.relevantSubs.flatMap((sub) => sub.items) : []
+  const currentFulfillment = order?.relevantSubs[0]?.fulfillmentStatus ?? "pending"
+  const subOrderId = order?.relevantSubs[0]?.id
 
   async function handleUpdateStatus(newStatus: string) {
     if (!subOrderId) return
@@ -319,11 +316,13 @@ function OrderDetailModal({
   }
 
   return (
-    <Dialog open onClose={onClose} className="max-w-2xl">
-      <DialogHeader onClose={onClose}>
-        Order {order.orderNumber}
-      </DialogHeader>
-      <DialogBody className="space-y-6">
+    <Sheet open={!!order} onClose={onClose}>
+      <SheetHeader onClose={onClose}>
+        {order ? `Order ${order.orderNumber}` : "Order Details"}
+      </SheetHeader>
+      <SheetBody className="space-y-6">
+        {order && (
+          <>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Order Status</p>
@@ -437,7 +436,9 @@ function OrderDetailModal({
             </table>
           </div>
         </div>
-      </DialogBody>
-    </Dialog>
+          </>
+        )}
+      </SheetBody>
+    </Sheet>
   )
 }

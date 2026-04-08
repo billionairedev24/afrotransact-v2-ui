@@ -15,6 +15,7 @@ import {
   Trash2,
   MoreHorizontal,
   Eye,
+  GripVertical,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useUploadThing } from "@/lib/uploadthing"
@@ -42,6 +43,9 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 const MAX_SIZE_MB = 5
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
 const MAX_BULK_FILES = 25
+const SELLER_MEDIA_MAX_PER_UPLOAD = 10
+
+type UploadRow = { id: string; file: File; name: string; description: string }
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -202,8 +206,10 @@ export default function MediaPage() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [uploadMode, setUploadMode] = useState<"single" | "bulk">("single")
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [uploadRows, setUploadRows] = useState<Array<{ file: File; name: string; description: string }>>([])
+  const [uploadRows, setUploadRows] = useState<UploadRow[]>([])
   const [bulkMetaTemplate, setBulkMetaTemplate] = useState("")
+  const [bulkNameBase, setBulkNameBase] = useState("")
+  const [draggingRowId, setDraggingRowId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -240,6 +246,13 @@ export default function MediaPage() {
 
   const { startUpload } = useUploadThing("sellerMedia")
 
+  const applyBulkNumberedNames = useCallback((baseRaw: string) => {
+    const base = baseRaw.trim()
+    if (!base) return
+    setUploadRows((prev) => prev.map((r, i) => ({ ...r, name: `${base}_${i + 1}` })))
+    setBulkNameBase(base)
+  }, [])
+
   const processFiles = useCallback((fileList: FileList | null) => {
     if (!fileList) return
     const all = Array.from(fileList)
@@ -254,7 +267,8 @@ export default function MediaPage() {
     }
     const capped = uploadMode === "single" ? valid.slice(0, 1) : valid.slice(0, MAX_BULK_FILES)
     setUploadRows(
-      capped.map((file) => ({
+      capped.map((file, i) => ({
+        id: `${file.name}-${file.lastModified}-${i}`,
         file,
         name: file.name.replace(/\.[^.]+$/, ""),
         description: buildAutoMediaDescription(file.name),
@@ -281,27 +295,29 @@ export default function MediaPage() {
         setUploadError("Session expired. Refresh and try again.")
         return
       }
-      const uploaded = await startUpload(cleaned.map((r) => r.file))
-      if (!uploaded || uploaded.length === 0) {
-        setUploadError("Upload failed. Please try again.")
-        return
-      }
-
-      for (let i = 0; i < uploaded.length; i += 1) {
-        const r = uploaded[i]
-        const meta = cleaned[i]
-        const url =
-          (r as unknown as Record<string, string>).ufsUrl ||
-          r.url ||
-          (r.key ? `https://utfs.io/f/${r.key}` : "")
-        await createMediaItem(token, {
-          name: meta?.name || r.name,
-          description: meta?.description || buildAutoMediaDescription(r.name),
-          url,
-          file_key: r.key ?? "",
-          content_type: r.type ?? "image/jpeg",
-          size_bytes: r.size ?? 0,
-        })
+      for (let offset = 0; offset < cleaned.length; offset += SELLER_MEDIA_MAX_PER_UPLOAD) {
+        const batch = cleaned.slice(offset, offset + SELLER_MEDIA_MAX_PER_UPLOAD)
+        const uploaded = await startUpload(batch.map((r) => r.file))
+        if (!uploaded || uploaded.length === 0) {
+          setUploadError("Upload failed. Please try again.")
+          return
+        }
+        for (let i = 0; i < uploaded.length; i += 1) {
+          const r = uploaded[i]
+          const meta = batch[i]
+          const url =
+            (r as unknown as Record<string, string>).ufsUrl ||
+            r.url ||
+            (r.key ? `https://utfs.io/f/${r.key}` : "")
+          await createMediaItem(token, {
+            name: meta?.name || r.name,
+            description: meta?.description || buildAutoMediaDescription(r.name),
+            url,
+            file_key: r.key ?? "",
+            content_type: r.type ?? "image/jpeg",
+            size_bytes: r.size ?? 0,
+          })
+        }
       }
 
       await loadMedia()
@@ -555,6 +571,7 @@ export default function MediaPage() {
               setUploadRows([])
               setUploadError(null)
               setBulkMetaTemplate("")
+              setBulkNameBase("")
               setUploadOpen(true)
             }}
             disabled={uploading}
@@ -569,6 +586,7 @@ export default function MediaPage() {
               setUploadRows([])
               setUploadError(null)
               setBulkMetaTemplate("")
+              setBulkNameBase("")
               setUploadOpen(true)
             }}
             disabled={uploading}
@@ -891,6 +909,28 @@ export default function MediaPage() {
                     Replace all
                   </button>
                 </div>
+                <div className="mt-3 border-t border-blue-200 pt-3">
+                  <p className="text-xs text-blue-800">
+                    Set all names at once. We auto-number by row order.
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      value={bulkNameBase}
+                      onChange={(e) => setBulkNameBase(e.target.value)}
+                      className="h-8 min-w-[220px] flex-1 rounded-md border border-blue-200 bg-white px-2 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/40"
+                      placeholder="e.g. jewelry"
+                    />
+                    <button
+                      onClick={() => applyBulkNumberedNames(bulkNameBase)}
+                      className="rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                    >
+                      Name all (jewelry_1..N)
+                    </button>
+                  </div>
+                  <p className="mt-1 text-[11px] text-blue-700">
+                    Tip: drag rows to reorder, then click the button again to re-number suffixes by the new order.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -898,21 +938,56 @@ export default function MediaPage() {
               <table className="w-full min-w-[680px] text-left">
                 <thead className="border-b border-gray-100 bg-gray-50">
                   <tr>
+                    {uploadMode === "bulk" && (
+                      <th className="w-10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">#</th>
+                    )}
                     <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">File</th>
                     <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Name *</th>
                     <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Metadata notes</th>
+                    <th className="w-16 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Row</th>
                   </tr>
                 </thead>
                 <tbody>
                   {uploadRows.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-3 py-6 text-center text-sm text-gray-400">
+                      <td colSpan={uploadMode === "bulk" ? 5 : 4} className="px-3 py-6 text-center text-sm text-gray-400">
                         No files selected yet.
                       </td>
                     </tr>
                   ) : (
                     uploadRows.map((row, i) => (
-                      <tr key={`${row.file.name}-${i}`} className="border-b border-gray-50">
+                      <tr
+                        key={row.id}
+                        className={cn("border-b border-gray-50", draggingRowId === row.id && "bg-amber-50")}
+                        draggable={uploadMode === "bulk"}
+                        onDragStart={() => setDraggingRowId(row.id)}
+                        onDragOver={(e) => {
+                          if (uploadMode !== "bulk") return
+                          e.preventDefault()
+                        }}
+                        onDrop={() => {
+                          if (uploadMode !== "bulk" || !draggingRowId || draggingRowId === row.id) return
+                          setUploadRows((prev) => {
+                            const from = prev.findIndex((r) => r.id === draggingRowId)
+                            const to = prev.findIndex((r) => r.id === row.id)
+                            if (from < 0 || to < 0) return prev
+                            const next = [...prev]
+                            const [moved] = next.splice(from, 1)
+                            next.splice(to, 0, moved)
+                            return next
+                          })
+                          setDraggingRowId(null)
+                        }}
+                        onDragEnd={() => setDraggingRowId(null)}
+                      >
+                        {uploadMode === "bulk" && (
+                          <td className="px-3 py-2 text-xs text-gray-400">
+                            <div className="inline-flex items-center gap-1">
+                              <GripVertical className="h-3.5 w-3.5" />
+                              <span>{i + 1}</span>
+                            </div>
+                          </td>
+                        )}
                         <td className="px-3 py-2 text-xs text-gray-600">{row.file.name}</td>
                         <td className="px-3 py-2">
                           <input
@@ -936,6 +1011,16 @@ export default function MediaPage() {
                             className="h-8 w-full rounded-md border border-gray-200 px-2 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/40"
                             placeholder="e.g. rice,jasmine,5kg,front"
                           />
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <button
+                            onClick={() => setUploadRows((prev) => prev.filter((r) => r.id !== row.id))}
+                            className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                            title="Remove row"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Remove
+                          </button>
                         </td>
                       </tr>
                     ))
