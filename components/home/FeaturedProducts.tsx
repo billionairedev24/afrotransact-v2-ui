@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useQuery } from "@tanstack/react-query"
 import { Star, MapPin, Leaf, ChevronRight } from "lucide-react"
 import { searchProducts, type SearchResult } from "@/lib/api"
 import { ProductCardSkeleton } from "@/components/ui/Skeleton"
+import { RemoteImage } from "@/components/ui/remote-image"
 
 interface Props {
   title?: string
@@ -13,6 +14,8 @@ interface Props {
   size?: number
   viewAllHref?: string
   icon?: React.ReactNode
+  /** First N product thumbnails load with priority (LCP / above-the-fold). */
+  imagePriorityCount?: number
 }
 
 export function FeaturedProducts({
@@ -22,16 +25,14 @@ export function FeaturedProducts({
   size = 8,
   viewAllHref = "/search?sort=rating",
   icon,
+  imagePriorityCount = 0,
 }: Props) {
-  const [products, setProducts] = useState<SearchResult[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    searchProducts({ size: String(size), sort_by: sortBy })
-      .then((res) => setProducts(res.results))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [sortBy, size])
+  const { data: products = [], isLoading: loading } = useQuery({
+    queryKey: ["featured-products", sortBy, size],
+    queryFn: () =>
+      searchProducts({ size: String(size), sort_by: sortBy }).then((res) => res.results),
+    staleTime: 5 * 60 * 1000,
+  })
 
   if (loading) {
     return (
@@ -79,7 +80,7 @@ export function FeaturedProducts({
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
-        {products.map((product) => (
+        {products.map((product, idx) => (
           <Link
             key={product.product_id}
             href={`/product/${product.slug || product.product_id}`}
@@ -87,7 +88,14 @@ export function FeaturedProducts({
           >
             <div className="h-[120px] sm:h-auto sm:aspect-square bg-gradient-to-br from-muted to-muted/50 relative overflow-hidden flex items-center justify-center">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                <RemoteImage
+                  src={product.image_url}
+                  alt={product.title}
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  className="object-cover"
+                  priority={idx < imagePriorityCount}
+                />
               ) : (
                 <Leaf className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/30" />
               )}

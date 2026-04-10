@@ -65,6 +65,10 @@ export interface ProductVariant {
   stockQuantity: number
   options: string | null
   weightKg: number | null
+  /** Parcel dimensions per unit for carrier rating (inches). */
+  lengthIn?: number | null
+  widthIn?: number | null
+  heightIn?: number | null
   createdAt: string
 }
 
@@ -193,6 +197,8 @@ export function searchProducts(params: Record<string, string>) {
 export interface SearchSuggestion {
   text: string
   product_id: string
+  /** Present when search service returns it; prefer for /product/[slug] URLs */
+  slug?: string
   image_url: string | null
   category: string
   price: number
@@ -202,7 +208,7 @@ export interface SuggestResponse {
   suggestions: SearchSuggestion[]
 }
 
-export function searchSuggest(q: string, size = 8) {
+export function searchSuggest(q: string, size = 12) {
   return api<SuggestResponse>(`/api/v1/search/suggest?q=${encodeURIComponent(q)}&size=${size}`)
 }
 
@@ -220,6 +226,9 @@ export interface CartItemDto {
   variantName?: string
   imageUrl?: string
   weightKg?: number | null
+  lengthIn?: number | null
+  widthIn?: number | null
+  heightIn?: number | null
 }
 
 export interface CartDto {
@@ -246,6 +255,9 @@ export function addToCart(
     variantName?: string
     imageUrl?: string
     weightKg?: number | null
+    lengthIn?: number | null
+    widthIn?: number | null
+    heightIn?: number | null
   },
 ) {
   return api<CartDto>("/api/v1/cart/items", { method: "POST", body: item, token })
@@ -268,6 +280,7 @@ export function mergeCart(
   items: {
     variantId: string; productId: string; storeId: string; quantity: number; unitPriceCents: number;
     productTitle?: string; variantName?: string; imageUrl?: string; weightKg?: number | null;
+    lengthIn?: number | null; widthIn?: number | null; heightIn?: number | null;
   }[],
 ) {
   return api<CartDto>("/api/v1/cart/merge", { method: "POST", body: items, token })
@@ -406,8 +419,9 @@ export interface PaymentSettings {
   maximum_payout_amount_cents: number
 }
 
+/** Admin-only read (same payload as internal GET /api/v1/internal/settings/payment). */
 export function getPaymentSettings(token: string) {
-  return api<PaymentSettings>("/api/v1/settings/payment", { token })
+  return api<PaymentSettings>("/api/v1/admin/settings/payment", { token })
 }
 
 export function updatePaymentSettings(token: string, data: PaymentSettings) {
@@ -650,7 +664,15 @@ export interface StoreDetail {
   addressCity: string | null
   addressState: string | null
   addressZip: string | null
+  addressCountry?: string | null
   deliveryRadiusMiles: number
+  shipFromSameAsBusiness?: boolean | null
+  shipFromLine1?: string | null
+  shipFromCity?: string | null
+  shipFromState?: string | null
+  shipFromZip?: string | null
+  shipFromCountry?: string | null
+  allowedCarriers?: string[] | null
   createdAt: string
   updatedAt: string
 }
@@ -774,6 +796,9 @@ export function createProduct(
       stockQuantity?: number
       options?: Record<string, unknown>
       weightKg?: number
+      lengthIn?: number
+      widthIn?: number
+      heightIn?: number
     }[]
     categoryIds?: string[]
   },
@@ -812,6 +837,9 @@ export function addVariant(
     stockQuantity?: number
     options?: Record<string, unknown>
     weightKg?: number | null
+    lengthIn?: number | null
+    widthIn?: number | null
+    heightIn?: number | null
   },
 ) {
   return api<ProductVariant>(`/api/v1/products/${productId}/variants`, {
@@ -833,6 +861,9 @@ export function updateVariant(
     stockQuantity?: number
     options?: Record<string, unknown>
     weightKg?: number | null
+    lengthIn?: number | null
+    widthIn?: number | null
+    heightIn?: number | null
   },
 ) {
   return api<ProductVariant>(`/api/v1/products/variants/${variantId}`, {
@@ -892,6 +923,15 @@ export interface SubOrderDto {
   transferAmountCents: number
   fulfillmentStatus: string
   trackingNumber: string | null
+  trackingStatus?: string | null
+  trackingStatusDetail?: string | null
+  shippingProvider?: string | null
+  shippingQuoteId?: string | null
+  shippingCarrier?: string | null
+  shippingService?: string | null
+  shippingLabelId?: string | null
+  shippingShipmentId?: string | null
+  trackingUpdatedAt?: string | null
   exceptionNote: string | null
   items: OrderItemDto[]
 }
@@ -961,6 +1001,10 @@ export interface CheckoutRequest {
   /** Applied deal ID. Order service uses this to apply the deal discount directly from catalog
    *  (fallback for when the deal's Kafka-created coupon hasn't been consumed yet). */
   dealId?: string
+  selectedShippingQuoteId?: string
+  selectedShippingCarrier?: string
+  selectedShippingService?: string
+  selectedShippingAmountCents?: number
 }
 
 export interface CheckoutResponse {
@@ -975,6 +1019,50 @@ export interface CheckoutResponse {
   currency: string
   paymentClientSecret: string | null
   status: string
+}
+
+export interface ShippingQuoteOption {
+  quoteId: string
+  carrier: string
+  serviceCode: string
+  serviceName: string
+  tier: "low" | "medium" | "high" | string
+  amountCents: number
+  currency: string
+  estimatedDays: number
+}
+
+export interface ShippingQuoteGroup {
+  carrier: string
+  options: ShippingQuoteOption[]
+}
+
+export interface ShippingQuoteResponse {
+  realtimeEnabled: boolean
+  shippingProvider: string
+  eligibleByGeo: boolean
+  groups: ShippingQuoteGroup[]
+  message?: string
+  packageCount?: number
+  shipmentHints?: string[]
+}
+
+export interface ShippingSettings {
+  shipping_realtime_enabled: boolean
+  shipping_provider: "shippo" | "easypost"
+  shipping_realtime_state_allowlist: string[]
+  shipping_realtime_city_allowlist: string[]
+  shipping_realtime_fallback_static: boolean
+  /**
+   * Multi-parcel packing: max weight per parcel (lb). Null/omit = order service env default.
+   * Config service + admin; order service may also read SHIPPING_PACK_MAX_WEIGHT_LBS.
+   */
+  shipping_pack_max_weight_lbs?: number | null
+  /**
+   * Multi-parcel packing: max stacked height per parcel (in). Null/omit = order service env default.
+   * Config service + admin; order service may also read SHIPPING_PACK_MAX_STACK_HEIGHT_IN.
+   */
+  shipping_pack_max_stack_height_in?: number | null
 }
 
 // ── Coupons ──
@@ -1071,6 +1159,32 @@ export function checkout(token: string, data: CheckoutRequest) {
     body: data,
     token,
   })
+}
+
+export function getShippingQuotes(
+  token: string,
+  data: {
+    regionId: string
+    state?: string
+    city?: string
+    destinationLine1?: string
+    destinationZip?: string
+    destinationCountry?: string
+  },
+) {
+  return api<ShippingQuoteResponse>("/api/v1/orders/shipping/quotes", {
+    method: "POST",
+    body: data,
+    token,
+  })
+}
+
+export function getAdminShippingSettings(token: string) {
+  return api<ShippingSettings>("/api/v1/admin/config/shipping", { token })
+}
+
+export function putAdminShippingSettings(token: string, data: ShippingSettings) {
+  return api<ShippingSettings>("/api/v1/admin/config/shipping", { method: "PUT", body: data, token })
 }
 
 // ── Admin ──
@@ -2276,9 +2390,9 @@ function mapAnalyticsAvailability(r: RawAnalyticsAvailability): AnalyticsAvailab
   }
 }
 
-/** Public read — sidebars and analytics routes (no token). */
-export async function getAnalyticsAvailability(): Promise<AnalyticsAvailability> {
-  const raw = await api<RawAnalyticsAvailability>("/api/v1/config/analytics")
+/** Authenticated read for admin/seller dashboards (realm roles seller or admin). */
+export async function getPortalAnalyticsAvailability(token: string): Promise<AnalyticsAvailability> {
+  const raw = await api<RawAnalyticsAvailability>("/api/v1/seller/config/analytics", { token })
   return mapAnalyticsAvailability(raw)
 }
 

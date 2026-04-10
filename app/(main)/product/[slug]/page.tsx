@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   Heart, Share2, Minus, Plus, ShoppingCart, Store, ChevronRight,
   Truck, Shield, RotateCcw, Leaf, Check, Loader2, Zap, Trash2
@@ -121,6 +122,9 @@ export default function ProductPage() {
       imageUrl: product.images[0]?.url,
       slug: product.slug,
       weightKg: variant.weightKg ?? null,
+      lengthIn: variant.lengthIn ?? null,
+      widthIn: variant.widthIn ?? null,
+      heightIn: variant.heightIn ?? null,
     })
   }
 
@@ -139,6 +143,9 @@ export default function ProductPage() {
         imageUrl: product.images[0]?.url,
         slug: product.slug,
         weightKg: variant.weightKg ?? null,
+        lengthIn: variant.lengthIn ?? null,
+        widthIn: variant.widthIn ?? null,
+        heightIn: variant.heightIn ?? null,
       })
     }
     router.push("/checkout")
@@ -196,10 +203,13 @@ export default function ProductPage() {
         <div className="space-y-4">
           <div className="relative aspect-square rounded-lg border border-border bg-card overflow-hidden">
             {product.images.length > 0 ? (
-              <img
-                src={product.images[selectedImage]?.url}
+              <Image
+                src={product.images[selectedImage]!.url}
                 alt={product.images[selectedImage]?.altText || product.title}
-                className="h-full w-full object-cover"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                priority={selectedImage === 0}
               />
             ) : (
               <div className="h-full w-full flex flex-col items-center justify-center gap-3">
@@ -235,11 +245,17 @@ export default function ProductPage() {
                   key={img.id}
                   onClick={() => setSelectedImage(i)}
                   className={cn(
-                    "flex-shrink-0 w-20 h-20 rounded-md border overflow-hidden transition-colors",
+                    "relative flex-shrink-0 w-20 h-20 rounded-md border overflow-hidden transition-colors",
                     selectedImage === i ? "border-primary" : "border-border hover:border-muted-foreground"
                   )}
                 >
-                  <img src={img.url} alt={img.altText || ""} className="h-full w-full object-cover" />
+                  <Image
+                    src={img.url}
+                    alt={img.altText || ""}
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
                 </button>
               ))}
             </div>

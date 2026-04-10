@@ -287,11 +287,21 @@ export function Header() {
                         onClick={() => {
                           setShowSuggestions(false)
                           setQuery(item.text)
-                          router.push(`/product/${item.product_id}`)
+                          const path = item.slug?.trim() ? `/product/${item.slug}` : `/product/${item.product_id}`
+                          router.push(path)
                         }}
                       >
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" className="h-10 w-10 rounded-md object-cover shrink-0 bg-gray-100" />
+                          <div className="relative h-10 w-10 shrink-0 rounded-md overflow-hidden bg-gray-100">
+                            <Image
+                              src={item.image_url}
+                              alt=""
+                              width={40}
+                              height={40}
+                              className="h-10 w-10 object-cover"
+                              sizes="40px"
+                            />
+                          </div>
                         ) : (
                           <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
                             <Search className="h-4 w-4 text-gray-400" />
@@ -680,11 +690,21 @@ export function Header() {
                       setShowSuggestions(false)
                       setMobileSearchOpen(false)
                       setQuery(item.text)
-                      router.push(`/product/${item.product_id}`)
+                      const path = item.slug?.trim() ? `/product/${item.slug}` : `/product/${item.product_id}`
+                      router.push(path)
                     }}
                   >
                     {item.image_url ? (
-                      <img src={item.image_url} alt="" className="h-12 w-12 rounded-lg object-cover shrink-0 bg-gray-100" />
+                      <div className="relative h-12 w-12 shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                        <Image
+                          src={item.image_url}
+                          alt=""
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 object-cover"
+                          sizes="48px"
+                        />
+                      </div>
                     ) : (
                       <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                         <Search className="h-5 w-5 text-gray-400" />

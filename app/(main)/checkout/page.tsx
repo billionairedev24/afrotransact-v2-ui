@@ -15,6 +15,12 @@ import {
   Loader2,
   Tag,
   Zap,
+  Plus,
+  Check,
+  Home,
+  Building2,
+  Clock,
+  Truck,
 } from "lucide-react"
 import {
   Elements,
@@ -36,6 +42,7 @@ import {
   createAddress,
   getUserProfile,
   validateCoupon,
+  getShippingQuotes,
   ApiError,
   type CheckoutResponse,
   type ValidateCouponResponse,
@@ -46,6 +53,8 @@ import {
   getActiveDeals,
   type DealData,
   type RegionPaymentMethod,
+  type ShippingQuoteOption,
+  type ShippingQuoteResponse,
   getRegionConfig,
 } from "@/lib/api"
 
@@ -72,6 +81,14 @@ const STRIPE_APPEARANCE = {
 
 type Step = "address" | "review" | "payment"
 
+/** Checkout API may return internal provider ids; keep the heading buyer-friendly. */
+function shippingOptionsHeading(shippingProvider: string | undefined | null): string {
+  const p = (shippingProvider ?? "").toLowerCase()
+  if (p === "shippo" || p === "easypost") return "Live carrier rates"
+  const t = shippingProvider?.trim()
+  return t && t.length > 0 ? t : "Live carrier rates"
+}
+
 const STEPS: { id: Step; label: string; icon: typeof MapPin }[] = [
   { id: "address", label: "Shipping",  icon: MapPin     },
   { id: "review",  label: "Review",    icon: Package    },
@@ -82,15 +99,21 @@ function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
 }
 
-function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>) => void; token: string | null }) {
+function AddressStep({ onNext, token, sessionName }: { onNext: (addr: Record<string, string>) => void; token: string | null; sessionName: string }) {
   const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showNew, setShowNew] = useState(false)
+  const [shipToOther, setShipToOther] = useState(false)
+  // Separate recipient override — never mutates the profile-sourced form fields
+  const [recipientName, setRecipientName] = useState("")
+  const [recipientPhone, setRecipientPhone] = useState("")
+  const [recipientAddressQuery, setRecipientAddressQuery] = useState("")
+  const [recipientAddress, setRecipientAddress] = useState({ line1: "", line2: "", city: "", state: "", zip: "" })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [makeDefault, setMakeDefault] = useState(false)
   const [form, setForm] = useState({
-    fullName: "", line1: "", line2: "", city: "", state: "", zip: "", phone: "",
+    fullName: sessionName, line1: "", line2: "", city: "", state: "", zip: "", phone: "",
   })
   const [addressQuery, setAddressQuery] = useState("")
 
@@ -115,7 +138,7 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
         const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ")
         setForm((prev) => ({
           ...prev,
-          fullName: name || prev.fullName,
+          fullName: name || sessionName || prev.fullName,
           phone: profile.phone || prev.phone,
         }))
         setSavedAddresses(addrs)
@@ -140,15 +163,17 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
   const handleUseSaved = () => {
     const addr = savedAddresses.find((a) => a.id === selectedId)
     if (!addr) return
+    const usingRecipientAddr = shipToOther && recipientAddress.line1.trim()
     onNext({
-      shippingAddressId: addr.id,
-      fullName: form.fullName,
-      line1: addr.line1,
-      line2: addr.line2 || "",
-      city: addr.city,
-      state: addr.state || "",
-      zip: addr.postalCode || "",
-      phone: form.phone || "",
+      // Only pass shippingAddressId if using the saved address (not an override address)
+      ...(usingRecipientAddr ? {} : { shippingAddressId: addr.id }),
+      fullName: shipToOther && recipientName.trim() ? recipientName.trim() : form.fullName,
+      line1: usingRecipientAddr ? recipientAddress.line1 : addr.line1,
+      line2: usingRecipientAddr ? recipientAddress.line2 : addr.line2 || "",
+      city: usingRecipientAddr ? recipientAddress.city : addr.city,
+      state: usingRecipientAddr ? recipientAddress.state : addr.state || "",
+      zip: usingRecipientAddr ? recipientAddress.zip : addr.postalCode || "",
+      phone: shipToOther ? recipientPhone.trim() : form.phone || "",
     })
   }
 
@@ -202,106 +227,58 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
     }
   }
 
-  const field = (label: string, key: keyof typeof form, placeholder = "") => (
+  const field = (label: string, key: keyof typeof form, placeholder = "", inputMode?: "numeric" | "tel" | "email" | "text" | "decimal" | "search" | "url" | "none") => (
     <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
       <input
         value={form[key]}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
+        inputMode={inputMode}
+        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
       />
     </div>
   )
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-10">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <div className="space-y-3">
+        <div className="h-5 w-48 bg-gray-100 rounded animate-pulse" />
+        {[1, 2].map((i) => (
+          <div key={i} className="h-[88px] rounded-2xl border border-gray-100 bg-gray-50 animate-pulse" />
+        ))}
+        <div className="h-12 rounded-xl bg-gray-100 animate-pulse" />
       </div>
     )
   }
 
-  return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-bold text-gray-900">Shipping Address</h2>
-
-      {savedAddresses.length > 0 && !showNew && (
-        <>
-          <div className="space-y-2">
-            {savedAddresses.map((addr) => (
-              <button
-                key={addr.id}
-                className={`w-full rounded-xl border p-4 text-left transition-colors ${
-                  selectedId === addr.id
-                    ? "border-primary/60 bg-primary/10"
-                    : "border-gray-200 bg-gray-50 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      checked={selectedId === addr.id}
-                      onChange={() => setSelectedId(addr.id)}
-                      className="h-4 w-4 rounded border-gray-300 bg-gray-50 text-primary accent-primary"
-                    />
-                    <span className="text-sm font-medium text-gray-900">{addr.label || "Address"}</span>
-                  </div>
-                  {addr.isDefault && (
-                    <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Default</span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500 mt-1">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}</p>
-                <p className="text-sm text-gray-500">{addr.city}, {addr.state} {addr.postalCode}</p>
-              </button>
-            ))}
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Shipping Contact</p>
-            <div className="grid grid-cols-2 gap-3">
-              {field("Full name", "fullName", "Jane Doe")}
-              {field("Phone", "phone", "(512) 555-0123")}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <button
-              disabled={!selectedId || !form.fullName}
-              onClick={handleUseSaved}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-40"
-            >
-              Continue <ChevronRight className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowNew(true)}
-              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors self-start"
-            >
-              + Ship to a new address
-            </button>
-          </div>
-        </>
-      )}
-
-      {(showNew || savedAddresses.length === 0) && (
-        <>
+  /* ── New address form ───────────────────────────────────────────── */
+  if (showNew) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
           {savedAddresses.length > 0 && (
             <button
               type="button"
               onClick={() => setShowNew(false)}
-              className="mb-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
-              &larr; Back to saved addresses
+              ← Back
             </button>
           )}
+          <h2 className="text-lg font-bold text-gray-900">
+            {savedAddresses.length > 0 ? "Add a new address" : "Delivery address"}
+          </h2>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             {field("Full name", "fullName", "Jane Doe")}
-            {field("Phone", "phone", "(512) 555-0123")}
+            {field("Phone", "phone", "+1 (555) 000-0000", "tel")}
           </div>
+
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Address</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
             <AddressAutocomplete
               value={addressQuery}
               onChange={setAddressQuery}
@@ -319,34 +296,234 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
               placeholder="Start typing your address…"
             />
           </div>
+
           {field("Apt, suite, unit (optional)", "line2", "Apt 4B")}
+
           <div className="grid grid-cols-2 gap-3">
             {field("City", "city")}
-            {field("State", "state")}
+            {field("State", "state", "TX")}
           </div>
-          {field("ZIP code", "zip", "78701")}
 
-          <label className="flex items-center gap-2 cursor-pointer group">
+          {field("ZIP code", "zip", "78701", "numeric")}
+
+          <label className="flex items-center gap-2.5 cursor-pointer group pt-1">
+            <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${makeDefault ? "bg-primary border-primary" : "border-gray-300 group-hover:border-primary/50"}`}>
+              {makeDefault && <Check className="h-3 w-3 text-[#0f0f10]" strokeWidth={3} />}
+            </div>
             <input
               type="checkbox"
               checked={makeDefault}
               onChange={(e) => setMakeDefault(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 bg-gray-50 text-primary accent-primary"
+              className="sr-only"
             />
-            <span className="text-sm text-gray-500 group-hover:text-gray-600 transition-colors">
-              Set as my default address
-            </span>
+            <span className="text-sm text-gray-600">Set as my default address</span>
           </label>
+        </div>
 
-          <button
-            disabled={!form.fullName || !form.line1 || !form.city || !form.zip || saving}
-            onClick={handleSaveNew}
-            className="w-full mt-2 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Continue to Review <ChevronRight className="h-4 w-4" /></>}
-          </button>
-        </>
+        <button
+          disabled={!form.fullName || !form.line1 || !form.city || !form.zip || saving}
+          onClick={handleSaveNew}
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {saving ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
+          ) : (
+            <>Use this address <ChevronRight className="h-4 w-4" /></>
+          )}
+        </button>
+      </div>
+    )
+  }
+
+  /* ── Saved addresses list ───────────────────────────────────────── */
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-bold text-gray-900">Choose a delivery address</h2>
+
+      <div className="space-y-2.5">
+        {savedAddresses.map((addr) => {
+          const isSelected = selectedId === addr.id
+          const icon = addr.label?.toLowerCase().includes("work") || addr.label?.toLowerCase().includes("office")
+            ? Building2
+            : Home
+          const Icon = icon
+          return (
+            <button
+              key={addr.id}
+              type="button"
+              onClick={() => setSelectedId(addr.id)}
+              className={`w-full rounded-2xl border-2 p-4 text-left transition-all ${
+                isSelected
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                  isSelected ? "bg-primary/20" : "bg-gray-100"
+                }`}>
+                  <Icon className={`h-4 w-4 ${isSelected ? "text-primary" : "text-gray-500"}`} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-semibold text-gray-900 capitalize">
+                      {addr.label || "Home"}
+                    </span>
+                    {addr.isDefault && (
+                      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 leading-snug">
+                    {addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {addr.city}, {addr.state} {addr.postalCode}
+                  </p>
+                </div>
+
+                <div className={`mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  isSelected ? "border-primary bg-primary" : "border-gray-300"
+                }`}>
+                  {isSelected && <div className="h-2 w-2 rounded-full bg-[#0f0f10]" />}
+                </div>
+              </div>
+            </button>
+          )
+        })}
+
+        {/* Add new address card */}
+        <button
+          type="button"
+          onClick={() => setShowNew(true)}
+          className="w-full rounded-2xl border-2 border-dashed border-gray-200 p-4 text-left hover:border-primary/40 hover:bg-primary/5 transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 group-hover:bg-primary/10 transition-colors">
+              <Plus className="h-4 w-4 text-gray-400 group-hover:text-primary transition-colors" />
+            </div>
+            <span className="text-sm font-medium text-gray-500 group-hover:text-primary transition-colors">
+              Add a new address
+            </span>
+          </div>
+        </button>
+      </div>
+
+      {/* Ship to someone else — only expanded on demand */}
+      {selectedId && (
+        <div>
+          {!shipToOther ? (
+            <button
+              type="button"
+              onClick={() => setShipToOther(true)}
+              className="text-sm text-gray-500 hover:text-primary transition-colors"
+            >
+              Ship to someone else?
+            </button>
+          ) : (
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-900">Ship to someone else</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShipToOther(false)
+                    setRecipientName("")
+                    setRecipientPhone("")
+                    setRecipientAddressQuery("")
+                    setRecipientAddress({ line1: "", line2: "", city: "", state: "", zip: "" })
+                  }}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Recipient name</label>
+                  <input
+                    value={recipientName}
+                    onChange={(e) => setRecipientName(e.target.value)}
+                    placeholder="Jane Doe"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone (optional)</label>
+                  <input
+                    value={recipientPhone}
+                    onChange={(e) => setRecipientPhone(e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                    inputMode="tel"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-3 space-y-3">
+                <p className="text-xs font-medium text-gray-500">Delivery address</p>
+                <p className="text-xs text-gray-400 -mt-2">Leave blank to use the selected address above</p>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
+                  <AddressAutocomplete
+                    value={recipientAddressQuery}
+                    onChange={setRecipientAddressQuery}
+                    onSelect={(parts) => {
+                      setRecipientAddress((prev) => ({
+                        ...prev,
+                        line1: parts.line1,
+                        line2: parts.line2 || prev.line2,
+                        city: parts.city || prev.city,
+                        state: parts.state || prev.state,
+                        zip: parts.zip || prev.zip,
+                      }))
+                      setRecipientAddressQuery(parts.line1)
+                    }}
+                    placeholder="Start typing an address…"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Apt, suite, unit (optional)</label>
+                  <input
+                    value={recipientAddress.line2}
+                    onChange={(e) => setRecipientAddress((prev) => ({ ...prev, line2: e.target.value }))}
+                    placeholder="Apt 4B"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {(["city", "state", "zip"] as const).map((k) => (
+                    <div key={k}>
+                      <label className="block text-xs font-medium text-gray-500 mb-1.5 capitalize">{k === "zip" ? "ZIP" : k}</label>
+                      <input
+                        value={recipientAddress[k]}
+                        onChange={(e) => setRecipientAddress((prev) => ({ ...prev, [k]: e.target.value }))}
+                        placeholder={k === "zip" ? "78701" : k === "state" ? "TX" : "Austin"}
+                        inputMode={k === "zip" ? "numeric" : undefined}
+                        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
+
+      <button
+        disabled={!selectedId}
+        onClick={handleUseSaved}
+        className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Deliver to this address <ChevronRight className="h-4 w-4" />
+      </button>
     </div>
   )
 }
@@ -354,7 +531,8 @@ function AddressStep({ onNext, token }: { onNext: (addr: Record<string, string>)
 function ReviewStep({
   address, onNext, onBack, items, subtotal, tax, shipping, total, placing, error: placeError,
   couponCode, couponResult, couponLoading, couponError, onApplyCoupon, onRemoveCoupon, onCouponCodeChange, discount,
-  couponsEnabled, availableDeals, appliedDeal, onApplyDeal, onRemoveDeal, shippingByStore
+  couponsEnabled, availableDeals, appliedDeal, onApplyDeal, onRemoveDeal, shippingByStore,
+  quoteData, selectedQuoteId, onSelectQuote, freeShippingApplies,
 }: {
   address: Record<string, string>
   onNext: () => void
@@ -376,19 +554,27 @@ function ReviewStep({
   onApplyDeal: (deal: DealData) => void
   onRemoveDeal: () => void
   shippingByStore: Map<string, { storeName: string; shippingCents: number }>
+  quoteData: ShippingQuoteResponse | null
+  selectedQuoteId: string | null
+  onSelectQuote: (quoteId: string) => void
+  freeShippingApplies: boolean
 }) {
+  const realtimeOptions = (quoteData?.groups ?? []).flatMap((g) => g.options ?? [])
+  const selectedQuote = realtimeOptions.find((q) => q.quoteId === selectedQuoteId) ?? null
+  const effectiveShipping = freeShippingApplies ? 0 : selectedQuote ? selectedQuote.amountCents : shipping
+  const effectiveTotal = freeShippingApplies ? total : selectedQuote ? total + (selectedQuote.amountCents - shipping) : total
   return (
     <div className="space-y-5">
       <h2 className="text-lg font-bold text-gray-900">Review Your Order</h2>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-1">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4">
         <div className="flex items-center gap-2 mb-2">
           <MapPin className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-gray-900">Shipping to</span>
+          <span className="text-sm font-semibold text-gray-900">Delivering to</span>
         </div>
-        <p className="text-sm text-gray-600">{address.fullName}</p>
-        <p className="text-sm text-gray-600">{address.line1}{address.line2 ? `, ${address.line2}` : ""}</p>
-        <p className="text-sm text-gray-600">{address.city}, {address.state} {address.zip}</p>
+        <p className="text-sm font-semibold text-gray-900">{address.fullName}</p>
+        <p className="text-sm text-gray-500 mt-0.5">{address.line1}{address.line2 ? `, ${address.line2}` : ""}</p>
+        <p className="text-sm text-gray-500">{address.city}, {address.state} {address.zip}</p>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
@@ -475,11 +661,90 @@ function ReviewStep({
       )}
 
       <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
+        {freeShippingApplies && (
+          <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+            <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+            <span className="text-sm font-medium text-green-800">Your order qualifies for free shipping</span>
+          </div>
+        )}
+
+        {!freeShippingApplies && quoteData?.realtimeEnabled && quoteData.eligibleByGeo && (quoteData.groups?.length ?? 0) > 0 && (
+          <div className="mb-4 space-y-2">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-semibold text-gray-900">Choose delivery speed</p>
+              {quoteData.packageCount && quoteData.packageCount > 1 && (
+                <span className="text-xs text-gray-500">{quoteData.packageCount} packages</span>
+              )}
+            </div>
+            {(quoteData.groups ?? []).flatMap((group) =>
+              group.options.map((opt) => {
+                const isSelected = selectedQuoteId === opt.quoteId
+                const isFastest = opt.tier === "express" || opt.tier === "overnight"
+                const isStandard = opt.tier === "standard" || opt.tier === "ground"
+                const TierIcon = isFastest ? Zap : isStandard ? Truck : Clock
+                return (
+                  <label
+                    key={opt.quoteId}
+                    className={`flex cursor-pointer items-center gap-4 rounded-2xl border-2 p-4 transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      checked={isSelected}
+                      onChange={() => onSelectQuote(opt.quoteId)}
+                      className="sr-only"
+                    />
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                      isSelected ? "bg-primary/20" : "bg-gray-100"
+                    }`}>
+                      <TierIcon className={`h-5 w-5 ${isSelected ? "text-primary" : "text-gray-500"}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900">{opt.serviceName}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{group.carrier} · {opt.estimatedDays} day{opt.estimatedDays !== 1 ? "s" : ""}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {opt.amountCents === 0 ? (
+                        <span className="text-sm font-bold text-green-600">FREE</span>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900">{formatCents(opt.amountCents)}</span>
+                      )}
+                    </div>
+                    <div className={`shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                      isSelected ? "border-primary bg-primary" : "border-gray-300"
+                    }`}>
+                      {isSelected && <div className="h-2 w-2 rounded-full bg-[#0f0f10]" />}
+                    </div>
+                  </label>
+                )
+              })
+            )}
+          </div>
+        )}
+
+        {!freeShippingApplies && quoteData?.realtimeEnabled && quoteData.eligibleByGeo && quoteData.message && (quoteData.groups?.length ?? 0) === 0 && (
+          <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+            <span className="text-xs text-amber-800">{quoteData.message}</span>
+          </div>
+        )}
+        {!freeShippingApplies && quoteData?.realtimeEnabled && !quoteData.eligibleByGeo && quoteData.message && (
+          <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+            <span className="text-xs text-amber-700">{quoteData.message}</span>
+          </div>
+        )}
         <div className="flex justify-between text-sm text-gray-600">
           <span>Subtotal</span><span>{formatCents(subtotal)}</span>
         </div>
         <div className="flex justify-between text-sm text-gray-600">
-          <span>Shipping</span><span className="text-green-400">{shipping === 0 ? "Free" : formatCents(shipping)}</span>
+          <span>Shipping</span>
+          <span className="text-green-400">
+            {effectiveShipping === 0 ? "Free" : formatCents(effectiveShipping)}
+          </span>
         </div>
         <div className="flex justify-between text-sm text-gray-600">
           <span>Tax</span><span>{formatCents(tax)}</span>
@@ -506,7 +771,7 @@ function ReviewStep({
         )}
         <div className="my-2 border-t border-gray-200" />
         <div className="flex justify-between text-gray-900 font-bold">
-          <span>Total</span><span>{formatCents(total)}</span>
+          <span>Total</span><span>{formatCents(effectiveTotal)}</span>
         </div>
       </div>
 
@@ -521,7 +786,18 @@ function ReviewStep({
         <button onClick={onBack} disabled={placing} className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40">
           Back
         </button>
-        <button onClick={onNext} disabled={placing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-70">
+        <button
+          onClick={onNext}
+          disabled={
+            placing ||
+            (!freeShippingApplies &&
+              quoteData?.realtimeEnabled &&
+              quoteData.eligibleByGeo &&
+              (quoteData.groups?.length ?? 0) > 0 &&
+              !selectedQuoteId)
+          }
+          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-70"
+        >
           {placing ? (
             <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Placing order…</span>
           ) : (
@@ -734,6 +1010,8 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState<string | null>(null)
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResponse | null>(null)
+  const [shippingQuotes, setShippingQuotes] = useState<ShippingQuoteResponse | null>(null)
+  const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null)
   const [couponCode, setCouponCode] = useState("")
   const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
   const [couponLoading, setCouponLoading] = useState(false)
@@ -755,6 +1033,8 @@ export default function CheckoutPage() {
   const taxRate = region?.taxRate ?? 0.0825
   const shippingRateCentsPerLb = region?.shippingRateCentsPerLb ?? 599
   const freeShippingThreshold = region?.freeShippingThresholdCents ?? 7500
+  /** Matches static shipping math: at/above threshold, weight-based shipping is $0 (realtime quotes skipped on review). */
+  const freeShippingApplies = subtotal >= freeShippingThreshold
   const KG_TO_LBS = 2.20462
   // Group shipping by store, matching backend logic
   const shippingByStore = new Map<string, { storeName: string; shippingCents: number }>()
@@ -907,6 +1187,9 @@ export default function CheckoutPage() {
         variantName: item.variantName,
         imageUrl: item.imageUrl,
         weightKg: item.weightKg ?? null,
+        lengthIn: item.lengthIn ?? null,
+        widthIn: item.widthIn ?? null,
+        heightIn: item.heightIn ?? null,
       }))
 
       await mergeCart(token, items)
@@ -939,6 +1222,10 @@ export default function CheckoutPage() {
         saveAddress: wantsSaveProfile,
         couponCodes: codes.length > 0 ? codes : undefined,
         dealId: appliedDeal?.id,
+        selectedShippingQuoteId: selectedQuoteId || undefined,
+        selectedShippingCarrier: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.carrier,
+        selectedShippingService: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.serviceCode,
+        selectedShippingAmountCents: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.amountCents,
       })
 
       setCheckoutResult(result)
@@ -949,7 +1236,11 @@ export default function CheckoutPage() {
         return
       }
       logError(e, "checkout")
-      setPlaceError("Checkout failed. Please try again.")
+      setPlaceError(
+        e instanceof ApiError && e.body
+          ? e.body
+          : "Checkout failed. Please try again.",
+      )
     } finally {
       setPlacing(false)
     }
@@ -961,6 +1252,42 @@ export default function CheckoutPage() {
   }, [clearCart])
 
   const currentIdx = STEPS.findIndex((s) => s.id === step)
+
+  useEffect(() => {
+    if (step !== "review") return
+    if (!authToken || !region) return
+    if (freeShippingApplies) {
+      setShippingQuotes(null)
+      setSelectedQuoteId(null)
+      return
+    }
+    if (!address.state && !address.city) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const q = await getShippingQuotes(authToken, {
+          regionId: region.id,
+          state: address.state,
+          city: address.city,
+          destinationLine1: address.line1,
+          destinationZip: address.zip,
+          destinationCountry: "US",
+        })
+        if (cancelled) return
+        setShippingQuotes(q)
+        const first = q.groups?.[0]?.options?.[0]?.quoteId
+        setSelectedQuoteId((prev) => prev ?? first ?? null)
+      } catch {
+        if (!cancelled) {
+          setShippingQuotes(null)
+          setSelectedQuoteId(null)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [step, authToken, region, address.state, address.city, address.zip, freeShippingApplies])
 
   if (!mounted) {
     return (
@@ -1038,7 +1365,11 @@ export default function CheckoutPage() {
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6">
         {step === "address" && (
-          <AddressStep token={authToken} onNext={(addr) => { setAddress(addr); setStep("review") }} />
+          <AddressStep
+            token={authToken}
+            sessionName={session?.data?.user?.name ?? ""}
+            onNext={(addr) => { setAddress(addr); setStep("review") }}
+          />
         )}
         {step === "review" && (
           <ReviewStep
@@ -1066,6 +1397,10 @@ export default function CheckoutPage() {
             onApplyDeal={(deal) => setAppliedDeal(deal)}
             onRemoveDeal={() => setAppliedDeal(null)}
             shippingByStore={shippingByStore}
+            quoteData={shippingQuotes}
+            selectedQuoteId={selectedQuoteId}
+            onSelectQuote={setSelectedQuoteId}
+            freeShippingApplies={freeShippingApplies}
           />
         )}
         {step === "payment" && (

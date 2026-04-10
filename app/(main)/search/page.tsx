@@ -32,6 +32,7 @@ import {
 } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
+import { RemoteImage } from "@/components/ui/remote-image"
 
 const SORT_OPTIONS = [
   { value: "relevance", label: "Most Relevant" },
@@ -332,6 +333,9 @@ function AddToCartButton({ item }: { item: SearchResult }) {
         imageUrl: item.image_url || product.images?.[0]?.url,
         slug: product.slug,
         weightKg: variant.weightKg ?? null,
+        lengthIn: variant.lengthIn ?? null,
+        widthIn: variant.widthIn ?? null,
+        heightIn: variant.heightIn ?? null,
       })
       toast.success(`${product.title} added to cart`)
     } catch {
@@ -400,10 +404,12 @@ function SearchResultCard({
           className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl bg-gray-100"
         >
           {item.image_url ? (
-            <img
+            <RemoteImage
               src={item.image_url}
               alt={item.title}
-              className="h-full w-full object-cover"
+              fill
+              sizes="128px"
+              className="object-cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
@@ -466,10 +472,12 @@ function SearchResultCard({
       <Link href={`/product/${slug}`}>
         <div className="relative h-[120px] sm:h-auto sm:aspect-square overflow-hidden bg-gray-100">
           {item.image_url ? (
-            <img
+            <RemoteImage
               src={item.image_url}
               alt={item.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">

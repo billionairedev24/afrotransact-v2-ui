@@ -12,6 +12,8 @@ function getSellerIntentCallbackUrl(): string | null {
     const raw = localStorage.getItem("afro_register_intent")
     if (!raw) return null
     const intent = JSON.parse(raw) as { callbackUrl?: string; role?: string }
+    // Consume the intent so it doesn't persist past the first login
+    localStorage.removeItem("afro_register_intent")
     return intent.callbackUrl || null
   } catch {
     return null
@@ -37,9 +39,9 @@ function LoginForm() {
   const autoKeycloakSignInStarted = useRef(false)
 
   // Only password_updated and account_updated auto-trigger sign-in.
-  // email_verified intentionally does NOT auto-sign-in — doing so immediately
-  // can re-enter Keycloak before the logout-after-verify-email required action
-  // is fully cleared, causing an infinite verification loop.
+  // email_verified shows a manual "Continue to sign in" button: the user has
+  // just verified their email and a deliberate click is better UX than an
+  // automatic redirect they didn't initiate.
   const callbackRecoveryReasons = [
     "password_updated",
     "account_updated",

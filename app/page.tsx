@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
+import { useQuery } from "@tanstack/react-query"
 import {
   ChevronRight,
   MapPin,
@@ -23,11 +24,45 @@ import { StartSellingLink } from "@/components/selling/StartSellingLink"
 import { HeroCarousel } from "@/components/home/HeroCarousel"
 import { AdSlot } from "@/components/home/AdSlot"
 import { FeaturedProducts } from "@/components/home/FeaturedProducts"
-import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
-import { getCategories, getAllStores, getFeaturedDeals, type CategoryRef, type StoreInfo, type DealData } from "@/lib/api"
+import { fetchStorefrontHomeData } from "@/lib/storefront-home"
+import type { CategoryRef, StoreInfo, DealData } from "@/lib/api"
+import { RemoteImage } from "@/components/ui/remote-image"
 import { StoreCardSkeleton } from "@/components/ui/Skeleton"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+const CategoryShowcase = dynamic(
+  () =>
+    import("@/components/categories/CategoryShowcase").then((m) => ({
+      default: m.CategoryShowcase,
+    })),
+  {
+    loading: () => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm animate-pulse"
+          >
+            <div className="h-5 bg-gray-100 rounded w-2/3 mb-3" />
+            <div className="grid grid-cols-2 gap-2">
+              {Array.from({ length: 4 }).map((__, j) => (
+                <div key={j} className="aspect-square bg-gray-100 rounded-md" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+)
+
+function HeroLoadingShell() {
+  return (
+    <div
+      className="min-h-[min(480px,70vh)] w-full bg-gradient-to-br from-muted/90 via-muted/60 to-muted/40 animate-pulse"
+      aria-hidden
+    />
+  )
+}
 
 interface PlatformDeal {
   id: string
@@ -82,29 +117,18 @@ const trustPoints = [
 ]
 
 export default function HomePage() {
-  const [categories, setCategories] = useState<CategoryRef[]>([])
-  const [stores, setStores] = useState<StoreInfo[]>([])
-  const [deals, setDeals] = useState<DealData[]>([])
-  const [platformDeals, setPlatformDeals] = useState<PlatformDeal[]>([])
+  const { data: home, isPending: homePending } = useQuery({
+    queryKey: ["storefront-home"],
+    queryFn: fetchStorefrontHomeData,
+    staleTime: 5 * 60 * 1000,
+  })
 
-  useEffect(() => {
-    getCategories()
-      .then(setCategories)
-      .catch(() => {})
-
-    getAllStores()
-      .then((s) => setStores(s.slice(0, 6)))
-      .catch(() => {})
-
-    getFeaturedDeals()
-      .then((list) => setDeals(list))
-      .catch(() => {})
-
-    fetch(`${API_BASE}/api/v1/platform-deals`)
-      .then(r => r.ok ? r.json() : [])
-      .then(list => setPlatformDeals(Array.isArray(list) ? list.slice(0, 3) : []))
-      .catch(() => {})
-  }, [])
+  const categories: CategoryRef[] = home?.categories ?? []
+  const stores: StoreInfo[] = (home?.stores ?? []).slice(0, 6)
+  const deals: DealData[] = home?.deals ?? []
+  const platformDeals: PlatformDeal[] = Array.isArray(home?.platformDeals)
+    ? (home!.platformDeals as PlatformDeal[]).slice(0, 3)
+    : []
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -112,7 +136,11 @@ export default function HomePage() {
 
       <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0">
 
-        <HeroCarousel />
+        {homePending ? (
+          <HeroLoadingShell />
+        ) : (
+          <HeroCarousel serverHeroConfigs={home?.heroSlides ?? []} />
+        )}
 
         <section className="bg-card/70 border-y border-border">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-3">
@@ -207,7 +235,7 @@ export default function HomePage() {
             </div>
 
             {categories.length > 0 ? (
-              <CategoryShowcaseAmazon categories={categories} maxParents={8} />
+              <CategoryShowcase categories={categories} maxParents={4} />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -234,6 +262,7 @@ export default function HomePage() {
           sortBy="rating"
           size={8}
           viewAllHref="/search?sort=rating"
+          imagePriorityCount={4}
         />
 
         <FeaturedProducts
@@ -283,9 +312,16 @@ export default function HomePage() {
                             <Store className="h-16 w-16 text-white" />
                           </div>
                         )}
-                        <div className="absolute -bottom-5 left-4 h-12 w-12 rounded-xl bg-card border-2 border-border flex items-center justify-center overflow-hidden">
+                        <div className="absolute -bottom-5 left-4 h-12 w-12 rounded-xl bg-card border-2 border-border flex items-center justify-center overflow-hidden relative">
                           {store.logoUrl ? (
-                            <img src={store.logoUrl} alt={store.name} className="h-full w-full object-cover" />
+                            <RemoteImage
+                              src={store.logoUrl}
+                              alt={store.name}
+                              width={48}
+                              height={48}
+                              className="h-full w-full object-cover"
+                              sizes="48px"
+                            />
                           ) : (
                             <Store className="h-6 w-6 text-primary" />
                           )}

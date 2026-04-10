@@ -30,6 +30,9 @@ interface ServerCartItem {
   variantName?: string
   imageUrl?: string
   weightKg?: number | null
+  lengthIn?: number | null
+  widthIn?: number | null
+  heightIn?: number | null
 }
 
 interface ServerCart {
@@ -50,6 +53,9 @@ function serverItemsToCartItems(serverCart: ServerCart): CartItem[] {
     imageUrl: si.imageUrl,
     slug: si.productId,
     weightKg: si.weightKg ?? null,
+    lengthIn: si.lengthIn ?? null,
+    widthIn: si.widthIn ?? null,
+    heightIn: si.heightIn ?? null,
   }))
 }
 
@@ -64,7 +70,21 @@ function cartItemsToMergePayload(items: CartItem[]) {
     variantName: item.variantName,
     imageUrl: item.imageUrl,
     weightKg: item.weightKg ?? null,
+    lengthIn: item.lengthIn ?? null,
+    widthIn: item.widthIn ?? null,
+    heightIn: item.heightIn ?? null,
   }))
+}
+
+function mergeCartItemsPreferHigherQty(a: CartItem[], b: CartItem[]): CartItem[] {
+  const byVariant = new Map<string, CartItem>()
+  for (const item of [...a, ...b]) {
+    const prev = byVariant.get(item.variantId)
+    if (!prev || item.quantity > prev.quantity) {
+      byVariant.set(item.variantId, item)
+    }
+  }
+  return Array.from(byVariant.values())
 }
 
 export function CartMergeProvider({ children }: { children: React.ReactNode }) {
@@ -96,6 +116,7 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
     allowServerCartPush.current = false
     const token = session.accessToken as string
     const guestItems = loadGuestCart()
+    const localItemsAtStart = useCartStore.getState().items
 
     async function mergeAndSync() {
       try {
@@ -116,7 +137,23 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
 
         if (res.ok) {
           const serverCart: ServerCart = await res.json()
-          useCartStore.getState().setItems(serverItemsToCartItems(serverCart))
+          const serverItems = serverItemsToCartItems(serverCart)
+          // Prevent race-loss: preserve any local cart edits made before hydration completed.
+          const merged = mergeCartItemsPreferHigherQty(serverItems, localItemsAtStart)
+          useCartStore.getState().setItems(merged)
+          if (merged.length > 0) {
+            await fetch(`${API_BASE}/api/v1/cart/merge`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(cartItemsToMergePayload(merged)),
+            })
+          }
+          allowServerCartPush.current = true
+        } else {
+          // If initial read fails, still allow push-sync to avoid dropping local authenticated cart edits.
           allowServerCartPush.current = true
         }
 
@@ -132,6 +169,13 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
     mergeAndSync()
   }, [status, session])
 
+  // Authenticated but no access token yet (or refresh failed): don't block the UI forever.
+  useEffect(() => {
+    if (status !== "authenticated") return
+    if (session?.accessToken) return
+    setCartReady(true)
+  }, [status, session?.accessToken])
+
   // ── Unauthenticated: hydrate from guest sessionStorage; reset merge state for next login ──
   useEffect(() => {
     if (status !== "unauthenticated") return
@@ -144,15 +188,18 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
     setCartReady(true)
   }, [status])
 
-  // ── Guest: persist cart to sessionStorage ──
+  // ── Guest: persist cart to sessionStorage (only after auth status is known).
+  // While status is "loading", isAuthenticatedRef is false; subscribing immediately would
+  // save an empty in-memory cart and wipe sessionStorage before guest hydration runs.
   useEffect(() => {
+    if (status === "loading") return
     const unsub = useCartStore.subscribe((state) => {
       if (!isAuthenticatedRef.current) {
         saveGuestCart(state.items)
       }
     })
     return unsub
-  }, [])
+  }, [status])
 
   // ── Authenticated: keep server cart in sync with the store (debounced) ──
   useEffect(() => {

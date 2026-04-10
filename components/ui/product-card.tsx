@@ -2,6 +2,7 @@ import { Heart, ShoppingCart, Star, Leaf, Loader2, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ProximityBadge } from "./proximity-badge"
 import Link from "next/link"
+import { RemoteImage } from "@/components/ui/remote-image"
 
 export interface ProductCardProps {
   name: string
@@ -16,6 +17,7 @@ export interface ProductCardProps {
   addingToCart?: boolean
   onAddToCart?: (e: React.MouseEvent) => void
   cartHref?: string
+  imagePriority?: boolean
 }
 
 export function ProductCard({
@@ -31,6 +33,7 @@ export function ProductCard({
   addingToCart = false,
   onAddToCart,
   cartHref = "/cart",
+  imagePriority = false,
 }: ProductCardProps) {
   return (
     <div
@@ -46,9 +49,16 @@ export function ProductCard({
         <Heart className="h-4 w-4" />
       </button>
 
-      <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
         {imageUrl ? (
-          <img src={imageUrl} alt={name} className="h-full w-full object-cover" />
+          <RemoteImage
+            src={imageUrl}
+            alt={name}
+            fill
+            sizes="(max-width: 768px) 50vw, 25vw"
+            className="object-cover"
+            priority={imagePriority}
+          />
         ) : (
           <Leaf className="h-12 w-12 text-muted-foreground/50" />
         )}

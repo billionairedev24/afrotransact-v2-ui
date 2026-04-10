@@ -95,7 +95,8 @@ function buildCells(parent: CategoryRef, tiles: (TilePick | null)[]): Cell[] {
     const tile = tiles[i] ?? tiles.find(Boolean) ?? null
     const img = tile?.image ?? null
     const categoryHref = ch ? `/category/${ch.slug}` : `/category/${parent.slug}`
-    const imageHref = productHref(tile) ?? categoryHref
+    // Clicking the image goes to the category page with this product pinned first.
+    const imageHref = tile ? `${categoryHref}?featured=${tile.productId}` : categoryHref
     if (ch) {
       cells.push({
         imageHref,
@@ -199,10 +200,10 @@ type ShowcaseProps = {
 }
 
 /**
- * Amazon-style category tiles: white cards, 2×2 image grid per parent category.
+ * Category tiles: white cards, 2×2 image grid per parent category.
  * Each tile’s photo comes from `/api/v1/search?category=…` (products in that subcategory or parent).
  */
-export function CategoryShowcaseAmazon({
+export function CategoryShowcase({
   categories,
   maxParents = 12,
   className = "",

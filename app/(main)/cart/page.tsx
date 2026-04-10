@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react"
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X } from "lucide-react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
 import { clearServerCart } from "@/lib/api"
+import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
 
 function formatCents(cents: number) {
@@ -108,10 +109,16 @@ export default function CartPage() {
                   {groupItems.map((item) => (
                     <div key={item.variantId} className="flex gap-3 sm:gap-4 p-4 sm:p-5">
                       <div
-                        className="w-20 h-20 rounded-xl shrink-0 bg-gray-50 flex items-center justify-center overflow-hidden"
+                        className="relative w-20 h-20 rounded-xl shrink-0 bg-gray-50 flex items-center justify-center overflow-hidden"
                       >
                         {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                          <RemoteImage
+                            src={item.imageUrl}
+                            alt={item.title}
+                            fill
+                            sizes="80px"
+                            className="object-cover"
+                          />
                         ) : (
                           <ShoppingCart className="h-8 w-8 text-gray-600" />
                         )}
