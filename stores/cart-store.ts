@@ -12,6 +12,9 @@ export interface CartItem {
   imageUrl?: string
   slug: string
   weightKg?: number | null
+  lengthIn?: number | null
+  widthIn?: number | null
+  heightIn?: number | null
 }
 
 interface CartState {

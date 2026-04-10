@@ -203,8 +203,11 @@ export default function FeatureFlagsPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Feature Flags</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Per-region toggles below. Analytics visibility is platform-wide and uses its own API (
-          <span className="font-mono text-gray-600">/api/v1/config/analytics</span>).
+          Per-region toggles below. Analytics visibility is platform-wide: admin updates via{" "}
+          <span className="font-mono text-gray-600">PUT /api/v1/admin/config/analytics</span>
+          ; dashboards read via{" "}
+          <span className="font-mono text-gray-600">GET /api/v1/seller/config/analytics</span>{" "}
+          (authenticated seller or admin).
         </p>
       </div>
 

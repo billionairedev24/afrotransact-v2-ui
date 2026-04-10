@@ -211,6 +211,7 @@ export default function MediaPage() {
   const [bulkMetaTemplate, setBulkMetaTemplate] = useState("")
   const [bulkNameBase, setBulkNameBase] = useState("")
   const [draggingRowId, setDraggingRowId] = useState<string | null>(null)
+  const [autoRenumberOnReorder, setAutoRenumberOnReorder] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -253,6 +254,19 @@ export default function MediaPage() {
     setUploadRows((prev) => prev.map((r, i) => ({ ...r, name: `${base}_${i + 1}` })))
     setBulkNameBase(base)
   }, [])
+
+  const autoRenumberRowsIfEnabled = useCallback((rows: UploadRow[]) => {
+    if (!autoRenumberOnReorder) return rows
+    const base = bulkNameBase.trim()
+    if (!base) return rows
+    const normalizedBase = base.toLowerCase()
+    const canRenumber = rows.every((r) => {
+      const name = r.name.trim().toLowerCase()
+      return name === normalizedBase || name.startsWith(`${normalizedBase}_`)
+    })
+    if (!canRenumber) return rows
+    return rows.map((r, i) => ({ ...r, name: `${base}_${i + 1}` }))
+  }, [autoRenumberOnReorder, bulkNameBase])
 
   const processFiles = useCallback((fileList: FileList | null) => {
     if (!fileList) return
@@ -573,6 +587,7 @@ export default function MediaPage() {
               setUploadError(null)
               setBulkMetaTemplate("")
               setBulkNameBase("")
+              setAutoRenumberOnReorder(true)
               setUploadOpen(true)
             }}
             disabled={uploading}
@@ -588,6 +603,7 @@ export default function MediaPage() {
               setUploadError(null)
               setBulkMetaTemplate("")
               setBulkNameBase("")
+              setAutoRenumberOnReorder(true)
               setUploadOpen(true)
             }}
             disabled={uploading}
@@ -928,8 +944,17 @@ export default function MediaPage() {
                       Name all (jewelry_1..N)
                     </button>
                   </div>
+                  <label className="mt-2 inline-flex items-center gap-2 text-xs text-blue-800">
+                    <input
+                      type="checkbox"
+                      checked={autoRenumberOnReorder}
+                      onChange={(e) => setAutoRenumberOnReorder(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-blue-300 text-[#EAB308] focus:ring-[#EAB308]/40"
+                    />
+                    Auto-renumber names after drag reorder
+                  </label>
                   <p className="mt-1 text-[11px] text-blue-700">
-                    Tip: drag rows to reorder, then click the button again to re-number suffixes by the new order.
+                    Tip: with auto-renumber on, dragging rows updates suffix numbers immediately.
                   </p>
                 </div>
               </div>
@@ -975,7 +1000,7 @@ export default function MediaPage() {
                             const next = [...prev]
                             const [moved] = next.splice(from, 1)
                             next.splice(to, 0, moved)
-                            return next
+                            return autoRenumberRowsIfEnabled(next)
                           })
                           setDraggingRowId(null)
                         }}

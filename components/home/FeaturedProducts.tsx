@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useQuery } from "@tanstack/react-query"
 import { Star, MapPin, Leaf, ChevronRight, Loader2, ShoppingCart } from "lucide-react"
 import { searchProducts, getProductById, type SearchResult } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
@@ -21,6 +22,8 @@ interface Props {
    * initial search call (removes one network round-trip per home section).
    */
   initialProducts?: SearchResult[]
+  /** First N product thumbnails load with priority (LCP / above-the-fold). */
+  imagePriorityCount?: number
 }
 
 function AddToCartButton({ item }: { item: SearchResult }) {
@@ -107,17 +110,16 @@ export function FeaturedProducts({
   viewAllHref = "/search?sort=rating",
   icon,
   initialProducts,
+  imagePriorityCount = 0,
 }: Props) {
-  const [products, setProducts] = useState<SearchResult[]>(initialProducts ?? [])
-  const [loading, setLoading] = useState(initialProducts === undefined)
-
-  useEffect(() => {
-    if (initialProducts) return
-    searchProducts({ size: String(size), sort_by: sortBy })
-      .then((res) => setProducts(res.results))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [sortBy, size, initialProducts])
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ["featured-products", sortBy, size],
+    queryFn: () =>
+      searchProducts({ size: String(size), sort_by: sortBy }).then((res) => res.results),
+    staleTime: 5 * 60 * 1000,
+    initialData: initialProducts,
+  })
+  const loading = isLoading && (initialProducts === undefined)
 
   if (loading) {
     return (
@@ -160,7 +162,7 @@ export function FeaturedProducts({
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
-        {products.map((product) => (
+        {products.map((product, idx) => (
           <Link
             key={product.product_id}
             href={`/product/${product.slug || product.product_id}`}
@@ -174,6 +176,7 @@ export function FeaturedProducts({
                   fill
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                   className="object-cover"
+                  priority={idx < imagePriorityCount}
                 />
               ) : (
                 <Leaf className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/30" />

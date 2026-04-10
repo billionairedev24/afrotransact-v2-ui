@@ -20,11 +20,14 @@ import {
   getSellerStores,
   createStore,
   updateStore,
+  getAdminShippingSettings,
+  getRegionConfig,
   type StoreDetail,
 } from "@/lib/api"
 import { useSellerMe, useSellerStores } from "@/hooks/use-seller-stats"
 import { useQueryClient } from "@tanstack/react-query"
 import { useUploadThing } from "@/lib/uploadthing"
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 
 const inputClass =
   "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
@@ -38,7 +41,15 @@ type FormData = {
   addressCity: string
   addressState: string
   addressZip: string
+  addressCountry: string
   deliveryRadiusMiles: string
+  shipFromSameAsBusiness: boolean
+  shipFromLine1: string
+  shipFromCity: string
+  shipFromState: string
+  shipFromZip: string
+  shipFromCountry: string
+  allowedCarriers: string[]
   logoUrl: string
   bannerUrl: string
 }
@@ -52,7 +63,15 @@ function storeToForm(store: any): FormData {
       addressCity: "",
       addressState: "",
       addressZip: "",
+      addressCountry: "US",
       deliveryRadiusMiles: "10",
+      shipFromSameAsBusiness: true,
+      shipFromLine1: "",
+      shipFromCity: "",
+      shipFromState: "",
+      shipFromZip: "",
+      shipFromCountry: "US",
+      allowedCarriers: ["usps", "ups", "fedex"],
       logoUrl: "",
       bannerUrl: "",
     }
@@ -64,19 +83,49 @@ function storeToForm(store: any): FormData {
     addressCity: store.addressCity ?? "",
     addressState: store.addressState ?? "",
     addressZip: store.addressZip ?? "",
+    addressCountry: store.addressCountry ?? "US",
     deliveryRadiusMiles: String(store.deliveryRadiusMiles ?? 10),
+    shipFromSameAsBusiness: store.shipFromSameAsBusiness ?? true,
+    shipFromLine1: store.shipFromLine1 ?? "",
+    shipFromCity: store.shipFromCity ?? "",
+    shipFromState: store.shipFromState ?? "",
+    shipFromZip: store.shipFromZip ?? "",
+    shipFromCountry: store.shipFromCountry ?? "US",
+    allowedCarriers: store.allowedCarriers ?? ["usps", "ups", "fedex"],
     logoUrl: store.logoUrl ?? "",
     bannerUrl: store.bannerUrl ?? "",
   }
 }
 
-function validateForm(data: FormData): { valid: boolean; errors: string[] } {
+function isShipFromCompleteForCarrier(data: FormData): boolean {
+  if (data.shipFromSameAsBusiness) {
+    return Boolean(
+      data.addressLine1?.trim() &&
+        data.addressCity?.trim() &&
+        data.addressState?.trim() &&
+        data.addressZip?.trim(),
+    )
+  }
+  return Boolean(
+    data.shipFromLine1?.trim() &&
+      data.shipFromCity?.trim() &&
+      data.shipFromState?.trim() &&
+      data.shipFromZip?.trim(),
+  )
+}
+
+function validateForm(data: FormData, carrierShippingEnabled: boolean): { valid: boolean; errors: string[] } {
   const errors: string[] = []
   if (!data.name.trim()) errors.push("Store name is required")
   if (data.name.length > 100) errors.push("Store name must be 100 characters or less")
   if (data.description.length > 500) errors.push("Description must be 500 characters or less")
   const radius = parseInt(data.deliveryRadiusMiles, 10)
   if (isNaN(radius) || radius < 1 || radius > 100) errors.push("Delivery radius must be between 1 and 100 miles")
+  if (carrierShippingEnabled && !isShipFromCompleteForCarrier(data)) {
+    errors.push(
+      "Carrier shipping is enabled for the platform: complete your ship-from address (or match it to your business address with a full business address).",
+    )
+  }
   // Logo and banner URLs come from UploadThing — no manual URL validation needed
   return { valid: errors.length === 0, errors }
 }
@@ -165,12 +214,42 @@ export default function StoreSettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const [carrierShippingEnabled, setCarrierShippingEnabled] = useState(false)
 
   useEffect(() => {
     if (store) {
       setForm(storeToForm(store))
     }
   }, [store])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const token = await getAccessToken()
+        if (!token || cancelled) return
+        const settings = await getAdminShippingSettings(token)
+        if (!cancelled) {
+          setCarrierShippingEnabled(settings.shipping_realtime_enabled === true)
+        }
+      } catch {
+        // Seller users may not have admin-config access; fall back to region config features.
+        const regionCode = process.env.NEXT_PUBLIC_DEFAULT_REGION_CODE
+        if (!regionCode || cancelled) return
+        try {
+          const regionCfg = await getRegionConfig(regionCode)
+          if (!cancelled) {
+            setCarrierShippingEnabled(regionCfg.features?.shipping_realtime_enabled === true)
+          }
+        } catch {
+          // Keep hidden when shipping mode cannot be determined.
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   function update<K extends keyof FormData>(field: K, value: FormData[K]) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -181,7 +260,7 @@ export default function StoreSettingsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const { valid, errors } = validateForm(form)
+    const { valid, errors } = validateForm(form, carrierShippingEnabled)
     if (!valid) {
       setValidationErrors(errors)
       return
@@ -205,11 +284,20 @@ export default function StoreSettingsPage() {
           addressCity: form.addressCity.trim() || null,
           addressState: form.addressState.trim() || null,
           addressZip: form.addressZip.trim() || null,
+          addressCountry: form.addressCountry.trim() || "US",
           deliveryRadiusMiles: radius,
+          shipFromSameAsBusiness: form.shipFromSameAsBusiness,
+          shipFromLine1: form.shipFromSameAsBusiness ? null : form.shipFromLine1.trim() || null,
+          shipFromCity: form.shipFromSameAsBusiness ? null : form.shipFromCity.trim() || null,
+          shipFromState: form.shipFromSameAsBusiness ? null : form.shipFromState.trim() || null,
+          shipFromZip: form.shipFromSameAsBusiness ? null : form.shipFromZip.trim() || null,
+          shipFromCountry: form.shipFromSameAsBusiness ? "US" : form.shipFromCountry.trim() || "US",
+          allowedCarriers: form.allowedCarriers,
           logoUrl: form.logoUrl.trim() || null,
           bannerUrl: form.bannerUrl.trim() || null,
         }
-        await updateStore(token, store.id, payload)
+        const updated = await updateStore(token, store.id, payload)
+        setForm(storeToForm(updated))
         setSuccess(true)
       } else {
         const createPayload = {
@@ -219,7 +307,15 @@ export default function StoreSettingsPage() {
           addressCity: form.addressCity.trim() || null,
           addressState: form.addressState.trim() || null,
           addressZip: form.addressZip.trim() || null,
+          addressCountry: form.addressCountry.trim() || "US",
           deliveryRadiusMiles: radius,
+          shipFromSameAsBusiness: form.shipFromSameAsBusiness,
+          shipFromLine1: form.shipFromSameAsBusiness ? null : form.shipFromLine1.trim() || null,
+          shipFromCity: form.shipFromSameAsBusiness ? null : form.shipFromCity.trim() || null,
+          shipFromState: form.shipFromSameAsBusiness ? null : form.shipFromState.trim() || null,
+          shipFromZip: form.shipFromSameAsBusiness ? null : form.shipFromZip.trim() || null,
+          shipFromCountry: form.shipFromSameAsBusiness ? "US" : form.shipFromCountry.trim() || "US",
+          allowedCarriers: form.allowedCarriers,
         }
         const created = await createStore(token, createPayload)
         if (form.logoUrl.trim() || form.bannerUrl.trim()) {
@@ -231,6 +327,7 @@ export default function StoreSettingsPage() {
         setSuccess(true)
       }
       queryClient.invalidateQueries({ queryKey: ["seller"] })
+      queryClient.invalidateQueries({ queryKey: ["seller", "stores", seller?.id] })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save store")
     } finally {
@@ -267,8 +364,20 @@ export default function StoreSettingsPage() {
     )
   }
 
+  const carrierShipFromIncomplete =
+    carrierShippingEnabled && store && !isShipFromCompleteForCarrier(storeToForm(store))
+
   return (
     <div className="space-y-6">
+      {carrierShipFromIncomplete && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-medium">Carrier shipping requires a complete ship-from address</p>
+          <p className="mt-1 text-amber-900/90">
+            Buyers in eligible regions need live rates from your origin. Use &quot;Same as business address&quot; with a full
+            business address, or enter a dedicated ship-from address below.
+          </p>
+        </div>
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Store Settings</h1>
@@ -405,19 +514,27 @@ export default function StoreSettingsPage() {
 
           <div className="mt-6 space-y-5">
             <div>
-              <label
-                htmlFor="addressLine1"
-                className="mb-1.5 block text-sm font-medium text-foreground"
-              >
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
                 Street Address
               </label>
-              <input
-                id="addressLine1"
-                type="text"
+              <AddressAutocomplete
                 value={form.addressLine1}
-                onChange={(e) => update("addressLine1", e.target.value)}
-                placeholder="123 Main St"
-                className={inputClass}
+                onChange={(v) => update("addressLine1", v)}
+                onSelect={(parts) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    addressLine1: parts.line1,
+                    addressCity: parts.city || prev.addressCity,
+                    addressState: parts.state || prev.addressState,
+                    addressZip: parts.zip || prev.addressZip,
+                    addressCountry: (parts.country || prev.addressCountry || "US").toUpperCase(),
+                  }))
+                  setValidationErrors([])
+                  setError(null)
+                  setSuccess(false)
+                }}
+                placeholder="Start typing your address…"
+                className={`${inputClass} !rounded-md`}
               />
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -469,6 +586,22 @@ export default function StoreSettingsPage() {
                   className={inputClass}
                 />
               </div>
+              <div>
+                <label
+                  htmlFor="addressCountry"
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Country
+                </label>
+                <input
+                  id="addressCountry"
+                  type="text"
+                  value={form.addressCountry}
+                  onChange={(e) => update("addressCountry", e.target.value)}
+                  placeholder="US"
+                  className={inputClass}
+                />
+              </div>
             </div>
             <div className="max-w-xs">
               <label
@@ -497,6 +630,135 @@ export default function StoreSettingsPage() {
             </div>
           </div>
         </section>
+
+        {/* Shipping preferences (only in realtime carrier mode) */}
+        {!carrierShippingEnabled && (
+          <section className="rounded-lg border border-border bg-card p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Shipping Preferences</h2>
+                <p className="text-sm text-muted-foreground">
+                  Carrier shipping is currently disabled by admin. Enable realtime carrier shipping to configure ship-from and carrier preferences.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+        {carrierShippingEnabled && <section className="rounded-lg border border-border bg-card p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+              <MapPin className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Shipping Preferences</h2>
+              <p className="text-sm text-muted-foreground">
+                Carrier preferences and ship-from address for realtime carrier shipping.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">Allowed carriers</label>
+              <div className="flex flex-wrap gap-2">
+                {["usps", "ups", "fedex"].map((c) => {
+                  const checked = form.allowedCarriers.includes(c)
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() =>
+                        update(
+                          "allowedCarriers",
+                          checked
+                            ? form.allowedCarriers.filter((x) => x !== c)
+                            : [...form.allowedCarriers, c],
+                        )
+                      }
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        checked
+                          ? "border-primary/40 bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {c.toUpperCase()}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="inline-flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={form.shipFromSameAsBusiness}
+                  onChange={(e) => update("shipFromSameAsBusiness", e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-primary"
+                />
+                Ship-from address is same as business address
+              </label>
+            </div>
+
+            {!form.shipFromSameAsBusiness && (
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">
+                    Ship-from street address
+                  </label>
+                  <AddressAutocomplete
+                    value={form.shipFromLine1}
+                    onChange={(v) => update("shipFromLine1", v)}
+                    onSelect={(parts) => {
+                      setForm((prev) => ({
+                        ...prev,
+                        shipFromLine1: parts.line1,
+                        shipFromCity: parts.city || prev.shipFromCity,
+                        shipFromState: parts.state || prev.shipFromState,
+                        shipFromZip: parts.zip || prev.shipFromZip,
+                        shipFromCountry: (parts.country || prev.shipFromCountry || "US").toUpperCase(),
+                      }))
+                      setValidationErrors([])
+                      setError(null)
+                      setSuccess(false)
+                    }}
+                    placeholder="Start typing your ship-from address…"
+                    className={`${inputClass} !rounded-md`}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <input
+                    value={form.shipFromCity}
+                    onChange={(e) => update("shipFromCity", e.target.value)}
+                    placeholder="City"
+                    className={inputClass}
+                  />
+                  <input
+                    value={form.shipFromState}
+                    onChange={(e) => update("shipFromState", e.target.value)}
+                    placeholder="State"
+                    className={inputClass}
+                  />
+                  <input
+                    value={form.shipFromZip}
+                    onChange={(e) => update("shipFromZip", e.target.value)}
+                    placeholder="ZIP"
+                    className={inputClass}
+                  />
+                  <input
+                    value={form.shipFromCountry}
+                    onChange={(e) => update("shipFromCountry", e.target.value)}
+                    placeholder="Country (US)"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </section>}
 
         {/* Branding */}
         <section className="rounded-lg border border-border bg-card p-6">

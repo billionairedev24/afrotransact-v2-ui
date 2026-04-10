@@ -42,6 +42,9 @@ const nextConfig = {
   ...(process.env.VERCEL ? {} : { outputFileTracingRoot: require('path').join(__dirname, '../') }),
 
   images: {
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [32, 48, 64, 80, 96, 128, 256, 384],
     remotePatterns: [
       { protocol: 'https', hostname: 'cdn.afrotransact.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -50,6 +53,8 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.ufs.sh' },
       { protocol: 'https', hostname: '*.uploadthing.com' },
       { protocol: 'https', hostname: '*.ingest.uploadthing.com' },
+      { protocol: 'https', hostname: '**.amazonaws.com' },
+      { protocol: 'https', hostname: '**.s3.amazonaws.com' },
     ],
   },
 

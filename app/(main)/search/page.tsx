@@ -33,6 +33,7 @@ import {
 } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
+import { RemoteImage } from "@/components/ui/remote-image"
 
 const SORT_OPTIONS = [
   { value: "relevance", label: "Most Relevant" },
@@ -333,6 +334,9 @@ function AddToCartButton({ item }: { item: SearchResult }) {
         imageUrl: item.image_url || product.images?.[0]?.url,
         slug: product.slug,
         weightKg: variant.weightKg ?? null,
+        lengthIn: variant.lengthIn ?? null,
+        widthIn: variant.widthIn ?? null,
+        heightIn: variant.heightIn ?? null,
       })
       toast.success(`${product.title} added to cart`)
     } catch {
