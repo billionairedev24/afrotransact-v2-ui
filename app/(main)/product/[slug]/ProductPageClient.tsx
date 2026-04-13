@@ -23,6 +23,7 @@ import {
   type Region,
   getActiveDeals,
   type DealData,
+  trackEvent,
 } from "@/lib/api"
 import { logError } from "@/lib/errors"
 
@@ -61,7 +62,13 @@ export default function ProductPageClient() {
         if (cancelled) return
         setProduct(data)
         setSelectedVariant(data.variants[0] ?? null)
-        
+
+        trackEvent({
+          event_type: "view",
+          product_id: data.id,
+          category: data.categories?.[0]?.name,
+        })
+
         // 2. Fetch store name
         getStoreById(data.storeId)
           .then((store) => { if (!cancelled) setStoreName(store.name) })

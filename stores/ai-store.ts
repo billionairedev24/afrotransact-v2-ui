@@ -22,6 +22,7 @@ export interface AiMessage {
   products?: ProductCard[]
   toolName?: string
   isStreaming?: boolean
+  isError?: boolean
   timestamp: number
 }
 
@@ -44,8 +45,10 @@ interface AiStore {
   addUserMessage: (content: string) => AiMessage
   addAssistantMessage: () => AiMessage
   appendToMessage: (id: string, delta: string) => void
+  resetMessage: (id: string) => void
   attachProducts: (id: string, products: ProductCard[]) => void
   finaliseMessage: (id: string) => void
+  markMessageError: (id: string, message: string) => void
   clearHistory: () => void
   setStreaming: (v: boolean) => void
 }
@@ -91,6 +94,13 @@ export const useAiStore = create<AiStore>((set, get) => ({
       ),
     })),
 
+  resetMessage: (id) =>
+    set((s) => ({
+      messages: s.messages.map((m) =>
+        m.id === id ? { ...m, content: "" } : m
+      ),
+    })),
+
   attachProducts: (id, products) =>
     set((s) => ({
       messages: s.messages.map((m) =>
@@ -102,6 +112,13 @@ export const useAiStore = create<AiStore>((set, get) => ({
     set((s) => ({
       messages: s.messages.map((m) =>
         m.id === id ? { ...m, isStreaming: false } : m
+      ),
+    })),
+
+  markMessageError: (id, message) =>
+    set((s) => ({
+      messages: s.messages.map((m) =>
+        m.id === id ? { ...m, content: message, isError: true, isStreaming: false } : m
       ),
     })),
 

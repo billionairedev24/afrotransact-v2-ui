@@ -23,11 +23,11 @@ export function AiChatPanel() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const { supported: voiceSupported, toggle: toggleVoice } = useVoiceInput({
+  const { supported: voiceSupported, toggle: toggleVoice, error: voiceError } = useVoiceInput({
     onTranscript: (text) => {
       setInterimText("")
       setInput("")
-      sendMessage(text)
+      sendMessage(text, false, true) // fromVoice = true → AI will speak the response
     },
     onInterim: (text) => setInterimText(text),
   })
@@ -57,7 +57,7 @@ export function AiChatPanel() {
     <div
       className={`flex flex-col bg-background border border-border rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 ${
         isExpanded
-          ? "fixed inset-4 sm:inset-auto sm:bottom-[88px] sm:right-4 sm:w-[480px] sm:h-[75vh] z-[60]"
+          ? "fixed inset-4 sm:inset-auto sm:bottom-[88px] sm:right-4 sm:w-[540px] sm:h-[82vh] z-[60]"
           : "w-full h-full"
       }`}
     >
@@ -67,7 +67,7 @@ export function AiChatPanel() {
           A
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-foreground leading-none">Afrobi</p>
+          <p className="text-sm font-bold text-foreground leading-none">Victory</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
             {isListening ? (
               <span className="text-red-500 font-medium animate-pulse">Listening…</span>
@@ -106,14 +106,14 @@ export function AiChatPanel() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4 scroll-smooth">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 space-y-4 scroll-smooth">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full gap-5 text-center py-8">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-3xl select-none">
               🛒
             </div>
             <div>
-              <p className="font-bold text-foreground text-base">Hey! I&apos;m Afrobi</p>
+              <p className="font-bold text-foreground text-base">Hey! I&apos;m Victory</p>
               <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                 Your African shopping guide. Ask me anything — I can find products, track orders, and more!
               </p>
@@ -131,35 +131,41 @@ export function AiChatPanel() {
             </div>
           </div>
         ) : (
-          messages.map((msg) => <AiMessageBubble key={msg.id} message={msg} />)
+          messages.map((msg, idx) => {
+            const onRetry = msg.isError
+              ? () => {
+                  const lastUser = [...messages].slice(0, idx).reverse().find((m) => m.role === "user")
+                  if (lastUser) sendMessage(lastUser.content)
+                }
+              : undefined
+            return <AiMessageBubble key={msg.id} message={msg} onRetry={onRetry} />
+          })
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Voice interim text */}
-      {interimText && (
-        <div className="px-4 py-1.5 text-xs text-muted-foreground italic border-t border-border bg-muted/30">
-          {interimText}…
+      {/* Voice interim text / error */}
+      {(interimText || voiceError) && (
+        <div className={`px-4 py-1.5 text-xs border-t border-border ${voiceError ? "text-red-500 bg-red-500/5" : "text-muted-foreground italic bg-muted/30"}`}>
+          {voiceError ?? `${interimText}…`}
         </div>
       )}
 
       {/* Input bar */}
       <div className="shrink-0 border-t border-border bg-card px-3 py-3">
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
-          {voiceSupported && (
-            <AiVoiceButton
-              isListening={isListening}
-              supported={voiceSupported}
-              onToggle={toggleVoice}
-              size="sm"
-            />
-          )}
+          <AiVoiceButton
+            isListening={isListening}
+            supported={voiceSupported}
+            onToggle={toggleVoice}
+            size="sm"
+          />
           <input
             ref={inputRef}
             value={isListening ? interimText : input}
             onChange={(e) => !isListening && setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSubmit(e as unknown as React.FormEvent)}
-            placeholder={isListening ? "Listening…" : "Ask Afrobi anything…"}
+            placeholder={isListening ? "Listening…" : "Ask Victory anything…"}
             disabled={isStreaming || isListening}
             className="flex-1 min-w-0 bg-muted/50 border border-border rounded-xl px-3.5 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 transition-all"
           />

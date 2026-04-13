@@ -13,7 +13,6 @@ import {
   Star,
   MapPin,
   ShoppingCart,
-  Check,
   SlidersHorizontal,
   X,
   ChevronRight,
@@ -304,15 +303,17 @@ function MobileFilterPanel({
 
 function AddToCartButton({ item }: { item: SearchResult }) {
   const addItem = useCartStore((s) => s.addItem)
-  const items = useCartStore((s) => s.items)
+  const updateQuantity = useCartStore((s) => s.updateQuantity)
+  const cartItems = useCartStore((s) => s.items)
   const [loading, setLoading] = useState(false)
 
-  const inCart = items.some((i) => i.productId === item.product_id)
+  const cartItem = cartItems.find((i) => i.productId === item.product_id)
+  const quantity = cartItem?.quantity ?? 0
 
   async function handleAdd(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!item.in_stock || loading || inCart) return
+    if (!item.in_stock || loading) return
 
     setLoading(true)
     try {
@@ -338,12 +339,18 @@ function AddToCartButton({ item }: { item: SearchResult }) {
         widthIn: variant.widthIn ?? null,
         heightIn: variant.heightIn ?? null,
       })
-      toast.success(`${product.title} added to cart`)
     } catch {
       toast.error("Could not add to cart")
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleChange(e: React.MouseEvent, delta: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!cartItem) return
+    updateQuantity(cartItem.variantId, quantity + delta)
   }
 
   if (!item.in_stock) {
@@ -357,16 +364,26 @@ function AddToCartButton({ item }: { item: SearchResult }) {
     )
   }
 
-  if (inCart) {
+  if (quantity > 0) {
     return (
-      <Link
-        href="/cart"
-        onClick={(e) => e.stopPropagation()}
-        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-100 transition-colors"
+      <div
+        onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+        className="flex w-full items-center justify-between rounded-xl bg-primary px-1 py-0.5"
       >
-        <Check className="h-3.5 w-3.5" />
-        In Cart
-      </Link>
+        <button
+          onClick={(e) => handleChange(e, -1)}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
+        >
+          −
+        </button>
+        <span className="text-sm font-black text-[#0f0f10] tabular-nums">{quantity}</span>
+        <button
+          onClick={(e) => handleChange(e, +1)}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
+        >
+          +
+        </button>
+      </div>
     )
   }
 

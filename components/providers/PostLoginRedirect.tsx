@@ -54,13 +54,18 @@ export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
 
     if (isOnAuthPage || isOnApiPage || isOnOnboarding || isOnAdmin) return
 
+    // Check JWT roles first — authoritative, no API call needed
+    const jwtRoles = (session?.user?.roles as string[] | undefined) ?? []
+    const isAdmin = jwtRoles.some((r) =>
+      r === "admin" || r === "realm-admin" || r.includes("admin"),
+    )
+    if (isAdmin) return
+
     const token = await getAccessToken()
     if (!token) return
 
     const role = await fetchUserRole(token)
     if (!role || role === "buyer") return
-
-    if (role === "admin") return
 
     // Only sellers get routed to dashboard/onboarding
     if (role === "seller") {

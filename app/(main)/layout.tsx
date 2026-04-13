@@ -1,6 +1,5 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
-import { AiWidget } from "@/components/ai/AiWidget"
 
 export default function MainLayout({
   children,
@@ -14,7 +13,6 @@ export default function MainLayout({
         {children}
       </main>
       <Footer />
-      <AiWidget />
     </div>
   )
 }

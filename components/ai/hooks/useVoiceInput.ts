@@ -51,7 +51,7 @@ export function useVoiceInput({ onTranscript, onInterim }: UseVoiceInputOptions)
     setListening(false)
   }, [setListening])
 
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     setError(null)
     const w = window as SpeechWindow
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition
@@ -60,10 +60,30 @@ export function useVoiceInput({ onTranscript, onInterim }: UseVoiceInputOptions)
       return
     }
 
+    // Chrome and Edge require an explicit getUserMedia call first — they won't
+    // auto-prompt for permission when SpeechRecognition.start() is called directly.
+    // We request the stream, then immediately release it; the permission grant persists.
+    if (navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach((t) => t.stop())
+      } catch (err: unknown) {
+        const name = err instanceof Error ? err.name : ""
+        if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+          setError("Microphone access denied. Click the lock icon in your browser's address bar to allow it.")
+        } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+          setError("No microphone found. Please connect one and try again.")
+        } else {
+          setError("Could not access microphone. Please check your browser settings.")
+        }
+        return
+      }
+    }
+
     const recognition = new Ctor()
     recognition.continuous = false
     recognition.interimResults = true
-    recognition.lang = navigator.language || "en-US"
+    recognition.lang = "en-US"
     recognition.maxAlternatives = 1
 
     recognition.onstart = () => setListening(true)
@@ -93,10 +113,16 @@ export function useVoiceInput({ onTranscript, onInterim }: UseVoiceInputOptions)
     }
 
     recognition.onerror = (event: SpeechRecognitionErrorResult) => {
-      if (event.error === "not-allowed") {
-        setError("Microphone access denied. Please allow microphone permissions.")
-      } else if (event.error !== "aborted") {
-        setError("Voice recognition failed. Please try again.")
+      if (event.error === "aborted") {
+        // Intentional stop — no message needed
+      } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setError("Microphone access denied. Click the lock icon in your browser's address bar to allow it.")
+      } else if (event.error === "network") {
+        setError("Speech recognition needs an internet connection.")
+      } else if (event.error === "no-speech") {
+        // Soft error — just stop without message
+      } else {
+        setError("Microphone error. Please try again.")
       }
       setListening(false)
     }
@@ -107,7 +133,11 @@ export function useVoiceInput({ onTranscript, onInterim }: UseVoiceInputOptions)
     }
 
     recognitionRef.current = recognition
-    recognition.start()
+    try {
+      recognition.start()
+    } catch {
+      // InvalidStateError — already started, ignore
+    }
   }, [onTranscript, onInterim, stop, setListening])
 
   const toggle = useCallback(() => {

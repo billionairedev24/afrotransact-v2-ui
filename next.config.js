@@ -28,7 +28,7 @@ const securityHeaders = [
   ...(enforceHttps ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' }] : []),
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(self), payment=(self "https://js.stripe.com")',
+    value: 'camera=(), microphone=(self), geolocation=(self), payment=(self "https://js.stripe.com")',
   },
   { key: 'Content-Security-Policy', value: cspDirectives },
 ]

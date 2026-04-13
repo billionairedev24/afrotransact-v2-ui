@@ -54,6 +54,9 @@ function AddToCartButton({ item }: { item: SearchResult }) {
         imageUrl: item.image_url || product.images?.[0]?.url,
         slug: product.slug,
         weightKg: variant.weightKg ?? null,
+        lengthIn: variant.lengthIn ?? null,
+        widthIn: variant.widthIn ?? null,
+        heightIn: variant.heightIn ?? null,
       })
     } catch {
       toast.error("Could not add to cart")

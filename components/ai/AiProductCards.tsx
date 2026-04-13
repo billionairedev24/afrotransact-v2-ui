@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Package, ShoppingCart } from "lucide-react"
+import { Package, ShoppingCart, Loader2 } from "lucide-react"
 import { type ProductCard } from "@/stores/ai-store"
 import { useCartStore } from "@/stores/cart-store"
 import { getProductById } from "@/lib/api"
@@ -11,12 +11,15 @@ import { useState } from "react"
 function AiProductCard({ product }: { product: ProductCard }) {
   const [adding, setAdding] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
-  const inCart = useCartStore((s) => s.items.some((i) => i.productId === product.product_id))
-  const path = (product.slug?.trim()) || product.product_id
+  const updateQuantity = useCartStore((s) => s.updateQuantity)
+  const cartItem = useCartStore((s) => s.items.find((i) => i.productId === product.product_id))
+  const quantity = cartItem?.quantity ?? 0
+  const path = product.slug?.trim() || product.product_id
 
   async function handleAdd(e: React.MouseEvent) {
     e.preventDefault()
-    if (adding || inCart || !product.in_stock) return
+    e.stopPropagation()
+    if (adding || !product.in_stock) return
     setAdding(true)
     try {
       const p = await getProductById(product.product_id)
@@ -38,7 +41,6 @@ function AiProductCard({ product }: { product: ProductCard }) {
         widthIn: variant.widthIn ?? null,
         heightIn: variant.heightIn ?? null,
       })
-      toast.success(`${p.title} added to cart`)
     } catch {
       toast.error("Could not add to cart")
     } finally {
@@ -46,60 +48,104 @@ function AiProductCard({ product }: { product: ProductCard }) {
     }
   }
 
+  function handleChange(e: React.MouseEvent, delta: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!cartItem) return
+    updateQuantity(cartItem.variantId, quantity + delta)
+  }
+
   return (
-    <div className="group relative flex flex-col rounded-xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-md transition-all duration-200 w-[120px] shrink-0">
+    <div className="group relative flex flex-col rounded-xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-md transition-all duration-200 w-[160px] shrink-0">
       <Link href={`/product/${encodeURIComponent(path)}`} className="block">
-        <div className="aspect-square bg-muted/40 flex items-center justify-center p-1.5">
+        <div className="h-[140px] bg-muted/40 flex items-center justify-center p-2 overflow-hidden">
           {product.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={product.image_url}
               alt={product.title}
-              className="h-full w-full object-contain group-hover:scale-[1.03] transition-transform duration-200"
+              className="h-full w-full object-contain group-hover:scale-[1.04] transition-transform duration-200"
             />
           ) : (
-            <Package className="h-8 w-8 text-muted-foreground/40" />
+            <Package className="h-10 w-10 text-muted-foreground/40" />
+          )}
+          {!product.in_stock && (
+            <span className="absolute top-2 left-2 text-[9px] font-bold rounded-md px-1.5 py-0.5 bg-red-500/90 text-white">
+              Out of stock
+            </span>
           )}
         </div>
-        <div className="px-2 pt-1.5 pb-1">
-          <p className="text-[10px] font-medium text-card-foreground line-clamp-2 leading-tight">
+        <div className="px-2.5 pt-2 pb-1.5 space-y-0.5">
+          <p className="text-[11px] font-semibold text-card-foreground line-clamp-2 leading-tight group-hover:text-primary transition-colors">
             {product.title}
           </p>
-          <p className="text-[11px] font-bold text-primary mt-0.5">
-            ${product.min_price.toFixed(2)}
-          </p>
-          {!product.in_stock && (
-            <p className="text-[9px] text-red-500 font-medium mt-0.5">Out of stock</p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-[13px] font-bold text-primary">${product.min_price.toFixed(2)}</span>
+            {product.max_price > product.min_price && (
+              <span className="text-[10px] text-muted-foreground">–${product.max_price.toFixed(2)}</span>
+            )}
+          </div>
+          {product.store_name && (
+            <p className="text-[10px] text-muted-foreground truncate">{product.store_name}</p>
           )}
         </div>
       </Link>
-      <button
-        onClick={handleAdd}
-        disabled={adding || inCart || !product.in_stock}
-        className={`mx-2 mb-2 flex items-center justify-center gap-1 rounded-lg py-1.5 text-[10px] font-semibold transition-colors ${
-          inCart
-            ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
-            : product.in_stock
-            ? "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-            : "bg-muted text-muted-foreground cursor-not-allowed"
-        }`}
-      >
-        <ShoppingCart className="h-3 w-3" />
-        {inCart ? "In Cart" : adding ? "Adding…" : "Add"}
-      </button>
+
+      <div className="px-2.5 pb-2.5 mt-auto">
+        {!product.in_stock ? (
+          <button disabled className="w-full flex items-center justify-center rounded-lg bg-gray-100 py-1.5 text-[10px] font-medium text-gray-400 cursor-not-allowed">
+            Out of stock
+          </button>
+        ) : quantity > 0 ? (
+          <div
+            onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+            className="flex w-full items-center justify-between rounded-lg bg-primary px-1 py-0.5"
+          >
+            <button
+              onClick={(e) => handleChange(e, -1)}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
+            >
+              −
+            </button>
+            <span className="text-sm font-black text-[#0f0f10] tabular-nums">{quantity}</span>
+            <button
+              onClick={(e) => handleChange(e, +1)}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
+            >
+              +
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleAdd}
+            disabled={adding}
+            className="w-full flex items-center justify-center gap-1 rounded-lg bg-primary py-1.5 text-[10px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors"
+          >
+            {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingCart className="h-3 w-3" />}
+            {adding ? "Adding…" : "Add to Cart"}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
 
-export function AiProductCards({ products }: { products: ProductCard[] }) {
+export function AiProductCards({ products, label }: { products: ProductCard[]; label?: string }) {
   if (!products.length) return null
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 mt-2 snap-x snap-mandatory">
-      {products.map((p) => (
-        <div key={p.product_id} className="snap-start">
-          <AiProductCard product={p} />
-        </div>
-      ))}
+    <div className="mt-2.5 space-y-1.5">
+      {label && (
+        <p className="text-[11px] font-medium text-muted-foreground px-0.5">
+          {label}
+        </p>
+      )}
+      <div className="flex gap-2.5 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+        {products.map((p) => (
+          <div key={p.product_id} className="snap-start">
+            <AiProductCard product={p} />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

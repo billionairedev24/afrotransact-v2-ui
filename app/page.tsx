@@ -21,6 +21,7 @@ import { HeroCarousel, mapConfigToSlide, type HeroSlide } from "@/components/hom
 import { AdSlot } from "@/components/home/AdSlot"
 import { FeaturedProducts } from "@/components/home/FeaturedProducts"
 import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
+import { ForYouSection } from "@/components/home/ForYouSection"
 import {
   getCategories,
   getAllStores,
@@ -259,6 +260,8 @@ export default async function HomePage() {
           icon={<Sparkles className="h-3.5 w-3.5 text-primary" />}
           initialProducts={featuredNewest.results}
         />
+
+        <ForYouSection />
 
         <AdSlot slotId="mid-page-2" />
 

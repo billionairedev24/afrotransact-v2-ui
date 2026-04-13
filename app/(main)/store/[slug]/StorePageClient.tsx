@@ -49,6 +49,7 @@ function getAccentColor(store: StoreInfo | null): string {
 function StoreProductGrid({ products, store }: { products: Product[]; store: StoreInfo }) {
   const addItem = useCartStore((s) => s.addItem)
   const cartItems = useCartStore((s) => s.items)
+  const updateQuantity = useCartStore((s) => s.updateQuantity)
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   function handleAdd(product: Product) {
@@ -84,7 +85,8 @@ function StoreProductGrid({ products, store }: { products: Product[]; store: Sto
         const displayVariant = firstInStockVariant(product) ?? product.variants?.[0]
         const price = displayVariant?.price
         const imageUrl = product.images?.[0]?.url
-        const inCart = cartItems.some((i) => i.productId === product.id)
+        const cartItem = cartItems.find((i) => i.productId === product.id)
+        const cartQuantity = cartItem?.quantity ?? 0
         return (
           <Link key={product.id} href={`/product/${product.slug}`}>
             <ProductCard
@@ -95,9 +97,13 @@ function StoreProductGrid({ products, store }: { products: Product[]; store: Sto
               rating={0}
               imageUrl={imageUrl}
               inStock={productHasSellableStock(product)}
-              inCart={inCart}
+              inCart={cartQuantity > 0}
+              cartQuantity={cartQuantity}
               addingToCart={loadingId === product.id}
               onAddToCart={() => handleAdd(product)}
+              onQuantityChange={(delta) => {
+                if (cartItem) updateQuantity(cartItem.variantId, cartQuantity + delta)
+              }}
             />
           </Link>
         )

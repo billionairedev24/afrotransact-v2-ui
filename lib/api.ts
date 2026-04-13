@@ -2448,4 +2448,83 @@ export async function putAdminAnalyticsSettings(
   })
 }
 
+// ── AI Provider Settings ───────────────────────────────────────────────────
+
+export interface AiSettings {
+  provider: string
+  available_providers: string[]
+  gemini_configured: boolean
+  claude_configured: boolean
+}
+
+export async function getAiSettings(token: string): Promise<AiSettings> {
+  return api<AiSettings>("/api/v1/ai/admin/settings", { token })
+}
+
+export async function updateAiProvider(token: string, provider: string): Promise<AiSettings> {
+  return api<AiSettings>("/api/v1/ai/admin/settings", {
+    method: "PUT",
+    body: { provider },
+    token,
+  })
+}
+
+// ── Behaviour Tracking ────────────────────────────────────────────────────────
+
+const CLIENT_ID_KEY = "afrotransact_cid"
+
+/** Stable anonymous client ID — created once in localStorage, persists across sessions. */
+export function getOrCreateClientId(): string {
+  try {
+    const existing = localStorage.getItem(CLIENT_ID_KEY)
+    if (existing) return existing
+    const id = crypto.randomUUID()
+    localStorage.setItem(CLIENT_ID_KEY, id)
+    return id
+  } catch {
+    return "anon"
+  }
+}
+
+interface TrackEventPayload {
+  event_type: "view" | "cart_add" | "search"
+  product_id?: string
+  category?: string
+  query?: string
+  client_id?: string
+}
+
+/** Fire-and-forget — never throws, never awaited for UX. */
+export function trackEvent(payload: TrackEventPayload, token?: string): void {
+  const body: TrackEventPayload = {
+    ...payload,
+    client_id: payload.client_id ?? getOrCreateClientId(),
+  }
+  fetch(`${API_BASE}/api/v1/ai/events/track`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  }).catch(() => {}) // intentionally swallowed
+}
+
+// ── Recommendations ───────────────────────────────────────────────────────────
+
+export interface RecommendationsResponse {
+  results: SearchResult[]
+  based_on: string[] | null
+  total: number
+}
+
+export async function getRecommendations(
+  token?: string,
+  limit = 8,
+): Promise<RecommendationsResponse> {
+  const clientId = getOrCreateClientId()
+  const qs = new URLSearchParams({ limit: String(limit), client_id: clientId })
+  return api<RecommendationsResponse>(`/api/v1/ai/recommendations?${qs}`, token ? { token } : {})
+}
+
 export { API_BASE }

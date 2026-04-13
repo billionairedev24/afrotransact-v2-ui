@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useSearchParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { ChevronRight, Star, MapPin, Leaf, Loader2, ShoppingCart, Check, Sparkles } from "lucide-react"
+import { ChevronRight, Star, MapPin, Leaf, Loader2, ShoppingCart, Sparkles } from "lucide-react"
 import { searchProducts, getCategories, getProductById, type SearchResult, type CategoryRef, type Product } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
@@ -37,24 +37,23 @@ function productToSearchResult(p: Product): SearchResult {
 
 function AddToCartButton({ item }: { item: SearchResult }) {
   const addItem = useCartStore((s) => s.addItem)
-  const items = useCartStore((s) => s.items)
+  const updateQuantity = useCartStore((s) => s.updateQuantity)
+  const cartItems = useCartStore((s) => s.items)
   const [loading, setLoading] = useState(false)
 
-  const inCart = items.some((i) => i.productId === item.product_id)
+  const cartItem = cartItems.find((i) => i.productId === item.product_id)
+  const quantity = cartItem?.quantity ?? 0
 
   async function handleAdd(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!item.in_stock || loading || inCart) return
+    if (!item.in_stock || loading) return
 
     setLoading(true)
     try {
       const product = await getProductById(item.product_id)
       const variant = product.variants?.[0]
-      if (!variant) {
-        toast.error("This product has no purchasable variant yet")
-        return
-      }
+      if (!variant) { toast.error("This product has no purchasable variant yet"); return }
       addItem({
         productId: product.id,
         variantId: variant.id,
@@ -71,7 +70,6 @@ function AddToCartButton({ item }: { item: SearchResult }) {
         widthIn: variant.widthIn ?? null,
         heightIn: variant.heightIn ?? null,
       })
-      toast.success(`${product.title} added to cart`)
     } catch {
       toast.error("Could not add to cart")
     } finally {
@@ -79,27 +77,41 @@ function AddToCartButton({ item }: { item: SearchResult }) {
     }
   }
 
+  function handleChange(e: React.MouseEvent, delta: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!cartItem) return
+    updateQuantity(cartItem.variantId, quantity + delta)
+  }
+
   if (!item.in_stock) {
     return (
-      <button
-        disabled
-        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-400 cursor-not-allowed"
-      >
+      <button disabled className="mt-1 flex w-full items-center justify-center rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-400 cursor-not-allowed">
         Out of Stock
       </button>
     )
   }
 
-  if (inCart) {
+  if (quantity > 0) {
     return (
-      <Link
-        href="/cart"
-        onClick={(e) => e.stopPropagation()}
-        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-100 transition-colors"
+      <div
+        onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+        className="mt-1 flex w-full items-center justify-between rounded-lg bg-primary px-1 py-0.5"
       >
-        <Check className="h-3.5 w-3.5" />
-        In Cart
-      </Link>
+        <button
+          onClick={(e) => handleChange(e, -1)}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
+        >
+          −
+        </button>
+        <span className="text-sm font-black text-[#0f0f10] tabular-nums">{quantity}</span>
+        <button
+          onClick={(e) => handleChange(e, +1)}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
+        >
+          +
+        </button>
+      </div>
     )
   }
 

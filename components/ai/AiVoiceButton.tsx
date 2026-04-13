@@ -39,10 +39,21 @@ export function AiVoiceButton({
     return () => cancelAnimationFrame(raf)
   }, [isListening])
 
-  if (!supported) return null
-
   const iconSize = size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"
   const btnSize = size === "sm" ? "h-7 w-7" : "h-9 w-9"
+
+  if (!supported) {
+    return (
+      <button
+        type="button"
+        disabled
+        title="Voice input is not supported in this browser. Try Chrome or Safari."
+        className={`relative flex items-center justify-center rounded-full shrink-0 opacity-30 cursor-not-allowed bg-muted text-muted-foreground ${btnSize} ${className}`}
+      >
+        <MicOff className={iconSize} />
+      </button>
+    )
+  }
 
   return (
     <button
