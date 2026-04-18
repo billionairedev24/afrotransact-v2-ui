@@ -1,7 +1,7 @@
-import { Heart, ShoppingCart, Star, Leaf, Loader2, Check } from "lucide-react"
+import { Heart, ShoppingCart, Star, Leaf, Loader2 } from "lucide-react"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { ProximityBadge } from "./proximity-badge"
-import Link from "next/link"
 
 export interface ProductCardProps {
   name: string
@@ -13,8 +13,10 @@ export interface ProductCardProps {
   className?: string
   inStock?: boolean
   inCart?: boolean
+  cartQuantity?: number
   addingToCart?: boolean
   onAddToCart?: (e: React.MouseEvent) => void
+  onQuantityChange?: (delta: number) => void
   cartHref?: string
 }
 
@@ -28,8 +30,10 @@ export function ProductCard({
   className,
   inStock = true,
   inCart = false,
+  cartQuantity = 0,
   addingToCart = false,
   onAddToCart,
+  onQuantityChange,
   cartHref = "/cart",
 }: ProductCardProps) {
   return (
@@ -46,9 +50,15 @@ export function ProductCard({
         <Heart className="h-4 w-4" />
       </button>
 
-      <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
         {imageUrl ? (
-          <img src={imageUrl} alt={name} className="h-full w-full object-cover" />
+          <Image
+            src={imageUrl}
+            alt={name}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover"
+          />
         ) : (
           <Leaf className="h-12 w-12 text-muted-foreground/50" />
         )}
@@ -77,15 +87,25 @@ export function ProductCard({
           <button disabled className="mt-1 flex w-full items-center justify-center gap-2 rounded-md bg-muted px-3 py-2 text-xs font-medium text-muted-foreground cursor-not-allowed">
             Out of Stock
           </button>
-        ) : inCart ? (
-          <Link
-            href={cartHref}
-            onClick={(e) => e.stopPropagation()}
-            className="mt-1 flex w-full items-center justify-center gap-2 rounded-md bg-success/15 border border-success/20 px-3 py-2 text-xs font-medium text-success hover:bg-success/25 transition-colors"
+        ) : inCart && cartQuantity > 0 ? (
+          <div
+            onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+            className="mt-1 flex w-full items-center justify-between rounded-md bg-primary px-1 py-0.5"
           >
-            <Check className="h-3.5 w-3.5" />
-            In Cart
-          </Link>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuantityChange?.(-1) }}
+              className="flex h-7 w-7 items-center justify-center rounded text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
+            >
+              −
+            </button>
+            <span className="text-sm font-black text-[#0f0f10] tabular-nums">{cartQuantity}</span>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuantityChange?.(+1) }}
+              className="flex h-7 w-7 items-center justify-center rounded text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
+            >
+              +
+            </button>
+          </div>
         ) : (
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddToCart?.(e) }}

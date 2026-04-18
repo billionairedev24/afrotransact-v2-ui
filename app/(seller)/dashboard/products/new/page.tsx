@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   ArrowLeft,
   Plus,
@@ -1040,8 +1041,9 @@ export default function NewProductPage() {
                     )}
                   >
                     {img.status === "done" && img.url ? (
-                      <img src={img.url} alt="" className="h-full w-full object-cover" />
+                      <Image src={img.url} alt="" fill sizes="(max-width: 640px) 25vw, (max-width: 768px) 16vw, 12vw" className="object-cover" />
                     ) : img.preview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={img.preview} alt="" className="h-full w-full object-cover opacity-60" />
                     ) : (
                       <div className="flex h-full items-center justify-center">
@@ -1259,6 +1261,7 @@ export default function NewProductPage() {
                   <span className="mb-1.5 block text-xs text-gray-500">Variant Image</span>
                   {variant.imagePreview || variant.imageUrl ? (
                     <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- may be a blob: URL preview */}
                       <img
                         src={variant.imageUrl || variant.imagePreview}
                         alt=""
@@ -1548,7 +1551,7 @@ export default function NewProductPage() {
                             : "border-gray-200 hover:border-[#EAB308]/60 cursor-pointer",
                         )}
                       >
-                        <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
+                        <Image src={item.url} alt={item.name} fill sizes="(max-width: 640px) 33vw, 20vw" className="object-cover" />
                         {alreadyAdded && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                             <Check className="h-6 w-6 text-white" />

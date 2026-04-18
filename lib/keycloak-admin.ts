@@ -1,7 +1,21 @@
 /**
  * Keycloak Admin API helpers (server-only).
  * Used by NextAuth callbacks and /api/auth/become-seller.
+ *
+ * This module references secrets (KEYCLOAK_ADMIN_API_SECRET,
+ * KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_ADMIN_CLIENT_SECRET) and must NEVER
+ * be imported from a client component. Only server-side entry points
+ * (NextAuth config, app/api/* route handlers) may import this.
+ *
+ * The runtime guard below throws loudly if this file is somehow evaluated
+ * in a browser context (defense-in-depth beyond Next's server/client
+ * component boundary rules).
  */
+if (typeof window !== "undefined") {
+  throw new Error(
+    "[keycloak-admin] This module is server-only and must not be imported from the client.",
+  )
+}
 
 function optionalEnv(name: string, fallback: string): string {
   return process.env[name] || fallback

@@ -94,8 +94,11 @@ function buildCells(parent: CategoryRef, tiles: (TilePick | null)[]): Cell[] {
     const ch = children[i]
     const tile = tiles[i] ?? tiles.find(Boolean) ?? null
     const img = tile?.image ?? null
-    const categoryHref = ch ? `/category/${ch.slug}` : `/category/${parent.slug}`
-    const imageHref = productHref(tile) ?? categoryHref
+    const categorySlug = ch ? ch.slug : parent.slug
+    const categoryHref = `/category/${categorySlug}`
+    // Clicking the image goes to the category page with the clicked product pinned first
+    const featuredParam = tile ? `?featured_id=${encodeURIComponent(tile.slug ?? tile.productId)}` : ""
+    const imageHref = `${categoryHref}${featuredParam}`
     if (ch) {
       cells.push({
         imageHref,
@@ -148,7 +151,7 @@ function CategoryMegaCard({
               <Link
                 href={cell.imageHref}
                 className="group block rounded-md overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                aria-label={`View product image for ${cell.label}`}
+                aria-label={`Shop ${cell.label}`}
               >
                 <div
                   className={`aspect-square flex items-center justify-center p-1.5 ${

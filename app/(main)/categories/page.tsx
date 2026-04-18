@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { ChevronRight, Package } from "lucide-react"
 import { getCategories, searchProducts, type CategoryRef, type SearchResult } from "@/lib/api"
 import {
@@ -48,10 +49,15 @@ function PopularPicksStrip() {
                 href={`/product/${slug}`}
                 className="shrink-0 w-[104px] sm:w-[120px] snap-start rounded-lg border border-gray-200 bg-white overflow-hidden hover:border-primary/40 hover:shadow-md transition-all"
               >
-                <div className="aspect-square bg-gray-50 flex items-center justify-center p-1">
+                <div className="relative aspect-square bg-gray-50 flex items-center justify-center p-1">
                   {p.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.image_url} alt="" className="max-h-full max-w-full object-contain" />
+                    <Image
+                      src={p.image_url}
+                      alt=""
+                      fill
+                      sizes="120px"
+                      className="object-contain p-1"
+                    />
                   ) : (
                     <Package className="h-8 w-8 text-gray-300" />
                   )}

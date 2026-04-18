@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
+import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import {
   Upload,
@@ -408,8 +409,8 @@ export default function MediaPage() {
         header: "",
         size: 64,
         cell: ({ row }) => (
-          <div className="h-10 w-10 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-            <img src={row.original.url} alt={row.original.name} className="h-full w-full object-cover" />
+          <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+            <Image src={row.original.url} alt={row.original.name} fill sizes="40px" className="object-cover" />
           </div>
         ),
         enableSorting: false,
@@ -771,8 +772,8 @@ export default function MediaPage() {
               Set a seller-friendly name and metadata for better product mapping.
             </p>
             <div className="mt-4 flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
-              <div className="h-14 w-14 overflow-hidden rounded-md border border-gray-200 bg-white">
-                <img src={editItem.url} alt={editItem.name} className="h-full w-full object-cover" />
+              <div className="relative h-14 w-14 overflow-hidden rounded-md border border-gray-200 bg-white">
+                <Image src={editItem.url} alt={editItem.name} fill sizes="56px" className="object-cover" />
               </div>
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-gray-900">{editItem.name || "Untitled"}</p>
@@ -1072,11 +1073,15 @@ export default function MediaPage() {
             >
               <X className="h-4 w-4" />
             </button>
-            <img
-              src={previewItem.url}
-              alt={previewItem.name}
-              className="max-h-[60vh] w-full object-contain"
-            />
+            <div className="relative h-[60vh] w-full">
+              <Image
+                src={previewItem.url}
+                alt={previewItem.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 640px"
+                className="object-contain"
+              />
+            </div>
             <div className="border-t border-gray-100 p-4">
               <p className="font-medium text-gray-900">{previewItem.name || "Untitled"}</p>
               <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-500">

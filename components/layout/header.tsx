@@ -291,7 +291,15 @@ export function Header() {
                         }}
                       >
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" className="h-10 w-10 rounded-md object-cover shrink-0 bg-gray-100" />
+                          <div className="relative h-10 w-10 rounded-md overflow-hidden shrink-0 bg-gray-100">
+                            <Image
+                              src={item.image_url}
+                              alt=""
+                              fill
+                              sizes="40px"
+                              className="object-cover"
+                            />
+                          </div>
                         ) : (
                           <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
                             <Search className="h-4 w-4 text-gray-400" />
@@ -684,7 +692,15 @@ export function Header() {
                     }}
                   >
                     {item.image_url ? (
-                      <img src={item.image_url} alt="" className="h-12 w-12 rounded-lg object-cover shrink-0 bg-gray-100" />
+                      <div className="relative h-12 w-12 rounded-lg overflow-hidden shrink-0 bg-gray-100">
+                        <Image
+                          src={item.image_url}
+                          alt=""
+                          fill
+                          sizes="48px"
+                          className="object-cover"
+                        />
+                      </div>
                     ) : (
                       <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                         <Search className="h-5 w-5 text-gray-400" />

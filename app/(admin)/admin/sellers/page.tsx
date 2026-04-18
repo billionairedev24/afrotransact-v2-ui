@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react"
 import { createPortal } from "react-dom"
+import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { useQueryClient } from "@tanstack/react-query"
 import { 
@@ -640,7 +641,15 @@ function DetailPanel({
                       {detail.stores.map((store) => (
                         <div key={store.id} className="rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-3 bg-white">
                           {store.logoUrl ? (
-                            <img src={store.logoUrl} alt="" className="h-8 w-8 rounded-lg object-cover" />
+                            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg">
+                              <Image
+                                src={store.logoUrl}
+                                alt=""
+                                fill
+                                sizes="32px"
+                                className="object-cover"
+                              />
+                            </div>
                           ) : (
                             <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center">
                               <Store className="h-4 w-4 text-gray-500" />
@@ -681,11 +690,15 @@ function DetailPanel({
                             </div>
                             {isImage && doc.fileUrl && (
                               <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
-                                <img
-                                  src={doc.fileUrl}
-                                  alt={doc.fileName}
-                                  className="w-full max-h-48 object-contain rounded-lg border border-gray-100 bg-gray-50"
-                                />
+                                <div className="relative h-48 w-full overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                                  <Image
+                                    src={doc.fileUrl}
+                                    alt={doc.fileName}
+                                    fill
+                                    sizes="(max-width: 768px) 100vw, 640px"
+                                    className="object-contain"
+                                  />
+                                </div>
                               </a>
                             )}
                             {!isImage && doc.fileUrl && (

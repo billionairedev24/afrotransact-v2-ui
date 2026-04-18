@@ -54,8 +54,23 @@ const nextConfig = {
   },
 
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+    // Tree-shake barrel imports from heavy packages. Each entry here tells
+    // Next.js to rewrite `import { X } from 'pkg'` into a direct deep import
+    // so only the used symbols land in the bundle.
+    optimizePackageImports: [
+      'lucide-react',
+      '@tanstack/react-query',
+      '@tanstack/react-table',
+      'date-fns',
+      'sonner',
+      'zod',
+      'recharts',
+      'react-icons',
+    ],
   },
+  reactStrictMode: true,
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
 
   async headers() {
     return [

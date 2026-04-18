@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   Grid3X3,
   LayoutList,
@@ -400,10 +401,12 @@ function SearchResultCard({
           className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl bg-gray-100"
         >
           {item.image_url ? (
-            <img
+            <Image
               src={item.image_url}
               alt={item.title}
-              className="h-full w-full object-cover"
+              fill
+              sizes="128px"
+              className="object-cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
@@ -466,10 +469,12 @@ function SearchResultCard({
       <Link href={`/product/${slug}`}>
         <div className="relative h-[120px] sm:h-auto sm:aspect-square overflow-hidden bg-gray-100">
           {item.image_url ? (
-            <img
+            <Image
               src={item.image_url}
               alt={item.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">

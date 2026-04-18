@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { ClipboardList, Loader2, Truck, Package, CheckCircle2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
@@ -414,7 +415,17 @@ function OrderDetailModal({
                   <tr key={item.id || idx} className="border-b border-gray-100 last:border-0">
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-3">
-                        {item.imageUrl && <img src={item.imageUrl} alt="" className="h-8 w-8 rounded object-cover border border-gray-200" />}
+                        {item.imageUrl && (
+                          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded border border-gray-200">
+                            <Image
+                              src={item.imageUrl}
+                              alt=""
+                              fill
+                              sizes="32px"
+                              className="object-cover"
+                            />
+                          </div>
+                        )}
                         <div>
                           <p className="text-gray-600">{item.productTitle || item.variantName || "Product"}</p>
                           {item.variantName && item.productTitle && <p className="text-xs text-gray-500">{item.variantName}</p>}

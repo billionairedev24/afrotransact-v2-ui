@@ -1,4 +1,5 @@
 import { Store, Star } from "lucide-react"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 export interface StoreCardProps {
@@ -25,9 +26,15 @@ export function StoreCard({
         className
       )}
     >
-      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary/10 overflow-hidden">
+      <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary/10 overflow-hidden">
         {logoUrl ? (
-          <img src={logoUrl} alt={name} className="h-full w-full object-cover" />
+          <Image
+            src={logoUrl}
+            alt={name}
+            fill
+            sizes="56px"
+            className="object-cover"
+          />
         ) : (
           <Store className="h-7 w-7 text-primary" />
         )}

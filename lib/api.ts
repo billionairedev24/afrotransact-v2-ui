@@ -3,10 +3,16 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 interface FetchOptions extends Omit<RequestInit, "body"> {
   body?: unknown
   token?: string
+  /**
+   * Opt-in Next.js cache hints for Server Component fetches.
+   * Pass `revalidate` (seconds) and/or `tags` to make the fetch cacheable.
+   * If provided, this overrides the default `cache: "no-store"` behavior.
+   */
+  next?: { revalidate?: number | false; tags?: string[] }
 }
 
 async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
-  const { body, token, headers: extraHeaders, ...rest } = opts
+  const { body, token, headers: extraHeaders, next, cache, ...rest } = opts
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -14,10 +20,16 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
   }
   if (token) headers["Authorization"] = `Bearer ${token}`
 
+  // When Server Components want a cached fetch, pass `next: { revalidate, tags }`.
+  // Otherwise default to fresh data (no-store) for authenticated/mutating calls.
+  const cacheOpts: Pick<RequestInit, "cache" | "next"> = next
+    ? { next }
+    : { cache: cache ?? "no-store" }
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...rest,
+    ...cacheOpts,
     headers,
-    cache: "no-store",
     body: body ? JSON.stringify(body) : undefined,
   })
 
@@ -109,20 +121,30 @@ export interface Page<T> {
   size: number
 }
 
-export function getProductBySlug(slug: string) {
-  return api<Product>(`/api/v1/products/slug/${slug}`)
+export function getProductBySlug(slug: string, opts?: { revalidate?: number }) {
+  return api<Product>(`/api/v1/products/slug/${slug}`, {
+    next: opts?.revalidate !== undefined
+      ? { revalidate: opts.revalidate, tags: [`product:${slug}`] }
+      : undefined,
+  })
 }
 
-export function getProductById(id: string) {
-  return api<Product>(`/api/v1/products/${id}`)
+export function getProductById(id: string, opts?: { revalidate?: number }) {
+  return api<Product>(`/api/v1/products/${id}`, {
+    next: opts?.revalidate !== undefined
+      ? { revalidate: opts.revalidate, tags: [`product:${id}`] }
+      : undefined,
+  })
 }
 
 export function getStoreProducts(storeId: string, page = 0, size = 20) {
   return api<Page<Product>>(`/api/v1/products/store/${storeId}?page=${page}&size=${size}`)
 }
 
-export function getCategories() {
-  return api<CategoryRef[]>("/api/v1/categories")
+export function getCategories(opts?: { revalidate?: number }) {
+  return api<CategoryRef[]>("/api/v1/categories", {
+    next: opts?.revalidate !== undefined ? { revalidate: opts.revalidate, tags: ["categories"] } : undefined,
+  })
 }
 
 export function createCategory(token: string, data: { name: string; slug?: string; parentId?: string; sortOrder?: number }) {
@@ -183,9 +205,11 @@ export interface SearchResponse {
   did_you_mean: string | null
 }
 
-export function searchProducts(params: Record<string, string>) {
+export function searchProducts(params: Record<string, string>, opts?: { revalidate?: number }) {
   const qs = new URLSearchParams(params).toString()
-  return api<SearchResponse>(`/api/v1/search?${qs}`)
+  return api<SearchResponse>(`/api/v1/search?${qs}`, {
+    next: opts?.revalidate !== undefined ? { revalidate: opts.revalidate, tags: ["search"] } : undefined,
+  })
 }
 
 // ── Autocomplete suggestions ──
@@ -295,16 +319,26 @@ export interface StoreInfo {
   deliveryRadiusMiles?: number
 }
 
-export function getAllStores() {
-  return api<StoreInfo[]>("/api/v1/stores")
+export function getAllStores(opts?: { revalidate?: number }) {
+  return api<StoreInfo[]>("/api/v1/stores", {
+    next: opts?.revalidate !== undefined ? { revalidate: opts.revalidate, tags: ["stores"] } : undefined,
+  })
 }
 
-export function getStoreById(id: string) {
-  return api<StoreInfo>(`/api/v1/stores/${id}`)
+export function getStoreById(id: string, opts?: { revalidate?: number }) {
+  return api<StoreInfo>(`/api/v1/stores/${id}`, {
+    next: opts?.revalidate !== undefined
+      ? { revalidate: opts.revalidate, tags: [`store:${id}`] }
+      : undefined,
+  })
 }
 
-export function getStoreBySlug(slug: string) {
-  return api<StoreInfo>(`/api/v1/stores/slug/${slug}`)
+export function getStoreBySlug(slug: string, opts?: { revalidate?: number }) {
+  return api<StoreInfo>(`/api/v1/stores/slug/${slug}`, {
+    next: opts?.revalidate !== undefined
+      ? { revalidate: opts.revalidate, tags: [`store:${slug}`] }
+      : undefined,
+  })
 }
 
 // ── Reviews ──
@@ -1715,8 +1749,10 @@ export async function getActiveDeals(): Promise<DealData[]> {
   return res.marketplaceDeals || []
 }
 
-export function getFeaturedDeals() {
-  return api<DealData[]>("/api/v1/deals/featured")
+export function getFeaturedDeals(opts?: { revalidate?: number }) {
+  return api<DealData[]>("/api/v1/deals/featured", {
+    next: opts?.revalidate !== undefined ? { revalidate: opts.revalidate, tags: ["deals"] } : undefined,
+  })
 }
 
 export function getSellerDeals(token: string, page = 0, size = 20) {
@@ -1799,29 +1835,14 @@ export function togglePlatformDeal(token: string, id: string) {
   return api<PlatformDealData>(`/api/v1/admin/platform-deals/${id}/toggle`, { method: "POST", token })
 }
 
-export function getPublicPlatformDeals(audience?: string) {
+export function getPublicPlatformDeals(audience?: string, opts?: { revalidate?: number }) {
   const q = audience ? `?audience=${audience}` : ""
-  return api<PlatformDealData[]>(`/api/v1/platform-deals${q}`)
+  return api<PlatformDealData[]>(`/api/v1/platform-deals${q}`, {
+    next: opts?.revalidate !== undefined ? { revalidate: opts.revalidate, tags: ["platform-deals"] } : undefined,
+  })
 }
 
 // ── Config: Ads & Hero Carousel (public) ──
-
-export interface AdConfig {
-  id: string
-  type: "banner" | "strip" | "card"
-  enabled: boolean
-  title: string
-  body?: string | null
-  ctaLabel?: string | null
-  ctaHref?: string | null
-  badgeText?: string | null
-  sponsor?: string | null
-  gradient: string
-  accentColor: string
-  dismissible: boolean
-  createdAt: string
-  updatedAt: string
-}
 
 export interface HeroSlideConfig {
   id: string
@@ -1844,15 +1865,27 @@ export interface HeroSlideConfig {
   updatedAt: string
 }
 
-export async function getPublicAds(): Promise<AdConfig[]> {
+export async function getPublicAds(): Promise<import("@/lib/ads").AdConfig[]> {
   const res = await fetch(`${API_BASE}/api/v1/config/ads`)
   if (!res.ok) return []
-  const data = (await res.json()) as { ads?: AdConfig[] }
+  const data = (await res.json()) as { ads?: import("@/lib/ads").AdConfig[] }
   return data.ads ?? []
 }
 
-export async function getPublicHeroSlides(): Promise<HeroSlideConfig[]> {
-  const res = await fetch(`${API_BASE}/api/v1/config/hero-carousel`)
+export function upsertAdminAd(token: string, body: import("@/lib/ads").AdConfig) {
+  return api<{ status: string }>("/api/v1/admin/ads", { method: "POST", body, token })
+}
+
+export function deleteAdminAd(token: string, id: string) {
+  return api<{ status: string }>(`/api/v1/admin/ads/${id}`, { method: "DELETE", token })
+}
+
+export async function getPublicHeroSlides(opts?: { revalidate?: number }): Promise<HeroSlideConfig[]> {
+  const init: RequestInit =
+    opts?.revalidate !== undefined
+      ? { next: { revalidate: opts.revalidate, tags: ["hero-carousel"] } }
+      : { cache: "no-store" }
+  const res = await fetch(`${API_BASE}/api/v1/config/hero-carousel`, init)
   if (!res.ok) return []
   const data = (await res.json()) as { slides?: HeroSlideConfig[] }
   return data.slides ?? []

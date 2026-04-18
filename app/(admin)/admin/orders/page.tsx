@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import Image from "next/image"
 import { useSession } from "next-auth/react"
 import {
   AlertTriangle,
@@ -318,7 +319,17 @@ function AdminOrderDetailSheet({
                         <tr key={item.id || idx} className="border-b border-gray-100 last:border-0">
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">
-                              {item.imageUrl && <img src={item.imageUrl} alt="" className="h-7 w-7 rounded object-cover border border-gray-200" />}
+                              {item.imageUrl && (
+                                <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded border border-gray-200">
+                                  <Image
+                                    src={item.imageUrl}
+                                    alt=""
+                                    fill
+                                    sizes="28px"
+                                    className="object-cover"
+                                  />
+                                </div>
+                              )}
                               <span className="text-gray-600">{item.productTitle || "Product"}</span>
                             </div>
                           </td>

@@ -23,6 +23,14 @@ import type { OAuthConfig } from "next-auth/providers/oauth"
 import KeycloakProvider from "next-auth/providers/keycloak"
 import { grantSellerEntitlements } from "@/lib/keycloak-admin"
 
+// Defense-in-depth: refuse to load in the browser. The secrets this module
+// references (KEYCLOAK_CLIENT_SECRET, etc.) must never be bundled client-side.
+if (typeof window !== "undefined") {
+  throw new Error(
+    "[auth] lib/auth.ts is server-only and must not be imported from the client.",
+  )
+}
+
 /** Fail fast at server startup if a required env var is absent. */
 function requireEnv(name: string): string {
   const value = process.env[name]

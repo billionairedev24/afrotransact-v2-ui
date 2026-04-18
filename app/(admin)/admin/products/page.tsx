@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
+import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { DataTable } from "@/components/ui/DataTable"
@@ -199,11 +200,15 @@ export default function AdminProductsPage() {
         cell: (info) => {
           const imgs = info.getValue()
           return imgs?.[0] ? (
-            <img
-              src={imgs[0].url}
-              alt={imgs[0].altText ?? ""}
-              className="h-10 w-10 rounded-lg object-cover border border-gray-200"
-            />
+            <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200">
+              <Image
+                src={imgs[0].url}
+                alt={imgs[0].altText ?? ""}
+                fill
+                sizes="40px"
+                className="object-cover"
+              />
+            </div>
           ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 border border-gray-200">
               <ImageOff className="h-4 w-4 text-gray-600" />
@@ -542,10 +547,12 @@ function ProductDetailPanel({
             {product.images.length > 0 ? (
               <div className="space-y-3">
                 <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                  <img
+                  <Image
                     src={product.images[galleryIndex]?.url}
                     alt={product.images[galleryIndex]?.altText ?? product.title}
-                    className="h-full w-full object-contain"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 640px"
+                    className="object-contain"
                   />
                   {product.images.length > 1 && (
                     <>
@@ -584,11 +591,15 @@ function ProductDetailPanel({
                             : "border-gray-200 hover:border-gray-300"
                         }`}
                       >
-                        <img
-                          src={img.url}
-                          alt={img.altText ?? ""}
-                          className="h-full w-full object-cover"
-                        />
+                        <div className="relative h-full w-full">
+                          <Image
+                            src={img.url}
+                            alt={img.altText ?? ""}
+                            fill
+                            sizes="56px"
+                            className="object-cover"
+                          />
+                        </div>
                       </button>
                     ))}
                   </div>

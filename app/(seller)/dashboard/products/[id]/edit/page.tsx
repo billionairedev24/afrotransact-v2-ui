@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   ArrowLeft,
   Plus,
@@ -1005,7 +1006,7 @@ export default function EditProductPage() {
                         img.isPrimary ? "border-[#EAB308]" : "border-gray-200",
                       )}
                     >
-                      <img src={img.url} alt={img.altText ?? ""} className="h-full w-full object-cover" />
+                      <Image src={img.url} alt={img.altText ?? ""} fill sizes="(max-width: 640px) 25vw, 12vw" className="object-cover" />
                       <button
                         type="button"
                         onClick={() => setExistingPrimary(img.id)}
@@ -1044,7 +1045,7 @@ export default function EditProductPage() {
                       key={img.id}
                       className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 opacity-50"
                     >
-                      <img src={img.url} alt="" className="h-full w-full object-cover" />
+                      <Image src={img.url} alt="" fill sizes="56px" className="object-cover" />
                       <button
                         type="button"
                         onClick={() => unremoveExistingImage(img.id)}
@@ -1086,8 +1087,9 @@ export default function EditProductPage() {
                     className="group relative aspect-square overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-50"
                   >
                     {img.status === "done" && img.url ? (
-                      <img src={img.url} alt="" className="h-full w-full object-cover" />
+                      <Image src={img.url} alt="" fill sizes="(max-width: 640px) 25vw, 12vw" className="object-cover" />
                     ) : img.preview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={img.preview} alt="" className="h-full w-full object-cover opacity-60" />
                     ) : (
                       <div className="flex h-full items-center justify-center">
@@ -1278,6 +1280,7 @@ export default function EditProductPage() {
                   <span className="mb-1.5 block text-xs text-gray-500">Variant Image</span>
                   {variant.imagePreview || variant.imageUrl ? (
                     <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- may be a blob: URL preview */}
                       <img
                         src={variant.imageUrl || variant.imagePreview}
                         alt=""

@@ -1,18 +1,12 @@
 "use client"
 
-/**
- * Zustand store for ad slot management.
- * Persists to localStorage so admin changes survive page reloads.
- * In production, `loadFromApi()` would sync from the Config Service.
- */
-
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { AdConfig, DEFAULT_ADS } from "@/lib/ads"
+import { getPublicAds } from "@/lib/api"
 
 interface AdsState {
   ads: AdConfig[]
-  /** IDs of ads the current user has dismissed in this session */
   dismissed: string[]
 
   // Admin actions
@@ -24,7 +18,10 @@ interface AdsState {
   dismissAd: (id: string) => void
   resetDismissed: () => void
 
-  // Selector helpers
+  // API sync — call once on app load
+  loadFromApi: () => Promise<void>
+
+  // Selectors
   getAd: (id: string) => AdConfig | undefined
   isVisible: (id: string) => boolean
 }
@@ -60,19 +57,28 @@ export const useAdsStore = create<AdsState>()(
 
       resetDismissed: () => set({ dismissed: [] }),
 
+      loadFromApi: async () => {
+        try {
+          const remote = await getPublicAds()
+          if (remote.length > 0) {
+            set({ ads: remote })
+          }
+        } catch {
+          // Network unavailable — keep current (localStorage) state
+        }
+      },
+
       getAd: (id) => get().ads.find((a) => a.id === id),
 
       isVisible: (id) => {
         const ad = get().ads.find((a) => a.id === id)
-        if (!ad) return false
-        if (!ad.enabled) return false
+        if (!ad || !ad.enabled) return false
         if (get().dismissed.includes(id)) return false
         return true
       },
     }),
     {
       name: "afrotransact-ads",
-      // Only persist admin config; dismissed list is intentionally ephemeral
       partialize: (state) => ({ ads: state.ads }),
     }
   )

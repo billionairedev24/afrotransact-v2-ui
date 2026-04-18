@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
@@ -120,8 +121,10 @@ function ImageUploadField({
       <label className="mb-1.5 block text-sm font-medium text-foreground">{label}</label>
       <div className="flex items-start gap-4">
         {currentUrl ? (
-          <div className="relative group">
-            <img src={currentUrl} alt={label} className={`${previewClass} object-cover border border-border`} />
+          <div className={`relative group ${previewClass}`}>
+            <div className={`${previewClass} relative overflow-hidden border border-border`}>
+              <Image src={currentUrl} alt={label} fill sizes={aspect === "square" ? "96px" : "192px"} className="object-cover" />
+            </div>
             <button
               type="button"
               onClick={onRemove}
