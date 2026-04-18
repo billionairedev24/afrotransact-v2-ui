@@ -6,9 +6,9 @@ import Image from "next/image"
 import { ChevronRight, Package } from "lucide-react"
 import { getCategories, searchProducts, type CategoryRef, type SearchResult } from "@/lib/api"
 import {
-  CategoryShowcaseAmazon,
+  CategoryShowcase,
   CategoryShowcaseLoading,
-} from "@/components/categories/CategoryShowcaseAmazon"
+} from "@/components/categories/CategoryShowcase"
 
 function PopularPicksStrip() {
   const [items, setItems] = useState<SearchResult[]>([])
@@ -111,7 +111,7 @@ export default function CategoriesPage() {
           </p>
         ) : (
           <>
-            <CategoryShowcaseAmazon categories={categories} maxParents={16} />
+            <CategoryShowcase categories={categories} maxParents={16} />
             <PopularPicksStrip />
           </>
         )}

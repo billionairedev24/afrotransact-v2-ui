@@ -48,8 +48,8 @@ function getAccentColor(store: StoreInfo | null): string {
 
 function StoreProductGrid({ products, store }: { products: Product[]; store: StoreInfo }) {
   const addItem = useCartStore((s) => s.addItem)
-  const updateQuantity = useCartStore((s) => s.updateQuantity)
   const cartItems = useCartStore((s) => s.items)
+  const updateQuantity = useCartStore((s) => s.updateQuantity)
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   function handleAdd(product: Product) {
@@ -71,6 +71,9 @@ function StoreProductGrid({ products, store }: { products: Product[]; store: Sto
       imageUrl: product.images?.[0]?.url,
       slug: product.slug,
       weightKg: variant.weightKg ?? null,
+      lengthIn: variant.lengthIn ?? null,
+      widthIn: variant.widthIn ?? null,
+      heightIn: variant.heightIn ?? null,
     })
     toast.success(`${product.title} added to cart`)
     setLoadingId(null)
@@ -83,7 +86,7 @@ function StoreProductGrid({ products, store }: { products: Product[]; store: Sto
         const price = displayVariant?.price
         const imageUrl = product.images?.[0]?.url
         const cartItem = cartItems.find((i) => i.productId === product.id)
-        const inCart = !!cartItem
+        const cartQuantity = cartItem?.quantity ?? 0
         return (
           <Link key={product.id} href={`/product/${product.slug}`}>
             <ProductCard
@@ -94,12 +97,12 @@ function StoreProductGrid({ products, store }: { products: Product[]; store: Sto
               rating={0}
               imageUrl={imageUrl}
               inStock={productHasSellableStock(product)}
-              inCart={inCart}
-              cartQuantity={cartItem?.quantity ?? 0}
+              inCart={cartQuantity > 0}
+              cartQuantity={cartQuantity}
               addingToCart={loadingId === product.id}
               onAddToCart={() => handleAdd(product)}
               onQuantityChange={(delta) => {
-                if (cartItem) updateQuantity(cartItem.variantId, cartItem.quantity + delta)
+                if (cartItem) updateQuantity(cartItem.variantId, cartQuantity + delta)
               }}
             />
           </Link>
@@ -120,8 +123,8 @@ function StoreHero({ store, productCount }: { store: StoreInfo; productCount: nu
             src={store.bannerUrl}
             alt=""
             fill
-            priority
             sizes="100vw"
+            priority
             className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/60 to-black/80" />
@@ -141,15 +144,13 @@ function StoreHero({ store, productCount }: { store: StoreInfo; productCount: nu
 
         <div className="flex flex-col sm:flex-row items-start gap-6">
           {store.logoUrl ? (
-            <div className="relative h-24 w-24 overflow-hidden rounded-2xl border-2 border-white/20 shadow-lg flex-shrink-0">
-              <Image
-                src={store.logoUrl}
-                alt={store.name}
-                fill
-                sizes="96px"
-                className="object-cover"
-              />
-            </div>
+            <Image
+              src={store.logoUrl}
+              alt={store.name}
+              width={96}
+              height={96}
+              className="h-24 w-24 rounded-2xl object-cover border-2 border-white/20 shadow-lg flex-shrink-0"
+            />
           ) : (
             <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 border-2 border-white/20 shadow-lg flex-shrink-0">
               <StoreIcon className="h-12 w-12 text-white/70" />
@@ -219,15 +220,13 @@ function StoreNavbar({
         <div className="flex items-center gap-6 h-14">
           <div className="flex items-center gap-3 flex-shrink-0">
             {store.logoUrl ? (
-              <div className="relative h-8 w-8 overflow-hidden rounded-lg">
-                <Image
-                  src={store.logoUrl}
-                  alt={store.name}
-                  fill
-                  sizes="32px"
-                  className="object-cover"
-                />
-              </div>
+              <Image
+                src={store.logoUrl}
+                alt={store.name}
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-lg object-cover"
+              />
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
                 <StoreIcon className="h-4 w-4 text-gray-500" />

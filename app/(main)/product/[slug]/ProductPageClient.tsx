@@ -23,6 +23,7 @@ import {
   type Region,
   getActiveDeals,
   type DealData,
+  trackEvent,
 } from "@/lib/api"
 import { logError } from "@/lib/errors"
 
@@ -61,7 +62,13 @@ export default function ProductPageClient() {
         if (cancelled) return
         setProduct(data)
         setSelectedVariant(data.variants[0] ?? null)
-        
+
+        trackEvent({
+          event_type: "view",
+          product_id: data.id,
+          category: data.categories?.[0]?.name,
+        })
+
         // 2. Fetch store name
         getStoreById(data.storeId)
           .then((store) => { if (!cancelled) setStoreName(store.name) })
@@ -122,6 +129,9 @@ export default function ProductPageClient() {
       imageUrl: product.images[0]?.url,
       slug: product.slug,
       weightKg: variant.weightKg ?? null,
+      lengthIn: variant.lengthIn ?? null,
+      widthIn: variant.widthIn ?? null,
+      heightIn: variant.heightIn ?? null,
     })
   }
 
@@ -140,6 +150,9 @@ export default function ProductPageClient() {
         imageUrl: product.images[0]?.url,
         slug: product.slug,
         weightKg: variant.weightKg ?? null,
+        lengthIn: variant.lengthIn ?? null,
+        widthIn: variant.widthIn ?? null,
+        heightIn: variant.heightIn ?? null,
       })
     }
     router.push("/checkout")
@@ -196,14 +209,14 @@ export default function ProductPageClient() {
         {/* Image gallery */}
         <div className="space-y-4">
           <div className="relative aspect-square rounded-lg border border-border bg-card overflow-hidden">
-            {product.images.length > 0 && product.images[selectedImage]?.url ? (
+            {product.images.length > 0 ? (
               <Image
-                src={product.images[selectedImage].url}
+                src={product.images[selectedImage]!.url}
                 alt={product.images[selectedImage]?.altText || product.title}
                 fill
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
                 className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                priority={selectedImage === 0}
               />
             ) : (
               <div className="h-full w-full flex flex-col items-center justify-center gap-3">
@@ -247,8 +260,8 @@ export default function ProductPageClient() {
                     src={img.url}
                     alt={img.altText || ""}
                     fill
-                    sizes="80px"
                     className="object-cover"
+                    sizes="80px"
                   />
                 </button>
               ))}

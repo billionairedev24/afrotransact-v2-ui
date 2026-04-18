@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react"
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X, Sparkles, Tag, Zap } from "lucide-react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
 import { clearServerCart } from "@/lib/api"
+import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
 
 function formatCents(cents: number) {

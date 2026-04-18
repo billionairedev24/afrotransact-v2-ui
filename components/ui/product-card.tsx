@@ -18,6 +18,7 @@ export interface ProductCardProps {
   onAddToCart?: (e: React.MouseEvent) => void
   onQuantityChange?: (delta: number) => void
   cartHref?: string
+  imagePriority?: boolean
 }
 
 export function ProductCard({
@@ -35,6 +36,7 @@ export function ProductCard({
   onAddToCart,
   onQuantityChange,
   cartHref = "/cart",
+  imagePriority = false,
 }: ProductCardProps) {
   return (
     <div
@@ -58,6 +60,7 @@ export function ProductCard({
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className="object-cover"
+            priority={imagePriority}
           />
         ) : (
           <Leaf className="h-12 w-12 text-muted-foreground/50" />

@@ -22,8 +22,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 2 * 60 * 1000,   // Show cached data instantly; refetch silently after 2 min
-            gcTime: 15 * 60 * 1000,     // Keep cache warm for the whole browsing session
+            staleTime: 5 * 60 * 1000, // Prefer cache on navigation; fewer duplicate API calls
+            gcTime: 30 * 60 * 1000,
             retry: 2,
             refetchOnWindowFocus: false,
             placeholderData: (prev: unknown) => prev,  // No content flash on tab re-focus

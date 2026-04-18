@@ -28,6 +28,7 @@ import {
   Ticket,
   Sparkles,
   BarChart2,
+  Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
@@ -58,7 +59,7 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/subscription",     label: "Subscriptions",    icon: ShieldCheck   },
   { href: "/admin/reviews",          label: "Reviews",          icon: Star          },
   { href: "/admin/payouts",          label: "Payouts",          icon: Banknote      },
-  { href: "/admin/payment-settings", label: "Payment Settings", icon: Percent       },
+  { href: "/admin/settings",         label: "Settings",         icon: Settings      },
   { href: "/admin/coupons",       label: "Coupons",       icon: Ticket           },
   { href: "/admin/deals",         label: "Deals",         icon: Sparkles         },
   { href: "/admin/ads",           label: "Ad Slots",      icon: Megaphone        },

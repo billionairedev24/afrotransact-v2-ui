@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useQuery } from "@tanstack/react-query"
 import {
   ChevronRight,
   Store,
@@ -31,38 +32,42 @@ const INTERVAL_MS = 6000
 const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}){1,2}$/
 const CSS_GRADIENT = /gradient\(/i
 
-export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
-  const [liveSlides, setLiveSlides] = useState<HeroSlide[]>(slides ?? [])
+export function HeroCarousel({
+  slides,
+  serverHeroConfigs,
+}: {
+  slides?: HeroSlide[]
+  /** Raw hero config (e.g. from `/api/public/home-data`). When set (including `[]`), client hero fetch is skipped. */
+  serverHeroConfigs?: HeroSlideConfig[]
+}) {
+  const fromServer = useMemo(() => {
+    if (serverHeroConfigs === undefined) return undefined
+    const enabled = serverHeroConfigs.filter((c) => c.enabled)
+    return enabled.length ? enabled.map((c, idx) => mapConfigToSlide(c, idx)) : []
+  }, [serverHeroConfigs])
+
+  const { data: fetchedSlides } = useQuery({
+    queryKey: ["hero-slides"],
+    queryFn: async () => {
+      const cfg = await getPublicHeroSlides().catch(() => [])
+      const enabled = cfg.filter((c) => c.enabled)
+      return enabled.length ? enabled.map((c, idx) => mapConfigToSlide(c, idx)) : []
+    },
+    placeholderData: slides,
+    staleTime: 10 * 60 * 1000,
+    enabled: serverHeroConfigs === undefined && !(slides && slides.length > 0),
+  })
+
+  const liveSlides = useMemo(() => {
+    if (fromServer !== undefined) return fromServer
+    return fetchedSlides ?? slides ?? []
+  }, [fromServer, fetchedSlides, slides])
+
   const [current, setCurrent] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
-  const hasServerSlides = (slides?.length ?? 0) > 0
-
-  // When slides are provided by the server parent, skip the client fetch entirely
-  // to avoid a duplicate request on hydration.
-  useEffect(() => {
-    if (hasServerSlides) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const cfg = await getPublicHeroSlides().catch(() => [])
-        if (cancelled) return
-        const enabled = cfg.filter((c) => c.enabled)
-        if (enabled.length) {
-          setLiveSlides(enabled.map((c, idx) => mapConfigToSlide(c, idx)))
-        } else {
-          setLiveSlides([])
-        }
-      } catch {
-        // ignore, keep any passed-in slides (likely admin preview) or nothing
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [hasServerSlides])
 
   const go = useCallback(
     (idx: number) => {

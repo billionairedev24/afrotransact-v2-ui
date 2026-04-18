@@ -72,11 +72,13 @@ async function getKeycloakAdminAccessToken(): Promise<string | null> {
     console.error("[keycloak-admin] KEYCLOAK_ADMIN_API_SECRET is not set.")
   }
 
-  // Fallback: admin username/password (useful in environments where service-account is not configured yet).
+  // Fallback: admin username/password against the master realm (admin-cli lives there, not in afrotransact).
   const adminUsername = process.env.KEYCLOAK_ADMIN_USERNAME
   const adminPassword = process.env.KEYCLOAK_ADMIN_PASSWORD
   if (adminUsername && adminPassword) {
     const adminClientId = optionalEnv("KEYCLOAK_ADMIN_CLIENT_ID", "admin-cli")
+    // admin-cli is registered in the master realm — derive its token URL from the base server URL.
+    const masterTokenUrl = kcIssuer.replace(/\/realms\/[^/]+/, "/realms/master") + "/protocol/openid-connect/token"
     const params = new URLSearchParams({
       grant_type: "password",
       client_id: adminClientId,
@@ -85,7 +87,7 @@ async function getKeycloakAdminAccessToken(): Promise<string | null> {
     })
     const adminClientSecret = process.env.KEYCLOAK_ADMIN_CLIENT_SECRET
     if (adminClientSecret) params.set("client_secret", adminClientSecret)
-    return requestAdminToken(tokenUrl, params, `Admin token (password:${adminClientId})`)
+    return requestAdminToken(masterTokenUrl, params, `Admin token (password:${adminClientId})`)
   }
 
   console.error(

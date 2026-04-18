@@ -63,6 +63,17 @@ function RegisterForm() {
     setIsLoading(true)
     try {
       if (isSeller) {
+        // Persist the seller intent so the login page can redirect back to onboarding
+        // if the user verifies their email on a different device (no active browser session).
+        // The login page reads this via getSellerIntentCallbackUrl().
+        try {
+          localStorage.setItem(
+            "afro_register_intent",
+            JSON.stringify({ callbackUrl: "/dashboard/onboarding", role: "seller" }),
+          )
+        } catch {
+          // localStorage not available (SSR/private mode) — skip silently
+        }
         await signIn("keycloak-register-seller", {
           callbackUrl,
           registration_role: "seller",

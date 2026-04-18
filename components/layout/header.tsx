@@ -287,7 +287,8 @@ export function Header() {
                         onClick={() => {
                           setShowSuggestions(false)
                           setQuery(item.text)
-                          router.push(`/product/${item.product_id}`)
+                          const path = item.slug?.trim() ? `/product/${item.slug}` : `/product/${item.product_id}`
+                          router.push(path)
                         }}
                       >
                         {item.image_url ? (
@@ -688,7 +689,8 @@ export function Header() {
                       setShowSuggestions(false)
                       setMobileSearchOpen(false)
                       setQuery(item.text)
-                      router.push(`/product/${item.product_id}`)
+                      const path = item.slug?.trim() ? `/product/${item.slug}` : `/product/${item.product_id}`
+                      router.push(path)
                     }}
                   >
                     {item.image_url ? (
