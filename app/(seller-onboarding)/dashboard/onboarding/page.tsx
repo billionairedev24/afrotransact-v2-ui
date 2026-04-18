@@ -417,7 +417,7 @@ export default function SellerOnboardingPage() {
     const token = await getAccessToken()
     if (!token) {
       toast.error("Session expired. Please sign in again.")
-      signIn()
+      void signIn("keycloak", { callbackUrl: "/dashboard/onboarding" })
       return null
     }
     return fn(token)
@@ -770,7 +770,7 @@ export default function SellerOnboardingPage() {
             You need to be signed in to set up your seller account.
           </p>
           <button
-            onClick={() => signIn()}
+            onClick={() => signIn("keycloak", { callbackUrl: "/dashboard/onboarding" })}
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Sign In <ArrowRight className="h-4 w-4" />

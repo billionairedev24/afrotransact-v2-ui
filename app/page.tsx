@@ -17,11 +17,12 @@ import {
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
-import { HeroCarousel, mapConfigToSlide, type HeroSlide } from "@/components/home/HeroCarousel"
+import { HeroCarousel } from "@/components/home/HeroCarousel"
 import { AdSlot } from "@/components/home/AdSlot"
 import { FeaturedProducts } from "@/components/home/FeaturedProducts"
 import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
 import { ForYouSection } from "@/components/home/ForYouSection"
+import { buildTilesFromPool } from "@/lib/category-tiles"
 import {
   getCategories,
   getAllStores,
@@ -99,8 +100,11 @@ export default async function HomePage() {
       safe<DealData[]>(getFeaturedDeals({ revalidate: 60 }), []),
       safe<PlatformDealData[]>(getPublicPlatformDeals(undefined, { revalidate: 60 }), []),
       safe(getPublicHeroSlides({ revalidate: 60 }), []),
+      // Rating-sorted pool: doubles as both the "Fresh Near You" featured
+      // section (first 8) AND the source for server-computed category tiles
+      // (all ~96). Keeps server→gateway traffic at 1 request for both uses.
       safe(
-        searchProducts({ size: "8", sort_by: "rating" }, { revalidate: 60 }),
+        searchProducts({ size: "96", sort_by: "rating" }, { revalidate: 300 }),
         { results: [] as SearchResult[] } as Awaited<ReturnType<typeof searchProducts>>,
       ),
       safe(
@@ -111,16 +115,24 @@ export default async function HomePage() {
 
   const stores = allStores.slice(0, 6)
   const platformDeals = platformDealsRaw.slice(0, 3)
-  const heroSlides: HeroSlide[] = heroConfig
-    .filter((c) => c.enabled)
-    .map((c, idx) => mapConfigToSlide(c, idx))
+  // Pre-compute category tile images on the server using the rating pool
+  // we already fetched. Client renders tiles synchronously — no
+  // `/api/v1/search?category=…` calls from the browser, no 429s.
+  const categoryTiles = buildTilesFromPool(
+    categories.filter((c) => c.parentId == null).slice(0, 4),
+    featuredRating.results,
+  )
+  const featuredRatingInitial = featuredRating.results.slice(0, 8)
+  // HeroCarousel is a client component — pass raw configs and let it map
+  // them to slides on the client (JSX in `mapConfigToSlide` can't be
+  // invoked across the server/client boundary).
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
 
       <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0">
-        <HeroCarousel slides={heroSlides} />
+        <HeroCarousel serverHeroConfigs={heroConfig} />
 
         <section className="bg-card/70 border-y border-border">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-3">
@@ -221,7 +233,11 @@ export default async function HomePage() {
             {categories.length > 0 ? (
               // Capped to 4 parents (down from 12) to reduce the N×5 search fan-out
               // until a dedicated "category tiles" BFF endpoint lands.
-              <CategoryShowcaseAmazon categories={categories} maxParents={4} />
+              <CategoryShowcaseAmazon
+                categories={categories}
+                maxParents={4}
+                initialTiles={categoryTiles}
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -248,7 +264,7 @@ export default async function HomePage() {
           sortBy="rating"
           size={8}
           viewAllHref="/search?sort=rating"
-          initialProducts={featuredRating.results}
+          initialProducts={featuredRatingInitial}
         />
 
         <FeaturedProducts

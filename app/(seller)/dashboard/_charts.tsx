@@ -48,7 +48,7 @@ export function SalesTrendChart({ data }: { data: SalesPoint[] }) {
           contentStyle={TOOLTIP_STYLE}
           labelStyle={{ color: "#9ca3af" }}
           itemStyle={{ color: PRIMARY }}
-          formatter={(value: number | string) => [
+          formatter={(value: string | number | undefined) => [
             `$${(value as number)?.toLocaleString?.() ?? "0"}`,
             "Sales",
           ]}
@@ -85,9 +85,9 @@ export function OrderStatusPieChart({ data }: { data: OrderStatusSlice[] }) {
         <Tooltip
           contentStyle={TOOLTIP_STYLE}
           labelStyle={{ color: "#9ca3af" }}
-          formatter={(value: number | string, name: string) => [
+          formatter={(value: string | number | undefined, name: unknown) => [
             value ?? "0",
-            name ?? "",
+            (name as string) ?? "",
           ]}
         />
       </PieChart>

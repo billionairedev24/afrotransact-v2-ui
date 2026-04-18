@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useSession, signIn } from "next-auth/react"
 import {
   ShoppingCart,
   MapPin,
@@ -407,13 +407,33 @@ export function Header() {
                 <div className="hidden md:flex flex-col items-start px-2 py-1 shrink-0">
                   <span className="text-[10px] text-gray-500">{getGreeting()}</span>
                   <span className="text-[13px] leading-tight">
-                    <Link href="/auth/login" className="font-semibold text-primary hover:text-primary/80 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const callbackUrl =
+                          typeof window !== "undefined"
+                            ? window.location.pathname + window.location.search
+                            : "/"
+                        void signIn("keycloak", { callbackUrl })
+                      }}
+                      className="font-semibold text-primary hover:text-primary/80 transition-colors"
+                    >
                       Sign in
-                    </Link>
+                    </button>
                     <span className="text-gray-400 mx-1">or</span>
-                    <Link href="/auth/register" className="font-semibold text-gray-900 hover:text-primary transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const callbackUrl =
+                          typeof window !== "undefined"
+                            ? window.location.pathname + window.location.search
+                            : "/"
+                        void signIn("keycloak-register", { callbackUrl })
+                      }}
+                      className="font-semibold text-gray-900 hover:text-primary transition-colors"
+                    >
                       Register
-                    </Link>
+                    </button>
                   </span>
                 </div>
               )}
@@ -530,21 +550,35 @@ export function Header() {
                       <>
                         <p className="text-lg font-semibold leading-tight text-white">there</p>
                         <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/85">
-                          <Link
-                            href="/auth/login"
-                            onClick={closeMobileMenu}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closeMobileMenu()
+                              const callbackUrl =
+                                typeof window !== "undefined"
+                                  ? window.location.pathname + window.location.search
+                                  : "/"
+                              void signIn("keycloak", { callbackUrl })
+                            }}
                             className="font-semibold text-primary underline decoration-primary/50 underline-offset-2 transition-colors hover:text-primary/90"
                           >
                             Sign in
-                          </Link>
+                          </button>
                           <span className="text-white/35">·</span>
-                          <Link
-                            href="/auth/register"
-                            onClick={closeMobileMenu}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closeMobileMenu()
+                              const callbackUrl =
+                                typeof window !== "undefined"
+                                  ? window.location.pathname + window.location.search
+                                  : "/"
+                              void signIn("keycloak-register", { callbackUrl })
+                            }}
                             className="font-medium text-white/80 transition-colors hover:text-white"
                           >
                             Create account
-                          </Link>
+                          </button>
                         </p>
                       </>
                     )}

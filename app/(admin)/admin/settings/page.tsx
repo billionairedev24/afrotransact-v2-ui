@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ReactNode } from "react"
+import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
@@ -15,7 +16,18 @@ import {
   type AiSettings,
 } from "@/lib/api"
 import { toast } from "sonner"
-import { Loader2, Save, Bot, CheckCircle2, XCircle } from "lucide-react"
+import {
+  Loader2,
+  Save,
+  Bot,
+  CheckCircle2,
+  XCircle,
+  ChevronRight,
+  Percent,
+  Truck,
+  Banknote,
+  Info,
+} from "lucide-react"
 
 const INPUT_CLASS =
   "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
@@ -55,11 +67,57 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   )
 }
 
+// ── Accordion section ─────────────────────────────────────────────────────────
+// Controlled accordion card: each section is collapsed by default so the page
+// fits a laptop viewport. Click the header to toggle. Caller can override the
+// initial state via `defaultOpen` for a "summary" section that's always useful.
+function Section({
+  icon: Icon,
+  title,
+  subtitle,
+  badge,
+  defaultOpen = false,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  subtitle?: string
+  badge?: ReactNode
+  defaultOpen?: boolean
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50"
+      >
+        <ChevronRight
+          className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-150 ${open ? "rotate-90" : ""}`}
+        />
+        <Icon className="h-4 w-4 shrink-0 text-primary" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-gray-900">{title}</span>
+            {badge}
+          </div>
+          {subtitle && <p className="mt-0.5 text-xs text-gray-500">{subtitle}</p>}
+        </div>
+      </button>
+      {open && <div className="border-t border-gray-100 px-6 py-5">{children}</div>}
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const { status } = useSession()
 
   // ── AI provider ──────────────────────────────────────────────────────────
   const [aiSettings, setAiSettings] = useState<AiSettings | null>(null)
+  const [aiUnavailable, setAiUnavailable] = useState<boolean>(false)
   const [selectedProvider, setSelectedProvider] = useState<string>("gemini")
   const [savingAi, setSavingAi] = useState(false)
 
@@ -121,8 +179,13 @@ export default function SettingsPage() {
         if (aiResult.status === "fulfilled") {
           setAiSettings(aiResult.value)
           setSelectedProvider(aiResult.value.provider)
+          setAiUnavailable(false)
+        } else {
+          // AI service unreachable → treat as disabled and hide the whole
+          // section. (Kept on old page as an inline warning; users said this
+          // is clutter when AI is intentionally off in this env.)
+          setAiUnavailable(true)
         }
-        // AI settings failure is non-fatal — service may not be running
 
         setLoading(false)
       }
@@ -198,38 +261,38 @@ export default function SettingsPage() {
   }
 
   const activeProviderChanged = aiSettings && selectedProvider !== aiSettings.provider
+  const realtimeShippingOn = shipping.shipping_realtime_enabled
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Platform Settings</h1>
-        <p className="text-gray-500 text-sm mt-1">Configure AI provider, payments, shipping, and payout behaviour.</p>
+        <p className="text-gray-500 text-sm mt-1">
+          Commission, payouts, shipping, and AI — click a section to expand.
+        </p>
       </div>
 
-      {/* ── AI Provider ───────────────────────────────────────────────────── */}
-      <details open className="rounded-2xl border border-gray-200 bg-white">
-        <summary className="cursor-pointer list-none border-b border-gray-100 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Bot className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold text-gray-900">AI Provider</span>
-            {aiSettings && (
-              <span className="ml-auto rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
+      {/* ── AI Provider (hidden entirely when AI service is unreachable) ── */}
+      {!aiUnavailable && (
+        <Section
+          icon={Bot}
+          title="AI Provider"
+          subtitle="Powers Victory (chat, seller coach, moderation, analytics)."
+          badge={
+            aiSettings && (
+              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
                 {aiSettings.provider} active
               </span>
-            )}
-          </div>
-        </summary>
-
-        <div className="p-6 space-y-5">
-          <p className="text-xs text-gray-500">
-            Select which AI provider powers Victory — the chat assistant, seller coach, content moderation, and admin analytics.
-            The switch takes effect immediately with no restart required.
-          </p>
-
+            )
+          }
+        >
           {!aiSettings ? (
-            <p className="text-sm text-gray-400 italic">AI service unavailable — cannot load provider settings.</p>
+            <p className="text-sm text-gray-400 italic">AI settings are still loading.</p>
           ) : (
-            <>
+            <div className="space-y-5">
+              <p className="text-xs text-gray-500">
+                Select the provider that powers AI features. The switch takes effect immediately — no restart required.
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {PROVIDERS.map((p) => {
                   const configured = p.id === "gemini" ? aiSettings.gemini_configured : aiSettings.claude_configured
@@ -268,7 +331,6 @@ export default function SettingsPage() {
                   )
                 })}
               </div>
-
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -285,144 +347,190 @@ export default function SettingsPage() {
                   </span>
                 )}
               </div>
-            </>
-          )}
-        </div>
-      </details>
-
-      {/* ── Payment & Shipping ────────────────────────────────────────────── */}
-      <form onSubmit={handleSavePayment} className="space-y-4">
-        <details open className="rounded-2xl border border-gray-200 bg-white">
-          <summary className="cursor-pointer list-none border-b border-gray-100 px-6 py-4 text-sm font-semibold text-gray-900">
-            Commission & Platform Controls
-          </summary>
-          <div className="p-6 space-y-5">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900">Platform Settings</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Controls the base platform configurations for all sellers.</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Platform Commission Rate (%)</label>
-                <div className="relative max-w-[150px]">
-                  <input
-                    type="number" step="0.1" min={0} max={100}
-                    value={commissionRate}
-                    onChange={(e) => setCommissionRate(Number(e.target.value))}
-                    className={`${INPUT_CLASS} pr-8`}
-                  />
-                  <span className="absolute right-3 top-2.5 text-xs text-gray-400">%</span>
-                </div>
-                <p className="text-xs text-gray-400 mt-1.5">Default percentage cut taken from all sub-orders.</p>
+          )}
+        </Section>
+      )}
+
+      {/* ── One <form> wraps commission / shipping / payouts since they share
+             a single POST endpoint via handleSavePayment. ───────────────── */}
+      <form onSubmit={handleSavePayment} className="space-y-4">
+        <Section
+          icon={Percent}
+          title="Commission & Platform Controls"
+          subtitle="Base commission percentage and global payout freeze switch."
+          defaultOpen
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Platform Commission Rate (%)</label>
+              <div className="relative max-w-[150px]">
+                <input
+                  type="number" step="0.1" min={0} max={100}
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(Number(e.target.value))}
+                  className={`${INPUT_CLASS} pr-8`}
+                />
+                <span className="absolute right-3 top-2.5 text-xs text-gray-400">%</span>
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Global Auto-Payouts</label>
-                <Toggle on={autoPayoutsEnabled} onToggle={() => setAutoPayoutsEnabled(!autoPayoutsEnabled)} />
-                <p className="text-xs text-gray-400 mt-1.5 leading-snug max-w-[200px]">
-                  Off = freeze all nightly Stripe payouts (e.g. during a fraud audit).
-                </p>
-              </div>
+              <p className="text-xs text-gray-400 mt-1.5">Default percentage cut taken from all sub-orders.</p>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Global Auto-Payouts</label>
+              <Toggle on={autoPayoutsEnabled} onToggle={() => setAutoPayoutsEnabled(!autoPayoutsEnabled)} />
+              <p className="text-xs text-gray-400 mt-1.5 leading-snug max-w-[240px]">
+                Off = freeze all nightly Stripe payouts (e.g. during a fraud audit).
+              </p>
             </div>
           </div>
-        </details>
+        </Section>
 
-        <details open className="rounded-2xl border border-gray-200 bg-white">
-          <summary className="cursor-pointer list-none border-b border-gray-100 px-6 py-4 text-sm font-semibold text-gray-900">
-            Shipping Controls
-          </summary>
-          <div className="p-6 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Realtime Carrier Shipping</label>
+        <Section
+          icon={Truck}
+          title="Shipping"
+          subtitle={
+            realtimeShippingOn
+              ? `Real-time carrier quotes via ${shipping.shipping_provider === "easypost" ? "EasyPost" : "Shippo"}.`
+              : "Platform weight-based rates (configured per region)."
+          }
+          badge={
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                realtimeShippingOn
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {realtimeShippingOn ? "Carrier" : "Platform"}
+            </span>
+          }
+        >
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900">
+                    Real-time carrier shipping
+                  </label>
+                  <p className="text-xs text-gray-500 mt-0.5 max-w-md">
+                    On: Shippo/EasyPost quote shipping at checkout based on real parcels.
+                    Off: Platform rates use per-region cents-per-pound + free-shipping threshold
+                    from the <Link href="/admin/regions" className="underline text-gray-700 hover:text-primary">Regions</Link> page.
+                  </p>
+                </div>
                 <Toggle
                   on={shipping.shipping_realtime_enabled}
                   onToggle={() => setShipping((prev) => ({ ...prev, shipping_realtime_enabled: !prev.shipping_realtime_enabled }))}
                 />
-                <p className="text-xs text-gray-400 mt-1.5">Off = static rates. On = carrier quotes in checkout.</p>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Shipping Provider</label>
-                <select
-                  value={shipping.shipping_provider}
-                  onChange={(e) => setShipping((prev) => ({ ...prev, shipping_provider: e.target.value as "shippo" | "easypost" }))}
-                  className={INPUT_CLASS}
-                >
-                  <option value="shippo">Shippo</option>
-                  <option value="easypost">EasyPost</option>
-                </select>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">State allowlist (CSV)</label>
-                <input value={shippingStatesInput} onChange={(e) => setShippingStatesInput(e.target.value)} placeholder="TX, CA, NY" className={INPUT_CLASS} />
-                <p className="text-xs text-gray-400 mt-1.5">Leave empty to allow all states.</p>
+
+            {/* Provider-specific fields only make sense when carrier mode is on.
+                When off, weight-based rates come from each Region's config, so
+                we replace the block with a hint + Regions link. */}
+            {realtimeShippingOn ? (
+              <div className="space-y-5 pt-2 border-t border-gray-100">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1.5">Shipping Provider</label>
+                    <select
+                      value={shipping.shipping_provider}
+                      onChange={(e) => setShipping((prev) => ({ ...prev, shipping_provider: e.target.value as "shippo" | "easypost" }))}
+                      className={INPUT_CLASS}
+                    >
+                      <option value="shippo">Shippo</option>
+                      <option value="easypost">EasyPost</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1.5">Fallback to platform rates when realtime fails</label>
+                    <Toggle
+                      on={shipping.shipping_realtime_fallback_static}
+                      onToggle={() => setShipping((prev) => ({ ...prev, shipping_realtime_fallback_static: !prev.shipping_realtime_fallback_static }))}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1.5">State allowlist (CSV)</label>
+                    <input value={shippingStatesInput} onChange={(e) => setShippingStatesInput(e.target.value)} placeholder="TX, CA, NY" className={INPUT_CLASS} />
+                    <p className="text-xs text-gray-400 mt-1.5">Leave empty to allow all states.</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1.5">City allowlist (CSV)</label>
+                    <input value={shippingCitiesInput} onChange={(e) => setShippingCitiesInput(e.target.value)} placeholder="Austin, Dallas" className={INPUT_CLASS} />
+                  </div>
+                </div>
+                <div className="border-t border-gray-100 pt-5">
+                  <h3 className="text-sm font-semibold text-gray-900">Multi-parcel packing</h3>
+                  <p className="text-xs text-gray-500 mt-0.5 mb-4">Leave blank to use deployment defaults.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1.5">Max weight per parcel (lb)</label>
+                      <input
+                        type="number" min={0.1} step={0.5}
+                        value={shipping.shipping_pack_max_weight_lbs ?? ""}
+                        onChange={(e) => setShipping((prev) => ({ ...prev, shipping_pack_max_weight_lbs: e.target.value === "" ? null : Number(e.target.value) }))}
+                        placeholder="e.g. 20" className={INPUT_CLASS}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1.5">Max stacked height per parcel (in)</label>
+                      <input
+                        type="number" min={1} step={1}
+                        value={shipping.shipping_pack_max_stack_height_in ?? ""}
+                        onChange={(e) => setShipping((prev) => ({ ...prev, shipping_pack_max_stack_height_in: e.target.value === "" ? null : Number(e.target.value) }))}
+                        placeholder="e.g. 36" className={INPUT_CLASS}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">City allowlist (CSV)</label>
-                <input value={shippingCitiesInput} onChange={(e) => setShippingCitiesInput(e.target.value)} placeholder="Austin, Dallas" className={INPUT_CLASS} />
+            ) : (
+              <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <Info className="h-4 w-4 shrink-0 text-gray-400 mt-0.5" />
+                <div className="text-xs text-gray-600 leading-relaxed">
+                  <p className="font-medium text-gray-800">Platform weight-based shipping is active.</p>
+                  <p className="mt-1">
+                    Checkout uses each region&apos;s <code className="bg-white px-1 rounded text-[11px]">shipping_rate_cents_per_lb</code> and
+                    <code className="bg-white px-1 rounded ml-1 text-[11px]">free_shipping_threshold_cents</code> values.
+                    Edit those on the{" "}
+                    <Link href="/admin/regions" className="font-medium text-primary hover:underline">
+                      Regions
+                    </Link>{" "}
+                    page.
+                  </p>
+                </div>
               </div>
+            )}
+          </div>
+        </Section>
+
+        <Section
+          icon={Banknote}
+          title="Payout Limits"
+          subtitle="Settlement window and per-payout amount caps."
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Settlement window (days)</label>
+              <input type="number" min={1} max={30} value={settlementDays} onChange={(e) => setSettlementDays(Number(e.target.value))} className={INPUT_CLASS} />
+              <p className="text-xs text-gray-400 mt-1.5 leading-snug">Funds held before nightly payout run.</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">Fallback to static when realtime unavailable</label>
-              <Toggle
-                on={shipping.shipping_realtime_fallback_static}
-                onToggle={() => setShipping((prev) => ({ ...prev, shipping_realtime_fallback_static: !prev.shipping_realtime_fallback_static }))}
-              />
+              <label className="block text-xs text-gray-500 mb-1.5">Min Payout Amount ($)</label>
+              <input type="number" min={1} value={minPayoutDollars} onChange={(e) => setMinPayoutDollars(Number(e.target.value))} className={INPUT_CLASS} />
+              <p className="text-xs text-gray-400 mt-1.5 leading-snug">Prevents micro-transfers.</p>
             </div>
-            <div className="border-t border-gray-100 pt-5">
-              <h3 className="text-sm font-semibold text-gray-900">Multi-parcel packing</h3>
-              <p className="text-xs text-gray-500 mt-0.5 mb-4">Leave blank to use deployment defaults.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">Max weight per parcel (lb)</label>
-                  <input
-                    type="number" min={0.1} step={0.5}
-                    value={shipping.shipping_pack_max_weight_lbs ?? ""}
-                    onChange={(e) => setShipping((prev) => ({ ...prev, shipping_pack_max_weight_lbs: e.target.value === "" ? null : Number(e.target.value) }))}
-                    placeholder="e.g. 20" className={INPUT_CLASS}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">Max stacked height per parcel (in)</label>
-                  <input
-                    type="number" min={1} step={1}
-                    value={shipping.shipping_pack_max_stack_height_in ?? ""}
-                    onChange={(e) => setShipping((prev) => ({ ...prev, shipping_pack_max_stack_height_in: e.target.value === "" ? null : Number(e.target.value) }))}
-                    placeholder="e.g. 36" className={INPUT_CLASS}
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Max Payout Amount ($)</label>
+              <input type="number" min={100} value={maxPayoutDollars} onChange={(e) => setMaxPayoutDollars(Number(e.target.value))} className={INPUT_CLASS} />
+              <p className="text-xs text-gray-400 mt-1.5 leading-snug">Fraud protection — manual review above this.</p>
             </div>
           </div>
-        </details>
+        </Section>
 
-        <details open className="rounded-2xl border border-gray-200 bg-white">
-          <summary className="cursor-pointer list-none border-b border-gray-100 px-6 py-4 text-sm font-semibold text-gray-900">
-            Payout Limits
-          </summary>
-          <div className="p-6 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Settlement window (days)</label>
-                <input type="number" min={1} max={30} value={settlementDays} onChange={(e) => setSettlementDays(Number(e.target.value))} className={INPUT_CLASS} />
-                <p className="text-xs text-gray-400 mt-1.5 leading-snug">Funds held before nightly payout run.</p>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Min Payout Amount ($)</label>
-                <input type="number" min={1} value={minPayoutDollars} onChange={(e) => setMinPayoutDollars(Number(e.target.value))} className={INPUT_CLASS} />
-                <p className="text-xs text-gray-400 mt-1.5 leading-snug">Prevents micro-transfers.</p>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Max Payout Amount ($)</label>
-                <input type="number" min={100} value={maxPayoutDollars} onChange={(e) => setMaxPayoutDollars(Number(e.target.value))} className={INPUT_CLASS} />
-                <p className="text-xs text-gray-400 mt-1.5 leading-snug">Fraud protection — manual review above this.</p>
-              </div>
-            </div>
-          </div>
-        </details>
-
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-2">
           <button
             type="submit"
             disabled={savingPayment}

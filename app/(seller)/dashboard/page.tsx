@@ -346,9 +346,15 @@ export default function DashboardOverview() {
               <p className="text-xs text-gray-600 mt-1">Order status will appear here once you receive orders</p>
             </div>
           ) : (
-            <div className="h-[240px] flex items-center">
-              <OrderStatusPieChart data={orderStatusData} />
-              <div className="flex flex-col gap-2 pr-2 shrink-0">
+            // Flex row for chart + legend. We use `items-stretch` (not
+            // `items-center`) so the chart wrapper can actually take full
+            // row height — otherwise Recharts' ResponsiveContainer measures
+            // the parent as 0×0 and emits "width(-1) height(-1)" warnings.
+            <div className="h-[240px] flex items-stretch">
+              <div className="flex-1 min-w-0 h-full">
+                <OrderStatusPieChart data={orderStatusData} />
+              </div>
+              <div className="flex flex-col justify-center gap-2 pr-2 shrink-0">
                 {orderStatusData.map((s) => (
                   <div key={s.name} className="flex items-center gap-2">
                     <span

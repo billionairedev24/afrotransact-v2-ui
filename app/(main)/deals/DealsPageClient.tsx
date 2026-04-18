@@ -21,6 +21,7 @@ import {
   BadgePercent,
 } from "lucide-react"
 import { getActiveDeals, type DealData } from "@/lib/api"
+import { StartSellingLink } from "@/components/selling/StartSellingLink"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 
@@ -430,13 +431,13 @@ export default function DealsPageClient() {
                 </p>
               </div>
             </div>
-            <Link
-              href="/seller/register"
+            <StartSellingLink
+              variant="bare"
               className="shrink-0 inline-flex items-center gap-2 rounded-2xl bg-primary px-7 py-3.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
             >
               Open Your Store
               <ArrowRight className="h-4 w-4" />
-            </Link>
+            </StartSellingLink>
           </div>
         </section>
       )}

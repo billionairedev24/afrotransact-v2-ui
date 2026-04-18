@@ -1706,6 +1706,9 @@ export interface EmailTemplate {
   is_default: boolean
   version: number
   updated_by: string
+  // Free-form plain text the admin leaves for developers describing the
+  // verbiage/copy they want — never rendered into the email itself.
+  admin_notes?: string
   created_at: string
   updated_at: string
   sample_data?: Record<string, unknown>
@@ -1720,7 +1723,11 @@ export function getEmailTemplate(token: string, slug: string) {
   return api<EmailTemplate & { sample_data: Record<string, unknown> }>(`/api/admin/email-templates/${slug}`, { token })
 }
 
-export function updateEmailTemplate(token: string, slug: string, body: { subject_template: string; html_body: string; text_body: string }) {
+export function updateEmailTemplate(
+  token: string,
+  slug: string,
+  body: { subject_template: string; html_body: string; text_body: string; admin_notes?: string },
+) {
   return api<EmailTemplate>(`/api/admin/email-templates/${slug}`, { method: "PUT", token, body })
 }
 
@@ -1739,7 +1746,7 @@ export function resetEmailTemplate(token: string, slug: string) {
 export function createEmailTemplate(token: string, body: {
   slug: string; name: string; description: string; category: string;
   subject_template: string; html_body: string; text_body: string;
-  variables: VariableDef[]; use_layout: boolean;
+  variables: VariableDef[]; use_layout: boolean; admin_notes?: string;
 }) {
   return api<EmailTemplate>(`/api/admin/email-templates`, { method: "POST", token, body })
 }

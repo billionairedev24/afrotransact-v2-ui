@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Eye,
   Code,
+  NotebookPen,
   Tag,
   Info,
   ChevronRight,
@@ -63,7 +64,18 @@ const STARTER_HTML = `<h1 style="color:#CA8A04;font-size:24px;margin:0 0 8px;">Y
 </p>
 {{ctaButton .ActionURL "Call To Action"}}`
 
+const STARTER_NOTES = `Write the copy you want this email to say, in plain English.
+
+A developer will read these notes and paste the wording into the HTML template.
+
+Example:
+- Opening line: "Thanks for your order, {first name}!"
+- Body: Confirm we got the order and we'll email again when it ships.
+- CTA button label: "View your order"
+- Tone: friendly, short sentences.`
+
 type ViewMode = "list" | "detail" | "create"
+type EditorMode = "notes" | "html"
 
 function normalizePreviewValue(key: string, value: unknown): unknown {
   if (value == null) return value
@@ -162,6 +174,12 @@ export default function EmailTemplatesPage() {
   const [editSubject, setEditSubject] = useState("")
   const [editHTML, setEditHTML] = useState("")
   const [editText, setEditText] = useState("")
+  // Plain-text notes where the admin describes the copy/verbiage they want.
+  // Developers read these notes and edit the HTMLBody by hand — we never
+  // compile the notes into rendered output. This keeps the control flow
+  // honest: admins describe intent, developers translate intent to HTML.
+  const [editNotes, setEditNotes] = useState("")
+  const [editorMode, setEditorMode] = useState<EditorMode>("notes")
   const [previewHTML, setPreviewHTML] = useState("")
   const [activeTab, setActiveTab] = useState<"editor" | "preview">("editor")
   const [saving, setSaving] = useState(false)
@@ -178,6 +196,8 @@ export default function EmailTemplatesPage() {
   const [newCategory, setNewCategory] = useState("custom")
   const [newSubject, setNewSubject] = useState("")
   const [newHTML, setNewHTML] = useState(STARTER_HTML)
+  const [newNotes, setNewNotes] = useState(STARTER_NOTES)
+  const [newEditorMode, setNewEditorMode] = useState<EditorMode>("notes")
   const [newText, setNewText] = useState("")
   const [newUseLayout, setNewUseLayout] = useState(true)
   const [newVariables, setNewVariables] = useState<VariableDef[]>([
@@ -221,9 +241,13 @@ export default function EmailTemplatesPage() {
       setEditSubject(tpl.subject_template)
       setEditHTML(tpl.html_body)
       setEditText(tpl.text_body || "")
+      setEditNotes(tpl.admin_notes ?? "")
       setActiveTab("editor")
       setPreviewHTML("")
       setViewMode("detail")
+      // Default to the Notes tab so non-technical admins land somewhere
+      // they can actually type without needing to read HTML.
+      setEditorMode("notes")
     } catch (e: unknown) {
       logError(e, "loading email template")
       toast.error("Failed to load template")
@@ -309,9 +333,17 @@ export default function EmailTemplatesPage() {
         subject_template: editSubject,
         html_body: editHTML,
         text_body: editText,
+        admin_notes: editNotes,
       })
       toast.success("Template saved")
-      setSelected({ ...selected, subject_template: editSubject, html_body: editHTML, text_body: editText, is_default: false })
+      setSelected({
+        ...selected,
+        subject_template: editSubject,
+        html_body: editHTML,
+        text_body: editText,
+        admin_notes: editNotes,
+        is_default: false,
+      })
       loadTemplates()
     } catch (e: unknown) {
       logError(e, "saving email template")
@@ -333,6 +365,7 @@ export default function EmailTemplatesPage() {
       setEditSubject(tpl.subject_template)
       setEditHTML(tpl.html_body)
       setEditText(tpl.text_body || "")
+      setEditNotes(tpl.admin_notes ?? "")
       toast.success("Template reset to default")
       loadTemplates()
     } catch (e: unknown) {
@@ -362,6 +395,7 @@ export default function EmailTemplatesPage() {
         text_body: newText,
         variables: newVariables,
         use_layout: newUseLayout,
+        admin_notes: newNotes,
       })
       toast.success(`Template "${newName}" created`)
       resetCreateForm()
@@ -420,6 +454,8 @@ export default function EmailTemplatesPage() {
     setNewCategory("custom")
     setNewSubject("")
     setNewHTML(STARTER_HTML)
+    setNewNotes(STARTER_NOTES)
+    setNewEditorMode("notes")
     setNewText("")
     setNewUseLayout(true)
     setNewVariables([
@@ -444,7 +480,8 @@ export default function EmailTemplatesPage() {
   const hasChanges = selected && (
     editSubject !== selected.subject_template ||
     editHTML !== selected.html_body ||
-    editText !== (selected.text_body || "")
+    editText !== (selected.text_body || "") ||
+    editNotes !== (selected.admin_notes ?? "")
   )
 
   const categories = Array.from(new Set(templates.map(t => t.category)))
@@ -556,15 +593,28 @@ export default function EmailTemplatesPage() {
           Wrap with shared email layout (header, footer, branding)
         </label>
 
-        {/* Tabs */}
+        {/* Tabs: Copy notes / HTML / Preview */}
         <div className="flex items-center gap-1 border-b border-gray-200">
           <button
-            onClick={() => setActiveTab("editor")}
+            onClick={() => { setNewEditorMode("notes"); setActiveTab("editor") }}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "editor" ? "border-yellow-600 text-yellow-700" : "border-transparent text-gray-500 hover:text-gray-700"
+              activeTab === "editor" && newEditorMode === "notes"
+                ? "border-yellow-600 text-yellow-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+            title="Describe the copy in plain English. Developers edit the HTML to match."
+          >
+            <NotebookPen className="h-4 w-4" /> Copy notes
+          </button>
+          <button
+            onClick={() => { setNewEditorMode("html"); setActiveTab("editor") }}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "editor" && newEditorMode === "html"
+                ? "border-yellow-600 text-yellow-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            <Code className="h-4 w-4" /> HTML Editor
+            <Code className="h-4 w-4" /> HTML
           </button>
           <button
             onClick={() => setActiveTab("preview")}
@@ -578,7 +628,20 @@ export default function EmailTemplatesPage() {
 
         <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-4">
           <div className="min-w-0 xl:col-span-3">
-            {activeTab === "editor" ? (
+            {activeTab === "editor" && newEditorMode === "notes" ? (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 leading-relaxed">
+                  Write the copy you want for this email in plain English. A developer will read these notes and update the HTML template to match. These notes are saved alongside the template and are <strong>never</strong> sent to customers.
+                </div>
+                <textarea
+                  value={newNotes}
+                  onChange={e => setNewNotes(e.target.value)}
+                  spellCheck
+                  placeholder="e.g. Opening line: Thanks for signing up, {first name}!  Body: Explain what they can do next. CTA: Go to my account. Tone: warm, 2 short sentences."
+                  className="h-[500px] w-full max-w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-y transition-colors leading-relaxed"
+                />
+              </div>
+            ) : activeTab === "editor" ? (
               <textarea
                 value={newHTML}
                 onChange={e => setNewHTML(e.target.value)}
@@ -722,28 +785,30 @@ export default function EmailTemplatesPage() {
             </div>
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
-            {!selected.is_default && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  disabled={resetting}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-                >
-                  {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-                  Reset
-                </button>
-                {/* Only custom (non-system-default) templates can be deleted */}
-                {selected.category === "custom" && (
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" /> Delete
-                  </button>
-                )}
-              </>
+            {selected.category !== "custom" && (
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={resetting}
+                title={
+                  selected.is_default
+                    ? "Re-apply the latest shipped default for this template"
+                    : "Discard admin edits and restore the shipped default"
+                }
+                className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                Reset to default
+              </button>
+            )}
+            {selected.category === "custom" && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </button>
             )}
             <button
               type="button"
@@ -821,17 +886,31 @@ export default function EmailTemplatesPage() {
           </div>
         )}
 
-        {/* Tabs */}
+        {/* Tabs: Copy notes (plain text) / HTML (raw) / Preview */}
         <div className="flex items-center gap-1 border-b border-gray-200">
           <button
-            onClick={() => setActiveTab("editor")}
+            onClick={() => { setEditorMode("notes"); setActiveTab("editor") }}
+            title="Describe the copy you want. Developers will edit the HTML to match."
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "editor"
+              activeTab === "editor" && editorMode === "notes"
                 ? "border-yellow-600 text-yellow-700"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            <Code className="h-4 w-4" /> HTML Editor
+            <NotebookPen className="h-4 w-4" /> Copy notes
+            {editNotes.trim().length > 0 && (
+              <span className="ml-1 rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-700">●</span>
+            )}
+          </button>
+          <button
+            onClick={() => { setEditorMode("html"); setActiveTab("editor") }}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "editor" && editorMode === "html"
+                ? "border-yellow-600 text-yellow-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Code className="h-4 w-4" /> HTML
           </button>
           <button
             onClick={() => setActiveTab("preview")}
@@ -847,7 +926,25 @@ export default function EmailTemplatesPage() {
 
         <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-4">
           <div className="min-w-0 xl:col-span-3">
-            {activeTab === "editor" ? (
+            {activeTab === "editor" && editorMode === "notes" ? (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 leading-relaxed">
+                  Write the copy you want this email to say, in plain English. A developer will read these notes and update the HTML template to match. These notes stay on the template and are <strong>never</strong> sent to customers.
+                </div>
+                <textarea
+                  value={editNotes}
+                  onChange={e => setEditNotes(e.target.value)}
+                  spellCheck={true}
+                  placeholder={
+                    "e.g.\n- Opening line: Thanks for your order, {first name}!\n- Body: Confirm we received it and explain we'll email when it ships.\n- CTA button label: View your order\n- Tone: friendly, short sentences, no jargon."
+                  }
+                  className="h-[600px] w-full max-w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-y transition-colors leading-relaxed"
+                />
+                <p className="text-xs text-gray-500">
+                  Tip: reference template variables by intent (&quot;customer&apos;s first name&quot;, &quot;order number&quot;) — the developer knows the exact Go-template syntax.
+                </p>
+              </div>
+            ) : activeTab === "editor" ? (
               <textarea
                 value={editHTML}
                 onChange={e => setEditHTML(e.target.value)}

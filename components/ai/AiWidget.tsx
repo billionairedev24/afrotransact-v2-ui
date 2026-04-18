@@ -50,6 +50,18 @@ export function AiWidget() {
     return () => document.removeEventListener("keydown", handle)
   }, [isOpen, close])
 
+  // When the panel closes, move focus out of it first. Without this, a focused
+  // descendant (e.g. the chat input) remains focused inside an `inert` /
+  // `aria-hidden` container, which the browser (correctly) refuses and logs as
+  // an accessibility violation.
+  useEffect(() => {
+    if (isOpen) return
+    const active = document.activeElement as HTMLElement | null
+    if (active && panelRef.current?.contains(active)) {
+      active.blur()
+    }
+  }, [isOpen])
+
   if (!AI_ENABLED) return null
 
   const unread = !hasSeenOpen && messages.length > 0
@@ -65,7 +77,10 @@ export function AiWidget() {
             : "opacity-0 scale-95 pointer-events-none"
         }`}
         style={{ height: "min(660px, calc(100vh - 112px))" }}
-        aria-hidden={!isOpen}
+        // `inert` both hides content from assistive tech AND removes its
+        // descendants from the focus order. Unlike `aria-hidden`, it's safe to
+        // apply when a descendant might currently hold focus.
+        inert={!isOpen}
       >
         <AiChatPanel />
       </div>

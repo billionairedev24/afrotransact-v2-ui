@@ -31,14 +31,29 @@ if (typeof window !== "undefined") {
   )
 }
 
-/** Fail fast at server startup if a required env var is absent. */
+/**
+ * Reads a required env var, but does NOT throw at module-load time.
+ *
+ * Historically we threw from the module's top-level to fail fast. The trouble
+ * is that the NextAuth route file imports this module, so a missing secret
+ * prevented the module from loading at all → every request to /api/auth/*
+ * (including GET /session, which doesn't actually need the secret) returned
+ * a generic 500 Internal Server Error from the Node runtime, with no log
+ * message and no NextAuth error JSON.
+ *
+ * Instead we now log a loud warning and return an empty string. The real
+ * error still surfaces — just later, at the first OAuth exchange — but now
+ * it comes through NextAuth's proper error path and /api/auth/session keeps
+ * working for unauthenticated users.
+ */
 function requireEnv(name: string): string {
   const value = process.env[name]
   if (!value) {
-    throw new Error(
+    console.error(
       `[auth] Missing required environment variable "${name}". ` +
-        "See .env.local.example for the full list."
+        "Auth will fail until it is set. See .env.local.example.",
     )
+    return ""
   }
   return value
 }
@@ -52,6 +67,12 @@ const kcIssuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/af
 const kcClientId = optionalEnv("KEYCLOAK_CLIENT_ID", "afrotransact-web")
 const kcClientSecret = requireEnv("KEYCLOAK_CLIENT_SECRET")
 const kcScope = "openid email profile offline_access"
+
+if (!process.env.NEXTAUTH_SECRET) {
+  console.error(
+    "[auth] NEXTAUTH_SECRET is not set. NextAuth cannot sign session cookies.",
+  )
+}
 
 /**
  * A raw OAuth provider that points at Keycloak's /registrations endpoint

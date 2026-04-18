@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "next build && cp -r .next/static .next/standalone/afrotransact-v2-ui/.next/static && cp -r public .next/standalone/afrotransact-v2-ui/public 2>/dev/null || true",
-    "start": "PORT=3001 node .next/standalone/afrotransact-v2-ui/server.js",
+    "start": "PORT=3001 node --env-file-if-exists=.env --env-file-if-exists=.env.production --env-file-if-exists=.env.local --env-file-if-exists=.env.production.local .next/standalone/afrotransact-v2-ui/server.js",
     "lint": "eslint --max-warnings=100 .",
     "test": "jest"
   },
