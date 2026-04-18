@@ -10,7 +10,6 @@ import {
   Megaphone,
   ToggleLeft,
   Users,
-  Percent,
   Menu,
   X,
   ChevronLeft,
@@ -28,6 +27,7 @@ import {
   Ticket,
   Sparkles,
   BarChart2,
+  Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
@@ -54,11 +54,10 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/orders",        label: "Orders",        icon: ShoppingCart     },
   { href: "/admin/regions",       label: "Regions",       icon: MapPin           },
   { href: "/admin/feature-flags", label: "Feature Flags", icon: ToggleLeft       },
-  { href: "/admin/commission",    label: "Commission",    icon: Percent          },
   { href: "/admin/subscription",     label: "Subscriptions",    icon: ShieldCheck   },
   { href: "/admin/reviews",          label: "Reviews",          icon: Star          },
   { href: "/admin/payouts",          label: "Payouts",          icon: Banknote      },
-  { href: "/admin/payment-settings", label: "Payment Settings", icon: Percent       },
+  { href: "/admin/settings",         label: "Settings",         icon: Settings      },
   { href: "/admin/coupons",       label: "Coupons",       icon: Ticket           },
   { href: "/admin/deals",         label: "Deals",         icon: Sparkles         },
   { href: "/admin/ads",           label: "Ad Slots",      icon: Megaphone        },

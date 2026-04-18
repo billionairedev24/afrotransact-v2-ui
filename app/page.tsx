@@ -1,7 +1,5 @@
-"use client"
-
-import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   ChevronRight,
   MapPin,
@@ -11,7 +9,6 @@ import {
   ShieldCheck,
   Users,
   TrendingUp,
-  Clock,
   Sparkles,
   Tag,
   Gift,
@@ -24,23 +21,26 @@ import { HeroCarousel } from "@/components/home/HeroCarousel"
 import { AdSlot } from "@/components/home/AdSlot"
 import { FeaturedProducts } from "@/components/home/FeaturedProducts"
 import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
-import { getCategories, getAllStores, getFeaturedDeals, type CategoryRef, type StoreInfo, type DealData } from "@/lib/api"
+import { ForYouSection } from "@/components/home/ForYouSection"
+import { buildTilesFromPool } from "@/lib/category-tiles"
+import {
+  getCategories,
+  getAllStores,
+  getFeaturedDeals,
+  getPublicHeroSlides,
+  getPublicPlatformDeals,
+  searchProducts,
+  type CategoryRef,
+  type StoreInfo,
+  type DealData,
+  type PlatformDealData,
+  type SearchResult,
+} from "@/lib/api"
 import { StoreCardSkeleton } from "@/components/ui/Skeleton"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
-
-interface PlatformDeal {
-  id: string
-  title: string
-  description: string | null
-  badgeText: string | null
-  bannerImageUrl: string | null
-  primaryColor: string
-  secondaryColor: string
-  textColor: string
-  ctaText: string | null
-  ctaLink: string | null
-}
+// Home is public, catalog-driven content: revalidate often enough to feel fresh,
+// long enough to dedupe bursts from spiders/warm navigations.
+export const revalidate = 60
 
 const BANNER_GRADIENTS = [
   "linear-gradient(135deg, #1a2e1a, #0f1f0f)",
@@ -81,38 +81,58 @@ const trustPoints = [
   },
 ]
 
-export default function HomePage() {
-  const [categories, setCategories] = useState<CategoryRef[]>([])
-  const [stores, setStores] = useState<StoreInfo[]>([])
-  const [deals, setDeals] = useState<DealData[]>([])
-  const [platformDeals, setPlatformDeals] = useState<PlatformDeal[]>([])
+async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await p
+  } catch {
+    return fallback
+  }
+}
 
-  useEffect(() => {
-    getCategories()
-      .then(setCategories)
-      .catch(() => {})
+export default async function HomePage() {
+  // All catalog data fetched in parallel on the server (Edge-cached via `next.revalidate`).
+  // Each call degrades gracefully to an empty fallback so one slow/broken service
+  // never blocks the whole page.
+  const [categories, allStores, deals, platformDealsRaw, heroConfig, featuredRating, featuredNewest] =
+    await Promise.all([
+      safe<CategoryRef[]>(getCategories({ revalidate: 300 }), []),
+      safe<StoreInfo[]>(getAllStores({ revalidate: 120 }), []),
+      safe<DealData[]>(getFeaturedDeals({ revalidate: 60 }), []),
+      safe<PlatformDealData[]>(getPublicPlatformDeals(undefined, { revalidate: 60 }), []),
+      safe(getPublicHeroSlides({ revalidate: 60 }), []),
+      // Rating-sorted pool: doubles as both the "Fresh Near You" featured
+      // section (first 8) AND the source for server-computed category tiles
+      // (all ~96). Keeps server→gateway traffic at 1 request for both uses.
+      safe(
+        searchProducts({ size: "96", sort_by: "rating" }, { revalidate: 300 }),
+        { results: [] as SearchResult[] } as Awaited<ReturnType<typeof searchProducts>>,
+      ),
+      safe(
+        searchProducts({ size: "8", sort_by: "newest" }, { revalidate: 60 }),
+        { results: [] as SearchResult[] } as Awaited<ReturnType<typeof searchProducts>>,
+      ),
+    ])
 
-    getAllStores()
-      .then((s) => setStores(s.slice(0, 6)))
-      .catch(() => {})
-
-    getFeaturedDeals()
-      .then((list) => setDeals(list))
-      .catch(() => {})
-
-    fetch(`${API_BASE}/api/v1/platform-deals`)
-      .then(r => r.ok ? r.json() : [])
-      .then(list => setPlatformDeals(Array.isArray(list) ? list.slice(0, 3) : []))
-      .catch(() => {})
-  }, [])
+  const stores = allStores.slice(0, 6)
+  const platformDeals = platformDealsRaw.slice(0, 3)
+  // Pre-compute category tile images on the server using the rating pool
+  // we already fetched. Client renders tiles synchronously — no
+  // `/api/v1/search?category=…` calls from the browser, no 429s.
+  const categoryTiles = buildTilesFromPool(
+    categories.filter((c) => c.parentId == null).slice(0, 4),
+    featuredRating.results,
+  )
+  const featuredRatingInitial = featuredRating.results.slice(0, 8)
+  // HeroCarousel is a client component — pass raw configs and let it map
+  // them to slides on the client (JSX in `mapConfigToSlide` can't be
+  // invoked across the server/client boundary).
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
 
       <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0">
-
-        <HeroCarousel />
+        <HeroCarousel serverHeroConfigs={heroConfig} />
 
         <section className="bg-card/70 border-y border-border">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-3">
@@ -122,7 +142,7 @@ export default function HomePage() {
                 Today&apos;s Deals
               </span>
               <span className="w-px h-5 bg-border shrink-0" />
-              {(deals.length > 0 ? deals : []).map((deal, idx) => {
+              {deals.map((deal, idx) => {
                 const color = DEFAULT_DEAL_COLORS[idx % DEFAULT_DEAL_COLORS.length]
                 return (
                   <Link
@@ -132,9 +152,7 @@ export default function HomePage() {
                   >
                     <span>{deal.badgeText || "Deal"}</span>
                     <span className="text-white/70">·</span>
-                    <span className="text-white/80">
-                      {deal.title}
-                    </span>
+                    <span className="text-white/80">{deal.title}</span>
                   </Link>
                 )
               })}
@@ -163,14 +181,20 @@ export default function HomePage() {
                   >
                     <div>
                       {deal.badgeText && (
-                        <span className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold mb-2"
-                          style={{ backgroundColor: deal.primaryColor, color: deal.secondaryColor }}>
+                        <span
+                          className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold mb-2"
+                          style={{ backgroundColor: deal.primaryColor, color: deal.secondaryColor }}
+                        >
                           {deal.badgeText}
                         </span>
                       )}
-                      <h3 className="text-lg font-bold leading-snug" style={{ color: deal.textColor }}>{deal.title}</h3>
+                      <h3 className="text-lg font-bold leading-snug" style={{ color: deal.textColor }}>
+                        {deal.title}
+                      </h3>
                       {deal.description && (
-                        <p className="text-xs opacity-75 mt-1 line-clamp-2" style={{ color: deal.textColor }}>{deal.description}</p>
+                        <p className="text-xs opacity-75 mt-1 line-clamp-2" style={{ color: deal.textColor }}>
+                          {deal.description}
+                        </p>
                       )}
                     </div>
                     {deal.ctaLink && (
@@ -207,7 +231,13 @@ export default function HomePage() {
             </div>
 
             {categories.length > 0 ? (
-              <CategoryShowcaseAmazon categories={categories} maxParents={8} />
+              // Capped to 4 parents (down from 12) to reduce the N×5 search fan-out
+              // until a dedicated "category tiles" BFF endpoint lands.
+              <CategoryShowcaseAmazon
+                categories={categories}
+                maxParents={4}
+                initialTiles={categoryTiles}
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -234,6 +264,7 @@ export default function HomePage() {
           sortBy="rating"
           size={8}
           viewAllHref="/search?sort=rating"
+          initialProducts={featuredRatingInitial}
         />
 
         <FeaturedProducts
@@ -243,7 +274,10 @@ export default function HomePage() {
           size={8}
           viewAllHref="/search?sort=newest"
           icon={<Sparkles className="h-3.5 w-3.5 text-primary" />}
+          initialProducts={featuredNewest.results}
         />
+
+        <ForYouSection />
 
         <AdSlot slotId="mid-page-2" />
 
@@ -285,7 +319,13 @@ export default function HomePage() {
                         )}
                         <div className="absolute -bottom-5 left-4 h-12 w-12 rounded-xl bg-card border-2 border-border flex items-center justify-center overflow-hidden">
                           {store.logoUrl ? (
-                            <img src={store.logoUrl} alt={store.name} className="h-full w-full object-cover" />
+                            <Image
+                              src={store.logoUrl}
+                              alt={store.name}
+                              width={48}
+                              height={48}
+                              className="h-full w-full object-cover"
+                            />
                           ) : (
                             <Store className="h-6 w-6 text-primary" />
                           )}
@@ -322,10 +362,7 @@ export default function HomePage() {
                       </div>
                     </Link>
                   ))
-                : Array.from({ length: 3 }).map((_, i) => (
-                    <StoreCardSkeleton key={i} />
-                  ))
-              }
+                : Array.from({ length: 3 }).map((_, i) => <StoreCardSkeleton key={i} />)}
             </div>
           </div>
         </section>
@@ -344,10 +381,7 @@ export default function HomePage() {
             {trustPoints.map((point) => {
               const Icon = point.icon
               return (
-                <div
-                  key={point.title}
-                  className={`rounded-2xl border ${point.bg} p-6 space-y-3`}
-                >
+                <div key={point.title} className={`rounded-2xl border ${point.bg} p-6 space-y-3`}>
                   <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${point.color}`}>
                     <Icon className="h-6 w-6" />
                   </div>
@@ -378,8 +412,7 @@ export default function HomePage() {
                 For Vendors
               </span>
               <h2 className="text-3xl sm:text-4xl font-black text-foreground leading-tight">
-                Turn your passion into{" "}
-                <span className="text-primary">a thriving business</span>
+                Turn your passion into <span className="text-primary">a thriving business</span>
               </h2>
               <p className="text-muted-foreground text-base leading-relaxed">
                 Join 200+ immigrant entrepreneurs already selling on AfroTransact. Set up your store in
@@ -389,15 +422,18 @@ export default function HomePage() {
               <div className="grid grid-cols-3 gap-3 max-w-lg mx-auto pt-2">
                 {[
                   { name: "Starter", price: "$29.99", tag: "Most popular" },
-                  { name: "Growth",  price: "$79.99", tag: "Scale faster"  },
-                  { name: "Pro",     price: "$149.99", tag: "Full power"   },
+                  { name: "Growth", price: "$79.99", tag: "Scale faster" },
+                  { name: "Pro", price: "$149.99", tag: "Full power" },
                 ].map((plan) => (
                   <div
                     key={plan.name}
                     className="rounded-xl border border-gray-200 bg-white p-3 text-center"
                   >
                     <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">{plan.name}</p>
-                    <p className="text-sm font-bold text-gray-900">{plan.price}<span className="text-[10px] font-normal text-gray-400">/mo</span></p>
+                    <p className="text-sm font-bold text-gray-900">
+                      {plan.price}
+                      <span className="text-[10px] font-normal text-gray-400">/mo</span>
+                    </p>
                     <p className="text-[10px] text-emerald-400 mt-0.5">{plan.tag}</p>
                   </div>
                 ))}

@@ -1,83 +1,34 @@
-"use client"
-
-import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ChevronRight, Package } from "lucide-react"
-import { getCategories, searchProducts, type CategoryRef, type SearchResult } from "@/lib/api"
-import {
-  CategoryShowcaseAmazon,
-  CategoryShowcaseLoading,
-} from "@/components/categories/CategoryShowcaseAmazon"
+import { ChevronRight } from "lucide-react"
+import { getCategories } from "@/lib/api"
+import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
+import { fetchCategoryTiles } from "@/lib/category-tiles"
+import { PopularPicksStrip } from "./PopularPicksStrip"
 
-function PopularPicksStrip() {
-  const [items, setItems] = useState<SearchResult[]>([])
-  const [loading, setLoading] = useState(true)
+/**
+ * `/categories` — Shop-by-category index.
+ *
+ * Rendered as a **Server Component** so we can pre-compute tile images via
+ * `fetchCategoryTiles`. The previous client-side version fired N × 5
+ * `/api/v1/search?category=…` requests on mount (16 parents × 5 = 80 parallel
+ * calls), which tripped the gateway's sensitive-endpoint rate limiter with a
+ * 429 on every cold load.
+ *
+ * Now the heavy lifting happens once on the server (one `size=96` search,
+ * cached for 5 min via Next.js's fetch cache) and the client renders
+ * synchronously with zero search traffic.
+ */
+export const revalidate = 300
 
-  useEffect(() => {
-    searchProducts({ size: "20", sort_by: "rating" })
-      .then((r) => setItems(r.results))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+const MAX_PARENTS = 16
 
-  if (loading) {
-    return (
-      <section className="mt-10 border-t border-gray-200 pt-8">
-        <div className="h-6 w-48 bg-gray-100 rounded animate-pulse mb-4" />
-        <div className="flex gap-3 overflow-hidden">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-28 w-28 shrink-0 rounded-lg bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      </section>
-    )
-  }
-
-  if (items.length === 0) return null
-
-  return (
-    <section className="mt-10 border-t border-gray-200 pt-8">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">Popular picks</h2>
-      <div className="-mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
-          {items.map((p) => {
-            const slug = p.slug || p.product_id
-            return (
-              <Link
-                key={p.product_id}
-                href={`/product/${slug}`}
-                className="shrink-0 w-[104px] sm:w-[120px] snap-start rounded-lg border border-gray-200 bg-white overflow-hidden hover:border-primary/40 hover:shadow-md transition-all"
-              >
-                <div className="aspect-square bg-gray-50 flex items-center justify-center p-1">
-                  {p.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.image_url} alt="" className="max-h-full max-w-full object-contain" />
-                  ) : (
-                    <Package className="h-8 w-8 text-gray-300" />
-                  )}
-                </div>
-                <p className="text-[10px] text-gray-700 line-clamp-2 px-1.5 py-1.5 leading-tight">
-                  {p.title}
-                </p>
-              </Link>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-export default function CategoriesPage() {
-  const [categories, setCategories] = useState<CategoryRef[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    getCategories()
-      .then(setCategories)
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+export default async function CategoriesPage() {
+  // One categories call (reused below for the tile pool) — Next's fetch
+  // cache handles dedup + revalidation so there's effectively one gateway
+  // hit per 5 min per route.
+  const categories = await getCategories({ revalidate: 300 }).catch(() => [])
+  const roots = categories.filter((c) => c.parentId == null).slice(0, MAX_PARENTS)
+  const tiles = await fetchCategoryTiles(roots, { revalidate: 300, size: 96 })
 
   return (
     <main className="min-h-[60vh] bg-[#eaeded]">
@@ -97,15 +48,17 @@ export default function CategoriesPage() {
           </p>
         </div>
 
-        {loading ? (
-          <CategoryShowcaseLoading />
-        ) : categories.length === 0 ? (
+        {categories.length === 0 ? (
           <p className="text-center text-gray-600 py-20 bg-white rounded-lg border border-gray-200">
             No categories available yet.
           </p>
         ) : (
           <>
-            <CategoryShowcaseAmazon categories={categories} maxParents={16} />
+            <CategoryShowcaseAmazon
+              categories={categories}
+              maxParents={MAX_PARENTS}
+              initialTiles={tiles}
+            />
             <PopularPicksStrip />
           </>
         )}

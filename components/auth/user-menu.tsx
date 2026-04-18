@@ -3,6 +3,7 @@
 import { useSession, signIn } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { User, LogOut, Package, Settings, ChevronDown, Store } from "lucide-react"
 import { useSignOut } from "@/hooks/useSignOut"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
@@ -11,6 +12,7 @@ export function UserMenu() {
   const { data: session, status } = useSession()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const pathname = usePathname()
   const signOut = useSignOut()
 
   useEffect(() => {
@@ -30,20 +32,21 @@ export function UserMenu() {
   }
 
   if (!session) {
+    const returnTo = pathname || "/"
     return (
       <div className="flex items-center gap-2">
         <button
-          onClick={() => signIn()}
+          onClick={() => signIn("keycloak", { callbackUrl: returnTo })}
           className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           Sign In
         </button>
-        <Link
-          href="/auth/register"
+        <button
+          onClick={() => signIn("keycloak-register", { callbackUrl: returnTo })}
           className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
         >
           Register
-        </Link>
+        </button>
         <StartSellingLink
           variant="bare"
           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 transition-colors hover:bg-accent"

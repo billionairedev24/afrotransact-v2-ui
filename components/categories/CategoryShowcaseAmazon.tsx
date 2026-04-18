@@ -8,6 +8,70 @@ import { searchProducts, type CategoryRef, type SearchResult } from "@/lib/api"
 const TINT_LIME = "bg-[#e8f5c8]"
 const TINT_PEACH = "bg-[#fce5cc]"
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared module-level cache + concurrency limiter for /api/v1/search calls
+// made from this component.
+//
+// Why this exists: rendering this component with N parents fires N × 5
+// `/api/v1/search?category=…` requests in parallel (4 child slots + 1 parent
+// pool). That easily saturates the gateway's sensitive-endpoint rate limiter
+// on a cold homepage load, especially with React Strict Mode's double-mount
+// in development. Instead we:
+//
+//   1. Dedupe in-flight requests so the same (category,size) pair never
+//      hits the network twice, even across remounts or sibling tiles.
+//   2. Cache successful results for a few minutes so SPA-style navigation
+//      back to "/" doesn't refetch anything.
+//   3. Cap parallelism at 4 concurrent gateway calls.
+//
+// All of this is scoped to this component's call site — no change to
+// `searchProducts` itself, so other callers' behavior is unchanged.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000
+const searchCache = new Map<string, { at: number; results: SearchResult[] }>()
+const searchInflight = new Map<string, Promise<SearchResult[]>>()
+
+const SEARCH_CONCURRENCY = 4
+let searchActive = 0
+const searchWaiting: Array<() => void> = []
+
+async function runLimited<T>(task: () => Promise<T>): Promise<T> {
+  if (searchActive >= SEARCH_CONCURRENCY) {
+    await new Promise<void>((resolve) => searchWaiting.push(resolve))
+  }
+  searchActive++
+  try {
+    return await task()
+  } finally {
+    searchActive--
+    const next = searchWaiting.shift()
+    if (next) next()
+  }
+}
+
+async function cachedCategorySearch(
+  category: string,
+  size: string,
+): Promise<SearchResult[]> {
+  const key = `${category}|${size}`
+  const hit = searchCache.get(key)
+  if (hit && Date.now() - hit.at < SEARCH_CACHE_TTL_MS) return hit.results
+  const existing = searchInflight.get(key)
+  if (existing) return existing
+  const p = (async () => {
+    try {
+      const res = await runLimited(() => searchProducts({ category, size }))
+      searchCache.set(key, { at: Date.now(), results: res.results })
+      return res.results
+    } finally {
+      searchInflight.delete(key)
+    }
+  })()
+  searchInflight.set(key, p)
+  return p
+}
+
 type TilePick = {
   image: string
   slug: string | null
@@ -55,26 +119,31 @@ async function fetchTilesForParent(parent: CategoryRef): Promise<(TilePick | nul
   const fromSlot = await Promise.all(
     categoryPerSlot.map(async (categoryName) => {
       try {
-        const res = await searchProducts({ category: categoryName, size: "8" })
-        return firstProductWithImage(res.results)
+        const results = await cachedCategorySearch(categoryName, "8")
+        return firstProductWithImage(results)
       } catch {
         return null
       }
     }),
   )
 
+  // Only hit the parent-pool endpoint if at least one slot came back empty.
+  // This eliminates ~20% of the category-search traffic in the common case.
+  const missing = fromSlot.some((t) => t == null)
   let pool: TilePick[] = []
-  try {
-    const res = await searchProducts({ category: parent.name, size: "24" })
-    pool = res.results
-      .filter((r): r is SearchResult & { image_url: string } => Boolean(r.image_url))
-      .map((r) => ({
-        image: r.image_url,
-        slug: r.slug ?? null,
-        productId: r.product_id,
-      }))
-  } catch {
-    /* ignore */
+  if (missing) {
+    try {
+      const results = await cachedCategorySearch(parent.name, "24")
+      pool = results
+        .filter((r): r is SearchResult & { image_url: string } => Boolean(r.image_url))
+        .map((r) => ({
+          image: r.image_url,
+          slug: r.slug ?? null,
+          productId: r.product_id,
+        }))
+    } catch {
+      /* ignore */
+    }
   }
 
   let j = 0
@@ -94,8 +163,11 @@ function buildCells(parent: CategoryRef, tiles: (TilePick | null)[]): Cell[] {
     const ch = children[i]
     const tile = tiles[i] ?? tiles.find(Boolean) ?? null
     const img = tile?.image ?? null
-    const categoryHref = ch ? `/category/${ch.slug}` : `/category/${parent.slug}`
-    const imageHref = productHref(tile) ?? categoryHref
+    const categorySlug = ch ? ch.slug : parent.slug
+    const categoryHref = `/category/${categorySlug}`
+    // Clicking the image goes to the category page with the clicked product pinned first
+    const featuredParam = tile ? `?featured_id=${encodeURIComponent(tile.slug ?? tile.productId)}` : ""
+    const imageHref = `${categoryHref}${featuredParam}`
     if (ch) {
       cells.push({
         imageHref,
@@ -148,7 +220,7 @@ function CategoryMegaCard({
               <Link
                 href={cell.imageHref}
                 className="group block rounded-md overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                aria-label={`View product image for ${cell.label}`}
+                aria-label={`Shop ${cell.label}`}
               >
                 <div
                   className={`aspect-square flex items-center justify-center p-1.5 ${
@@ -196,23 +268,50 @@ type ShowcaseProps = {
   /** Max parent category cards (large tiles). */
   maxParents?: number
   className?: string
+  /**
+   * Tiles pre-computed on the server (strongly preferred — eliminates all
+   * client-side `/api/v1/search` traffic for this component). When provided,
+   * the client renders synchronously with zero network calls.
+   *
+   * Shape: `{ [parent.id]: [tile|null, tile|null, tile|null, tile|null] }`
+   *
+   * If omitted, the component falls back to legacy client-side fetching
+   * (useful for non-server-rendered mounts, but subject to gateway rate
+   * limits — prefer passing this prop).
+   */
+  initialTiles?: Record<string, (TilePick | null)[]>
 }
 
 /**
  * Amazon-style category tiles: white cards, 2×2 image grid per parent category.
- * Each tile’s photo comes from `/api/v1/search?category=…` (products in that subcategory or parent).
+ *
+ * Tile images come from product search. The preferred path is for the server
+ * to pre-compute tiles (see `lib/category-tiles.ts`) and pass them as
+ * `initialTiles`; the client-side fetch exists only as a fallback.
  */
 export function CategoryShowcaseAmazon({
   categories,
   maxParents = 12,
   className = "",
+  initialTiles,
 }: ShowcaseProps) {
   const roots = useMemo(() => rootsOnly(categories).slice(0, maxParents), [categories, maxParents])
-  const [tilesByParentId, setTilesByParentId] = useState<Record<string, (TilePick | null)[]>>({})
-  /** undefined = before first fetch pass; empty Set = images loaded */
-  const [loadingIds, setLoadingIds] = useState<Set<string> | undefined>(undefined)
+
+  // When the server pre-computed the tiles, start with them and skip the
+  // effect entirely — zero client-side `/api/v1/search` calls.
+  const hasInitial = !!initialTiles && Object.keys(initialTiles).length > 0
+  const [tilesByParentId, setTilesByParentId] = useState<Record<string, (TilePick | null)[]>>(
+    initialTiles ?? {},
+  )
+  /** undefined = before first fetch pass; empty Set = done loading. */
+  const [loadingIds, setLoadingIds] = useState<Set<string> | undefined>(
+    hasInitial ? new Set() : undefined,
+  )
 
   useEffect(() => {
+    // Server-provided tiles win — don't refetch.
+    if (hasInitial) return
+
     if (roots.length === 0) {
       setLoadingIds(new Set())
       return
@@ -241,7 +340,7 @@ export function CategoryShowcaseAmazon({
     return () => {
       cancelled = true
     }
-  }, [roots])
+  }, [roots, hasInitial])
 
   if (roots.length === 0) return null
 

@@ -12,8 +12,19 @@
  *      meaningful metadata rather than strict numbered filenames.
  */
 
-import * as XLSX from "xlsx"
+// `xlsx` is ~400KB parsed. It is intentionally NOT imported at the top level
+// so pages that merely link to bulk-import routes do not pay the bundle cost.
+// Callers load it lazily via `loadXLSX()` inside each function below.
 import type { CategoryRef, MediaItem } from "./api"
+
+type XLSXModule = typeof import("xlsx")
+let xlsxPromise: Promise<XLSXModule> | null = null
+function loadXLSX(): Promise<XLSXModule> {
+  if (!xlsxPromise) {
+    xlsxPromise = import("xlsx")
+  }
+  return xlsxPromise
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Types
@@ -187,10 +198,11 @@ const TEMPLATE_HEADERS = [
 
 const COL_WIDTHS = [30, 50, 20, 10, 15, 10, 20, 12, 30, 15, 25]
 
-export function generateTemplate(
+export async function generateTemplate(
   categories: CategoryRef[],
   mediaItems: MediaItem[],
-): void {
+): Promise<void> {
+  const XLSX = await loadXLSX()
   const wb = XLSX.utils.book_new()
 
   // ── Products sheet ──────────────────────────────────────────────────────────
@@ -284,6 +296,7 @@ export function generateTemplate(
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function parseSpreadsheet(file: File): Promise<RawRow[]> {
+  const XLSX = await loadXLSX()
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {

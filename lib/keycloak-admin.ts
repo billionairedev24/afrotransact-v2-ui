@@ -1,7 +1,21 @@
 /**
  * Keycloak Admin API helpers (server-only).
  * Used by NextAuth callbacks and /api/auth/become-seller.
+ *
+ * This module references secrets (KEYCLOAK_ADMIN_API_SECRET,
+ * KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_ADMIN_CLIENT_SECRET) and must NEVER
+ * be imported from a client component. Only server-side entry points
+ * (NextAuth config, app/api/* route handlers) may import this.
+ *
+ * The runtime guard below throws loudly if this file is somehow evaluated
+ * in a browser context (defense-in-depth beyond Next's server/client
+ * component boundary rules).
  */
+if (typeof window !== "undefined") {
+  throw new Error(
+    "[keycloak-admin] This module is server-only and must not be imported from the client.",
+  )
+}
 
 function optionalEnv(name: string, fallback: string): string {
   return process.env[name] || fallback
@@ -58,11 +72,13 @@ async function getKeycloakAdminAccessToken(): Promise<string | null> {
     console.error("[keycloak-admin] KEYCLOAK_ADMIN_API_SECRET is not set.")
   }
 
-  // Fallback: admin username/password (useful in environments where service-account is not configured yet).
+  // Fallback: admin username/password against the master realm (admin-cli lives there, not in afrotransact).
   const adminUsername = process.env.KEYCLOAK_ADMIN_USERNAME
   const adminPassword = process.env.KEYCLOAK_ADMIN_PASSWORD
   if (adminUsername && adminPassword) {
     const adminClientId = optionalEnv("KEYCLOAK_ADMIN_CLIENT_ID", "admin-cli")
+    // admin-cli is registered in the master realm — derive its token URL from the base server URL.
+    const masterTokenUrl = kcIssuer.replace(/\/realms\/[^/]+/, "/realms/master") + "/protocol/openid-connect/token"
     const params = new URLSearchParams({
       grant_type: "password",
       client_id: adminClientId,
@@ -71,7 +87,7 @@ async function getKeycloakAdminAccessToken(): Promise<string | null> {
     })
     const adminClientSecret = process.env.KEYCLOAK_ADMIN_CLIENT_SECRET
     if (adminClientSecret) params.set("client_secret", adminClientSecret)
-    return requestAdminToken(tokenUrl, params, `Admin token (password:${adminClientId})`)
+    return requestAdminToken(masterTokenUrl, params, `Admin token (password:${adminClientId})`)
   }
 
   console.error(

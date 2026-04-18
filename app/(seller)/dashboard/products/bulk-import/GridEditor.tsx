@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useMemo } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   Plus, Trash2, Upload, ImageIcon, Loader2,
   X, CheckCircle2, XCircle, Search, Package, Sparkles,
@@ -151,7 +152,7 @@ function MediaPickerModal({ mediaItems, onSelect, onClose }: {
               {filtered.map(m => (
                 <button key={m.id} onClick={() => onSelect(m)} title={m.name}
                   className="group relative aspect-square overflow-hidden rounded-xl border-2 border-transparent hover:border-[#EAB308] transition-all">
-                  <img src={m.url} alt={m.name} className="h-full w-full object-cover" />
+                  <Image src={m.url} alt={m.name} fill sizes="(max-width: 640px) 25vw, 16vw" className="object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="rounded-full bg-[#EAB308] p-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-black" /></div>
                   </div>
@@ -176,7 +177,9 @@ function ImagesCell({ rowId, images, uploading, onUpload, onLibrary, onRemove }:
     <div className="flex items-center gap-1 px-2 py-1 flex-wrap min-h-[2.5rem]">
       {images.map((img, i) => (
         <div key={img.id} className="relative group/img shrink-0">
-          <img src={img.url} alt={img.name} className="h-8 w-8 rounded-md object-cover border border-gray-200" />
+          <div className="relative h-8 w-8 overflow-hidden rounded-md border border-gray-200">
+            <Image src={img.url} alt={img.name} fill sizes="32px" className="object-cover" />
+          </div>
           {i === 0 && <div className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-[#EAB308] border border-white" title="Primary" />}
           <button onClick={() => onRemove(i)}
             className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">

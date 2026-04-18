@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   ArrowLeft,
   Plus,
@@ -29,6 +30,7 @@ import {
   addVariant as apiAddVariant,
   updateVariant as apiUpdateVariant,
   deleteVariant as apiDeleteVariant,
+  getAdminShippingSettings,
   type Product,
   type ProductImage,
   type CategoryRef,
@@ -193,6 +195,10 @@ export default function EditProductPage() {
   const [categoryId, setCategoryId] = useState("")
   const [weight, setWeight] = useState("")
   const [weightUnit, setWeightUnit] = useState("lb")
+  const [carrierShippingEnabled, setCarrierShippingEnabled] = useState(false)
+  const [parcelLengthIn, setParcelLengthIn] = useState("")
+  const [parcelWidthIn, setParcelWidthIn] = useState("")
+  const [parcelHeightIn, setParcelHeightIn] = useState("")
   const [brand, setBrand] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
@@ -224,6 +230,15 @@ export default function EditProductPage() {
     if (!categoryId) e.categoryId = "Please select a category"
     if (!weight || isNaN(parseFloat(weight)) || parseFloat(weight) <= 0)
       e.weight = "Weight is required and must be a positive number"
+    if (carrierShippingEnabled) {
+      const L = parseFloat(parcelLengthIn)
+      const W = parseFloat(parcelWidthIn)
+      const H = parseFloat(parcelHeightIn)
+      if (isNaN(L) || L <= 0)
+        e.parcelLengthIn = "Length (in) is required for carrier shipping"
+      if (isNaN(W) || W <= 0) e.parcelWidthIn = "Width (in) is required for carrier shipping"
+      if (isNaN(H) || H <= 0) e.parcelHeightIn = "Height (in) is required for carrier shipping"
+    }
     if (variants.length === 0) e.variants = "At least one variant is required"
     variants.forEach((v, i) => {
       if (!v.name.trim()) e[`v${i}_name`] = "Required"
@@ -238,7 +253,17 @@ export default function EditProductPage() {
       }
     })
     return e
-  }, [name, description, categoryId, weight, variants])
+  }, [
+    name,
+    description,
+    categoryId,
+    weight,
+    carrierShippingEnabled,
+    parcelLengthIn,
+    parcelWidthIn,
+    parcelHeightIn,
+    variants,
+  ])
 
   const flatCategories = useMemo(() => flattenCategories(categories), [categories])
 
@@ -347,6 +372,21 @@ export default function EditProductPage() {
           isPrimary: idx === 0,
         }))
       setExistingImages(imgs)
+
+      const fv = prod.variants?.[0]
+      if (fv?.lengthIn != null) setParcelLengthIn(String(fv.lengthIn))
+      else setParcelLengthIn("")
+      if (fv?.widthIn != null) setParcelWidthIn(String(fv.widthIn))
+      else setParcelWidthIn("")
+      if (fv?.heightIn != null) setParcelHeightIn(String(fv.heightIn))
+      else setParcelHeightIn("")
+
+      try {
+        const ship = await getAdminShippingSettings(token)
+        setCarrierShippingEnabled(ship.shipping_realtime_enabled === true)
+      } catch {
+        setCarrierShippingEnabled(false)
+      }
     } catch (e) {
       logError(e, "loading product for edit")
       setGlobalError("Failed to load product")
@@ -626,6 +666,14 @@ export default function EditProductPage() {
       attrsObj["weight"] = weightNum
       attrsObj["weightUnit"] = weightUnit
 
+      const pl = parseFloat(parcelLengthIn)
+      const pw = parseFloat(parcelWidthIn)
+      const ph = parseFloat(parcelHeightIn)
+      const parcelDims =
+        !isNaN(pl) && pl > 0 && !isNaN(pw) && pw > 0 && !isNaN(ph) && ph > 0
+          ? { lengthIn: pl, widthIn: pw, heightIn: ph }
+          : {}
+
       await updateProduct(token, id, {
         title: name.trim(),
         description: description.trim(),
@@ -664,6 +712,7 @@ export default function EditProductPage() {
           stockQuantity: isNaN(stock) ? 0 : stock,
           options: Object.keys(optionsObj).length > 0 ? optionsObj : undefined,
           weightKg: isNaN(weightKg) ? undefined : weightKg,
+          ...parcelDims,
         }
         if (v.apiId) {
           await apiUpdateVariant(token, v.apiId, data)
@@ -888,6 +937,57 @@ export default function EditProductPage() {
               <FieldError msg={err("weight")} />
             </div>
 
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-gray-900">
+                Parcel size (inches)
+                {carrierShippingEnabled ? <span className="text-red-600"> *</span> : null}
+              </p>
+              <p className="mb-2 text-xs text-gray-500">
+                Used for live carrier rates (per unit). Optional when realtime shipping is off.
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs text-gray-600">L</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={parcelLengthIn}
+                    onChange={(e) => setParcelLengthIn(e.target.value)}
+                    onBlur={() => touch("parcelLengthIn")}
+                    className={cn(inputCls(err("parcelLengthIn")), "w-full")}
+                  />
+                  <FieldError msg={err("parcelLengthIn")} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-600">W</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={parcelWidthIn}
+                    onChange={(e) => setParcelWidthIn(e.target.value)}
+                    onBlur={() => touch("parcelWidthIn")}
+                    className={cn(inputCls(err("parcelWidthIn")), "w-full")}
+                  />
+                  <FieldError msg={err("parcelWidthIn")} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-600">H</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={parcelHeightIn}
+                    onChange={(e) => setParcelHeightIn(e.target.value)}
+                    onBlur={() => touch("parcelHeightIn")}
+                    className={cn(inputCls(err("parcelHeightIn")), "w-full")}
+                  />
+                  <FieldError msg={err("parcelHeightIn")} />
+                </div>
+              </div>
+            </div>
+
             {/* Status */}
             <div>
               <span className="mb-2 block text-sm font-medium text-gray-900">Status</span>
@@ -1005,7 +1105,7 @@ export default function EditProductPage() {
                         img.isPrimary ? "border-[#EAB308]" : "border-gray-200",
                       )}
                     >
-                      <img src={img.url} alt={img.altText ?? ""} className="h-full w-full object-cover" />
+                      <Image src={img.url} alt={img.altText ?? ""} fill sizes="(max-width: 640px) 25vw, 12vw" className="object-cover" />
                       <button
                         type="button"
                         onClick={() => setExistingPrimary(img.id)}
@@ -1044,7 +1144,7 @@ export default function EditProductPage() {
                       key={img.id}
                       className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 opacity-50"
                     >
-                      <img src={img.url} alt="" className="h-full w-full object-cover" />
+                      <Image src={img.url} alt="" fill sizes="56px" className="object-cover" />
                       <button
                         type="button"
                         onClick={() => unremoveExistingImage(img.id)}
@@ -1086,8 +1186,9 @@ export default function EditProductPage() {
                     className="group relative aspect-square overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-50"
                   >
                     {img.status === "done" && img.url ? (
-                      <img src={img.url} alt="" className="h-full w-full object-cover" />
+                      <Image src={img.url} alt="" fill sizes="(max-width: 640px) 25vw, 12vw" className="object-cover" />
                     ) : img.preview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={img.preview} alt="" className="h-full w-full object-cover opacity-60" />
                     ) : (
                       <div className="flex h-full items-center justify-center">
@@ -1278,6 +1379,7 @@ export default function EditProductPage() {
                   <span className="mb-1.5 block text-xs text-gray-500">Variant Image</span>
                   {variant.imagePreview || variant.imageUrl ? (
                     <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- may be a blob: URL preview */}
                       <img
                         src={variant.imageUrl || variant.imagePreview}
                         alt=""

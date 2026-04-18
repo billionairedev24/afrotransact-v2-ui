@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { ChevronRight, MapPin, Search, Star, Store, Loader2 } from "lucide-react"
 import { getAllStores, type StoreInfo } from "@/lib/api"
 
@@ -71,7 +72,13 @@ export default function StoresPage() {
             >
               <div className="h-28 relative bg-gradient-to-br from-primary/10 via-card to-secondary/10 overflow-hidden">
                 {store.bannerUrl ? (
-                  <img src={store.bannerUrl} alt="" className="h-full w-full object-cover" />
+                  <Image
+                    src={store.bannerUrl}
+                    alt=""
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                    className="object-cover"
+                  />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center opacity-10">
                     <Store className="h-16 w-16 text-white" />
@@ -79,7 +86,13 @@ export default function StoresPage() {
                 )}
                 <div className="absolute -bottom-5 left-4 h-12 w-12 rounded-xl bg-card border-2 border-border flex items-center justify-center overflow-hidden">
                   {store.logoUrl ? (
-                    <img src={store.logoUrl} alt={store.name} className="h-full w-full object-cover" />
+                    <Image
+                      src={store.logoUrl}
+                      alt={store.name}
+                      fill
+                      sizes="48px"
+                      className="object-cover"
+                    />
                   ) : (
                     <Store className="h-6 w-6 text-primary" />
                   )}

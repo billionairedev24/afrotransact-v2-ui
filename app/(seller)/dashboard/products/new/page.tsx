@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   ArrowLeft,
   Plus,
@@ -30,6 +31,7 @@ import {
   getRegions,
   getSellerMedia,
   createSellerDeal,
+  getAdminShippingSettings,
   type CategoryRef,
   type StoreDetail,
   type MediaItem,
@@ -190,6 +192,10 @@ export default function NewProductPage() {
   const [categoryId, setCategoryId] = useState("")
   const [weight, setWeight] = useState("")
   const [weightUnit, setWeightUnit] = useState("lb")
+  const [carrierShippingEnabled, setCarrierShippingEnabled] = useState(false)
+  const [parcelLengthIn, setParcelLengthIn] = useState("")
+  const [parcelWidthIn, setParcelWidthIn] = useState("")
+  const [parcelHeightIn, setParcelHeightIn] = useState("")
   const [brand, setBrand] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
@@ -232,6 +238,15 @@ export default function NewProductPage() {
     if (!categoryId) e.categoryId = "Please select a category"
     if (!weight || isNaN(parseFloat(weight)) || parseFloat(weight) <= 0)
       e.weight = "Weight is required and must be a positive number"
+    if (carrierShippingEnabled) {
+      const L = parseFloat(parcelLengthIn)
+      const W = parseFloat(parcelWidthIn)
+      const H = parseFloat(parcelHeightIn)
+      if (isNaN(L) || L <= 0)
+        e.parcelLengthIn = "Length (in) is required for carrier shipping"
+      if (isNaN(W) || W <= 0) e.parcelWidthIn = "Width (in) is required for carrier shipping"
+      if (isNaN(H) || H <= 0) e.parcelHeightIn = "Height (in) is required for carrier shipping"
+    }
     if (variants.length > 0) {
       variants.forEach((v, i) => {
         if (!v.name.trim()) e[`v${i}_name`] = "Required"
@@ -257,7 +272,20 @@ export default function NewProductPage() {
       }
     }
     return e
-  }, [name, description, categoryId, weight, variants, price, stockQuantity, compareAtPrice])
+  }, [
+    name,
+    description,
+    categoryId,
+    weight,
+    carrierShippingEnabled,
+    parcelLengthIn,
+    parcelWidthIn,
+    parcelHeightIn,
+    variants,
+    price,
+    stockQuantity,
+    compareAtPrice,
+  ])
 
   const flatCategories = useMemo(() => flattenCategories(categories), [categories])
 
@@ -296,6 +324,12 @@ export default function NewProductPage() {
         const mktCfg = await getMarketplaceConfig(regions[0].id)
         setMaxImages(mktCfg.maxProductImages)
         setMaxTags(mktCfg.maxProductTags)
+      }
+      try {
+        const ship = await getAdminShippingSettings(token)
+        setCarrierShippingEnabled(ship.shipping_realtime_enabled === true)
+      } catch {
+        setCarrierShippingEnabled(false)
       }
     } catch (e) {
       logError(e, "loading product form data")
@@ -574,6 +608,14 @@ export default function NewProductPage() {
       attrsObj["weight"] = weightNum
       attrsObj["weightUnit"] = weightUnit
 
+      const pl = parseFloat(parcelLengthIn)
+      const pw = parseFloat(parcelWidthIn)
+      const ph = parseFloat(parcelHeightIn)
+      const parcelDims =
+        !isNaN(pl) && pl > 0 && !isNaN(pw) && pw > 0 && !isNaN(ph) && ph > 0
+          ? { lengthIn: pl, widthIn: pw, heightIn: ph }
+          : {}
+
       const variantPayload = variants.length > 0
         ? variants.map((v) => {
             const vPrice = parseFloat(v.price)
@@ -594,6 +636,7 @@ export default function NewProductPage() {
               stockQuantity: isNaN(stock) ? 0 : stock,
               options: Object.keys(optionsObj).length > 0 ? optionsObj : undefined,
               weightKg: isNaN(weightKg) ? undefined : weightKg,
+              ...parcelDims,
             }
           })
         : [{
@@ -604,6 +647,7 @@ export default function NewProductPage() {
             currency: "USD",
             stockQuantity: parseInt(stockQuantity, 10),
             weightKg: isNaN(weightKg) ? undefined : weightKg,
+            ...parcelDims,
           }]
 
       const product = await createProduct(token, {
@@ -830,6 +874,60 @@ export default function NewProductPage() {
               <FieldError msg={err("weight")} />
             </div>
 
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-gray-900">
+                Parcel size (inches)
+                {carrierShippingEnabled ? <span className="text-red-600"> *</span> : null}
+              </p>
+              <p className="mb-2 text-xs text-gray-500">
+                Used for live carrier rates (length × width × height per unit). Optional when realtime shipping is off.
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs text-gray-600">L</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={parcelLengthIn}
+                    onChange={(e) => setParcelLengthIn(e.target.value)}
+                    onBlur={() => touch("parcelLengthIn")}
+                    placeholder="12"
+                    className={cn(inputCls(err("parcelLengthIn")), "w-full")}
+                  />
+                  <FieldError msg={err("parcelLengthIn")} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-600">W</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={parcelWidthIn}
+                    onChange={(e) => setParcelWidthIn(e.target.value)}
+                    onBlur={() => touch("parcelWidthIn")}
+                    placeholder="9"
+                    className={cn(inputCls(err("parcelWidthIn")), "w-full")}
+                  />
+                  <FieldError msg={err("parcelWidthIn")} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-600">H</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={parcelHeightIn}
+                    onChange={(e) => setParcelHeightIn(e.target.value)}
+                    onBlur={() => touch("parcelHeightIn")}
+                    placeholder="6"
+                    className={cn(inputCls(err("parcelHeightIn")), "w-full")}
+                  />
+                  <FieldError msg={err("parcelHeightIn")} />
+                </div>
+              </div>
+            </div>
+
             {/* Status info */}
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3">
               <p className="text-sm text-yellow-700 font-medium">Product will be submitted for review</p>
@@ -1040,8 +1138,9 @@ export default function NewProductPage() {
                     )}
                   >
                     {img.status === "done" && img.url ? (
-                      <img src={img.url} alt="" className="h-full w-full object-cover" />
+                      <Image src={img.url} alt="" fill sizes="(max-width: 640px) 25vw, (max-width: 768px) 16vw, 12vw" className="object-cover" />
                     ) : img.preview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={img.preview} alt="" className="h-full w-full object-cover opacity-60" />
                     ) : (
                       <div className="flex h-full items-center justify-center">
@@ -1259,6 +1358,7 @@ export default function NewProductPage() {
                   <span className="mb-1.5 block text-xs text-gray-500">Variant Image</span>
                   {variant.imagePreview || variant.imageUrl ? (
                     <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- may be a blob: URL preview */}
                       <img
                         src={variant.imageUrl || variant.imagePreview}
                         alt=""
@@ -1548,7 +1648,7 @@ export default function NewProductPage() {
                             : "border-gray-200 hover:border-[#EAB308]/60 cursor-pointer",
                         )}
                       >
-                        <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
+                        <Image src={item.url} alt={item.name} fill sizes="(max-width: 640px) 33vw, 20vw" className="object-cover" />
                         {alreadyAdded && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                             <Check className="h-6 w-6 text-white" />

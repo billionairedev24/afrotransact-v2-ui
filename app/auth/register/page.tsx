@@ -1,370 +1,87 @@
 "use client"
 
-import { signIn, useSession } from "next-auth/react"
-import { useSearchParams, useRouter } from "next/navigation"
-import { Suspense, useState, useEffect, useRef } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { Store, ShoppingBag, ArrowRight, Loader2 } from "lucide-react"
-import { toast } from "sonner"
+/**
+ * /auth/register
+ *
+ * Thin redirect shim to Keycloak's registration page — same pattern as
+ * /auth/login. The branded "Continue with Google / Apple / Instagram" tiles
+ * we used to render here are gone; Keycloak is now the single source of truth
+ * for registration UX (including any Identity Providers enabled on the realm,
+ * so when Google IdP is wired up it automatically appears on the Keycloak
+ * register screen).
+ *
+ * Behavior:
+ *   - /auth/register                 → signIn("keycloak-register", { callbackUrl: "/" })
+ *   - /auth/register?role=seller     → signIn("keycloak-register-seller", …)
+ *                                      and persist seller intent in
+ *                                      localStorage so that cross-device
+ *                                      email-verified flows still land on
+ *                                      /dashboard/onboarding.
+ *
+ * The seller-intent localStorage key is consumed by /auth/login
+ * (see `getSellerIntentCallbackUrl` there).
+ */
 
-function RegisterForm() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const { data: session, status } = useSession()
-  const role = searchParams.get("role")
-  const isSeller = role === "seller"
-  const callbackUrl = isSeller ? "/dashboard/onboarding" : "/"
-  const [isLoading, setIsLoading] = useState(false)
-  const sellerUpgradeStarted = useRef(false)
+import { signIn } from "next-auth/react"
+import { useSearchParams } from "next/navigation"
+import { Suspense, useEffect, useRef } from "react"
 
-  useEffect(() => {
-    if (status !== "authenticated" || !session?.user) return
-    if (isSeller) return
-    router.replace("/")
-  }, [status, session, isSeller, router])
-
-  useEffect(() => {
-    if (status !== "authenticated" || !session?.user || !isSeller) return
-    if (sellerUpgradeStarted.current) return
-    const roles = session.user.roles ?? []
-    if (roles.includes("seller")) {
-      router.replace("/dashboard/onboarding")
-      return
-    }
-    sellerUpgradeStarted.current = true
-    void (async () => {
-      try {
-        const res = await fetch("/api/auth/become-seller", { method: "POST" })
-        const data = (await res.json().catch(() => ({}))) as { error?: string }
-        if (!res.ok) {
-          toast.error(typeof data.error === "string" ? data.error : "Could not enable seller access.")
-          sellerUpgradeStarted.current = false
-          return
-        }
-        await signIn("keycloak", { callbackUrl: "/dashboard/onboarding" })
-      } catch {
-        toast.error("Something went wrong. Please try again.")
-        sellerUpgradeStarted.current = false
-      }
-    })()
-  }, [status, session, isSeller, router])
-
-  if (status === "authenticated" && isSeller) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-background">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Taking you to seller setup…</p>
-      </div>
-    )
-  }
-
-  const handleEmailRegister = async () => {
-    setIsLoading(true)
-    try {
-      if (isSeller) {
-        await signIn("keycloak-register-seller", {
-          callbackUrl,
-          registration_role: "seller",
-        })
-      } else {
-        await signIn("keycloak-register", { callbackUrl })
-      }
-    } catch {
-      setIsLoading(false)
-    }
-  }
-
+function Spinner({ label }: { label: string }) {
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Left panel - Branding */}
-      <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-primary/15 via-background to-background p-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23EAB308' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
-
-        <div className="relative z-10">
-          <Link href="/" className="inline-flex items-center gap-3 group">
-            <Image
-              src="/logo.png"
-              alt="AfroTransact"
-              width={48}
-              height={48}
-              className="rounded-xl"
-            />
-            <div>
-              <span className="text-2xl font-bold text-primary">Afro</span>
-              <span className="text-2xl font-bold text-foreground">Transact</span>
-            </div>
-          </Link>
-        </div>
-
-        <div className="relative z-10 space-y-8">
-          {isSeller ? (
-            <>
-              <h2 className="text-4xl font-black leading-tight text-foreground">
-                Grow your business<br />
-                <span className="text-primary">with your community</span>
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-md">
-                Reach thousands of customers who are looking for authentic products 
-                and services from their community. First month free.
-              </p>
-              <div className="space-y-4">
-                {[
-                  "Zero setup fees, cancel anytime",
-                  "Built-in payments & order management",
-                  "Real-time analytics & customer insights",
-                  "Dedicated seller support team",
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20">
-                      <svg className="h-3.5 w-3.5 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-muted-foreground">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="text-4xl font-black leading-tight text-foreground">
-                Every flavor of home,<br />
-                <span className="text-primary">delivered to you</span>
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-md">
-                Discover authentic food, spices, fashion, and cultural goods from 
-                immigrant-owned stores in your neighborhood.
-              </p>
-              <div className="space-y-4">
-                {[
-                  "Fresh produce & authentic spices",
-                  "Support local immigrant-owned businesses",
-                  "Fast delivery in Austin, TX",
-                  "Secure payments & buyer protection",
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20">
-                      <svg className="h-3.5 w-3.5 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-muted-foreground">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="relative z-10 text-xs text-muted-foreground/50">
-          &copy; {new Date().getFullYear()} AfroTransact. All rights reserved.
-        </div>
-      </div>
-
-      {/* Right panel - Registration form */}
-      <div className="flex flex-col justify-center px-4 sm:px-8 lg:px-16 py-12 bg-background">
-        {/* Mobile logo */}
-        <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
-          <Image
-            src="/logo.png"
-            alt="AfroTransact"
-            width={40}
-            height={40}
-            className="rounded-xl"
-          />
-          <div>
-            <span className="text-2xl font-bold text-primary">Afro</span>
-            <span className="text-2xl font-bold text-foreground">Transact</span>
-          </div>
-        </div>
-
-        <div className="w-full max-w-[420px] mx-auto space-y-8">
-          {/* Header */}
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1.5 text-xs font-medium text-muted-foreground mb-2">
-              {isSeller ? (
-                <>
-                  <Store className="h-3.5 w-3.5 text-primary" />
-                  Seller Account
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="h-3.5 w-3.5 text-primary" />
-                  Shopper Account
-                </>
-              )}
-            </div>
-            <h1 className="text-3xl font-black text-foreground">
-              {isSeller ? "Start selling today" : "Create your account"}
-            </h1>
-            <p className="text-muted-foreground">
-              {isSeller
-                ? "Set up your store and start reaching customers in your community."
-                : "Join the community and discover authentic products from local stores."}
-            </p>
-          </div>
-
-          {/* Social registration buttons */}
-          <div className="space-y-3">
-            <div className="group relative">
-              <button
-                disabled
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-sm font-medium text-card-foreground opacity-50 cursor-not-allowed"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                </svg>
-                Continue with Google
-              </button>
-              <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 whitespace-nowrap">
-                Coming soon
-              </span>
-            </div>
-
-            <div className="group relative">
-              <button
-                disabled
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-sm font-medium text-card-foreground opacity-50 cursor-not-allowed"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                </svg>
-                Continue with Apple
-              </button>
-              <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 whitespace-nowrap">
-                Coming soon
-              </span>
-            </div>
-
-            <div className="group relative">
-              <button
-                disabled
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-sm font-medium text-card-foreground opacity-50 cursor-not-allowed"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
-                  <defs>
-                    <linearGradient id="ig-reg" x1="0" y1="24" x2="24" y2="0">
-                      <stop stopColor="#FFDC80" />
-                      <stop offset=".5" stopColor="#F56040" />
-                      <stop offset="1" stopColor="#833AB4" />
-                    </linearGradient>
-                  </defs>
-                  <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-reg)" strokeWidth="2" />
-                  <circle cx="12" cy="12" r="5" stroke="url(#ig-reg)" strokeWidth="2" />
-                  <circle cx="17.5" cy="6.5" r="1.5" fill="url(#ig-reg)" />
-                </svg>
-                Continue with Instagram
-              </button>
-              <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 whitespace-nowrap">
-                Coming soon
-              </span>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-3 text-muted-foreground tracking-wider">
-                or register with email
-              </span>
-            </div>
-          </div>
-
-          {/* Email registration */}
-          <button
-            onClick={handleEmailRegister}
-            disabled={isLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:brightness-110 hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-80 disabled:cursor-wait disabled:translate-y-0"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Redirecting…
-              </>
-            ) : (
-              <>
-                Register with email
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-
-          {/* Terms */}
-          <p className="text-center text-xs text-muted-foreground leading-relaxed">
-            By creating an account, you agree to our{" "}
-            <Link href="/terms" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              Privacy Policy
-            </Link>
-          </p>
-
-          {/* Sign-in link */}
-          <div className="rounded-xl border border-border bg-card/30 p-4 text-center">
-            <span className="text-sm text-muted-foreground">
-              Already have an account?{" "}
-            </span>
-            <Link
-              href="/auth/login"
-              className="text-sm font-semibold text-primary hover:text-accent transition-colors"
-            >
-              Sign in
-            </Link>
-          </div>
-
-          {/* Role switcher */}
-          {!isSeller ? (
-            <div className="text-center">
-              <Link
-                href="/auth/register?role=seller"
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
-              >
-                <Store className="h-4 w-4" />
-                Want to sell on AfroTransact?
-                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            </div>
-          ) : (
-            <div className="text-center">
-              <Link
-                href="/auth/register"
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                Just looking to shop?
-                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3 px-4 text-center">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <p className="text-sm text-muted-foreground">{label}</p>
     </div>
   )
 }
 
+function RegisterRedirect() {
+  const searchParams = useSearchParams()
+  const role = searchParams.get("role")
+  const isSeller = role === "seller"
+  const startedRef = useRef(false)
+
+  useEffect(() => {
+    if (startedRef.current) return
+    startedRef.current = true
+
+    void (async () => {
+      try {
+        if (isSeller) {
+          // Persist seller intent so /auth/login can route back to the
+          // onboarding flow if the user verifies their email on another
+          // device (no live session when they return).
+          try {
+            localStorage.setItem(
+              "afro_register_intent",
+              JSON.stringify({ callbackUrl: "/dashboard/onboarding", role: "seller" }),
+            )
+          } catch {
+            // localStorage unavailable (SSR / private mode) — proceed anyway.
+          }
+          await signIn("keycloak-register-seller", {
+            callbackUrl: "/dashboard/onboarding",
+            registration_role: "seller",
+          })
+        } else {
+          await signIn("keycloak-register", {
+            callbackUrl: searchParams.get("callbackUrl") || "/",
+          })
+        }
+      } catch {
+        // Allow the user to manually retry via a refresh if NextAuth throws.
+        startedRef.current = false
+      }
+    })()
+  }, [isSeller, searchParams])
+
+  return <Spinner label={isSeller ? "Taking you to seller sign-up…" : "Taking you to sign-up…"} />
+}
+
 export default function RegisterPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      }
-    >
-      <RegisterForm />
+    <Suspense fallback={<Spinner label="Loading…" />}>
+      <RegisterRedirect />
     </Suspense>
   )
 }

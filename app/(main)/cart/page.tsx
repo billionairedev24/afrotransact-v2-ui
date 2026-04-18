@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X } from "lucide-react"
+import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X, Sparkles, Tag, Zap } from "lucide-react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
 import { clearServerCart } from "@/lib/api"
+import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
 
 function formatCents(cents: number) {
@@ -66,16 +68,62 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <main className="min-h-[60vh] flex flex-col items-center justify-center gap-4 px-4">
-        <ShoppingCart className="h-16 w-16 text-gray-500" />
-        <h2 className="text-xl font-semibold text-gray-900">Your cart is empty</h2>
-        <p className="text-gray-500 text-sm">Add items from the marketplace to get started.</p>
-        <Link
-          href="/"
-          className="mt-2 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-[#0f0f10]"
-        >
-          Continue Shopping
-        </Link>
+      <main className="min-h-[70vh] flex flex-col items-center justify-center px-4 py-12">
+        {/* Illustration */}
+        <div className="relative mb-8">
+          <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/10">
+            <ShoppingCart className="h-14 w-14 text-primary/40" strokeWidth={1.5} />
+          </div>
+          {/* floating icons */}
+          <span className="absolute -top-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 border-2 border-white shadow-sm">
+            <Tag className="h-4 w-4 text-orange-500" />
+          </span>
+          <span className="absolute -bottom-1 -left-3 flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 border-2 border-white shadow-sm">
+            <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+          </span>
+        </div>
+
+        <h2 className="text-2xl font-black text-gray-900 mb-2">Your cart is empty</h2>
+        <p className="text-gray-500 text-sm text-center max-w-xs leading-relaxed mb-1">
+          Looks like you haven&apos;t added anything yet.
+        </p>
+        <p className="text-gray-400 text-xs text-center mb-8">
+          Browse the marketplace and find something you love!
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-xs sm:max-w-none sm:w-auto">
+          <Link
+            href="/"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-3.5 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            Start Shopping
+          </Link>
+          <Link
+            href="/deals"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-card px-8 py-3.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+          >
+            <Zap className="h-4 w-4 text-orange-500" />
+            Today&apos;s Deals
+          </Link>
+        </div>
+
+        {/* Subtle suggestion row */}
+        <div className="mt-12 flex flex-wrap justify-center gap-3 text-xs text-muted-foreground">
+          {[
+            { href: "/search?sort=rating", label: "Top rated" },
+            { href: "/search?sort=newest", label: "New arrivals" },
+            { href: "/categories", label: "Browse categories" },
+          ].map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className="rounded-full border border-border px-4 py-1.5 hover:border-primary/40 hover:text-primary transition-colors"
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
       </main>
     )
   }
@@ -108,10 +156,16 @@ export default function CartPage() {
                   {groupItems.map((item) => (
                     <div key={item.variantId} className="flex gap-3 sm:gap-4 p-4 sm:p-5">
                       <div
-                        className="w-20 h-20 rounded-xl shrink-0 bg-gray-50 flex items-center justify-center overflow-hidden"
+                        className="relative w-20 h-20 rounded-xl shrink-0 bg-gray-50 flex items-center justify-center overflow-hidden"
                       >
                         {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                          <Image
+                            src={item.imageUrl}
+                            alt={item.title}
+                            fill
+                            sizes="80px"
+                            className="object-cover"
+                          />
                         ) : (
                           <ShoppingCart className="h-8 w-8 text-gray-600" />
                         )}

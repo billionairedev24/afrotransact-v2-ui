@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   Grid3X3,
   LayoutList,
@@ -12,7 +13,6 @@ import {
   Star,
   MapPin,
   ShoppingCart,
-  Check,
   SlidersHorizontal,
   X,
   ChevronRight,
@@ -32,6 +32,7 @@ import {
 } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
+import { RemoteImage } from "@/components/ui/remote-image"
 
 const SORT_OPTIONS = [
   { value: "relevance", label: "Most Relevant" },
@@ -302,15 +303,17 @@ function MobileFilterPanel({
 
 function AddToCartButton({ item }: { item: SearchResult }) {
   const addItem = useCartStore((s) => s.addItem)
-  const items = useCartStore((s) => s.items)
+  const updateQuantity = useCartStore((s) => s.updateQuantity)
+  const cartItems = useCartStore((s) => s.items)
   const [loading, setLoading] = useState(false)
 
-  const inCart = items.some((i) => i.productId === item.product_id)
+  const cartItem = cartItems.find((i) => i.productId === item.product_id)
+  const quantity = cartItem?.quantity ?? 0
 
   async function handleAdd(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!item.in_stock || loading || inCart) return
+    if (!item.in_stock || loading) return
 
     setLoading(true)
     try {
@@ -332,13 +335,22 @@ function AddToCartButton({ item }: { item: SearchResult }) {
         imageUrl: item.image_url || product.images?.[0]?.url,
         slug: product.slug,
         weightKg: variant.weightKg ?? null,
+        lengthIn: variant.lengthIn ?? null,
+        widthIn: variant.widthIn ?? null,
+        heightIn: variant.heightIn ?? null,
       })
-      toast.success(`${product.title} added to cart`)
     } catch {
       toast.error("Could not add to cart")
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleChange(e: React.MouseEvent, delta: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!cartItem) return
+    updateQuantity(cartItem.variantId, quantity + delta)
   }
 
   if (!item.in_stock) {
@@ -352,16 +364,26 @@ function AddToCartButton({ item }: { item: SearchResult }) {
     )
   }
 
-  if (inCart) {
+  if (quantity > 0) {
     return (
-      <Link
-        href="/cart"
-        onClick={(e) => e.stopPropagation()}
-        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-100 transition-colors"
+      <div
+        onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+        className="flex w-full items-center justify-between rounded-xl bg-primary px-1 py-0.5"
       >
-        <Check className="h-3.5 w-3.5" />
-        In Cart
-      </Link>
+        <button
+          onClick={(e) => handleChange(e, -1)}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
+        >
+          −
+        </button>
+        <span className="text-sm font-black text-[#0f0f10] tabular-nums">{quantity}</span>
+        <button
+          onClick={(e) => handleChange(e, +1)}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
+        >
+          +
+        </button>
+      </div>
     )
   }
 
@@ -400,10 +422,12 @@ function SearchResultCard({
           className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl bg-gray-100"
         >
           {item.image_url ? (
-            <img
+            <Image
               src={item.image_url}
               alt={item.title}
-              className="h-full w-full object-cover"
+              fill
+              sizes="128px"
+              className="object-cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
@@ -466,10 +490,12 @@ function SearchResultCard({
       <Link href={`/product/${slug}`}>
         <div className="relative h-[120px] sm:h-auto sm:aspect-square overflow-hidden bg-gray-100">
           {item.image_url ? (
-            <img
+            <Image
               src={item.image_url}
               alt={item.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">

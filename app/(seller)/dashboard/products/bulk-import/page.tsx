@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   ArrowLeft,
   Download,
@@ -560,7 +561,7 @@ function ReviewStep({
                                 key={img.id}
                                 className="relative h-9 w-9 overflow-hidden rounded-md border border-gray-200"
                               >
-                                <img src={img.url} alt={img.name} className="h-full w-full object-cover" />
+                                <Image src={img.url} alt={img.name} fill sizes="36px" className="object-cover" />
                                 {idx === 0 && (
                                   <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#EAB308] border border-white" title="Primary" />
                                 )}
@@ -817,8 +818,11 @@ export default function BulkImportPage() {
     else if (sessionStatus === "unauthenticated") setLoading(false)
   }, [sessionStatus, loadData])
 
-  function handleDownload() {
-    generateTemplate(categories, mediaItems)
+  async function handleDownload() {
+    // `generateTemplate` lazy-loads the xlsx library (~400KB parsed) on first use,
+    // so the download is slightly deferred on cold cache but the rest of the page
+    // stays lean.
+    await generateTemplate(categories, mediaItems)
   }
 
   function handleValidated(rows: ValidatedRow[]) {

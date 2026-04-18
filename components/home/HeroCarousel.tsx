@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import Link from "next/link"
+import Image from "next/image"
+import { useQuery } from "@tanstack/react-query"
 import {
   ChevronRight,
   Store,
@@ -30,33 +32,42 @@ const INTERVAL_MS = 6000
 const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}){1,2}$/
 const CSS_GRADIENT = /gradient\(/i
 
-export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
-  const [liveSlides, setLiveSlides] = useState<HeroSlide[]>(slides ?? [])
+export function HeroCarousel({
+  slides,
+  serverHeroConfigs,
+}: {
+  slides?: HeroSlide[]
+  /** Raw hero config (e.g. from `/api/public/home-data`). When set (including `[]`), client hero fetch is skipped. */
+  serverHeroConfigs?: HeroSlideConfig[]
+}) {
+  const fromServer = useMemo(() => {
+    if (serverHeroConfigs === undefined) return undefined
+    const enabled = serverHeroConfigs.filter((c) => c.enabled)
+    return enabled.length ? enabled.map((c, idx) => mapConfigToSlide(c, idx)) : []
+  }, [serverHeroConfigs])
+
+  const { data: fetchedSlides } = useQuery({
+    queryKey: ["hero-slides"],
+    queryFn: async () => {
+      const cfg = await getPublicHeroSlides().catch(() => [])
+      const enabled = cfg.filter((c) => c.enabled)
+      return enabled.length ? enabled.map((c, idx) => mapConfigToSlide(c, idx)) : []
+    },
+    placeholderData: slides,
+    staleTime: 10 * 60 * 1000,
+    enabled: serverHeroConfigs === undefined && !(slides && slides.length > 0),
+  })
+
+  const liveSlides = useMemo(() => {
+    if (fromServer !== undefined) return fromServer
+    return fetchedSlides ?? slides ?? []
+  }, [fromServer, fetchedSlides, slides])
+
   const [current, setCurrent] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  // Load dynamic slides from config-service; render nothing if backend has none.
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const cfg = await getPublicHeroSlides().catch(() => [])
-        if (cancelled) return
-        const enabled = cfg.filter((c) => c.enabled)
-        if (enabled.length) {
-          setLiveSlides(enabled.map((c, idx) => mapConfigToSlide(c, idx)))
-        } else {
-          setLiveSlides([])
-        }
-      } catch {
-        // ignore, keep any passed-in slides (likely admin preview) or nothing
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
 
   const go = useCallback(
     (idx: number) => {
@@ -88,6 +99,24 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
     return () => window.removeEventListener("keydown", onKey)
   }, [prev, next])
 
+  // Touch swipe handlers
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null || touchStartY.current === null) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    // Only trigger if horizontal swipe is dominant and > 40px
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) next()
+      else prev()
+    }
+    touchStartX.current = null
+    touchStartY.current = null
+  }
+
   useEffect(() => {
     // When admin changes slide count, keep index valid
     setCurrent((c) => Math.min(c, Math.max(0, liveSlides.length - 1)))
@@ -105,6 +134,8 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
       className={`relative overflow-hidden min-h-[480px] flex items-center ${isCssGradientBg ? "" : `bg-gradient-to-br ${slide.bg}`}`}
       style={isCssGradientBg ? { background: slide.bg } : undefined}
       aria-label="Promotional carousel"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
       {/* Optional media as background */}
       {slide.media && (
@@ -119,10 +150,14 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
               loop
             />
           ) : (
-            <img
+            <Image
               src={slide.media.url}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover"
+              fill
+              sizes="100vw"
+              // First slide is above the fold — prioritize it for LCP.
+              priority={current === 0}
+              className="object-cover"
             />
           )}
           <div
@@ -230,24 +265,26 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
         </div>
       </div>
 
-      {/* Controls: prev / next */}
+      {/* Controls: prev / next — always visible, large touch targets on mobile */}
       <button
         onClick={prev}
         aria-label="Previous slide"
-        className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white transition-all backdrop-blur-sm hidden sm:flex"
+        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30 flex h-10 w-10 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 text-gray-700 hover:text-gray-900 hover:bg-white active:scale-95 transition-all shadow-md backdrop-blur-sm"
+        style={{ touchAction: "manipulation" }}
       >
         <ChevronLeft className="h-5 w-5" />
       </button>
       <button
         onClick={next}
         aria-label="Next slide"
-        className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white transition-all backdrop-blur-sm hidden sm:flex"
+        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30 flex h-10 w-10 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/90 border border-gray-200 text-gray-700 hover:text-gray-900 hover:bg-white active:scale-95 transition-all shadow-md backdrop-blur-sm"
+        style={{ touchAction: "manipulation" }}
       >
         <ChevronRight className="h-5 w-5" />
       </button>
 
       {/* Dot indicators */}
-      <div className="absolute bottom-5 left-0 right-0 flex items-center justify-center gap-2 z-10">
+      <div className="absolute bottom-5 left-0 right-0 flex items-center justify-center gap-2 z-30">
         {liveSlides.map((s, i) => (
           <button
             key={s.id}
@@ -265,7 +302,7 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] }) {
   )
 }
 
-function mapConfigToSlide(cfg: HeroSlideConfig, idx: number): HeroSlide {
+export function mapConfigToSlide(cfg: HeroSlideConfig, idx: number): HeroSlide {
   const badgeIcon =
     idx % 4 === 0 ? <Sparkles className="h-3 w-3" /> :
     idx % 4 === 1 ? <Tag className="h-3 w-3" /> :

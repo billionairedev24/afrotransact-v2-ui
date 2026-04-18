@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
+import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import {
   Upload,
@@ -210,6 +211,7 @@ export default function MediaPage() {
   const [bulkMetaTemplate, setBulkMetaTemplate] = useState("")
   const [bulkNameBase, setBulkNameBase] = useState("")
   const [draggingRowId, setDraggingRowId] = useState<string | null>(null)
+  const [autoRenumberOnReorder, setAutoRenumberOnReorder] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -252,6 +254,19 @@ export default function MediaPage() {
     setUploadRows((prev) => prev.map((r, i) => ({ ...r, name: `${base}_${i + 1}` })))
     setBulkNameBase(base)
   }, [])
+
+  const autoRenumberRowsIfEnabled = useCallback((rows: UploadRow[]) => {
+    if (!autoRenumberOnReorder) return rows
+    const base = bulkNameBase.trim()
+    if (!base) return rows
+    const normalizedBase = base.toLowerCase()
+    const canRenumber = rows.every((r) => {
+      const name = r.name.trim().toLowerCase()
+      return name === normalizedBase || name.startsWith(`${normalizedBase}_`)
+    })
+    if (!canRenumber) return rows
+    return rows.map((r, i) => ({ ...r, name: `${base}_${i + 1}` }))
+  }, [autoRenumberOnReorder, bulkNameBase])
 
   const processFiles = useCallback((fileList: FileList | null) => {
     if (!fileList) return
@@ -408,8 +423,8 @@ export default function MediaPage() {
         header: "",
         size: 64,
         cell: ({ row }) => (
-          <div className="h-10 w-10 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-            <img src={row.original.url} alt={row.original.name} className="h-full w-full object-cover" />
+          <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+            <Image src={row.original.url} alt={row.original.name} fill sizes="40px" className="object-cover" />
           </div>
         ),
         enableSorting: false,
@@ -572,6 +587,7 @@ export default function MediaPage() {
               setUploadError(null)
               setBulkMetaTemplate("")
               setBulkNameBase("")
+              setAutoRenumberOnReorder(true)
               setUploadOpen(true)
             }}
             disabled={uploading}
@@ -587,6 +603,7 @@ export default function MediaPage() {
               setUploadError(null)
               setBulkMetaTemplate("")
               setBulkNameBase("")
+              setAutoRenumberOnReorder(true)
               setUploadOpen(true)
             }}
             disabled={uploading}
@@ -771,8 +788,8 @@ export default function MediaPage() {
               Set a seller-friendly name and metadata for better product mapping.
             </p>
             <div className="mt-4 flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
-              <div className="h-14 w-14 overflow-hidden rounded-md border border-gray-200 bg-white">
-                <img src={editItem.url} alt={editItem.name} className="h-full w-full object-cover" />
+              <div className="relative h-14 w-14 overflow-hidden rounded-md border border-gray-200 bg-white">
+                <Image src={editItem.url} alt={editItem.name} fill sizes="56px" className="object-cover" />
               </div>
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-gray-900">{editItem.name || "Untitled"}</p>
@@ -927,8 +944,17 @@ export default function MediaPage() {
                       Name all (jewelry_1..N)
                     </button>
                   </div>
+                  <label className="mt-2 inline-flex items-center gap-2 text-xs text-blue-800">
+                    <input
+                      type="checkbox"
+                      checked={autoRenumberOnReorder}
+                      onChange={(e) => setAutoRenumberOnReorder(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-blue-300 text-[#EAB308] focus:ring-[#EAB308]/40"
+                    />
+                    Auto-renumber names after drag reorder
+                  </label>
                   <p className="mt-1 text-[11px] text-blue-700">
-                    Tip: drag rows to reorder, then click the button again to re-number suffixes by the new order.
+                    Tip: with auto-renumber on, dragging rows updates suffix numbers immediately.
                   </p>
                 </div>
               </div>
@@ -974,7 +1000,7 @@ export default function MediaPage() {
                             const next = [...prev]
                             const [moved] = next.splice(from, 1)
                             next.splice(to, 0, moved)
-                            return next
+                            return autoRenumberRowsIfEnabled(next)
                           })
                           setDraggingRowId(null)
                         }}
@@ -1072,11 +1098,15 @@ export default function MediaPage() {
             >
               <X className="h-4 w-4" />
             </button>
-            <img
-              src={previewItem.url}
-              alt={previewItem.name}
-              className="max-h-[60vh] w-full object-contain"
-            />
+            <div className="relative h-[60vh] w-full">
+              <Image
+                src={previewItem.url}
+                alt={previewItem.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 640px"
+                className="object-contain"
+              />
+            </div>
             <div className="border-t border-gray-100 p-4">
               <p className="font-medium text-gray-900">{previewItem.name || "Untitled"}</p>
               <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-500">

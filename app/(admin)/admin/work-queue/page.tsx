@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useWorkQueueLists } from "@/hooks/use-admin-stats"
@@ -270,9 +271,15 @@ export default function WorkQueuePage() {
                 className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-4 cursor-pointer hover:border-gray-300 transition-colors"
                 onClick={() => { setGalleryIndex(0); setSelectedProduct(product) }}
               >
-                <div className="h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-gray-50 border border-gray-200 flex items-center justify-center">
+                <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-gray-50 border border-gray-200 flex items-center justify-center">
                   {product.images?.[0]?.url ? (
-                    <img src={product.images[0].url} alt="" className="h-full w-full object-cover" />
+                    <Image
+                      src={product.images[0].url}
+                      alt=""
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                    />
                   ) : (
                     <ImageOff className="h-5 w-5 text-gray-600" />
                   )}
@@ -507,10 +514,12 @@ function ProductReviewSheet({
             {product.images.length > 0 ? (
               <div className="space-y-3">
                 <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                  <img
+                  <Image
                     src={product.images[galleryIndex]?.url}
                     alt={product.images[galleryIndex]?.altText ?? product.title}
-                    className="h-full w-full object-contain"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 640px"
+                    className="object-contain"
                   />
                   {product.images.length > 1 && (
                     <>
@@ -535,11 +544,17 @@ function ProductReviewSheet({
                       <button
                         key={img.id}
                         onClick={() => setGalleryIndex(i)}
-                        className={`shrink-0 h-14 w-14 rounded-lg overflow-hidden border-2 transition-colors ${
+                        className={`relative shrink-0 h-14 w-14 rounded-lg overflow-hidden border-2 transition-colors ${
                           i === galleryIndex ? "border-primary" : "border-gray-200 hover:border-gray-300"
                         }`}
                       >
-                        <img src={img.url} alt={img.altText ?? ""} className="h-full w-full object-cover" />
+                        <Image
+                          src={img.url}
+                          alt={img.altText ?? ""}
+                          fill
+                          sizes="56px"
+                          className="object-cover"
+                        />
                       </button>
                     ))}
                   </div>
@@ -786,7 +801,15 @@ function SellerReviewSheet({
               {seller.stores.map((store) => (
                 <div key={store.id} className="flex items-center gap-3 rounded-lg bg-gray-50 border border-gray-200 p-3">
                   {store.logoUrl ? (
-                    <img src={store.logoUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg">
+                      <Image
+                        src={store.logoUrl}
+                        alt=""
+                        fill
+                        sizes="40px"
+                        className="object-cover"
+                      />
+                    </div>
                   ) : (
                     <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
                       <Store className="h-5 w-5 text-gray-500" />

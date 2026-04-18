@@ -28,7 +28,7 @@ const securityHeaders = [
   ...(enforceHttps ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' }] : []),
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(self), payment=(self "https://js.stripe.com")',
+    value: 'camera=(), microphone=(self), geolocation=(self), payment=(self "https://js.stripe.com")',
   },
   { key: 'Content-Security-Policy', value: cspDirectives },
 ]
@@ -42,6 +42,9 @@ const nextConfig = {
   ...(process.env.VERCEL ? {} : { outputFileTracingRoot: require('path').join(__dirname, '../') }),
 
   images: {
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [32, 48, 64, 80, 96, 128, 256, 384],
     remotePatterns: [
       { protocol: 'https', hostname: 'cdn.afrotransact.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -50,12 +53,29 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.ufs.sh' },
       { protocol: 'https', hostname: '*.uploadthing.com' },
       { protocol: 'https', hostname: '*.ingest.uploadthing.com' },
+      { protocol: 'https', hostname: '**.amazonaws.com' },
+      { protocol: 'https', hostname: '**.s3.amazonaws.com' },
     ],
   },
 
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+    // Tree-shake barrel imports from heavy packages. Each entry here tells
+    // Next.js to rewrite `import { X } from 'pkg'` into a direct deep import
+    // so only the used symbols land in the bundle.
+    optimizePackageImports: [
+      'lucide-react',
+      '@tanstack/react-query',
+      '@tanstack/react-table',
+      'date-fns',
+      'sonner',
+      'zod',
+      'recharts',
+      'react-icons',
+    ],
   },
+  reactStrictMode: true,
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
 
   async headers() {
     return [

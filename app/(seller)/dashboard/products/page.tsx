@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useSession } from "next-auth/react"
 import {
   Plus, Package, Eye, Pencil, Trash2, Loader2, ImageIcon, Save, X,
@@ -143,9 +144,15 @@ export default function ProductsPage() {
         header: "Product",
         cell: (info) => (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-gray-50 overflow-hidden">
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-gray-50 overflow-hidden">
               {info.row.original.imageUrl ? (
-                <img src={info.row.original.imageUrl} alt="" className="h-full w-full object-cover" />
+                <Image
+                  src={info.row.original.imageUrl}
+                  alt=""
+                  fill
+                  sizes="40px"
+                  className="object-cover"
+                />
               ) : (
                 <Package className="h-5 w-5 text-gray-500" />
               )}
@@ -543,7 +550,13 @@ function ProductDetailSheet({
               <div className="flex flex-wrap gap-3">
                 {product.images.map((img, idx) => (
                   <div key={img.id} className="group relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200">
-                    <img src={img.url} alt={img.altText || ""} className="h-full w-full object-cover" />
+                    <Image
+                      src={img.url}
+                      alt={img.altText || ""}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                    />
                     {idx === 0 && (
                       <div className="absolute bottom-0.5 left-0.5">
                         <Star className="h-3 w-3 fill-[#EAB308] text-[#EAB308]" />

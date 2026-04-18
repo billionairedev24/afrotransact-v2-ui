@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -19,17 +20,6 @@ import {
   DollarSign,
 } from "lucide-react"
 import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
-import {
   getCurrentSeller,
   getSellerStores,
   getStoreProducts,
@@ -41,13 +31,21 @@ import {
   type SellerSubscription,
 } from "@/lib/api"
 
-const PRIMARY = "hsl(45 93% 58%)"
+// Recharts is ~100KB parsed. Defer it to a separate chunk so the dashboard
+// shell (KPI cards + navigation) paints before charts hydrate.
+const ChartSkeleton = () => (
+  <div className="h-full w-full animate-pulse rounded-lg bg-gray-100" />
+)
+const SalesTrendChart = dynamic(
+  () => import("./_charts").then((m) => m.SalesTrendChart),
+  { ssr: false, loading: ChartSkeleton }
+)
+const OrderStatusPieChart = dynamic(
+  () => import("./_charts").then((m) => m.OrderStatusPieChart),
+  { ssr: false, loading: ChartSkeleton }
+)
+
 const CARD_BG = "#FFFFFF"
-const TOOLTIP_STYLE = {
-  background: "#FFFFFF",
-  border: "1px solid #E5E7EB",
-  borderRadius: 12,
-}
 
 const PIE_COLORS: Record<string, string> = {
   pending: "hsl(45 93% 58%)",
@@ -332,41 +330,7 @@ export default function DashboardOverview() {
         >
           <h2 className="text-sm font-semibold text-gray-900 mb-4">Sales Trend (7 days)</h2>
           <div className="h-[240px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={buildSalesData(recentOrders)}>
-                <defs>
-                  <linearGradient id="sellerSalesGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={PRIMARY} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="day"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#9ca3af", fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#9ca3af", fontSize: 12 }}
-                  tickFormatter={(v) => `$${v}`}
-                />
-                <Tooltip
-                  contentStyle={TOOLTIP_STYLE}
-                  labelStyle={{ color: "#9ca3af" }}
-                  itemStyle={{ color: PRIMARY }}
-                  formatter={(value: number | string | any) => [`$${value?.toLocaleString() ?? "0"}`, "Sales"]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="sales"
-                  stroke={PRIMARY}
-                  strokeWidth={2}
-                  fill="url(#sellerSalesGrad)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <SalesTrendChart data={buildSalesData(recentOrders)} />
           </div>
         </div>
 
@@ -382,30 +346,15 @@ export default function DashboardOverview() {
               <p className="text-xs text-gray-600 mt-1">Order status will appear here once you receive orders</p>
             </div>
           ) : (
-            <div className="h-[240px] flex items-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={orderStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {orderStatusData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={TOOLTIP_STYLE}
-                    labelStyle={{ color: "#9ca3af" }}
-                    formatter={(value: any, name: any) => [value ?? "0", name ?? ""]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-col gap-2 pr-2 shrink-0">
+            // Flex row for chart + legend. We use `items-stretch` (not
+            // `items-center`) so the chart wrapper can actually take full
+            // row height — otherwise Recharts' ResponsiveContainer measures
+            // the parent as 0×0 and emits "width(-1) height(-1)" warnings.
+            <div className="h-[240px] flex items-stretch">
+              <div className="flex-1 min-w-0 h-full">
+                <OrderStatusPieChart data={orderStatusData} />
+              </div>
+              <div className="flex flex-col justify-center gap-2 pr-2 shrink-0">
                 {orderStatusData.map((s) => (
                   <div key={s.name} className="flex items-center gap-2">
                     <span
