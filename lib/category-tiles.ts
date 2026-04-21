@@ -104,6 +104,13 @@ export function buildTilesFromPool(
  * Convenience wrapper: fetch the search pool AND bucket in one call.
  * Safe to invoke from Server Components; relies on Next.js's fetch cache
  * for deduplication/revalidation.
+ *
+ * Second-pass fallback: any parent category whose pool-based tiles all came
+ * back null (e.g. a flat category with no subcategories and with products
+ * that ranked below the global size-96 cutoff) gets a targeted per-category
+ * search so it still renders products instead of placeholder boxes.
+ * Subcategories are therefore optional — a top-level category with its own
+ * products will populate its tiles directly.
  */
 export async function fetchCategoryTiles(
   parents: CategoryRef[],
@@ -115,7 +122,43 @@ export async function fetchCategoryTiles(
 
   try {
     const res = await searchProducts({ size }, { revalidate })
-    return buildTilesFromPool(parents, res.results ?? [])
+    const tiles = buildTilesFromPool(parents, res.results ?? [])
+
+    const empty = parents.filter((p) => {
+      const t = tiles[p.id]
+      return !t || t.every((x) => x === null)
+    })
+
+    if (empty.length > 0) {
+      const fills = await Promise.all(
+        empty.map(async (p) => {
+          try {
+            // Query by slug; backend lowercases both sides of the filter so
+            // `slug` works for every category regardless of name casing.
+            const r = await searchProducts(
+              { category: p.slug, size: "8" },
+              { revalidate },
+            )
+            const picks: (TilePick | null)[] = []
+            const used = new Set<string>()
+            for (const hit of r.results ?? []) {
+              if (picks.length >= 4) break
+              const tile = toTile(hit)
+              if (!tile || used.has(tile.productId)) continue
+              used.add(tile.productId)
+              picks.push(tile)
+            }
+            while (picks.length < 4) picks.push(null)
+            return [p.id, picks] as const
+          } catch {
+            return [p.id, [null, null, null, null] as (TilePick | null)[]] as const
+          }
+        }),
+      )
+      for (const [id, t] of fills) tiles[id] = t
+    }
+
+    return tiles
   } catch {
     // Degrade gracefully — client renders empty tiles, not a broken page.
     return {}

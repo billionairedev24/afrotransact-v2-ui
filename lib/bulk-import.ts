@@ -178,6 +178,37 @@ export function collectCategoryDisplayNames(cats: CategoryRef[]): string[] {
   return out
 }
 
+/**
+ * Ordered `<option>` entries for the GridEditor category dropdown. Value is
+ * the exact category name (what the backend expects to resolve via
+ * flattenCategories's alias map into a categoryId). Label mirrors the catalog
+ * hierarchy — top-level names as-is, subcategories prefixed with an em-dash
+ * indent so sellers can tell them apart without needing optgroup.
+ *
+ * Parents WITH children are still selectable, matching the backend contract
+ * (Product.categories accepts any Category UUID, parent or leaf).
+ */
+export interface CategoryOption {
+  value: string
+  label: string
+  isChild: boolean
+}
+
+export function collectCategoryOptions(cats: CategoryRef[]): CategoryOption[] {
+  const out: CategoryOption[] = []
+  for (const parent of cats) {
+    const pName = parent.name.trim()
+    if (!pName) continue
+    out.push({ value: pName, label: pName, isChild: false })
+    for (const child of parent.children ?? []) {
+      const cName = child.name.trim()
+      if (!cName) continue
+      out.push({ value: cName, label: `— ${cName}`, isChild: true })
+    }
+  }
+  return out
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  Template generation
 // ─────────────────────────────────────────────────────────────────────────────

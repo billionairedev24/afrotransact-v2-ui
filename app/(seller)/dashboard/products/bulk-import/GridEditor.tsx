@@ -12,7 +12,7 @@ import { useUploadThing } from "@/lib/uploadthing"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { createMediaItem, type MediaItem, type CategoryRef } from "@/lib/api"
 import {
-  importRows, flattenCategories,
+  importRows, flattenCategories, collectCategoryOptions,
   type ValidatedRow, type RawRow, type ImportResult,
 } from "@/lib/bulk-import"
 
@@ -303,6 +303,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
   const uploadForRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const catMap = useMemo(() => flattenCategories(categories), [categories])
+  const catOptions = useMemo(() => collectCategoryOptions(categories), [categories])
 
   // ── UploadThing ─────────────────────────────────────────────────────────────
   const { startUpload } = useUploadThing("sellerMedia", {
@@ -430,8 +431,6 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
   if (phase === "importing" || phase === "done") {
     return <GridImportProgress results={importResults} total={importTotal} done={phase === "done"} />
   }
-
-  const catNames = [...catMap.keys()]
 
   return (
     <div className="space-y-4">
@@ -634,8 +633,10 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                       <select value={row.category} onChange={e => update(row.id, "category", e.target.value)}
                         className={cn(CELL, "h-9 cursor-pointer appearance-none")}>
                         <option value="">— Select —</option>
-                        {catNames.map(name => (
-                          <option key={name} value={name}>{name.charAt(0).toUpperCase() + name.slice(1)}</option>
+                        {catOptions.map(opt => (
+                          <option key={`${opt.isChild ? "c" : "p"}-${opt.value}`} value={opt.value}>
+                            {opt.label}
+                          </option>
                         ))}
                       </select>
                     </td>

@@ -794,14 +794,20 @@ export default function BulkImportPage() {
     if (!token) return
     setLoading(true)
     try {
-      const [seller, cats] = await Promise.all([
-        getCurrentSeller(token),
-        getCategories(),
+      // Four requests in flight. Only getSellerStores depends on seller.id —
+      // chain it off the seller promise so the other three (categories,
+      // media, seller-self) all race in parallel. Previously this ran as
+      // two serial Promise.all batches, wasting a full round-trip of wall
+      // time (typically the media fetch, which lists up to 500 items).
+      const sellerP = getCurrentSeller(token)
+      const catsP = getCategories()
+      const mediaP = getSellerMedia(token, 1, 500)
+      const storesP = sellerP.then((s) => getSellerStores(token, s.id))
+
+      const [seller, cats, media, stores] = await Promise.all([
+        sellerP, catsP, mediaP, storesP,
       ])
-      const [stores, media] = await Promise.all([
-        getSellerStores(token, seller.id),
-        getSellerMedia(token, 1, 500),
-      ])
+      void seller // reserved for future use; kept to fail-fast if token invalid
       setCategories(cats)
       setMediaItems(media.items ?? [])
       if (stores.length > 0) setStoreId(stores[0].id)
