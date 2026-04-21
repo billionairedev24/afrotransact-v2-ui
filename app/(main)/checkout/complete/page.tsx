@@ -14,7 +14,15 @@ function CheckoutCompleteContent() {
   const status = redirectStatus === "failed" ? "failed" : "success"
 
   useEffect(() => {
-    if (redirectStatus !== "failed") {
+    // Only clear on an explicit Stripe success. Previously this was
+    // `!== "failed"`, which also cleared when there was no query param at
+    // all (e.g. browser Back landing on this route) or when status was
+    // "processing" / "requires_action" / "requires_payment_method" — all
+    // cases where the cart should stay intact so the buyer can retry.
+    // Server-side, OrderService no longer clears the cart at order
+    // creation either; the authoritative clear happens in
+    // PaymentEventConsumer on payment.completed.
+    if (redirectStatus === "succeeded") {
       clearCart()
     }
   }, [redirectStatus, clearCart])

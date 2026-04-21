@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X, Sparkles, Tag, Zap } from "lucide-react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
-import { clearServerCart } from "@/lib/api"
+import { clearServerCart, prefetchCheckoutShippingContext } from "@/lib/api"
 import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
 
@@ -263,6 +263,19 @@ export default function CartPage() {
 
             <button
               onClick={() => router.push("/checkout")}
+              onMouseEnter={() => {
+                // Warm profile + saved addresses so the checkout page has
+                // them on first paint instead of showing a skeleton while
+                // round-trips resolve post-mount.
+                if (status === "authenticated") {
+                  getAccessToken().then((t) => { if (t) prefetchCheckoutShippingContext(t) })
+                }
+              }}
+              onPointerDown={() => {
+                if (status === "authenticated") {
+                  getAccessToken().then((t) => { if (t) prefetchCheckoutShippingContext(t) })
+                }
+              }}
               className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors"
             >
               Proceed to Checkout

@@ -1558,29 +1558,84 @@ export function getAddresses(token: string) {
   return api<UserAddress[]>("/api/v1/users/me/addresses", { token })
 }
 
-/**
- * Checkout: ensures buyer profile exists (GET /me), then loads saved addresses.
- * If the address list endpoint fails (routing/outage), `addresses` is empty and `addressesUnavailable` is true.
- */
-export async function loadCheckoutShippingContext(token: string): Promise<{
+export interface CheckoutShippingContext {
   profile: UserProfile
   addresses: UserAddress[]
   addressesUnavailable: boolean
-}> {
-  const profile = await getUserProfile(token)
-  let addresses: UserAddress[] = []
-  let addressesUnavailable = false
-  try {
-    addresses = await getAddresses(token)
-  } catch (e) {
-    if (e instanceof ApiError && (e.status === 404 || e.status === 502 || e.status === 503)) {
-      addresses = []
-      addressesUnavailable = true
-    } else {
-      throw e
+}
+
+/**
+ * Token-scoped in-flight cache for the checkout shipping context.
+ *
+ * The cart page calls `prefetchCheckoutShippingContext(token)` on hover /
+ * pointer-down of the "Proceed to Checkout" button; the checkout page's
+ * `loadCheckoutShippingContext` then joins the same in-flight promise
+ * instead of firing a fresh round-trip after mount. Short TTL because
+ * tokens rotate and we don't want to serve addresses from a stale session.
+ */
+const CHECKOUT_CTX_TTL_MS = 30_000
+const checkoutCtxCache = new Map<string, { at: number; promise: Promise<CheckoutShippingContext> }>()
+
+function fetchCheckoutShippingContext(token: string): Promise<CheckoutShippingContext> {
+  return (async () => {
+    const [profileResult, addressesResult] = await Promise.allSettled([
+      getUserProfile(token),
+      getAddresses(token),
+    ])
+
+    if (profileResult.status === "rejected") {
+      throw profileResult.reason
     }
+    const profile = profileResult.value
+
+    let addresses: UserAddress[] = []
+    let addressesUnavailable = false
+    if (addressesResult.status === "fulfilled") {
+      addresses = addressesResult.value
+    } else {
+      const e = addressesResult.reason
+      if (e instanceof ApiError && (e.status === 404 || e.status === 502 || e.status === 503)) {
+        addressesUnavailable = true
+      } else {
+        throw e
+      }
+    }
+    return { profile, addresses, addressesUnavailable }
+  })()
+}
+
+/** Fire-and-forget: warm the checkout context cache before navigation. */
+export function prefetchCheckoutShippingContext(token: string): void {
+  if (!token) return
+  const hit = checkoutCtxCache.get(token)
+  if (hit && Date.now() - hit.at < CHECKOUT_CTX_TTL_MS) return
+  const promise = fetchCheckoutShippingContext(token).catch((e) => {
+    checkoutCtxCache.delete(token)
+    throw e
+  })
+  checkoutCtxCache.set(token, { at: Date.now(), promise })
+}
+
+/**
+ * Checkout: loads buyer profile and saved addresses in parallel, reusing the
+ * warm cache from `prefetchCheckoutShippingContext` when available.
+ *
+ * If the address list endpoint fails (routing/outage), `addresses` is empty
+ * and `addressesUnavailable` is true.
+ */
+export async function loadCheckoutShippingContext(token: string): Promise<CheckoutShippingContext> {
+  const hit = checkoutCtxCache.get(token)
+  if (hit && Date.now() - hit.at < CHECKOUT_CTX_TTL_MS) {
+    return hit.promise
   }
-  return { profile, addresses, addressesUnavailable }
+  const promise = fetchCheckoutShippingContext(token)
+  checkoutCtxCache.set(token, { at: Date.now(), promise })
+  try {
+    return await promise
+  } catch (e) {
+    checkoutCtxCache.delete(token)
+    throw e
+  }
 }
 
 export function createAddress(token: string, data: {
