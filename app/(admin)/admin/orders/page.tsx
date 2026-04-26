@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import {
@@ -18,12 +18,15 @@ import { DataTable } from "@/components/ui/DataTable"
 import { RowActions, type RowAction } from "@/components/ui/RowActions"
 import { Sheet, SheetHeader, SheetBody } from "@/components/ui/Sheet"
 import { createColumnHelper } from "@tanstack/react-table"
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   getAdminOrders,
   updateSubOrderStatus,
   type OrderDto,
+  type Page as ApiPage,
 } from "@/lib/api"
+import { useStoreNameMap } from "@/hooks/use-stores"
 
 function statusBadge(status: string) {
   const s = getStatusStyle(status)
@@ -70,29 +73,37 @@ const ADMIN_STATUSES = [
   { value: "returned",           label: "Returned",           variant: "danger"  },
 ] as const
 
+const ADMIN_ORDERS_KEY = "admin-orders"
+
 export default function AdminOrdersPage() {
   const { status } = useSession()
-  const [orders, setOrders] = useState<OrderDto[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(50)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
-  async function loadOrders() {
-    const token = await getAccessToken()
-    if (!token) return
-    try {
-      const res = await getAdminOrders(token, 0, 200)
-      setOrders(res.content)
-    } catch {
-      toast.error("Failed to load orders")
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data, isLoading, isFetching } = useQuery<ApiPage<OrderDto>>({
+    queryKey: [ADMIN_ORDERS_KEY, pageIndex, pageSize],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not authenticated")
+      return getAdminOrders(token, pageIndex, pageSize)
+    },
+    enabled: status === "authenticated",
+    placeholderData: keepPreviousData,
+  })
 
-  useEffect(() => {
-    if (status !== "authenticated") { if (status === "unauthenticated") setLoading(false); return }
-    loadOrders()
-  }, [status])
+  const orders = useMemo(() => data?.content ?? [], [data])
+  const totalElements = data?.totalElements ?? 0
+  const totalPages = data?.totalPages ?? 0
+
+  function applySubOrderUpdate(updated: OrderDto) {
+    // Patch the cached page so the table updates without a refetch.
+    queryClient.setQueryData<ApiPage<OrderDto>>(
+      [ADMIN_ORDERS_KEY, pageIndex, pageSize],
+      (prev) => prev ? { ...prev, content: prev.content.map((o) => (o.id === updated.id ? updated : o)) } : prev,
+    )
+  }
 
   const flatOrders = useMemo<FlatOrder[]>(() =>
     orders.map((order) => {
@@ -175,18 +186,27 @@ export default function AdminOrdersPage() {
       <DataTable
         columns={columns}
         data={flatOrders}
-        loading={loading}
+        loading={isLoading || isFetching}
         searchPlaceholder="Search orders…"
         searchColumn="orderNumber"
         enableExport
         exportFilename="admin-orders"
         emptyMessage="No orders in the system yet."
+        pageSize={pageSize}
+        serverPagination={{
+          pageIndex,
+          pageSize,
+          pageCount: totalPages,
+          totalRows: totalElements,
+          onPageChange: setPageIndex,
+          onPageSizeChange: (n) => { setPageSize(n); setPageIndex(0) },
+        }}
       />
 
       <AdminOrderDetailSheet
         order={selectedOrder}
         onClose={() => setSelectedOrderId(null)}
-        onUpdated={loadOrders}
+        onUpdated={applySubOrderUpdate}
       />
     </div>
   )
@@ -199,12 +219,13 @@ function AdminOrderDetailSheet({
 }: {
   order: FlatOrder | null
   onClose: () => void
-  onUpdated: () => Promise<void>
+  onUpdated: (updated: OrderDto) => void
 }) {
   const [updating, setUpdating] = useState<string | null>(null)
   const [trackingInput, setTrackingInput] = useState("")
   const [exceptionNoteInput, setExceptionNoteInput] = useState("")
   const [pendingExceptionSubId, setPendingExceptionSubId] = useState<string | null>(null)
+  const { nameFor: storeNameFor } = useStoreNameMap()
 
   async function handleUpdateStatus(subOrderId: string, newStatus: string) {
     if (newStatus === "delivery_exception" && !exceptionNoteInput.trim()) {
@@ -215,7 +236,7 @@ function AdminOrderDetailSheet({
     try {
       const token = await getAccessToken()
       if (!token) return
-      await updateSubOrderStatus(
+      const updated = await updateSubOrderStatus(
         token, subOrderId, newStatus,
         trackingInput || undefined,
         newStatus === "delivery_exception" ? exceptionNoteInput || undefined : undefined,
@@ -223,7 +244,7 @@ function AdminOrderDetailSheet({
       toast.success(`Fulfillment updated to ${newStatus.replace(/_/g, " ")}`)
       setExceptionNoteInput("")
       setPendingExceptionSubId(null)
-      await onUpdated()
+      onUpdated(updated)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update status")
     } finally {
@@ -277,7 +298,7 @@ function AdminOrderDetailSheet({
               <div key={sub.id} className="rounded-xl border border-gray-200 p-4 space-y-4 bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <p className="text-sm font-semibold text-gray-900">Store {sub.storeId.slice(0, 8)}…</p>
+                    <p className="text-sm font-semibold text-gray-900">{storeNameFor(sub.storeId)}</p>
                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusBadge(sub.fulfillmentStatus).className}`}>
                       {sub.fulfillmentStatus.replace(/_/g, " ")}
                     </span>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -865,6 +865,9 @@ export default function CheckoutClient({
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState<string | null>(null)
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResponse | null>(null)
+  // Idempotency-Key reused across retries of the same logical placement so
+  // a network blip can't create a second order. Reset when the user goes back.
+  const idempotencyKeyRef = useRef<string | null>(null)
   const [shippingQuotes, setShippingQuotes] = useState<ShippingQuoteResponse | null>(null)
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null)
   const [couponCode, setCouponCode] = useState("")
@@ -1064,6 +1067,13 @@ export default function CheckoutClient({
         !address.shippingAddressId &&
         Boolean(address.line1?.trim() && address.city?.trim() && address.zip?.trim())
 
+      // Idempotency-Key persists across the placement attempt — if the user clicks
+      // again or the network blips, the backend returns the same checkout result
+      // instead of creating a second order / PaymentIntent.
+      if (!idempotencyKeyRef.current) {
+        idempotencyKeyRef.current = crypto.randomUUID()
+      }
+
       const result = await apiCheckout(token, {
         regionId: region.id,
         shippingAddressId: address.shippingAddressId || undefined,
@@ -1081,7 +1091,7 @@ export default function CheckoutClient({
         selectedShippingCarrier: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.carrier,
         selectedShippingService: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.serviceCode,
         selectedShippingAmountCents: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.amountCents,
-      })
+      }, idempotencyKeyRef.current)
 
       setCheckoutResult(result)
       setStep("payment")

@@ -14,6 +14,7 @@ import { RowActions, type RowAction } from "@/components/ui/RowActions"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
 import { ConfirmDialog } from "@/components/ui/Dialog"
 import { createColumnHelper } from "@tanstack/react-table"
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { logError } from "@/lib/errors"
 import {
@@ -30,6 +31,7 @@ import {
   deleteVariant,
   type Product,
   type CategoryRef,
+  type Page as ApiPage,
 } from "@/lib/api"
 import { useUploadThing } from "@/lib/uploadthing"
 
@@ -55,41 +57,60 @@ interface FlatProduct {
 
 const col = createColumnHelper<FlatProduct>()
 
+const SELLER_STORE_KEY = "seller-store"
+const SELLER_PRODUCTS_KEY = "seller-products"
+
 export default function ProductsPage() {
   const { status } = useSession()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [_storeId, setStoreId] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(50)
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
   const [detailMode, setDetailMode] = useState<"view" | "edit">("view")
   const [deleteTarget, setDeleteTarget] = useState<FlatProduct | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  const loadProducts = useCallback(async () => {
-    const token = await getAccessToken()
-    if (!token) return
-    try {
+  const storeQuery = useQuery({
+    queryKey: [SELLER_STORE_KEY],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not authenticated")
       const seller = await getCurrentSeller(token)
       const stores = await getSellerStores(token, seller.id)
-      if (stores.length === 0) return
-      setStoreId(stores[0].id)
-      const page = await getStoreProducts(stores[0].id, 0, 200)
-      setProducts(page.content)
-    } catch {
-      toast.error("Failed to load products")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      return stores[0]?.id ?? null
+    },
+    enabled: status === "authenticated",
+    staleTime: 10 * 60 * 1000,
+  })
 
-  useEffect(() => {
-    if (status !== "authenticated") {
-      if (status === "unauthenticated") setLoading(false)
-      return
-    }
-    loadProducts()
-  }, [status, loadProducts])
+  const storeId = storeQuery.data ?? null
+
+  const productsQuery = useQuery<ApiPage<Product>>({
+    queryKey: [SELLER_PRODUCTS_KEY, storeId, pageIndex, pageSize],
+    queryFn: () => getStoreProducts(storeId!, pageIndex, pageSize),
+    enabled: status === "authenticated" && !!storeId,
+    placeholderData: keepPreviousData,
+  })
+
+  const products = useMemo(() => productsQuery.data?.content ?? [], [productsQuery.data])
+  const totalElements = productsQuery.data?.totalElements ?? 0
+  const totalPages = productsQuery.data?.totalPages ?? 0
+  const loading = storeQuery.isLoading || productsQuery.isLoading || productsQuery.isFetching
+
+  const productsKey = [SELLER_PRODUCTS_KEY, storeId, pageIndex, pageSize] as const
+
+  const applyProductUpdate = useCallback((updated: Product) => {
+    queryClient.setQueryData<ApiPage<Product>>(productsKey as unknown as readonly unknown[], (prev) =>
+      prev ? { ...prev, content: prev.content.map((p) => (p.id === updated.id ? updated : p)) } : prev,
+    )
+  }, [queryClient, productsKey])
+
+  const removeProductFromList = useCallback((productId: string) => {
+    queryClient.setQueryData<ApiPage<Product>>(productsKey as unknown as readonly unknown[], (prev) =>
+      prev ? { ...prev, content: prev.content.filter((p) => p.id !== productId), totalElements: Math.max(0, prev.totalElements - 1) } : prev,
+    )
+  }, [queryClient, productsKey])
 
   const flatProducts = useMemo<FlatProduct[]>(
     () =>
@@ -115,8 +136,8 @@ export default function ProductsPage() {
       if (!token) return
       await deleteProduct(token, deleteTarget.id)
       toast.success("Product archived")
+      removeProductFromList(deleteTarget.id)
       setDeleteTarget(null)
-      await loadProducts()
     } catch (e) {
       logError(e, "deleting product")
       toast.error("Failed to delete product")
@@ -129,14 +150,14 @@ export default function ProductsPage() {
     try {
       const token = await getAccessToken()
       if (!token) return
-      await updateProduct(token, productId, { status: "pending_review" })
+      const updated = await updateProduct(token, productId, { status: "pending_review" })
       toast.success("Product submitted for review")
-      await loadProducts()
+      applyProductUpdate(updated)
     } catch (e) {
       logError(e, "submitting product for review")
       toast.error("Failed to submit")
     }
-  }, [loadProducts])
+  }, [applyProductUpdate])
 
   const columns = useMemo(
     () => [
@@ -265,13 +286,22 @@ export default function ProductsPage() {
         enableExport
         exportFilename="products"
         emptyMessage="No products yet. Add your first product to get started."
+        pageSize={pageSize}
+        serverPagination={{
+          pageIndex,
+          pageSize,
+          pageCount: totalPages,
+          totalRows: totalElements,
+          onPageChange: setPageIndex,
+          onPageSizeChange: (n) => { setPageSize(n); setPageIndex(0) },
+        }}
       />
 
       <ProductDetailSheet
         productId={selectedProductId}
         mode={detailMode}
         onClose={() => setSelectedProductId(null)}
-        onUpdated={loadProducts}
+        onUpdated={applyProductUpdate}
       />
 
       <ConfirmDialog
@@ -300,7 +330,7 @@ function ProductDetailSheet({
   productId: string | null
   mode: "view" | "edit"
   onClose: () => void
-  onUpdated: () => void
+  onUpdated: (product: Product) => void
 }) {
   const [product, setProduct] = useState<Product | null>(null)
   const [_categories, setCategories] = useState<CategoryRef[]>([])
@@ -357,7 +387,7 @@ function ProductDetailSheet({
     try {
       const token = await getAccessToken()
       if (!token) return
-      const updated = await updateProduct(token, product.id, {
+      await updateProduct(token, product.id, {
         title: title.trim(),
         description: description.trim(),
       })
@@ -378,7 +408,7 @@ function ProductDetailSheet({
       setProduct(refreshed)
       setEditing(false)
       toast.success("Product updated")
-      onUpdated()
+      onUpdated(refreshed)
     } catch (e) {
       logError(e, "updating product")
       toast.error("Failed to update product")
@@ -396,7 +426,7 @@ function ProductDetailSheet({
       const updated = await updateProduct(token, product.id, { status: "pending_review" })
       setProduct(updated)
       toast.success("Product submitted for review")
-      onUpdated()
+      onUpdated(updated)
     } catch (e) {
       logError(e, "submitting product for review")
       toast.error("Failed to submit for review")
@@ -425,7 +455,7 @@ function ProductDetailSheet({
         await addProductImage(token, product.id, { url, altText: product.title, sortOrder: product.images.length })
         const refreshed = await getProductById(product.id)
         setProduct(refreshed)
-        onUpdated()
+        onUpdated(refreshed)
         toast.success("Image added")
       }
     } catch (e) {
@@ -444,7 +474,7 @@ function ProductDetailSheet({
       await deleteProductImage(token, imageId)
       const refreshed = await getProductById(product.id)
       setProduct(refreshed)
-      onUpdated()
+      onUpdated(refreshed)
       toast.success("Image removed")
     } catch (e) {
       logError(e, "removing image")
@@ -463,7 +493,7 @@ function ProductDetailSheet({
       await updateVariant(token, variantId, data)
       const refreshed = await getProductById(product.id)
       setProduct(refreshed)
-      onUpdated()
+      onUpdated(refreshed)
       toast.success("Variant updated")
     } catch (e) {
       logError(e, "updating variant")
@@ -482,7 +512,7 @@ function ProductDetailSheet({
       await deleteVariant(token, variantId)
       const refreshed = await getProductById(product.id)
       setProduct(refreshed)
-      onUpdated()
+      onUpdated(refreshed)
       toast.success("Variant deleted")
     } catch (e) {
       logError(e, "deleting variant")
@@ -501,7 +531,7 @@ function ProductDetailSheet({
       <SheetBody className="space-y-6">
         {loading && (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-[#EAB308]" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
 
@@ -559,7 +589,7 @@ function ProductDetailSheet({
                     />
                     {idx === 0 && (
                       <div className="absolute bottom-0.5 left-0.5">
-                        <Star className="h-3 w-3 fill-[#EAB308] text-[#EAB308]" />
+                        <Star className="h-3 w-3 fill-primary text-primary" />
                       </div>
                     )}
                     {editing && (
@@ -578,7 +608,7 @@ function ProductDetailSheet({
                   </div>
                 )}
                 {editing && (
-                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-200 text-gray-500 hover:border-[#EAB308]/40 hover:text-[#EAB308] transition-colors">
+                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-200 text-gray-500 hover:border-primary/40 hover:text-primary transition-colors">
                     {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
                   </label>
@@ -597,7 +627,7 @@ function ProductDetailSheet({
                     <input
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none"
+                      className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary focus:outline-none"
                     />
                   </div>
                   <div>
@@ -606,7 +636,7 @@ function ProductDetailSheet({
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={3}
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none resize-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none resize-none"
                     />
                   </div>
                 </div>
@@ -693,7 +723,7 @@ function ProductDetailSheet({
               <button
                 onClick={handleSaveBasicInfo}
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#EAB308] px-4 py-2 text-sm font-semibold text-black hover:bg-[#CA8A04] disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Save Changes
@@ -705,7 +735,7 @@ function ProductDetailSheet({
                 <button
                   onClick={handleSubmitForReview}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#EAB308] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[#CA8A04] disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   Submit for Review
@@ -774,7 +804,7 @@ function VariantCard({
             <input
               value={draft.sku}
               onChange={(e) => onDraftChange({ sku: e.target.value })}
-              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#EAB308] focus:outline-none"
+              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-primary focus:outline-none"
             />
           </div>
           <div>
@@ -784,7 +814,7 @@ function VariantCard({
               step="0.01"
               value={draft.price}
               onChange={(e) => onDraftChange({ price: e.target.value })}
-              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#EAB308] focus:outline-none"
+              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-primary focus:outline-none"
             />
           </div>
           <div>
@@ -793,7 +823,7 @@ function VariantCard({
               type="number"
               value={draft.stock}
               onChange={(e) => onDraftChange({ stock: e.target.value })}
-              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-[#EAB308] focus:outline-none"
+              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-primary focus:outline-none"
             />
           </div>
         </div>

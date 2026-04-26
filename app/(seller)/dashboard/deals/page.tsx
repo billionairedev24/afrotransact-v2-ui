@@ -260,8 +260,8 @@ export default function SellerDealsPage() {
         </button>
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-[#EAB308]/20 bg-[#EAB308]/5 p-4">
-        <Tag className="h-5 w-5 text-[#EAB308] mt-0.5 shrink-0" />
+      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <Tag className="h-5 w-5 text-primary mt-0.5 shrink-0" />
         <div>
           <p className="text-sm text-gray-900 font-medium">How deals work</p>
           <p className="text-xs text-gray-500 mt-1 leading-relaxed">
@@ -401,14 +401,14 @@ export default function SellerDealsPage() {
                     onClick={() => setForm({ ...form, dealType: "store-wide", productId: "" })}
                     className={`flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 text-left transition-all ${
                       form.dealType === "store-wide"
-                        ? "border-[#EAB308] bg-[#EAB308]/5 shadow-sm"
+                        ? "border-primary bg-primary/5 shadow-sm"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                      form.dealType === "store-wide" ? "bg-[#EAB308]/10" : "bg-gray-100"
+                      form.dealType === "store-wide" ? "bg-primary/10" : "bg-gray-100"
                     }`}>
-                      <Store className={`h-4 w-4 ${form.dealType === "store-wide" ? "text-[#EAB308]" : "text-gray-400"}`} />
+                      <Store className={`h-4 w-4 ${form.dealType === "store-wide" ? "text-primary" : "text-gray-400"}`} />
                     </div>
                     <div>
                       <p className={`text-sm font-semibold ${form.dealType === "store-wide" ? "text-gray-900" : "text-gray-700"}`}>Store-wide</p>
@@ -420,14 +420,14 @@ export default function SellerDealsPage() {
                     onClick={() => setForm({ ...form, dealType: "product", storeId: "" })}
                     className={`flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 text-left transition-all ${
                       form.dealType === "product"
-                        ? "border-[#EAB308] bg-[#EAB308]/5 shadow-sm"
+                        ? "border-primary bg-primary/5 shadow-sm"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                      form.dealType === "product" ? "bg-[#EAB308]/10" : "bg-gray-100"
+                      form.dealType === "product" ? "bg-primary/10" : "bg-gray-100"
                     }`}>
-                      <Package className={`h-4 w-4 ${form.dealType === "product" ? "text-[#EAB308]" : "text-gray-400"}`} />
+                      <Package className={`h-4 w-4 ${form.dealType === "product" ? "text-primary" : "text-gray-400"}`} />
                     </div>
                     <div>
                       <p className={`text-sm font-semibold ${form.dealType === "product" ? "text-gray-900" : "text-gray-700"}`}>Product</p>

@@ -231,7 +231,7 @@ export default function NotificationRoutingPage() {
             setShowAdd(true)
             if (!addEventType && eventTypes.length) setAddEventType(eventTypes[0].key)
           }}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#EAB308] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#CA8A04] transition-colors whitespace-nowrap"
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors whitespace-nowrap"
         >
           <Plus className="h-4 w-4" />
           Add Recipient
@@ -249,7 +249,7 @@ export default function NotificationRoutingPage() {
         <div className="p-5">
           {loading ? (
             <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-[#EAB308]" />
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -278,7 +278,7 @@ export default function NotificationRoutingPage() {
 
       {/* Add form */}
       {showAdd && (
-        <div className="rounded-2xl border border-[#EAB308]/30 bg-[#EAB308]/5 p-6 space-y-4">
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900">Add Notification Recipient</h3>
             <button onClick={() => setShowAdd(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
@@ -291,7 +291,7 @@ export default function NotificationRoutingPage() {
               <select
                 value={addEventType}
                 onChange={e => setAddEventType(e.target.value)}
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]/50"
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/50"
               >
                 {eventTypes.map(et => (
                   <option key={et.key} value={et.key}>{et.label}</option>
@@ -305,7 +305,7 @@ export default function NotificationRoutingPage() {
                 value={addEmail}
                 onChange={e => setAddEmail(e.target.value)}
                 placeholder="team@afrotransact.com"
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]/50"
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary focus:ring-1 focus:ring-primary/50"
               />
             </div>
             <div>
@@ -315,7 +315,7 @@ export default function NotificationRoutingPage() {
                 value={addLabel}
                 onChange={e => setAddLabel(e.target.value)}
                 placeholder="e.g. Seller Team"
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]/50"
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary focus:ring-1 focus:ring-primary/50"
               />
             </div>
           </div>
@@ -323,7 +323,7 @@ export default function NotificationRoutingPage() {
             <button
               onClick={handleAdd}
               disabled={adding || !addEmail || !addEventType}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#EAB308] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#CA8A04] disabled:opacity-50 transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50 transition-colors whitespace-nowrap"
             >
               {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Add Recipient

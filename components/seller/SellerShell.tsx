@@ -97,14 +97,15 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                     active
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-sidebar-accent text-foreground font-semibold shadow-[inset_3px_0_0_hsl(var(--primary))]"
+                      : "text-muted-foreground font-medium hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={cn("h-4 w-4", active && "text-primary")} />
                   {item.label}
                 </Link>
               )
@@ -172,14 +173,15 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
                       key={item.href}
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
+                      aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                         active
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          ? "bg-sidebar-accent text-foreground font-semibold shadow-[inset_3px_0_0_hsl(var(--primary))]"
+                          : "text-muted-foreground font-medium hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className={cn("h-4 w-4", active && "text-primary")} />
                       {item.label}
                     </Link>
                   )

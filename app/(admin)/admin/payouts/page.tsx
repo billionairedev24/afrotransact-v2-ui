@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { useSession } from "next-auth/react"
+import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
 import {
@@ -17,12 +18,11 @@ import {
   Copy,
 } from "lucide-react"
 import { toast } from "sonner"
-import { API_BASE } from "@/lib/api"
-import type { TransferRecord } from "@/lib/api"
-import { logError } from "@/lib/errors"
+import { getAdminPayoutSummary, getAdminPayouts, type AdminPayoutSummary, type TransferRecord, type Page as ApiPage } from "@/lib/api"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
 import { createColumnHelper } from "@tanstack/react-table"
+import { useStoreNameMap } from "@/hooks/use-stores"
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -36,14 +36,6 @@ function formatDate(iso: string | null) {
 function formatDateTime(iso: string | null) {
   if (!iso) return "—"
   return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })
-}
-
-interface AdminSummary {
-  pendingSettlementCents: number
-  readyForTransferCents: number
-  transferredCents: number
-  failedCents: number
-  totalCents: number
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -70,46 +62,45 @@ function shortId(id: string, len = 10) {
 
 const col = createColumnHelper<TransferRecord>()
 
+const ADMIN_PAYOUT_SUMMARY_KEY = "admin-payout-summary"
+const ADMIN_PAYOUTS_KEY = "admin-payouts"
+
 export default function AdminPayoutsPage() {
   const { status } = useSession()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [summary, setSummary] = useState<AdminSummary | null>(null)
-  const [transfers, setTransfers] = useState<TransferRecord[]>([])
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(50)
   const [statusFilter, setStatusFilter] = useState<string>("")
   const [selected, setSelected] = useState<TransferRecord | null>(null)
+  const { nameFor: storeNameFor } = useStoreNameMap()
 
-  const fetchData = useCallback(async (filter?: string) => {
-    const token = await getAccessToken()
-    if (!token) return
-    try {
-      const params = new URLSearchParams({ page: "0", size: "100" })
-      if (filter) params.set("status", filter)
-      const [sumRes, payoutsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/v1/admin/payouts/summary`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE}/api/v1/admin/payouts?${params}`, { headers: { Authorization: `Bearer ${token}` } }),
-      ])
-      if (sumRes.ok) setSummary(await sumRes.json())
-      if (payoutsRes.ok) {
-        const data = await payoutsRes.json()
-        setTransfers(data.content || [])
-      }
-    } catch (e: unknown) {
-      logError(e, "loading payouts")
-      setError("Failed to load payouts")
-    }
-  }, [])
+  const summaryQuery = useQuery<AdminPayoutSummary>({
+    queryKey: [ADMIN_PAYOUT_SUMMARY_KEY],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not authenticated")
+      return getAdminPayoutSummary(token)
+    },
+    enabled: status === "authenticated",
+    staleTime: 30 * 1000, // refresh summary cards quickly without thrashing
+  })
 
-  useEffect(() => {
-    if (status !== "authenticated") return
-    setLoading(true)
-    fetchData().finally(() => setLoading(false))
-  }, [status, fetchData])
+  const payoutsQuery = useQuery<ApiPage<TransferRecord>>({
+    queryKey: [ADMIN_PAYOUTS_KEY, statusFilter, pageIndex, pageSize],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not authenticated")
+      return getAdminPayouts(token, pageIndex, pageSize, statusFilter || undefined)
+    },
+    enabled: status === "authenticated",
+    placeholderData: keepPreviousData,
+  })
 
-  useEffect(() => {
-    if (status !== "authenticated") return
-    fetchData(statusFilter || undefined)
-  }, [status, statusFilter, fetchData])
+  const summary = summaryQuery.data ?? null
+  const transfers = useMemo(() => payoutsQuery.data?.content ?? [], [payoutsQuery.data])
+  const totalElements = payoutsQuery.data?.totalElements ?? 0
+  const totalPages = payoutsQuery.data?.totalPages ?? 0
+  const loading = summaryQuery.isLoading || payoutsQuery.isLoading || payoutsQuery.isFetching
+  const error = (summaryQuery.error || payoutsQuery.error) ? "Failed to load payouts" : ""
 
   function handleCopyId(id: string) {
     navigator.clipboard.writeText(id)
@@ -123,7 +114,10 @@ export default function AdminPayoutsPage() {
     }),
     col.accessor("storeId", {
       header: "Store",
-      cell: info => <span className="font-mono text-xs text-gray-500" title={info.getValue()}>{shortId(info.getValue())}</span>,
+      cell: info => {
+        const id = info.getValue()
+        return <span className="text-sm text-gray-900" title={id}>{storeNameFor(id)}</span>
+      },
     }),
     col.accessor("amountCents", {
       header: "Amount",
@@ -155,9 +149,9 @@ export default function AdminPayoutsPage() {
         ]} />
       ),
     }),
-  ], [])
+  ], [storeNameFor])
 
-  if (loading) {
+  if (loading && !summary) {
     return (
       <div className="flex min-h-[400px] items-center justify-center gap-2 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" /> Loading payouts...
@@ -207,7 +201,7 @@ export default function AdminPayoutsPage() {
           <Filter className="h-3.5 w-3.5 shrink-0 text-gray-500" />
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setPageIndex(0) }}
             className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 outline-none focus:border-primary/60"
           >
             <option value="">All statuses</option>
@@ -227,6 +221,15 @@ export default function AdminPayoutsPage() {
           enableExport
           exportFilename="payouts"
           emptyMessage="No transfers found."
+          pageSize={pageSize}
+          serverPagination={{
+            pageIndex,
+            pageSize,
+            pageCount: totalPages,
+            totalRows: totalElements,
+            onPageChange: setPageIndex,
+            onPageSizeChange: (n) => { setPageSize(n); setPageIndex(0) },
+          }}
         />
       </div>
 
@@ -305,7 +308,7 @@ export default function AdminPayoutsPage() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {[
                       { label: "Transfer ID", value: selected.id, copyable: true },
-                      { label: "Store ID", value: selected.storeId, copyable: true },
+                      { label: "Store", value: storeNameFor(selected.storeId), copyable: false },
                       { label: "Order ID", value: selected.orderId || "—", copyable: !!selected.orderId },
                       { label: "Stripe Transfer ID", value: selected.stripeTransferId || "—" },
                       { label: "Created", value: formatDateTime(selected.createdAt) },

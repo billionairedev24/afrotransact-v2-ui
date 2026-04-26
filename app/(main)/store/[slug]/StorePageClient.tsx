@@ -24,7 +24,7 @@ import {
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
 
-const FALLBACK_ACCENT = "#EAB308"
+const FALLBACK_ACCENT = "#FFD400"
 
 function formatPrice(price: number) {
   return `$${price.toFixed(2)}`
