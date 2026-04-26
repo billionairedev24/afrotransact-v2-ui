@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useMemo, useState } from "react"
 import { useSession } from "next-auth/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Star,
   MessageCircle,
@@ -10,19 +11,21 @@ import {
   ChevronRight,
   Loader2,
   BarChart3,
+  Reply,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   getSellerProducts,
   getReviewsByProducts,
+  replyToReview,
   type ProductReviewsResponse,
   type Review,
   type Product,
 } from "@/lib/api"
 
 const PAGE_SIZE = 10
-const EMPTY_DISTRIBUTION: Record<string, number> = {}
 
 function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
   return (
@@ -33,8 +36,8 @@ function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
           size={size}
           className={
             i < Math.round(rating)
-              ? "fill-amber-400 text-amber-400"
-              : "fill-transparent text-gray-300"
+              ? "fill-primary text-primary"
+              : "fill-transparent text-muted-foreground/40"
           }
         />
       ))}
@@ -50,85 +53,66 @@ function formatDate(iso: string) {
   })
 }
 
-function snippet(text: string | null, max = 120) {
-  if (!text) return "—"
-  return text.length > max ? text.slice(0, max) + "…" : text
-}
-
 export default function SellerReviewsPage() {
   const { status } = useSession()
-
-  const [products, setProducts] = useState<Product[]>([])
-  const [reviewData, setReviewData] = useState<ProductReviewsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyDraft, setReplyDraft] = useState("")
 
+  const productsQuery = useQuery<{ content: Product[] }>({
+    queryKey: ["seller", "products", "for-reviews"],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not authenticated")
+      return getSellerProducts(token)
+    },
+    enabled: status === "authenticated",
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const products = productsQuery.data?.content ?? []
+  const productIds = useMemo(() => products.map((p) => p.id), [products])
   const productMap = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const p of products) map.set(p.id, p.title)
-    return map
+    const m = new Map<string, string>()
+    for (const p of products) m.set(p.id, p.title)
+    return m
   }, [products])
 
-  const fetchReviews = useCallback(
-    async (productIds: string[], pageNum: number) => {
-      if (productIds.length === 0) return
-      try {
-        const data = await getReviewsByProducts(productIds, pageNum, PAGE_SIZE)
-        setReviewData(data)
-      } catch {
-        toast.error("Failed to load reviews")
-      }
-    },
-    [],
-  )
+  const reviewsQuery = useQuery<ProductReviewsResponse>({
+    queryKey: ["seller", "reviews", productIds, page],
+    queryFn: () => getReviewsByProducts(productIds, page, PAGE_SIZE),
+    enabled: productIds.length > 0,
+  })
 
-  useEffect(() => {
-    if (status !== "authenticated") {
-      if (status === "unauthenticated") setLoading(false)
-      return
-    }
-
-    let cancelled = false
-
-    async function init() {
+  const replyMutation = useMutation({
+    mutationFn: async ({ reviewId, reply }: { reviewId: string; reply: string }) => {
       const token = await getAccessToken()
-      if (!token || cancelled) return
+      if (!token) throw new Error("Not authenticated")
+      return replyToReview(token, reviewId, reply)
+    },
+    onSuccess: (updated) => {
+      toast.success("Reply posted")
+      queryClient.setQueryData<ProductReviewsResponse | undefined>(
+        ["seller", "reviews", productIds, page],
+        (old) =>
+          old
+            ? { ...old, reviews: old.reviews.map((r) => (r.id === updated.id ? updated : r)) }
+            : old,
+      )
+      setReplyingTo(null)
+      setReplyDraft("")
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : "Failed to post reply"
+      toast.error(msg)
+    },
+  })
 
-      try {
-        const res = await getSellerProducts(token)
-        if (cancelled) return
-        setProducts(res.content)
-
-        const ids = res.content.map((p) => p.id)
-        if (ids.length > 0) {
-          const data = await getReviewsByProducts(ids, 1, PAGE_SIZE)
-          if (!cancelled) setReviewData(data)
-        }
-      } catch {
-        if (!cancelled) toast.error("Failed to load reviews")
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    init()
-    return () => {
-      cancelled = true
-    }
-  }, [status])
-
-  useEffect(() => {
-    if (products.length === 0 || page === 1) return
-    fetchReviews(
-      products.map((p) => p.id),
-      page,
-    )
-  }, [page, products, fetchReviews])
-
-  const reviews: Review[] = reviewData?.reviews ?? []
-  const totalReviews = reviewData?.total ?? 0
-  const avgRating = reviewData?.avg_rating ?? 0
-  const distribution = reviewData?.distribution ?? EMPTY_DISTRIBUTION
+  const reviews: Review[] = reviewsQuery.data?.reviews ?? []
+  const totalReviews = reviewsQuery.data?.total ?? 0
+  const avgRating = reviewsQuery.data?.avg_rating ?? 0
+  const distribution = reviewsQuery.data?.distribution ?? {}
   const totalPages = Math.max(1, Math.ceil(totalReviews / PAGE_SIZE))
 
   const distributionEntries = useMemo(() => {
@@ -140,69 +124,85 @@ export default function SellerReviewsPage() {
     return entries
   }, [distribution, totalReviews])
 
+  const loading = productsQuery.isLoading || reviewsQuery.isLoading
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
+  function startReply(review: Review) {
+    setReplyingTo(review.id)
+    setReplyDraft(review.seller_reply ?? "")
+  }
+
+  function cancelReply() {
+    setReplyingTo(null)
+    setReplyDraft("")
+  }
+
+  function submitReply(reviewId: string) {
+    const trimmed = replyDraft.trim()
+    if (!trimmed) {
+      toast.error("Reply cannot be empty")
+      return
+    }
+    replyMutation.mutate({ reviewId, reply: trimmed })
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Reviews</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Reviews from customers on your products
+        <h1 className="text-2xl font-bold text-foreground">Reviews</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Reviews from customers on your products. Reply to engage with shoppers — your reply is shown publicly under the review.
         </p>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        {/* Average Rating */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Star size={16} />
             Average Rating
           </div>
           <div className="mt-3 flex items-end gap-3">
-            <span className="text-4xl font-bold text-gray-900">
+            <span className="text-4xl font-bold text-foreground">
               {avgRating > 0 ? avgRating.toFixed(1) : "—"}
             </span>
             {avgRating > 0 && <Stars rating={avgRating} size={18} />}
           </div>
         </div>
 
-        {/* Total Reviews */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <MessageCircle size={16} />
             Total Reviews
           </div>
-          <p className="mt-3 text-4xl font-bold text-gray-900">
+          <p className="mt-3 text-4xl font-bold text-foreground">
             {totalReviews.toLocaleString()}
           </p>
         </div>
 
-        {/* Star Distribution */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <BarChart3 size={16} />
             Distribution
           </div>
           <div className="mt-3 space-y-1.5">
             {distributionEntries.map((d) => (
               <div key={d.star} className="flex items-center gap-2 text-xs">
-                <span className="w-3 text-right text-gray-500">{d.star}</span>
-                <Star size={10} className="fill-amber-400 text-amber-400 shrink-0" />
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
+                <span className="w-3 text-right text-muted-foreground">{d.star}</span>
+                <Star size={10} className="fill-primary text-primary shrink-0" />
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full rounded-full bg-amber-400 transition-all"
+                    className="h-full rounded-full bg-primary transition-all"
                     style={{ width: `${d.pct}%` }}
                   />
                 </div>
-                <span className="w-8 text-right tabular-nums text-gray-500">
+                <span className="w-8 text-right tabular-nums text-muted-foreground">
                   {d.count}
                 </span>
               </div>
@@ -211,100 +211,115 @@ export default function SellerReviewsPage() {
         </div>
       </div>
 
-      {/* Reviews List */}
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
         {reviews.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <MessageCircle className="h-10 w-10 text-gray-300" />
-            <p className="mt-4 text-sm text-gray-500">
+            <MessageCircle className="h-10 w-10 text-muted-foreground/50" />
+            <p className="mt-4 text-sm text-muted-foreground">
               No reviews yet. Reviews from your customers will appear here.
             </p>
           </div>
         ) : (
-          <>
-            {/* Table Header */}
-            <div className="hidden border-b border-gray-200 bg-gray-50 px-5 py-3 sm:grid sm:grid-cols-[1fr_100px_1fr_1.5fr_90px_80px] sm:gap-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Product
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Rating
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Title
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Review
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Date
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 text-center">
-                Verified
-              </span>
-            </div>
-
-            {/* Rows */}
-            <div className="divide-y divide-gray-100">
-              {reviews.map((r) => (
-                <div
-                  key={r.id}
-                  className="grid gap-2 px-5 py-4 sm:grid-cols-[1fr_100px_1fr_1.5fr_90px_80px] sm:items-center sm:gap-4"
-                >
-                  {/* Product */}
-                  <span className="truncate text-sm font-medium text-gray-900">
-                    {productMap.get(r.product_id) ?? "Unknown Product"}
-                  </span>
-
-                  {/* Stars */}
-                  <div>
-                    <Stars rating={r.rating} size={14} />
-                  </div>
-
-                  {/* Title */}
-                  <span className="truncate text-sm text-gray-600">
-                    {r.title || "—"}
-                  </span>
-
-                  {/* Body Snippet */}
-                  <span className="text-sm text-gray-500 line-clamp-2">
-                    {snippet(r.body)}
-                  </span>
-
-                  {/* Date */}
-                  <span className="text-xs text-gray-500">
-                    {formatDate(r.created_at)}
-                  </span>
-
-                  {/* Verified */}
-                  <div className="flex justify-center">
-                    {r.verified_purchase ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
-                        <BadgeCheck size={12} />
-                        Verified
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-600">—</span>
+          <ul className="divide-y divide-border">
+            {reviews.map((r) => {
+              const product = productMap.get(r.product_id) ?? "Unknown Product"
+              const isReplying = replyingTo === r.id
+              return (
+                <li key={r.id} className="px-5 py-5 space-y-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{product}</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Stars rating={r.rating} size={14} />
+                        <span className="text-xs text-muted-foreground">{formatDate(r.created_at)}</span>
+                        {r.verified_purchase && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-secondary/15 px-2 py-0.5 text-[10px] font-medium text-secondary">
+                            <BadgeCheck size={12} />
+                            Verified
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {!isReplying && (
+                      <button
+                        type="button"
+                        onClick={() => startReply(r)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Reply size={14} />
+                        {r.seller_reply ? "Edit reply" : "Reply"}
+                      </button>
                     )}
                   </div>
-                </div>
-              ))}
-            </div>
-          </>
+
+                  {r.title && <p className="text-sm font-medium text-foreground">{r.title}</p>}
+                  {r.body && (
+                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">{r.body}</p>
+                  )}
+
+                  {r.seller_reply && !isReplying && (
+                    <div className="rounded-xl border border-border bg-primary/5 p-3">
+                      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <Reply size={12} />
+                        Your reply{r.seller_reply_at ? ` · ${formatDate(r.seller_reply_at)}` : ""}
+                      </div>
+                      <p className="mt-1.5 whitespace-pre-wrap text-sm text-foreground">{r.seller_reply}</p>
+                    </div>
+                  )}
+
+                  {isReplying && (
+                    <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+                      <textarea
+                        value={replyDraft}
+                        onChange={(e) => setReplyDraft(e.target.value)}
+                        placeholder="Write a public response that helps future shoppers…"
+                        className="block h-24 w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                        maxLength={2000}
+                      />
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-muted-foreground">
+                          {replyDraft.length}/2000 · public reply
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={cancelReply}
+                            className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            disabled={replyMutation.isPending}
+                          >
+                            <X size={14} />
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => submitReply(r.id)}
+                            disabled={replyMutation.isPending || !replyDraft.trim()}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                          >
+                            {replyMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Reply size={14} />}
+                            Post reply
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
         )}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Page {page} of {totalPages} &middot; {totalReviews} review{totalReviews !== 1 && "s"}
           </p>
           <div className="flex gap-2">
             <button
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors disabled:pointer-events-none disabled:opacity-40"
             >
               <ChevronLeft size={16} />
               Prev
@@ -312,7 +327,7 @@ export default function SellerReviewsPage() {
             <button
               disabled={page >= totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors disabled:pointer-events-none disabled:opacity-40"
             >
               Next
               <ChevronRight size={16} />

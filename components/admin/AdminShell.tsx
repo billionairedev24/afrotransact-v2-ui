@@ -90,14 +90,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         key={item.href}
         href={item.href}
         onClick={onClick}
+        aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
           active
-            ? "bg-primary/15 text-primary"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            ? "bg-sidebar-accent text-foreground font-semibold shadow-[inset_3px_0_0_hsl(var(--primary))]"
+            : "text-muted-foreground font-medium hover:bg-muted hover:text-foreground"
         )}
       >
-        <Icon className="h-4 w-4 shrink-0" />
+        <Icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
         <span className="flex-1">{item.label}</span>
         {item.badge != null && item.badge > 0 && (
           <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">

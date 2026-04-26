@@ -57,7 +57,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   custom: "bg-pink-100 text-pink-700",
 }
 
-const STARTER_HTML = `<h1 style="color:#CA8A04;font-size:24px;margin:0 0 8px;">Your Template Title</h1>
+const STARTER_HTML = `<h1 style="color:#E6BE00;font-size:24px;margin:0 0 8px;">Your Template Title</h1>
 <p style="color:#525252;font-size:16px;margin:0 0 24px;">Hello {{.RecipientName}},</p>
 <p style="color:#525252;font-size:15px;line-height:1.6;margin:0 0 24px;">
   Your content goes here. Use template variables to personalise the email.

@@ -131,7 +131,7 @@ function inputCls(error?: string) {
     "h-10 w-full rounded-lg border bg-gray-50 px-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-gray-200 focus:border-[#EAB308] focus:ring-[#EAB308]/50",
+      : "border-gray-200 focus:border-primary focus:ring-primary/50",
   )
 }
 
@@ -140,7 +140,7 @@ function textareaCls(error?: string) {
     "w-full rounded-lg border bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors resize-none",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-gray-200 focus:border-[#EAB308] focus:ring-[#EAB308]/50",
+      : "border-gray-200 focus:border-primary focus:ring-primary/50",
   )
 }
 
@@ -722,7 +722,7 @@ export default function NewProductPage() {
   if (sessionStatus === "loading" || loading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#EAB308]" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -760,7 +760,7 @@ export default function NewProductPage() {
         <div className={CARD}>
           <p className="text-sm text-gray-500">
             You need to create a store before adding products.{" "}
-            <Link href="/dashboard/store" className="text-[#EAB308] hover:underline">
+            <Link href="/dashboard/store" className="text-primary hover:underline">
               Go to Store Settings
             </Link>
           </p>
@@ -1047,19 +1047,19 @@ export default function NewProductPage() {
               <div
                 className={cn(
                   "flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-lg border bg-gray-50 px-2 py-1.5 transition-colors focus-within:ring-1",
-                  "border-gray-200 focus-within:border-[#EAB308] focus-within:ring-[#EAB308]/50",
+                  "border-gray-200 focus-within:border-primary focus-within:ring-primary/50",
                 )}
               >
                 {tags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 rounded-md border border-[#EAB308]/30 bg-[#EAB308]/10 px-2 py-0.5 text-xs font-medium text-[#EAB308]"
+                    className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
                   >
                     {tag}
                     <button
                       type="button"
                       onClick={() => setTags((p) => p.filter((t) => t !== tag))}
-                      className="text-[#EAB308]/50 hover:text-[#EAB308]"
+                      className="text-primary/50 hover:text-primary"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1099,7 +1099,7 @@ export default function NewProductPage() {
             {/* Upload zone + Library button */}
             {images.length < maxImages && (
               <div className="space-y-3">
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-[#EAB308]/40 hover:bg-[#EAB308]/5">
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-primary/40 hover:bg-primary/90/5">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
                     <Upload className="h-6 w-6 text-gray-500" />
                   </div>
@@ -1134,7 +1134,7 @@ export default function NewProductPage() {
                     key={img.id}
                     className={cn(
                       "group relative aspect-square overflow-hidden rounded-lg border-2 bg-gray-50",
-                      img.isPrimary ? "border-[#EAB308]" : "border-gray-200",
+                      img.isPrimary ? "border-primary" : "border-gray-200",
                     )}
                   >
                     {img.status === "done" && img.url ? (
@@ -1150,7 +1150,7 @@ export default function NewProductPage() {
 
                     {img.status === "uploading" && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                        <Loader2 className="h-5 w-5 animate-spin text-[#EAB308]" />
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
                       </div>
                     )}
 
@@ -1172,7 +1172,7 @@ export default function NewProductPage() {
                         className={cn(
                           "h-4 w-4",
                           img.isPrimary
-                            ? "fill-[#EAB308] text-[#EAB308]"
+                            ? "fill-primary text-primary"
                             : "text-gray-500 hover:text-gray-600",
                         )}
                       />
@@ -1313,7 +1313,7 @@ export default function NewProductPage() {
                     <button
                       type="button"
                       onClick={() => addVariantOption(variant.id)}
-                      className="text-xs text-[#EAB308] hover:underline"
+                      className="text-xs text-primary hover:underline"
                     >
                       + Add Option
                     </button>
@@ -1329,7 +1329,7 @@ export default function NewProductPage() {
                               updateVariantOption(variant.id, opt.id, "key", e.target.value)
                             }
                             placeholder="Key (e.g. Size)"
-                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                           />
                           <input
                             type="text"
@@ -1338,7 +1338,7 @@ export default function NewProductPage() {
                               updateVariantOption(variant.id, opt.id, "value", e.target.value)
                             }
                             placeholder="Value (e.g. M)"
-                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                           />
                           <button
                             type="button"
@@ -1366,7 +1366,7 @@ export default function NewProductPage() {
                       />
                       {variant.imageStatus === "uploading" && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                          <Loader2 className="h-4 w-4 animate-spin text-[#EAB308]" />
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
                         </div>
                       )}
                       <button
@@ -1428,14 +1428,14 @@ export default function NewProductPage() {
                     value={attr.key}
                     onChange={(e) => updateAttribute(attr.id, "key", e.target.value)}
                     placeholder="Key"
-                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                   />
                   <input
                     type="text"
                     value={attr.value}
                     onChange={(e) => updateAttribute(attr.id, "value", e.target.value)}
                     placeholder="Value"
-                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                   />
                   <button
                     type="button"
@@ -1464,7 +1464,7 @@ export default function NewProductPage() {
               onClick={() => setCreateDeal(!createDeal)}
               className={cn(
                 "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                createDeal ? "bg-[#EAB308]" : "bg-gray-200",
+                createDeal ? "bg-primary" : "bg-gray-200",
               )}
             >
               <span
@@ -1477,8 +1477,8 @@ export default function NewProductPage() {
           </div>
 
           {createDeal && (
-            <div className="mt-5 space-y-4 rounded-xl border border-[#EAB308]/20 bg-[#EAB308]/5 p-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-[#EAB308]">
+            <div className="mt-5 space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary">
                 <Tag className="h-4 w-4" />
                 Deal Details
               </div>
@@ -1596,7 +1596,7 @@ export default function NewProductPage() {
             type="submit"
             disabled={!canSubmit}
             onClick={() => setSubmitAction("pending_review")}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#EAB308] px-6 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-[#CA8A04] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           >
             {saving && submitAction === "pending_review" ? (
               <>
@@ -1623,7 +1623,7 @@ export default function NewProductPage() {
             <div className="overflow-y-auto p-6" style={{ maxHeight: "calc(80vh - 80px)" }}>
               {loadingLibrary ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-[#EAB308]" />
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : mediaLibrary.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -1644,8 +1644,8 @@ export default function NewProductPage() {
                         className={cn(
                           "group relative aspect-square overflow-hidden rounded-lg border-2 transition-colors",
                           alreadyAdded
-                            ? "border-[#EAB308] opacity-60 cursor-not-allowed"
-                            : "border-gray-200 hover:border-[#EAB308]/60 cursor-pointer",
+                            ? "border-primary opacity-60 cursor-not-allowed"
+                            : "border-gray-200 hover:border-primary/60 cursor-pointer",
                         )}
                       >
                         <Image src={item.url} alt={item.name} fill sizes="(max-width: 640px) 33vw, 20vw" className="object-cover" />

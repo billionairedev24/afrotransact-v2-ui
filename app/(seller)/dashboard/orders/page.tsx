@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { ClipboardList, Loader2, Truck, Package, CheckCircle2, AlertTriangle } from "lucide-react"
@@ -9,6 +9,7 @@ import { DataTable } from "@/components/ui/DataTable"
 import { RowActions, type RowAction } from "@/components/ui/RowActions"
 import { Sheet, SheetHeader, SheetBody } from "@/components/ui/Sheet"
 import { createColumnHelper } from "@tanstack/react-table"
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   getCurrentSeller,
@@ -17,6 +18,7 @@ import {
   updateSubOrderStatus,
   type OrderDto,
   type SubOrderDto,
+  type Page as ApiPage,
 } from "@/lib/api"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -98,50 +100,54 @@ function subOrderCustomerTotal(sub: SubOrderDto): number {
 
 const col = createColumnHelper<FlatOrder>()
 
+const SELLER_STORE_KEY = "seller-store"
+const SELLER_ORDERS_KEY = "seller-orders"
+
 export default function SellerOrdersPage() {
   const { status } = useSession()
-
-  const [storeId, setStoreId] = useState<string | null>(null)
-  const [orders, setOrders] = useState<OrderDto[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(50)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (status !== "authenticated") {
-      if (status === "unauthenticated") setLoading(false)
-      return
-    }
-
-    let cancelled = false
-
-    async function init() {
+  // Resolve the seller's primary store once. Cached across pages thanks to TanStack.
+  const storeQuery = useQuery({
+    queryKey: [SELLER_STORE_KEY],
+    queryFn: async () => {
       const token = await getAccessToken()
-      if (!token || cancelled) return
+      if (!token) throw new Error("Not authenticated")
+      const seller = await getCurrentSeller(token)
+      const stores = await getSellerStores(token, seller.id)
+      return stores[0]?.id ?? null
+    },
+    enabled: status === "authenticated",
+    staleTime: 10 * 60 * 1000, // store rarely changes
+  })
 
-      try {
-        const seller = await getCurrentSeller(token)
-        if (cancelled) return
-        const stores = await getSellerStores(token, seller.id)
-        if (cancelled || stores.length === 0) {
-          setLoading(false)
-          return
-        }
+  const storeId = storeQuery.data ?? null
 
-        const sid = stores[0].id
-        setStoreId(sid)
+  const ordersQuery = useQuery<ApiPage<OrderDto>>({
+    queryKey: [SELLER_ORDERS_KEY, storeId, pageIndex, pageSize],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not authenticated")
+      return getSellerOrders(token, storeId!, pageIndex, pageSize)
+    },
+    enabled: status === "authenticated" && !!storeId,
+    placeholderData: keepPreviousData,
+  })
 
-        const data = await getSellerOrders(token, sid, 0, 200)
-        if (!cancelled) setOrders(data.content)
-      } catch {
-        if (!cancelled) toast.error("Failed to load orders")
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
+  const orders = useMemo(() => ordersQuery.data?.content ?? [], [ordersQuery.data])
+  const totalElements = ordersQuery.data?.totalElements ?? 0
+  const totalPages = ordersQuery.data?.totalPages ?? 0
+  const loading = storeQuery.isLoading || ordersQuery.isLoading || ordersQuery.isFetching
 
-    init()
-    return () => { cancelled = true }
-  }, [status])
+  function applyOrderUpdate(updated: OrderDto) {
+    queryClient.setQueryData<ApiPage<OrderDto>>(
+      [SELLER_ORDERS_KEY, storeId, pageIndex, pageSize],
+      (prev) => prev ? { ...prev, content: prev.content.map((o) => (o.id === updated.id ? updated : o)) } : prev,
+    )
+  }
 
   const flatOrders = useMemo<FlatOrder[]>(() => {
     if (!storeId) return []
@@ -266,18 +272,21 @@ export default function SellerOrdersPage() {
         enableExport
         exportFilename="seller-orders"
         emptyMessage="No orders yet. Orders from your store will appear here."
+        pageSize={pageSize}
+        serverPagination={{
+          pageIndex,
+          pageSize,
+          pageCount: totalPages,
+          totalRows: totalElements,
+          onPageChange: setPageIndex,
+          onPageSizeChange: (n) => { setPageSize(n); setPageIndex(0) },
+        }}
       />
 
       <OrderDetailModal
         order={flatOrders.find((o) => o.id === selectedOrderId) ?? null}
         onClose={() => setSelectedOrderId(null)}
-        onStatusUpdated={async () => {
-          if (!storeId) return
-          const token = await getAccessToken()
-          if (!token) return
-          const data = await getSellerOrders(token, storeId, 0, 200)
-          setOrders(data.content)
-        }}
+        onStatusUpdated={applyOrderUpdate}
       />
     </div>
   )
@@ -292,7 +301,7 @@ function OrderDetailModal({
 }: {
   order: FlatOrder | null
   onClose: () => void
-  onStatusUpdated: () => Promise<void>
+  onStatusUpdated: (updated: OrderDto) => void
 }) {
   const [updating, setUpdating] = useState(false)
   const [trackingInput, setTrackingInput] = useState("")
@@ -306,9 +315,9 @@ function OrderDetailModal({
     try {
       const token = await getAccessToken()
       if (!token) return
-      await updateSubOrderStatus(token, subOrderId, newStatus, trackingInput || undefined)
+      const updated = await updateSubOrderStatus(token, subOrderId, newStatus, trackingInput || undefined)
       toast.success(`Status updated to ${newStatus}`)
-      await onStatusUpdated()
+      onStatusUpdated(updated)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update status")
     } finally {

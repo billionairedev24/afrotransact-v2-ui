@@ -134,7 +134,7 @@ function inputCls(error?: string) {
     "h-10 w-full rounded-lg border bg-gray-50 px-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-gray-200 focus:border-[#EAB308] focus:ring-[#EAB308]/50",
+      : "border-gray-200 focus:border-primary focus:ring-primary/50",
   )
 }
 
@@ -143,7 +143,7 @@ function textareaCls(error?: string) {
     "w-full rounded-lg border bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors resize-none",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-gray-200 focus:border-[#EAB308] focus:ring-[#EAB308]/50",
+      : "border-gray-200 focus:border-primary focus:ring-primary/50",
   )
 }
 
@@ -791,7 +791,7 @@ export default function EditProductPage() {
   if (sessionStatus === "loading" || loading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#EAB308]" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -804,7 +804,7 @@ export default function EditProductPage() {
         </div>
         <Link
           href="/dashboard/products"
-          className="inline-flex items-center gap-2 text-sm text-[#EAB308] hover:underline"
+          className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Products
@@ -843,7 +843,7 @@ export default function EditProductPage() {
 
       {/* Success */}
       {success && (
-        <div className="flex items-center gap-2 rounded-xl border border-[#EAB308]/30 bg-[#EAB308]/10 px-4 py-3 text-sm text-[#EAB308]">
+        <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
           <CheckCircle className="h-4 w-4 shrink-0" />
           Product saved successfully.
         </div>
@@ -1000,7 +1000,7 @@ export default function EditProductPage() {
                     className={cn(
                       "rounded-lg border px-5 py-2 text-sm font-medium capitalize transition-colors",
                       status === s
-                        ? "border-[#EAB308] bg-[#EAB308]/10 text-[#EAB308]"
+                        ? "border-primary bg-primary/10 text-primary"
                         : "border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-600",
                     )}
                   >
@@ -1049,19 +1049,19 @@ export default function EditProductPage() {
               <div
                 className={cn(
                   "flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-lg border bg-gray-50 px-2 py-1.5 transition-colors focus-within:ring-1",
-                  "border-gray-200 focus-within:border-[#EAB308] focus-within:ring-[#EAB308]/50",
+                  "border-gray-200 focus-within:border-primary focus-within:ring-primary/50",
                 )}
               >
                 {tags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 rounded-md border border-[#EAB308]/30 bg-[#EAB308]/10 px-2 py-0.5 text-xs font-medium text-[#EAB308]"
+                    className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
                   >
                     {tag}
                     <button
                       type="button"
                       onClick={() => setTags((p) => p.filter((t) => t !== tag))}
-                      className="text-[#EAB308]/50 hover:text-[#EAB308]"
+                      className="text-primary/50 hover:text-primary"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1102,7 +1102,7 @@ export default function EditProductPage() {
                       key={img.id}
                       className={cn(
                         "group relative aspect-square overflow-hidden rounded-lg border-2 bg-gray-50",
-                        img.isPrimary ? "border-[#EAB308]" : "border-gray-200",
+                        img.isPrimary ? "border-primary" : "border-gray-200",
                       )}
                     >
                       <Image src={img.url} alt={img.altText ?? ""} fill sizes="(max-width: 640px) 25vw, 12vw" className="object-cover" />
@@ -1117,7 +1117,7 @@ export default function EditProductPage() {
                           className={cn(
                             "h-4 w-4",
                             img.isPrimary
-                              ? "fill-[#EAB308] text-[#EAB308]"
+                              ? "fill-primary text-primary"
                               : "text-gray-500 hover:text-gray-600",
                           )}
                         />
@@ -1159,7 +1159,7 @@ export default function EditProductPage() {
 
             {/* Upload zone */}
             {totalImageCount < MAX_IMAGES && (
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-[#EAB308]/40 hover:bg-[#EAB308]/5">
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-primary/40 hover:bg-primary/90/5">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
                   <Upload className="h-6 w-6 text-gray-500" />
                 </div>
@@ -1197,7 +1197,7 @@ export default function EditProductPage() {
                     )}
                     {img.status === "uploading" && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                        <Loader2 className="h-5 w-5 animate-spin text-[#EAB308]" />
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
                       </div>
                     )}
                     {img.status === "error" && (
@@ -1334,7 +1334,7 @@ export default function EditProductPage() {
                     <button
                       type="button"
                       onClick={() => addVariantOption(variant.id)}
-                      className="text-xs text-[#EAB308] hover:underline"
+                      className="text-xs text-primary hover:underline"
                     >
                       + Add Option
                     </button>
@@ -1350,7 +1350,7 @@ export default function EditProductPage() {
                               updateVariantOption(variant.id, opt.id, "key", e.target.value)
                             }
                             placeholder="Key (e.g. Size)"
-                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                           />
                           <input
                             type="text"
@@ -1359,7 +1359,7 @@ export default function EditProductPage() {
                               updateVariantOption(variant.id, opt.id, "value", e.target.value)
                             }
                             placeholder="Value (e.g. M)"
-                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                           />
                           <button
                             type="button"
@@ -1387,7 +1387,7 @@ export default function EditProductPage() {
                       />
                       {variant.imageStatus === "uploading" && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                          <Loader2 className="h-4 w-4 animate-spin text-[#EAB308]" />
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
                         </div>
                       )}
                       <button
@@ -1448,14 +1448,14 @@ export default function EditProductPage() {
                     value={attr.key}
                     onChange={(e) => updateAttribute(attr.id, "key", e.target.value)}
                     placeholder="Key"
-                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                   />
                   <input
                     type="text"
                     value={attr.value}
                     onChange={(e) => updateAttribute(attr.id, "value", e.target.value)}
                     placeholder="Value"
-                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-[#EAB308] focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                   />
                   <button
                     type="button"
@@ -1482,7 +1482,7 @@ export default function EditProductPage() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#EAB308] px-6 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-[#CA8A04] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {saving ? (
                 <>

@@ -137,7 +137,7 @@ function MediaPickerModal({ mediaItems, onSelect, onClose }: {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
             <input autoFocus type="text" placeholder="Search…" value={q} onChange={e => setQ(e.target.value)}
-              className="h-8 w-full rounded-lg border border-gray-200 bg-gray-50 pl-8 pr-3 text-sm focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/30" />
+              className="h-8 w-full rounded-lg border border-gray-200 bg-gray-50 pl-8 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30" />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
@@ -151,10 +151,10 @@ function MediaPickerModal({ mediaItems, onSelect, onClose }: {
             <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
               {filtered.map(m => (
                 <button key={m.id} onClick={() => onSelect(m)} title={m.name}
-                  className="group relative aspect-square overflow-hidden rounded-xl border-2 border-transparent hover:border-[#EAB308] transition-all">
+                  className="group relative aspect-square overflow-hidden rounded-xl border-2 border-transparent hover:border-primary transition-all">
                   <Image src={m.url} alt={m.name} fill sizes="(max-width: 640px) 25vw, 16vw" className="object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="rounded-full bg-[#EAB308] p-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-black" /></div>
+                    <div className="rounded-full bg-primary p-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-black" /></div>
                   </div>
                 </button>
               ))}
@@ -180,7 +180,7 @@ function ImagesCell({ rowId, images, uploading, onUpload, onLibrary, onRemove }:
           <div className="relative h-8 w-8 overflow-hidden rounded-md border border-gray-200">
             <Image src={img.url} alt={img.name} fill sizes="32px" className="object-cover" />
           </div>
-          {i === 0 && <div className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-[#EAB308] border border-white" title="Primary" />}
+          {i === 0 && <div className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-primary border border-white" title="Primary" />}
           <button onClick={() => onRemove(i)}
             className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
             <X className="h-2 w-2" />
@@ -189,13 +189,13 @@ function ImagesCell({ rowId, images, uploading, onUpload, onLibrary, onRemove }:
       ))}
       {uploading && (
         <div className="h-8 w-8 rounded-md border border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-[#EAB308]" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
         </div>
       )}
       {canAdd && !uploading && (
         <div className="flex flex-col gap-0.5 shrink-0">
           <button onClick={onUpload} title="Upload from device"
-            className="flex items-center gap-0.5 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 hover:border-[#EAB308] hover:text-[#EAB308] transition-colors">
+            className="flex items-center gap-0.5 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 hover:border-primary hover:text-primary transition-colors">
             <Upload className="h-2.5 w-2.5" /> Upload
           </button>
           <button onClick={onLibrary} title="Pick from Library"
@@ -222,7 +222,7 @@ function GridImportProgress({ results, total, done }: { results: ImportResult[];
           <span className="text-sm text-gray-500">{results.length} / {total}</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-          <div className="h-full rounded-full bg-[#EAB308] transition-all duration-300" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${pct}%` }} />
         </div>
         {done && (
           <div className="flex flex-wrap gap-2">
@@ -249,7 +249,7 @@ function GridImportProgress({ results, total, done }: { results: ImportResult[];
         ))}
         {!done && (
           <div className="flex items-center gap-3 px-5 py-2.5 opacity-50">
-            <Loader2 className="h-4 w-4 animate-spin text-[#EAB308]" />
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
             <p className="text-sm text-gray-500">Processing…</p>
           </div>
         )}
@@ -257,7 +257,7 @@ function GridImportProgress({ results, total, done }: { results: ImportResult[];
       {done && (
         <div className="flex justify-end">
           <Link href="/dashboard/products"
-            className="inline-flex items-center gap-2 rounded-xl bg-[#EAB308] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[#CA8A04] transition-colors">
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-black hover:bg-primary/90 transition-colors">
             <Package className="h-4 w-4" /> View Products
           </Link>
         </div>
@@ -784,7 +784,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
             : "Fill in at least one row to import"}
         </p>
         <button onClick={handleImport} disabled={filledCount === 0}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#EAB308] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[#CA8A04] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-black hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           <Sparkles className="h-4 w-4" />
           Import {filledCount || ""} Product{filledCount !== 1 ? "s" : ""}
         </button>

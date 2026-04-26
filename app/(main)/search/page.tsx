@@ -86,7 +86,7 @@ function FilterSidebar({
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-sm font-medium transition-all",
                   category === f.key
-                    ? "border-[#EAB308]/20 bg-[#EAB308]/10 text-[#EAB308]"
+                    ? "border-primary/20 bg-primary/10 text-primary"
                     : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 )}
               >
@@ -94,7 +94,7 @@ function FilterSidebar({
                 <span
                   className={cn(
                     "text-xs",
-                    category === f.key ? "text-[#EAB308]/60" : "text-gray-400"
+                    category === f.key ? "text-primary/60" : "text-gray-400"
                   )}
                 >
                   {f.count}
@@ -121,7 +121,7 @@ function FilterSidebar({
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-sm font-medium transition-all",
                     isActive
-                      ? "border-[#EAB308]/20 bg-[#EAB308]/10 text-[#EAB308]"
+                      ? "border-primary/20 bg-primary/10 text-primary"
                       : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                   )}
                 >
@@ -129,7 +129,7 @@ function FilterSidebar({
                   <span
                     className={cn(
                       "text-xs",
-                      isActive ? "text-[#EAB308]/60" : "text-gray-400"
+                      isActive ? "text-primary/60" : "text-gray-400"
                     )}
                   >
                     {f.count}
@@ -159,7 +159,7 @@ function FilterSidebar({
                         className={cn(
                           "h-3.5 w-3.5",
                           i < stars
-                            ? "fill-[#EAB308] text-[#EAB308]"
+                            ? "fill-primary text-primary"
                             : "fill-gray-200 text-gray-200"
                         )}
                       />
@@ -416,7 +416,7 @@ function SearchResultCard({
 
   if (viewMode === "list") {
     return (
-      <div className="group flex gap-4 rounded-2xl border border-gray-200 bg-white p-4 hover:border-[#EAB308]/30 hover:shadow-lg transition-all duration-200">
+      <div className="group flex gap-4 rounded-2xl border border-gray-200 bg-white p-4 hover:border-primary/30 hover:shadow-lg transition-all duration-200">
         <Link
           href={`/product/${slug}`}
           className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl bg-gray-100"
@@ -439,7 +439,7 @@ function SearchResultCard({
         <div className="flex flex-1 flex-col justify-between min-w-0">
           <div>
             <Link href={`/product/${slug}`}>
-              <h3 className="font-medium text-gray-900 group-hover:text-[#EAB308] transition-colors line-clamp-2">
+              <h3 className="font-medium text-gray-900 group-hover:text-primary transition-colors line-clamp-2">
                 {item.title}
               </h3>
             </Link>
@@ -459,7 +459,7 @@ function SearchResultCard({
               )}
               {item.avg_rating > 0 && (
                 <span className="flex items-center gap-1 text-sm">
-                  <Star className="h-3.5 w-3.5 fill-[#EAB308] text-[#EAB308]" />
+                  <Star className="h-3.5 w-3.5 fill-primary text-primary" />
                   <span className="font-medium text-gray-900">
                     {item.avg_rating.toFixed(1)}
                   </span>
@@ -486,7 +486,7 @@ function SearchResultCard({
   }
 
   return (
-    <div className="group rounded-xl sm:rounded-2xl border border-gray-200 bg-white overflow-hidden hover:border-[#EAB308]/30 hover:shadow-lg transition-all duration-200">
+    <div className="group rounded-xl sm:rounded-2xl border border-gray-200 bg-white overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-200">
       <Link href={`/product/${slug}`}>
         <div className="relative h-[120px] sm:h-auto sm:aspect-square overflow-hidden bg-gray-100">
           {item.image_url ? (
@@ -512,7 +512,7 @@ function SearchResultCard({
 
       <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
         <Link href={`/product/${slug}`}>
-          <h3 className="text-[11px] sm:text-sm font-medium leading-snug text-gray-900 group-hover:text-[#EAB308] transition-colors line-clamp-2">
+          <h3 className="text-[11px] sm:text-sm font-medium leading-snug text-gray-900 group-hover:text-primary transition-colors line-clamp-2">
             {item.title}
           </h3>
         </Link>
@@ -536,7 +536,7 @@ function SearchResultCard({
                 className={cn(
                   "h-3 w-3",
                   i < Math.round(item.avg_rating)
-                    ? "fill-[#EAB308] text-[#EAB308]"
+                    ? "fill-primary text-primary"
                     : "fill-gray-200 text-gray-200"
                 )}
               />
@@ -751,7 +751,7 @@ function SearchContent() {
             {query ? (
               <>
                 Results for &ldquo;
-                <span className="text-[#EAB308]">{query}</span>
+                <span className="text-primary">{query}</span>
                 &rdquo;
               </>
             ) : (
@@ -775,7 +775,7 @@ function SearchContent() {
               <SlidersHorizontal className="h-4 w-4" />
               Filters
               {hasActiveFilters && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EAB308] text-[10px] font-bold text-white">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
                   !
                 </span>
               )}
@@ -787,7 +787,7 @@ function SearchContent() {
             <select
               value={sortBy}
               onChange={(e) => updateParam("sort", e.target.value)}
-              className="appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#EAB308]/30 focus:border-[#EAB308]/50"
+              className="appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -834,7 +834,7 @@ function SearchContent() {
           Did you mean{" "}
           <button
             onClick={() => updateParam("q", data.did_you_mean!)}
-            className="font-medium text-[#EAB308] underline underline-offset-2 hover:text-[#CA9A06] transition-colors"
+            className="font-medium text-primary underline underline-offset-2 hover:text-[#CA9A06] transition-colors"
           >
             {data.did_you_mean}
           </button>
@@ -883,7 +883,7 @@ function SearchContent() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
               <div className="rounded-2xl bg-gray-50 p-6">
-                <Loader2 className="h-8 w-8 animate-spin text-[#EAB308]" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
               <p className="text-sm text-gray-400">Searching products...</p>
             </div>
@@ -981,7 +981,7 @@ function SearchContent() {
                         className={cn(
                           "h-10 w-10 rounded-xl text-sm font-medium transition-colors",
                           p === page
-                            ? "bg-[#EAB308] text-white shadow-sm"
+                            ? "bg-primary text-white shadow-sm"
                             : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                         )}
                       >
@@ -1032,7 +1032,7 @@ export default function SearchPage() {
     <Suspense
       fallback={
         <div className="mx-auto max-w-7xl px-4 py-24 text-center sm:px-6 lg:px-8">
-          <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-[#EAB308]" />
+          <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-gray-400">Loading search...</p>
         </div>
       }

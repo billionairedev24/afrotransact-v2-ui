@@ -34,7 +34,7 @@ const col = createColumnHelper<PlatformDealData>()
 
 const EMPTY_FORM: PlatformDealCreateRequest = {
   title: "", description: "", content: "", badgeText: "", bannerImageUrl: "",
-  primaryColor: "#EAB308", secondaryColor: "#1a1a1a", textColor: "#ffffff",
+  primaryColor: "#FFD400", secondaryColor: "#1a1a1a", textColor: "#ffffff",
   ctaText: "", ctaLink: "", targetAudience: "GENERAL", sortOrder: 0,
 }
 
@@ -286,8 +286,8 @@ export default function AdminDealsPage() {
                 <div>
                   <span className="text-[10px] text-gray-500">Primary</span>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <input type="color" value={form.primaryColor || "#EAB308"} onChange={e => setForm({ ...form, primaryColor: e.target.value })} className="h-8 w-8 rounded border border-gray-300 cursor-pointer" />
-                    <input value={form.primaryColor || "#EAB308"} onChange={e => setForm({ ...form, primaryColor: e.target.value })} className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none" />
+                    <input type="color" value={form.primaryColor || "#FFD400"} onChange={e => setForm({ ...form, primaryColor: e.target.value })} className="h-8 w-8 rounded border border-gray-300 cursor-pointer" />
+                    <input value={form.primaryColor || "#FFD400"} onChange={e => setForm({ ...form, primaryColor: e.target.value })} className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none" />
                   </div>
                 </div>
                 <div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback } from "react"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/Dialog"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
 import { createColumnHelper } from "@tanstack/react-table"
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { toast } from "sonner"
 import {
   Loader2,
@@ -39,6 +40,7 @@ import {
   triggerSearchReindex,
   ApiError,
   type Product,
+  type Page as ApiPage,
 } from "@/lib/api"
 import { logError } from "@/lib/errors"
 
@@ -86,11 +88,13 @@ function StatusBadge({ status }: { status: string }) {
 
 const col = createColumnHelper<Product>()
 
+const ADMIN_PRODUCTS_KEY = "admin-products"
+
 export default function AdminProductsPage() {
   const { status: sessionStatus } = useSession()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [apiNotReady, setApiNotReady] = useState(false)
+  const queryClient = useQueryClient()
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(50)
   const [statusFilter, setStatusFilter] = useState("all")
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
@@ -123,30 +127,41 @@ export default function AdminProductsPage() {
     }
   }
 
-  const loadProducts = useCallback(async (filterStatus: string) => {
-    try {
-      setApiNotReady(false)
-      setLoading(true)
+  const productsQuery = useQuery<ApiPage<Product>>({
+    queryKey: [ADMIN_PRODUCTS_KEY, statusFilter, pageIndex, pageSize],
+    queryFn: async () => {
       const token = await getAccessToken()
-      if (!token) return
-      const res = await getAdminProducts(token, filterStatus, 0, 200)
-      setProducts(res.content)
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 404) {
-        setApiNotReady(true)
-      } else {
-        logError(e, "loading products")
-        toast.error("Failed to load products")
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      if (!token) throw new Error("Not authenticated")
+      return getAdminProducts(token, statusFilter, pageIndex, pageSize)
+    },
+    enabled: sessionStatus === "authenticated",
+    placeholderData: keepPreviousData,
+    retry: (failureCount, error) => {
+      // 404 = endpoint not deployed yet; don't retry, surface the empty state
+      if (error instanceof ApiError && error.status === 404) return false
+      return failureCount < 2
+    },
+  })
 
-  useEffect(() => {
-    if (sessionStatus === "authenticated") loadProducts(statusFilter)
-    else setLoading(false)
-  }, [sessionStatus, statusFilter, loadProducts])
+  const products = useMemo(() => productsQuery.data?.content ?? [], [productsQuery.data])
+  const totalElements = productsQuery.data?.totalElements ?? 0
+  const totalPages = productsQuery.data?.totalPages ?? 0
+  const loading = productsQuery.isLoading || productsQuery.isFetching
+  const apiNotReady = productsQuery.error instanceof ApiError && productsQuery.error.status === 404
+
+  const queryKey = [ADMIN_PRODUCTS_KEY, statusFilter, pageIndex, pageSize] as const
+
+  const applyProductUpdate = useCallback((updated: Product) => {
+    queryClient.setQueryData<ApiPage<Product>>(queryKey as unknown as readonly unknown[], (prev) =>
+      prev ? { ...prev, content: prev.content.map((p) => (p.id === updated.id ? updated : p)) } : prev,
+    )
+  }, [queryClient, queryKey])
+
+  const removeProductFromList = useCallback((productId: string) => {
+    queryClient.setQueryData<ApiPage<Product>>(queryKey as unknown as readonly unknown[], (prev) =>
+      prev ? { ...prev, content: prev.content.filter((p) => p.id !== productId), totalElements: Math.max(0, prev.totalElements - 1) } : prev,
+    )
+  }, [queryClient, queryKey])
 
   const handleApprove = useCallback(async (product: Product) => {
     const token = await getAccessToken()
@@ -156,14 +171,19 @@ export default function AdminProductsPage() {
       await approveProduct(token, product.id)
       toast.success(`"${product.title}" has been approved`)
       if (viewProduct?.id === product.id) setViewProduct(null)
-      await loadProducts(statusFilter)
+      // Filtered view: approved item leaves the current list. For "all", just refresh status locally next load.
+      if (statusFilter !== "all" && statusFilter !== "active") {
+        removeProductFromList(product.id)
+      } else {
+        applyProductUpdate({ ...product, status: "active" })
+      }
     } catch (e) {
       logError(e, "approving product")
       toast.error("Failed to approve product")
     } finally {
       setActionLoading(null)
     }
-  }, [viewProduct, statusFilter, loadProducts])
+  }, [viewProduct, statusFilter, removeProductFromList, applyProductUpdate])
 
   function openRejectModal(product: Product) {
     setRejectReason("")
@@ -182,9 +202,15 @@ export default function AdminProductsPage() {
     try {
       await rejectProduct(token, rejectModal.productId, rejectReason.trim())
       toast.success(`"${rejectModal.productName}" has been rejected`)
+      const rejectedId = rejectModal.productId
       closeRejectModal()
-      if (viewProduct?.id === rejectModal.productId) setViewProduct(null)
-      await loadProducts(statusFilter)
+      if (viewProduct?.id === rejectedId) setViewProduct(null)
+      const target = products.find((p) => p.id === rejectedId)
+      if (statusFilter !== "all" && statusFilter !== "rejected") {
+        removeProductFromList(rejectedId)
+      } else if (target) {
+        applyProductUpdate({ ...target, status: "rejected" })
+      }
     } catch (e) {
       logError(e, "rejecting product")
       toast.error("Failed to reject product")
@@ -321,7 +347,7 @@ export default function AdminProductsPage() {
         size: 50,
       }),
     ],
-    [actionLoading, statusFilter, handleApprove]
+    [actionLoading, handleApprove]
   )
 
   if (sessionStatus !== "authenticated" && !loading) {
@@ -383,7 +409,7 @@ export default function AdminProductsPage() {
 
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setPageIndex(0) }}
             className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
           >
             {STATUS_OPTIONS.map((opt) => (
@@ -408,6 +434,15 @@ export default function AdminProductsPage() {
         enableExport
         exportFilename="admin-products"
         emptyMessage="No products found for this filter."
+        pageSize={pageSize}
+        serverPagination={{
+          pageIndex,
+          pageSize,
+          pageCount: totalPages,
+          totalRows: totalElements,
+          onPageChange: setPageIndex,
+          onPageSizeChange: (n) => { setPageSize(n); setPageIndex(0) },
+        }}
       />
 
       {/* ── Detail Slide-Over Panel ─────────────────────────────────── */}

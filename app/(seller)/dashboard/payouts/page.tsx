@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { useSession } from "next-auth/react"
+import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
 import {
@@ -25,8 +26,8 @@ import {
   getPayouts,
   type PayoutSummary,
   type TransferRecord,
+  type Page as ApiPage,
 } from "@/lib/api"
-import { logError } from "@/lib/errors"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
 import { createColumnHelper } from "@tanstack/react-table"
@@ -83,64 +84,60 @@ function BreakdownLine({ label, amount, variant = "default", indent = false }: {
 
 const col = createColumnHelper<TransferRecord>()
 
+const SELLER_STORE_KEY = "seller-store"
+const SELLER_PAYOUT_SUMMARY_KEY = "seller-payout-summary"
+const SELLER_PAYOUTS_KEY = "seller-payouts"
+
 export default function PayoutsPage() {
   const { status } = useSession()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [storeId, setStoreId] = useState<string | null>(null)
-  const [summary, setSummary] = useState<PayoutSummary | null>(null)
-  const [transfers, setTransfers] = useState<TransferRecord[]>([])
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(50)
   const [statusFilter, setStatusFilter] = useState<string>("")
   const [selected, setSelected] = useState<TransferRecord | null>(null)
 
-  useEffect(() => {
-    if (status !== "authenticated") return
-    let cancelled = false
-
-    async function load() {
+  const storeQuery = useQuery({
+    queryKey: [SELLER_STORE_KEY],
+    queryFn: async () => {
       const token = await getAccessToken()
-      if (!token) return
-      setLoading(true)
-      setError("")
-      try {
-        const s = await getCurrentSeller(token)
-        if (cancelled) return
-        const stores = await getSellerStores(token, s.id)
-        if (cancelled || stores.length === 0) { setLoading(false); return }
-        const sid = stores[0].id
-        setStoreId(sid)
-        const [sum, payoutsRes] = await Promise.all([
-          getPayoutSummary(token, sid),
-          getPayouts(token, sid, 0, 100),
-        ])
-        if (cancelled) return
-        setSummary(sum)
-        setTransfers(payoutsRes.content || [])
-      } catch (e: unknown) {
-        logError(e, "loading payouts")
-        if (!cancelled) setError("Failed to load payouts")
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [status])
+      if (!token) throw new Error("Not authenticated")
+      const s = await getCurrentSeller(token)
+      const stores = await getSellerStores(token, s.id)
+      return stores[0]?.id ?? null
+    },
+    enabled: status === "authenticated",
+    staleTime: 10 * 60 * 1000,
+  })
 
-  useEffect(() => {
-    if (!storeId || status !== "authenticated") return
-    let cancelled = false
-    async function reload() {
+  const storeId = storeQuery.data ?? null
+
+  const summaryQuery = useQuery<PayoutSummary>({
+    queryKey: [SELLER_PAYOUT_SUMMARY_KEY, storeId],
+    queryFn: async () => {
       const token = await getAccessToken()
-      if (!token || cancelled) return
-      try {
-        const res = await getPayouts(token, storeId!, 0, 100, statusFilter || undefined)
-        if (!cancelled) setTransfers(res.content || [])
-      } catch { /* ignore */ }
-    }
-    reload()
-    return () => { cancelled = true }
-  }, [statusFilter, storeId, status])
+      if (!token) throw new Error("Not authenticated")
+      return getPayoutSummary(token, storeId!)
+    },
+    enabled: !!storeId,
+    staleTime: 30 * 1000,
+  })
+
+  const payoutsQuery = useQuery<ApiPage<TransferRecord>>({
+    queryKey: [SELLER_PAYOUTS_KEY, storeId, statusFilter, pageIndex, pageSize],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not authenticated")
+      return getPayouts(token, storeId!, pageIndex, pageSize, statusFilter || undefined)
+    },
+    enabled: !!storeId,
+    placeholderData: keepPreviousData,
+  })
+
+  const summary = summaryQuery.data ?? null
+  const transfers = useMemo(() => payoutsQuery.data?.content ?? [], [payoutsQuery.data])
+  const totalElements = payoutsQuery.data?.totalElements ?? 0
+  const totalPages = payoutsQuery.data?.totalPages ?? 0
+  const loading = storeQuery.isLoading || summaryQuery.isLoading || payoutsQuery.isLoading || payoutsQuery.isFetching
+  const error = (storeQuery.error || summaryQuery.error || payoutsQuery.error) ? "Failed to load payouts" : ""
 
   function handleCopyId(id: string) {
     navigator.clipboard.writeText(id)
@@ -220,7 +217,7 @@ export default function PayoutsPage() {
     return <div className="flex items-center justify-center min-h-[400px] text-gray-500">Sign in to view payouts</div>
   }
 
-  if (loading) {
+  if (loading && !summary) {
     return (
       <div className="flex items-center justify-center min-h-[400px] gap-2 text-gray-500">
         <Loader2 className="h-5 w-5 animate-spin" /> Loading payouts...
@@ -269,8 +266,8 @@ export default function PayoutsPage() {
       </div>
 
       {/* How payouts work */}
-      <div className="flex items-start gap-3 rounded-xl border border-[#EAB308]/20 bg-[#EAB308]/5 p-4">
-        <DollarSign className="h-5 w-5 text-[#EAB308] mt-0.5 shrink-0" />
+      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <DollarSign className="h-5 w-5 text-primary mt-0.5 shrink-0" />
         <div>
           <p className="text-sm text-gray-900 font-medium">How payouts work</p>
           <p className="text-xs text-gray-500 mt-1 leading-relaxed">
@@ -287,7 +284,7 @@ export default function PayoutsPage() {
           <Filter className="h-3.5 w-3.5 shrink-0 text-gray-500" />
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setPageIndex(0) }}
             className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 outline-none focus:border-primary/60"
           >
             <option value="">All statuses</option>
@@ -307,6 +304,15 @@ export default function PayoutsPage() {
           enableExport
           exportFilename="payouts"
           emptyMessage={transfers.length === 0 ? "No payouts yet. Earnings will appear here when customers place orders." : "No transfers match this filter."}
+          pageSize={pageSize}
+          serverPagination={{
+            pageIndex,
+            pageSize,
+            pageCount: totalPages,
+            totalRows: totalElements,
+            onPageChange: setPageIndex,
+            onPageSizeChange: (n) => { setPageSize(n); setPageIndex(0) },
+          }}
         />
       </div>
 
@@ -319,7 +325,7 @@ export default function PayoutsPage() {
       <Sheet open={!!selected} onClose={() => setSelected(null)}>
         <SheetHeader onClose={() => setSelected(null)}>
           <div className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-[#EAB308]" />
+            <Receipt className="h-5 w-5 text-primary" />
             Payout Breakdown
           </div>
         </SheetHeader>

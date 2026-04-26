@@ -448,7 +448,7 @@ export default function MediaPage() {
                     if (e.key === "Enter") void handleInlineRename(item.id, inlineNameDraft)
                     if (e.key === "Escape") setEditingNameId(null)
                   }}
-                  className="h-8 w-full rounded-md border border-gray-200 px-2 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/40"
+                  className="h-8 w-full rounded-md border border-gray-200 px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                 />
               ) : (
                 <button
@@ -544,7 +544,7 @@ export default function MediaPage() {
   if (status === "loading") {
     return (
       <div className="flex min-h-[320px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#EAB308]" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -591,7 +591,7 @@ export default function MediaPage() {
               setUploadOpen(true)
             }}
             disabled={uploading}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#EAB308] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#CA8A04] transition-colors disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
           >
             <Upload className="h-4 w-4" />
             Upload New
@@ -660,7 +660,7 @@ export default function MediaPage() {
               placeholder="Search media…"
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="h-9 w-64 rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/50"
+              className="h-9 w-64 rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
             <ImageIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           </div>
@@ -668,7 +668,7 @@ export default function MediaPage() {
 
         {loadingMedia ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-[#EAB308]" />
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : media.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -697,8 +697,8 @@ export default function MediaPage() {
                         >
                           <span className="inline-flex items-center gap-1">
                             {flexRender(header.column.columnDef.header, header.getContext())}
-                            {header.column.getIsSorted() === "asc" && <span className="text-[#EAB308]">↑</span>}
-                            {header.column.getIsSorted() === "desc" && <span className="text-[#EAB308]">↓</span>}
+                            {header.column.getIsSorted() === "asc" && <span className="text-primary">↑</span>}
+                            {header.column.getIsSorted() === "desc" && <span className="text-primary">↓</span>}
                           </span>
                         </th>
                       ))}
@@ -802,7 +802,7 @@ export default function MediaPage() {
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/40"
+                  className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                   placeholder="e.g. Jasmine Rice Front Pack"
                 />
               </div>
@@ -812,7 +812,7 @@ export default function MediaPage() {
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows={3}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/40"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                   placeholder="e.g. rice,jasmine,5kg,bag,front"
                 />
               </div>
@@ -832,7 +832,7 @@ export default function MediaPage() {
               <button
                 onClick={handleSaveEdit}
                 disabled={savingEdit}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#EAB308] px-4 py-2 text-sm font-semibold text-black hover:bg-[#CA8A04] disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-60"
               >
                 {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Save
@@ -897,7 +897,7 @@ export default function MediaPage() {
                   <input
                     value={bulkMetaTemplate}
                     onChange={(e) => setBulkMetaTemplate(e.target.value)}
-                    className="h-8 min-w-[260px] flex-1 rounded-md border border-blue-200 bg-white px-2 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/40"
+                    className="h-8 min-w-[260px] flex-1 rounded-md border border-blue-200 bg-white px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                     placeholder="e.g. rice,5kg,packshot,store-a"
                   />
                   <button
@@ -934,7 +934,7 @@ export default function MediaPage() {
                     <input
                       value={bulkNameBase}
                       onChange={(e) => setBulkNameBase(e.target.value)}
-                      className="h-8 min-w-[220px] flex-1 rounded-md border border-blue-200 bg-white px-2 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/40"
+                      className="h-8 min-w-[220px] flex-1 rounded-md border border-blue-200 bg-white px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                       placeholder="e.g. jewelry"
                     />
                     <button
@@ -949,7 +949,7 @@ export default function MediaPage() {
                       type="checkbox"
                       checked={autoRenumberOnReorder}
                       onChange={(e) => setAutoRenumberOnReorder(e.target.checked)}
-                      className="h-3.5 w-3.5 rounded border-blue-300 text-[#EAB308] focus:ring-[#EAB308]/40"
+                      className="h-3.5 w-3.5 rounded border-blue-300 text-primary focus:ring-primary/40"
                     />
                     Auto-renumber names after drag reorder
                   </label>
@@ -1023,7 +1023,7 @@ export default function MediaPage() {
                                 prev.map((r, idx) => (idx === i ? { ...r, name: e.target.value } : r)),
                               )
                             }
-                            className="h-8 w-full rounded-md border border-gray-200 px-2 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/40"
+                            className="h-8 w-full rounded-md border border-gray-200 px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                           />
                         </td>
                         <td className="px-3 py-2">
@@ -1034,7 +1034,7 @@ export default function MediaPage() {
                                 prev.map((r, idx) => (idx === i ? { ...r, description: e.target.value } : r)),
                               )
                             }
-                            className="h-8 w-full rounded-md border border-gray-200 px-2 text-sm text-gray-900 focus:border-[#EAB308] focus:outline-none focus:ring-1 focus:ring-[#EAB308]/40"
+                            className="h-8 w-full rounded-md border border-gray-200 px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                             placeholder="e.g. rice,jasmine,5kg,front"
                           />
                         </td>
@@ -1072,7 +1072,7 @@ export default function MediaPage() {
               <button
                 onClick={submitUploadForm}
                 disabled={uploading || uploadRows.length === 0}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#EAB308] px-4 py-2 text-sm font-semibold text-black hover:bg-[#CA8A04] disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-60"
               >
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {uploading ? "Uploading..." : `Save ${uploadRows.length} file${uploadRows.length !== 1 ? "s" : ""}`}
@@ -1120,7 +1120,7 @@ export default function MediaPage() {
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
                     copiedId === previewItem.id
-                      ? "border-[#EAB308] bg-[#EAB308]/10 text-[#EAB308]"
+                      ? "border-primary bg-primary/10 text-primary"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50",
                   )}
                 >

@@ -1,5 +1,8 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 
+/** Default request budget in ms. One slow downstream shouldn't hang the UI forever. */
+const DEFAULT_TIMEOUT_MS = 15_000
+
 interface FetchOptions extends Omit<RequestInit, "body"> {
   body?: unknown
   token?: string
@@ -9,10 +12,22 @@ interface FetchOptions extends Omit<RequestInit, "body"> {
    * If provided, this overrides the default `cache: "no-store"` behavior.
    */
   next?: { revalidate?: number | false; tags?: string[] }
+  /** Override the default request timeout. Pass 0 to disable. */
+  timeoutMs?: number
+}
+
+/**
+ * In-browser hook for a global 401 handler. Set once from the SessionGuard so
+ * the api layer can trigger a re-auth when the backend rejects our token,
+ * without coupling api.ts to next-auth or react-router.
+ */
+let on401Handler: (() => void) | null = null
+export function setOn401Handler(fn: (() => void) | null) {
+  on401Handler = fn
 }
 
 async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
-  const { body, token, headers: extraHeaders, next, cache, ...rest } = opts
+  const { body, token, headers: extraHeaders, next, cache, signal, timeoutMs, ...rest } = opts
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -26,12 +41,40 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     ? { next }
     : { cache: cache ?? "no-store" }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...rest,
-    ...cacheOpts,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  })
+  // Wire a timeout AbortController and chain it with the caller-supplied signal,
+  // so callers (e.g. TanStack Query cancellation) and our timeout both fire.
+  const budget = timeoutMs ?? DEFAULT_TIMEOUT_MS
+  const timeoutCtrl = new AbortController()
+  const timer = budget > 0 ? setTimeout(() => timeoutCtrl.abort(new DOMException("timeout", "TimeoutError")), budget) : null
+  const composedSignal = signal
+    ? anySignal([signal, timeoutCtrl.signal])
+    : timeoutCtrl.signal
+
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...rest,
+      ...cacheOpts,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: composedSignal,
+    })
+  } catch (err) {
+    if (timer) clearTimeout(timer)
+    // Distinguish caller-cancellation from our timeout vs. a network error.
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      console.error(`[API] ${opts.method ?? "GET"} ${path} → timeout after ${budget}ms`)
+      throw new ApiError(0, `Request timed out after ${budget}ms`, path)
+    }
+    if (err instanceof DOMException && err.name === "AbortError") {
+      // Caller cancelled — propagate as-is for TanStack Query etc.
+      throw err
+    }
+    console.error(`[API] ${opts.method ?? "GET"} ${path} → network error`, err)
+    throw new ApiError(0, "Network error", path)
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "")
@@ -41,6 +84,11 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
       userMessage = parsed.error || parsed.message || res.statusText
     } catch {
       if (text) userMessage = text
+    }
+    // 401 from the API means our access token is no longer accepted (revoked,
+    // expired beyond refresh, key rotated). Hand off to the session guard.
+    if (res.status === 401 && on401Handler && typeof window !== "undefined") {
+      try { on401Handler() } catch { /* don't mask the original failure */ }
     }
     // Log every API error at source so it's always captured regardless of how the caller handles it
     console.error(`[API] ${opts.method ?? "GET"} ${path} → ${res.status}`, userMessage)
@@ -52,6 +100,19 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
   const text = await res.text()
   if (!text) return undefined as T
   return JSON.parse(text)
+}
+
+/** Combine multiple AbortSignals — the result aborts when any input aborts. */
+function anySignal(signals: AbortSignal[]): AbortSignal {
+  const ctrl = new AbortController()
+  for (const s of signals) {
+    if (s.aborted) {
+      ctrl.abort(s.reason)
+      return ctrl.signal
+    }
+    s.addEventListener("abort", () => ctrl.abort(s.reason), { once: true })
+  }
+  return ctrl.signal
 }
 
 export class ApiError extends Error {
@@ -142,7 +203,7 @@ export function getProductById(id: string, opts?: { revalidate?: number }) {
 }
 
 export function getStoreProducts(storeId: string, page = 0, size = 20) {
-  return api<Page<Product>>(`/api/v1/products/store/${storeId}?page=${page}&size=${size}`)
+  return api<Page<Product>>(`/api/v1/products/store/${storeId}?page=${page}&size=${size}&sort=createdAt,desc`)
 }
 
 export function getCategories(opts?: { revalidate?: number }) {
@@ -360,11 +421,40 @@ export interface Review {
   id: string
   product_id: string
   user_id: string
+  store_id: string | null
   rating: number
   title: string | null
   body: string | null
   verified_purchase: boolean
+  seller_reply: string | null
+  seller_reply_at: string | null
   created_at: string
+}
+
+export interface AdminReviewAnalyticsExtended {
+  totalReviews: number
+  avgRating: number
+  verifiedReviews: number
+  verifiedRate: number
+  reviewsLast30Days: number
+  repliedReviews: number
+  replyRate: number
+  distribution: Record<string, number>
+  trend: { week: string; count: number; avgRating: number }[]
+  topProducts: { productId: string; reviewCount: number; avgRating: number }[]
+  topStores: { storeId: string; reviewCount: number; avgRating: number }[]
+}
+
+export function getAdminReviewAnalyticsExtended(token: string) {
+  return api<AdminReviewAnalyticsExtended>("/api/v1/reviews/admin/analytics", { token })
+}
+
+export function replyToReview(token: string, reviewId: string, reply: string) {
+  return api<Review>(`/api/v1/reviews/${reviewId}/reply`, {
+    method: "PATCH",
+    body: { reply },
+    token,
+  })
 }
 
 export interface ProductReviewsResponse {
@@ -990,11 +1080,11 @@ export interface OrderDto {
 }
 
 export function getSellerOrders(token: string, storeId: string, page = 0, size = 20) {
-  return api<Page<OrderDto>>(`/api/v1/orders/store/${storeId}?page=${page}&size=${size}`, { token })
+  return api<Page<OrderDto>>(`/api/v1/orders/store/${storeId}?page=${page}&size=${size}&sort=createdAt,desc`, { token })
 }
 
 export function getBuyerOrders(token: string, page = 0, size = 20) {
-  return api<Page<OrderDto>>(`/api/v1/orders?page=${page}&size=${size}`, { token })
+  return api<Page<OrderDto>>(`/api/v1/orders?page=${page}&size=${size}&sort=createdAt,desc`, { token })
 }
 
 export function getOrderByNumber(token: string, orderNumber: string) {
@@ -1002,7 +1092,7 @@ export function getOrderByNumber(token: string, orderNumber: string) {
 }
 
 export function getAdminOrders(token: string, page = 0, size = 20) {
-  return api<Page<OrderDto>>(`/api/v1/orders/admin/all?page=${page}&size=${size}`, { token })
+  return api<Page<OrderDto>>(`/api/v1/orders/admin/all?page=${page}&size=${size}&sort=createdAt,desc`, { token })
 }
 
 export function updateSubOrderStatus(
@@ -1187,11 +1277,12 @@ export function validateCoupon(token: string, code: string, subtotalCents: numbe
   })
 }
 
-export function checkout(token: string, data: CheckoutRequest) {
+export function checkout(token: string, data: CheckoutRequest, idempotencyKey?: string) {
   return api<CheckoutResponse>("/api/v1/orders/checkout", {
     method: "POST",
     body: data,
     token,
+    headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
   })
 }
 
@@ -1477,7 +1568,7 @@ export async function getRegionConfig(regionCode: string): Promise<RegionConfig>
 // ── Admin: Products ──
 
 export function getAdminProducts(token: string, status?: string, page = 0, size = 20) {
-  const params = new URLSearchParams({ page: String(page), size: String(size) })
+  const params = new URLSearchParams({ page: String(page), size: String(size), sort: "createdAt,desc" })
   if (status && status !== "all") params.set("status", status)
   return api<Page<Product>>(`/api/v1/products/admin/all?${params}`, { token })
 }
@@ -1532,6 +1623,10 @@ export interface UserProfile {
 
 export function getUserProfile(token: string) {
   return api<UserProfile>("/api/v1/users/me", { token })
+}
+
+export function getUserProfileById(token: string, id: string) {
+  return api<UserProfile>(`/api/v1/users/${id}`, { token })
 }
 
 export function updateUserProfile(token: string, data: Record<string, unknown>) {
@@ -1733,9 +1828,27 @@ export function getPayoutSummary(token: string, storeId: string) {
 }
 
 export function getPayouts(token: string, storeId: string, page = 0, size = 20, status?: string) {
-  const params = new URLSearchParams({ page: String(page), size: String(size) })
+  const params = new URLSearchParams({ page: String(page), size: String(size), sort: "createdAt,desc" })
   if (status) params.set("status", status)
   return api<Page<TransferRecord>>(`/api/v1/payouts/store/${storeId}?${params}`, { token })
+}
+
+export interface AdminPayoutSummary {
+  pendingSettlementCents: number
+  readyForTransferCents: number
+  transferredCents: number
+  failedCents: number
+  totalCents: number
+}
+
+export function getAdminPayoutSummary(token: string) {
+  return api<AdminPayoutSummary>("/api/v1/admin/payouts/summary", { token })
+}
+
+export function getAdminPayouts(token: string, page = 0, size = 20, status?: string) {
+  const params = new URLSearchParams({ page: String(page), size: String(size), sort: "createdAt,desc" })
+  if (status) params.set("status", status)
+  return api<Page<TransferRecord>>(`/api/v1/admin/payouts?${params}`, { token })
 }
 
 // ── Email Templates (Admin) ──────────────────────────────────────────────────
