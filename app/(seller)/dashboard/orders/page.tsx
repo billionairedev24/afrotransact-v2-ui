@@ -20,6 +20,7 @@ import {
   type SubOrderDto,
   type Page as ApiPage,
 } from "@/lib/api"
+import { pickPrimarySellerStoreId } from "@/lib/seller-store"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   pending:    { label: "Pending",    className: "bg-yellow-50 text-yellow-700" },
@@ -118,7 +119,7 @@ export default function SellerOrdersPage() {
       if (!token) throw new Error("Not authenticated")
       const seller = await getCurrentSeller(token)
       const stores = await getSellerStores(token, seller.id)
-      return stores[0]?.id ?? null
+      return pickPrimarySellerStoreId(stores)
     },
     enabled: status === "authenticated",
     staleTime: 10 * 60 * 1000, // store rarely changes
@@ -254,6 +255,20 @@ export default function SellerOrdersPage() {
     [],
   )
 
+  if (!storeQuery.isLoading && storeQuery.isFetched && storeId === null && !storeQuery.error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-center px-4">
+        <AlertTriangle className="h-10 w-10 text-amber-500" />
+        <div>
+          <p className="text-sm font-medium text-gray-900">No active store found</p>
+          <p className="text-sm text-gray-500 mt-1 max-w-md">
+            Orders are scoped to your primary storefront. Create or activate at least one store, then reload this page.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -352,8 +367,9 @@ function OrderDetailModal({
             <p className="mt-1 text-sm text-gray-600">{formatDate(order.placedAt)}</p>
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Total</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Your storefront</p>
             <p className="mt-1 text-sm font-medium text-gray-900">{formatCents(order.totalCents, order.currency)}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Including tax &amp; shipping for your items</p>
           </div>
         </div>
 
@@ -363,6 +379,79 @@ function OrderDetailModal({
             <p className="mt-1 text-sm text-gray-600">{order.raw.shippingAddress}</p>
           </div>
         )}
+
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Customer payment (whole order)</p>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-600">Subtotal</span>
+              <span className="font-mono tabular-nums text-gray-900">{formatCents(order.raw.subtotalCents, order.currency)}</span>
+            </div>
+            {(order.raw.discountCents ?? 0) > 0 && (
+              <div className="flex justify-between gap-4 text-green-700">
+                <span>
+                  {order.raw.couponCode ? `Coupon (${order.raw.couponCode})` : "Coupon / savings"}
+                </span>
+                <span className="font-mono tabular-nums">−{formatCents(order.raw.discountCents ?? 0, order.currency)}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-600">Tax collected</span>
+              <span className="font-mono tabular-nums text-gray-900">{formatCents(order.raw.taxCents ?? 0, order.currency)}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-600">Shipping collected</span>
+              <span className="font-mono tabular-nums text-gray-900">{formatCents(order.raw.shippingCostCents ?? 0, order.currency)}</span>
+            </div>
+            <div className="flex justify-between gap-4 border-t border-gray-200 pt-2 font-semibold text-gray-900">
+              <span>Order total</span>
+              <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents, order.currency)}</span>
+            </div>
+          </div>
+        </div>
+
+        {(() => {
+          const slice = order.relevantSubs.reduce(
+            (acc, sub) => {
+              acc.sub += sub.subtotalCents
+              acc.shipping += sub.shippingCostCents ?? 0
+              acc.tax += sub.taxCents ?? 0
+              acc.disc += sub.discountCents ?? 0
+              return acc
+            },
+            { sub: 0, shipping: 0, tax: 0, disc: 0 },
+          )
+          const sliceTotal = slice.sub + slice.shipping + slice.tax - slice.disc
+          return (
+            <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-700">Your store on this order</p>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-gray-600">Subtotal (your items)</span>
+                  <span className="font-mono tabular-nums text-gray-900">{formatCents(slice.sub, order.currency)}</span>
+                </div>
+                {slice.disc > 0 && (
+                  <div className="flex justify-between gap-4 text-green-700">
+                    <span>Coupon / discounts attributed here</span>
+                    <span className="font-mono tabular-nums">−{formatCents(slice.disc, order.currency)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between gap-4">
+                  <span className="text-gray-600">Shipping (your shipments)</span>
+                  <span className="font-mono tabular-nums text-gray-900">{formatCents(slice.shipping, order.currency)}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-gray-600">Tax attributed to your subtotal</span>
+                  <span className="font-mono tabular-nums text-gray-900">{formatCents(slice.tax, order.currency)}</span>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-primary/15 pt-2 font-semibold text-gray-900">
+                  <span>Your storefront total</span>
+                  <span className="font-mono tabular-nums">{formatCents(sliceTotal, order.currency)}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Fulfillment update */}
         {/* Once dispatched the delivery team takes over — show read-only notice */}
@@ -449,8 +538,10 @@ function OrderDetailModal({
               </tbody>
               <tfoot>
                 <tr className="border-t border-gray-200">
-                  <td colSpan={3} className="px-4 py-3 text-right text-sm font-medium text-gray-500">Total</td>
-                  <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">{formatCents(order.totalCents, order.currency)}</td>
+                  <td colSpan={3} className="px-4 py-3 text-right text-sm font-medium text-gray-500">Items subtotal</td>
+                  <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
+                    {formatCents(allItems.reduce((acc, item) => acc + item.unitPriceCents * item.quantity, 0), order.currency)}
+                  </td>
                 </tr>
               </tfoot>
             </table>

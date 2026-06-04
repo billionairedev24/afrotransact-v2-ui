@@ -38,7 +38,7 @@ const PaymentStep = dynamic(() => import("./_stripe-payment"), {
     </div>
   ),
 })
-import { useCartStore } from "@/stores/cart-store"
+import { useCartStore, clearGuestCart } from "@/stores/cart-store"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
@@ -46,6 +46,7 @@ import { logError } from "@/lib/errors"
 import {
   checkout as apiCheckout,
   mergeCart,
+  clearServerCart,
   getRegions,
   loadCheckoutShippingContext,
   createAddress,
@@ -67,6 +68,7 @@ import {
   type ShippingQuoteResponse,
   getRegionConfig,
 } from "@/lib/api"
+import { resolveDefaultRegion } from "@/lib/regions"
 
 type Step = "address" | "review" | "payment"
 
@@ -322,7 +324,7 @@ function AddressStep({
             {field("State", "state", "TX")}
           </div>
 
-          {field("ZIP code", "zip", "78701", "numeric")}
+          {field("ZIP code", "zip", "ZIP", "numeric")}
 
           <label className="flex items-center gap-2.5 cursor-pointer group pt-1">
             <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${makeDefault ? "bg-primary border-primary" : "border-gray-300 group-hover:border-primary/50"}`}>
@@ -522,7 +524,7 @@ function AddressStep({
                       <input
                         value={recipientAddress[k]}
                         onChange={(e) => setRecipientAddress((prev) => ({ ...prev, [k]: e.target.value }))}
-                        placeholder={k === "zip" ? "78701" : k === "state" ? "TX" : "Austin"}
+                        placeholder={k === "zip" ? "ZIP" : k === "state" ? "TX" : "City"}
                         inputMode={k === "zip" ? "numeric" : undefined}
                         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
                       />
@@ -551,6 +553,7 @@ function ReviewStep({
   couponCode, couponResult, couponLoading, couponError, onApplyCoupon, onRemoveCoupon, onCouponCodeChange, discount,
   couponsEnabled, availableDeals, appliedDeal, onApplyDeal, onRemoveDeal, shippingByStore,
   quoteData, selectedQuoteId, onSelectQuote, freeShippingApplies,
+  checkoutBlocked,
 }: {
   address: Record<string, string>
   onNext: () => void
@@ -576,6 +579,7 @@ function ReviewStep({
   selectedQuoteId: string | null
   onSelectQuote: (quoteId: string) => void
   freeShippingApplies: boolean
+  checkoutBlocked?: boolean
 }) {
   const realtimeOptions = (quoteData?.groups ?? []).flatMap((g) => g.options ?? [])
   const selectedQuote = realtimeOptions.find((q) => q.quoteId === selectedQuoteId) ?? null
@@ -807,6 +811,7 @@ function ReviewStep({
         <button
           onClick={onNext}
           disabled={
+            Boolean(checkoutBlocked) ||
             placing ||
             (!freeShippingApplies &&
               quoteData?.realtimeEnabled &&
@@ -868,12 +873,18 @@ export default function CheckoutClient({
   // Idempotency-Key reused across retries of the same logical placement so
   // a network blip can't create a second order. Reset when the user goes back.
   const idempotencyKeyRef = useRef<string | null>(null)
+  // Synchronous in-flight gate. setPlacing(true) only disables the button on
+  // the next render, which leaves a same-tick double-click able to re-enter
+  // syncCartAndCheckout. The ref is set before the first await so a second
+  // call sees `true` immediately and bails.
+  const placingRef = useRef(false)
   const [shippingQuotes, setShippingQuotes] = useState<ShippingQuoteResponse | null>(null)
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null)
   const [couponCode, setCouponCode] = useState("")
   const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
   const [couponLoading, setCouponLoading] = useState(false)
   const [couponError, setCouponError] = useState("")
+  const [gatesReady, setGatesReady] = useState(false)
 
   const cartItems = useCartStore((s) => s.items)
   const getSubtotal = useCartStore((s) => s.getSubtotal)
@@ -886,6 +897,7 @@ export default function CheckoutClient({
   const [authToken, setAuthToken] = useState<string | null>(null)
   const [allDeals, setAllDeals] = useState<DealData[]>([])
   const [appliedDeal, setAppliedDeal] = useState<DealData | null>(null)
+  const [configFeatures, setConfigFeatures] = useState<Record<string, boolean>>({})
 
   const subtotal = getSubtotal()
   const taxRate = region?.taxRate ?? 0.0825
@@ -921,11 +933,18 @@ export default function CheckoutClient({
 
   const availableDeals = allDeals.filter(d => cartItems.some(i => i.productId === d.productId))
 
-  // Prefer config-service features for visibility; default to disabled when missing
-  const [configFeatures, setConfigFeatures] = useState<Record<string, boolean>>({})
   const couponsEnabled = configFeatures["coupons_enabled"] === true
   const stripeFeatureEnabled =
     flags.find((f) => f.key === "stripe_enabled" || f.key === "stripe")?.enabled ?? true
+  const marketplaceFromFlags = flags.find((f) => f.key === "marketplace_enabled")?.enabled
+  const marketplaceFromConfig =
+    "marketplace_enabled" in configFeatures ? configFeatures["marketplace_enabled"] === true : undefined
+  const marketplacePurchasingAllowed =
+    !gatesReady
+      ? true
+      : marketplaceFromConfig !== undefined
+        ? marketplaceFromConfig
+        : (marketplaceFromFlags ?? true)
   const stripeRow = paymentMethods.find((m) => m.provider.toLowerCase() === "stripe")
   const stripeMethodEnabled = stripeRow ? stripeRow.enabled : paymentMethods.length === 0
   const stripeAvailable = stripeFeatureEnabled && stripeMethodEnabled
@@ -956,10 +975,10 @@ export default function CheckoutClient({
         const validRegions = allRegions.filter((r) => r.code)
         setAvailableRegions(validRegions)
         setAllDeals(deals)
-        const defaultCode = process.env.NEXT_PUBLIC_DEFAULT_REGION_CODE
+        const defaultCode = process.env.NEXT_PUBLIC_DEFAULT_REGION_CODE ?? ""
         const initial =
-          (defaultCode ? validRegions.find((r) => r.code === defaultCode) : null) ??
-          validRegions[0]
+          (defaultCode ? validRegions.find((r) => r.code === defaultCode) : undefined)
+            ?? resolveDefaultRegion(validRegions)
         if (initial) setRegion(initial)
       } catch {
         // fall back to hardcoded defaults
@@ -974,24 +993,28 @@ export default function CheckoutClient({
     if (!region) return
     const currentRegion = region
     let cancelled = false
+    setGatesReady(false)
     async function loadRegionConfig() {
-      const [f, cfg] = await Promise.all([
-        getRegionFeatures(currentRegion.id).catch((): FeatureFlag[] => []),
-        getRegionConfig(currentRegion.code).catch(() => null),
-      ])
-      if (cancelled) return
-      setFlags(f)
-      if (cfg) {
-        setPaymentMethods(cfg.paymentMethods || [])
-        setConfigFeatures(cfg.features || {})
-      } else {
-        setPaymentMethods([])
-        setConfigFeatures({})
+      try {
+        const [f, cfg] = await Promise.all([
+          getRegionFeatures(currentRegion.id).catch((): FeatureFlag[] => []),
+          getRegionConfig(currentRegion.code).catch(() => null),
+        ])
+        if (cancelled) return
+        setFlags(f)
+        if (cfg) {
+          setPaymentMethods(cfg.paymentMethods || [])
+          setConfigFeatures(cfg.features || {})
+        } else {
+          setPaymentMethods([])
+          setConfigFeatures({})
+        }
+        setCouponCode("")
+        setCouponResult(null)
+        setCouponError("")
+      } finally {
+        if (!cancelled) setGatesReady(true)
       }
-      // Reset any applied coupon — it may not be valid in the new region.
-      setCouponCode("")
-      setCouponResult(null)
-      setCouponError("")
     }
     loadRegionConfig()
     return () => { cancelled = true }
@@ -1025,6 +1048,11 @@ export default function CheckoutClient({
   }
 
   async function syncCartAndCheckout() {
+    // Synchronous re-entry guard — protects against double-click, React 18
+    // StrictMode double-invokes, and any other path that fires this twice
+    // within the same tick before `placing` propagates to disable the button.
+    if (placingRef.current) return
+    placingRef.current = true
     setPlacing(true)
     setPlaceError(null)
 
@@ -1054,6 +1082,14 @@ export default function CheckoutClient({
 
       if (!region) {
         setPlaceError("Unable to load region configuration. Please refresh and try again.")
+        placingRef.current = false
+        setPlacing(false)
+        return
+      }
+
+      if (gatesReady && !marketplacePurchasingAllowed) {
+        setPlaceError("Purchasing is temporarily unavailable right now. Please try again soon.")
+        placingRef.current = false
         setPlacing(false)
         return
       }
@@ -1107,12 +1143,26 @@ export default function CheckoutClient({
           : "Checkout failed. Please try again.",
       )
     } finally {
+      placingRef.current = false
       setPlacing(false)
     }
   }
 
-  const handlePaymentComplete = useCallback(() => {
+  const handlePaymentComplete = useCallback(async () => {
+    try {
+      const token = await getAccessToken()
+      if (token) {
+        await clearServerCart(token)
+      }
+    } catch (e) {
+      logError(e, "clear server cart after payment")
+    }
     clearCart()
+    try {
+      clearGuestCart()
+    } catch {
+      // sessionStorage/localStorage may be unavailable — non-fatal
+    }
     setStep("success")
   }, [clearCart])
 
@@ -1121,6 +1171,11 @@ export default function CheckoutClient({
   useEffect(() => {
     if (step !== "review") return
     if (!authToken || !region) return
+    if (gatesReady && !marketplacePurchasingAllowed) {
+      setShippingQuotes(null)
+      setSelectedQuoteId(null)
+      return
+    }
     if (freeShippingApplies) {
       setShippingQuotes(null)
       setSelectedQuoteId(null)
@@ -1152,7 +1207,7 @@ export default function CheckoutClient({
     return () => {
       cancelled = true
     }
-  }, [step, authToken, region, address.state, address.city, address.zip, freeShippingApplies])
+  }, [step, authToken, region, gatesReady, marketplacePurchasingAllowed, address.state, address.city, address.zip, freeShippingApplies])
 
   if (!mounted) {
     return (
@@ -1186,6 +1241,16 @@ export default function CheckoutClient({
   return (
     <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-10">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
+
+      {gatesReady && !marketplacePurchasingAllowed && step !== "success" && (
+        <div className="mb-4 flex gap-3 rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" aria-hidden />
+          <p>
+            Purchasing is paused for updates in your selected region (operators may have turned the marketplace off).
+            You can browse, but checkout will stay blocked until marketplace is enabled again.
+          </p>
+        </div>
+      )}
 
       {availableRegions.length > 1 && step !== "success" && (
         <div className="flex items-center gap-2 mb-6">
@@ -1267,6 +1332,7 @@ export default function CheckoutClient({
             selectedQuoteId={selectedQuoteId}
             onSelectQuote={setSelectedQuoteId}
             freeShippingApplies={freeShippingApplies}
+            checkoutBlocked={gatesReady && !marketplacePurchasingAllowed}
           />
         )}
         {step === "payment" && (

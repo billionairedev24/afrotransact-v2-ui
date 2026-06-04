@@ -21,7 +21,9 @@ export default async function AdminLayout({
   }
 
   const roles: string[] = session.user?.roles ?? []
-  if (!roles.includes("admin")) {
+  const isAdminPanelUser =
+    roles.includes("admin") || roles.includes("realm-admin")
+  if (!isAdminPanelUser) {
     redirect("/")
   }
 

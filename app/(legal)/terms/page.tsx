@@ -102,8 +102,8 @@ export default function TermsPage() {
           <Section id="services" title="2. Description of Services">
             <p>
               {COMPANY_SHORT} operates an online marketplace connecting buyers with immigrant-owned
-              businesses selling food, cultural goods, clothing, and related products primarily
-              in Austin, Texas and surrounding cities.
+              businesses selling food, cultural goods, clothing, and related products in eligible
+              service areas in the United States, as configured on the Platform.
             </p>
             <p>
               {COMPANY_SHORT} acts as a facilitator between buyers and sellers. We are not the seller
@@ -177,8 +177,8 @@ export default function TermsPage() {
 
           <Section id="shipping" title="6. Shipping & Delivery">
             <p>
-              {COMPANY_SHORT} currently serves Austin, Georgetown, Hutto, Leander, and Round Rock,
-              Texas. Delivery availability, times, and fees vary by seller and location.
+              Delivery and pickup options depend on seller settings and eligible service areas, which may
+              change over time.
             </p>
             <p>
               Estimated delivery times are provided by sellers and are not guaranteed. {COMPANY_SHORT}
@@ -329,7 +329,7 @@ export default function TermsPage() {
             </p>
             <p>
               <strong className="text-gray-900">Arbitration:</strong> If informal resolution fails, any
-              disputes shall be resolved by binding arbitration in Austin, Texas under the rules of
+              disputes shall be resolved by binding arbitration in the State of Texas under the rules of
               the American Arbitration Association (AAA), except that either party may seek injunctive
               or equitable relief in a court of competent jurisdiction.
             </p>
@@ -375,7 +375,7 @@ export default function TermsPage() {
             <p>If you have questions about these Terms, please contact us:</p>
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-1">
               <p className="font-semibold text-gray-900">{COMPANY}</p>
-              <p>Austin, Texas, United States</p>
+              <p>Texas, United States</p>
               <p>
                 Email:{" "}
                 <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">

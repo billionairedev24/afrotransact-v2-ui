@@ -13,45 +13,54 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
 
-    /* Brand primary: #FFD400 (HSL 50, 100%, 50%). Pure yellow — pair only with
-       black foreground for legibility. Hover/active uses --accent (slightly
-       darker) so buttons don't blow out the eye. */
-    --primary: 50 100% 50%;
-    --primary-foreground: 0 0% 0%;
+    /* Brand primary: Afrotransact Gold #F5C518 (HSL 48 92% 53%) — matches the
+       logo's Africa silhouette. Pair with black foreground. */
+    --primary: 47 92% 53%;
+    --primary-foreground: 0 0% 4%;
 
     --secondary: 142 71% 35%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 96.1%;
-    /* Tightened from 45.1% → 38% — labels and captions hit AAA contrast on
-       white instead of borderline-AA, which the user flagged as hard to read. */
-    --muted-foreground: 0 0% 38%;
+    --muted-foreground: 0 0% 32%;
 
-    --accent: 50 100% 45%;
-    --accent-foreground: 0 0% 0%;
+    --accent: 47 92% 48%;
+    --accent-foreground: 0 0% 4%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
-    --ring: 50 100% 50%;
+    --ring: 47 92% 53%;
 
     --radius: 0.625rem;
 
+    /* Sidebar — current shells render light (bg-card); keep light tokens here.
+       Active-row uses a pale gold tint that matches the new brand primary.
+       A future shell rewrite can adopt the brand-black sidebar from the
+       initial design by switching shells to bg-sidebar/text-sidebar-foreground. */
     --sidebar: 0 0% 97%;
     --sidebar-foreground: 0 0% 15%;
-    --sidebar-primary: 50 100% 50%;
-    /* Selected-row highlight: very pale primary tint so the yellow accent on
-       the active item reads as deliberate, not muddy. */
-    --sidebar-accent: 50 100% 95%;
+    --sidebar-primary: 47 92% 53%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 47 92% 94%;
+    --sidebar-accent-foreground: 0 0% 4%;
     --sidebar-border: 0 0% 89.8%;
+    --sidebar-ring: 47 92% 53%;
 
-    --chart-1: 50 100% 50%;
-    --chart-2: 142 71% 35%;
-    --chart-3: 50 100% 45%;
-    --chart-4: 0 84% 60%;
-    --chart-5: 200 80% 50%;
+    /* Portal accents — per-portal identity from initial theme.config */
+    --portal-main: 47 92% 53%;       /* gold */
+    --portal-admin: 217 91% 60%;     /* blue #3B82F6 */
+    --portal-seller: 160 84% 39%;    /* emerald #10B981 */
+    --portal-service: 258 90% 66%;   /* violet #8B5CF6 */
+    --portal-dispatcher: 24 95% 53%; /* orange #F97316 */
+
+    --chart-1: 47 92% 53%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 217 91% 60%;
+    --chart-4: 24 95% 53%;
+    --chart-5: 258 90% 66%;
 
     --success: 142 71% 35%;
     --success-foreground: 0 0% 100%;
@@ -81,8 +90,8 @@
     --popover: 0 0% 7%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 50 100% 55%;
-    --primary-foreground: 0 0% 0%;
+    --primary: 47 92% 56%;
+    --primary-foreground: 0 0% 4%;
 
     --secondary: 142 71% 35%;
     --secondary-foreground: 0 0% 100%;
@@ -90,27 +99,36 @@
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 70%;
 
-    --accent: 50 100% 50%;
-    --accent-foreground: 0 0% 0%;
+    --accent: 47 92% 50%;
+    --accent-foreground: 0 0% 4%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 0 0% 18%;
     --input: 0 0% 18%;
-    --ring: 50 100% 55%;
+    --ring: 47 92% 56%;
 
     --sidebar: 0 0% 5%;
     --sidebar-foreground: 0 0% 92%;
-    --sidebar-primary: 50 100% 55%;
-    --sidebar-accent: 50 100% 12%;
+    --sidebar-primary: 47 92% 56%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 47 92% 14%;
+    --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 47 92% 56%;
 
-    --chart-1: 50 100% 55%;
-    --chart-2: 142 71% 35%;
-    --chart-3: 50 100% 50%;
-    --chart-4: 0 84% 60%;
-    --chart-5: 200 80% 50%;
+    --portal-main: 47 92% 56%;
+    --portal-admin: 217 91% 60%;
+    --portal-seller: 160 84% 39%;
+    --portal-service: 258 90% 66%;
+    --portal-dispatcher: 24 95% 53%;
+
+    --chart-1: 47 92% 56%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 217 91% 60%;
+    --chart-4: 24 95% 53%;
+    --chart-5: 258 90% 66%;
 
     --success: 142 71% 40%;
     --success-foreground: 0 0% 100%;

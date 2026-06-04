@@ -11,14 +11,14 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { kcIssuerServer } from "@/lib/keycloak-issuers"
 
 function optionalEnv(name: string, fallback: string): string {
   return process.env[name] || fallback
 }
 
 async function getAdminToken(): Promise<string | null> {
-  const kcIssuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
-  const kcBase = kcIssuer.replace(/\/realms\/.*$/, "")
+  const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
   const adminUser = optionalEnv("KEYCLOAK_ADMIN_USERNAME", "admin")
   const adminPass = optionalEnv("KEYCLOAK_ADMIN_PASSWORD", "admin")
 
@@ -57,8 +57,7 @@ export async function POST() {
     )
   }
 
-  const kcIssuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
-  const kcBase = kcIssuer.replace(/\/realms\/.*$/, "")
+  const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
   const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
 
   const appUrl =

@@ -5,11 +5,12 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X, Sparkles, Tag, Zap } from "lucide-react"
+import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X, Sparkles, Tag, Zap, AlertCircle } from "lucide-react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
 import { clearServerCart, prefetchCheckoutShippingContext } from "@/lib/api"
 import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { useDefaultRegionCommerceGates } from "@/hooks/use-default-region-commerce-gates"
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -19,6 +20,11 @@ export default function CartPage() {
   const router = useRouter()
   const { status } = useSession()
   const [mounted, setMounted] = useState(false)
+  const {
+    loading: commerceGatesLoading,
+    marketplaceEnabled,
+    canEnterCheckoutFlow,
+  } = useDefaultRegionCommerceGates()
 
   const items = useCartStore((s) => s.items)
   const removeItem = useCartStore((s) => s.removeItem)
@@ -261,6 +267,13 @@ export default function CartPage() {
               <span>{formatCents(total)}</span>
             </div>
 
+            {mounted && !commerceGatesLoading && !marketplaceEnabled && (
+              <div className="mt-4 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-950">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                <span>Checkout is temporarily paused (marketplace toggle). You can still edit your cart.</span>
+              </div>
+            )}
+
             <button
               onClick={() => router.push("/checkout")}
               onMouseEnter={() => {
@@ -276,7 +289,14 @@ export default function CartPage() {
                   getAccessToken().then((t) => { if (t) prefetchCheckoutShippingContext(t) })
                 }
               }}
-              className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors"
+              disabled={
+                !mounted || commerceGatesLoading || !canEnterCheckoutFlow
+              }
+              className={`mt-5 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-colors ${
+                !mounted || commerceGatesLoading || !canEnterCheckoutFlow
+                  ? "cursor-not-allowed bg-gray-200 text-gray-500"
+                  : "bg-primary text-[#0f0f10] hover:bg-primary/90"
+              }`}
             >
               Proceed to Checkout
               <ArrowRight className="h-4 w-4" />

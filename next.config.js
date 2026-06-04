@@ -11,7 +11,7 @@ const cspDirectives = [
   `img-src 'self' data: blob: https://cdn.afrotransact.com https://images.unsplash.com https://maps.gstatic.com https://maps.googleapis.com https://utfs.io https://*.ufs.sh https://*.uploadthing.com https://*.ingest.uploadthing.com`,
   "font-src 'self' https://fonts.gstatic.com",
   "frame-src https://js.stripe.com https://hooks.stripe.com",
-  `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'} https://api.afrotransact.com https://api.stripe.com https://maps.googleapis.com https://utfs.io https://*.ufs.sh https://*.uploadthing.com https://*.ingest.uploadthing.com http://localhost:* ws://localhost:*`,
+  `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'} https://api.prod.afrotransact.com https://api.stripe.com https://maps.googleapis.com https://utfs.io https://*.ufs.sh https://*.uploadthing.com https://*.ingest.uploadthing.com http://localhost:* ws://localhost:*`,
   "media-src 'self' https://cdn.afrotransact.com",
   "object-src 'none'",
   "base-uri 'self'",
@@ -28,7 +28,7 @@ const securityHeaders = [
   ...(enforceHttps ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' }] : []),
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(self), geolocation=(self), payment=(self "https://js.stripe.com")',
+    value: 'camera=(), microphone=(self), geolocation=(), payment=(self "https://js.stripe.com")',
   },
   { key: 'Content-Security-Policy', value: cspDirectives },
 ]

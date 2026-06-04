@@ -13,6 +13,8 @@ import {
   FileDown,
   FileJson,
   Printer,
+  Ban,
+  ShieldAlert,
 } from "lucide-react"
 import { useAdminAnalytics } from "@/hooks/use-admin-stats"
 import { useAnalyticsAvailability } from "@/hooks/use-analytics-settings"
@@ -301,6 +303,14 @@ export default function AdminAnalyticsPage() {
       { label: "Total Orders", value: data.totalOrders.toLocaleString() },
       { label: "Avg Order Value", value: fmt(data.avgOrderValueCents) },
       { label: "Total Discounts", value: fmt(data.totalDiscountCents) },
+      {
+        label: "Cancellation rate",
+        value: `${data.cancelledOrderPercent}% (${data.cancelledOrderCount.toLocaleString()} of ${data.allOrdersCreatedCount.toLocaleString()} placed)`,
+      },
+      {
+        label: "Payment failures",
+        value: `${data.paymentFailedOrderPercent}% (${data.paymentFailedOrderCount.toLocaleString()})`,
+      },
     ]
 
     const statsHtml = statCards
@@ -564,6 +574,23 @@ export default function AdminAnalyticsPage() {
               value={fmt(data.totalDiscountCents)}
               icon={Tag}
               color="bg-rose-500/15 text-rose-600 dark:text-rose-400"
+            />
+          </div>
+
+          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+            <StatCard
+              label="Cancellation rate"
+              value={`${data.cancelledOrderPercent}%`}
+              sub={`${data.cancelledOrderCount.toLocaleString()} cancelled • ${data.allOrdersCreatedCount.toLocaleString()} orders placed in range`}
+              icon={Ban}
+              color="bg-orange-500/15 text-orange-600 dark:text-orange-400"
+            />
+            <StatCard
+              label="Payment failures"
+              value={`${data.paymentFailedOrderPercent}%`}
+              sub={`${data.paymentFailedOrderCount.toLocaleString()} payment_failed in range`}
+              icon={ShieldAlert}
+              color="bg-red-500/15 text-red-600 dark:text-red-400"
             />
           </div>
 

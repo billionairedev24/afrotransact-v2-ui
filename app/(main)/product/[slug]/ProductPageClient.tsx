@@ -26,6 +26,7 @@ import {
   trackEvent,
 } from "@/lib/api"
 import { logError } from "@/lib/errors"
+import { resolveDefaultRegion } from "@/lib/regions"
 
 export default function ProductPageClient() {
   const params = useParams()
@@ -77,7 +78,7 @@ export default function ProductPageClient() {
         // 3. Fetch Region & Flags (Non-critical, gracefully fail)
         try {
           const regions = await getRegions("", true).catch(() => [])
-          const r = regions.find((r) => r.code === "us-tx-austin") ?? regions[0]
+          const r = resolveDefaultRegion(regions)
           
           if (r && !cancelled) {
             const [f, deals] = await Promise.all([

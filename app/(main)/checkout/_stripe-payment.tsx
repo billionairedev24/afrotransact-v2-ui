@@ -32,7 +32,7 @@ function getStripe() {
 const STRIPE_APPEARANCE = {
   theme: "stripe" as const,
   variables: {
-    colorPrimary: "#FFD400",
+    colorPrimary: "#F5C518",
     colorBackground: "#FFFFFF",
     colorText: "#171717",
     colorDanger: "#DC2626",

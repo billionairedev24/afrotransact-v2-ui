@@ -18,7 +18,14 @@ import {
   Copy,
 } from "lucide-react"
 import { toast } from "sonner"
-import { getAdminPayoutSummary, getAdminPayouts, type AdminPayoutSummary, type TransferRecord, type Page as ApiPage } from "@/lib/api"
+import {
+  ApiError,
+  getAdminPayoutSummary,
+  getAdminPayouts,
+  type AdminPayoutSummary,
+  type TransferRecord,
+  type Page as ApiPage,
+} from "@/lib/api"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
 import { createColumnHelper } from "@tanstack/react-table"
@@ -82,6 +89,8 @@ export default function AdminPayoutsPage() {
     },
     enabled: status === "authenticated",
     staleTime: 30 * 1000, // refresh summary cards quickly without thrashing
+    retry: (failureCount, e) =>
+      failureCount < 2 && e instanceof ApiError && (e.status === 502 || e.status === 503 || e.status === 504),
   })
 
   const payoutsQuery = useQuery<ApiPage<TransferRecord>>({
@@ -93,6 +102,8 @@ export default function AdminPayoutsPage() {
     },
     enabled: status === "authenticated",
     placeholderData: keepPreviousData,
+    retry: (failureCount, e) =>
+      failureCount < 2 && e instanceof ApiError && (e.status === 502 || e.status === 503 || e.status === 504),
   })
 
   const summary = summaryQuery.data ?? null
@@ -100,7 +111,7 @@ export default function AdminPayoutsPage() {
   const totalElements = payoutsQuery.data?.totalElements ?? 0
   const totalPages = payoutsQuery.data?.totalPages ?? 0
   const loading = summaryQuery.isLoading || payoutsQuery.isLoading || payoutsQuery.isFetching
-  const error = (summaryQuery.error || payoutsQuery.error) ? "Failed to load payouts" : ""
+  const fetchError = summaryQuery.error ?? payoutsQuery.error
 
   function handleCopyId(id: string) {
     navigator.clipboard.writeText(id)
@@ -159,11 +170,41 @@ export default function AdminPayoutsPage() {
     )
   }
 
-  if (error) {
+  if (fetchError) {
+    const title = "Could not load payouts"
+    const isGateway =
+      fetchError instanceof ApiError && (fetchError.status === 502 || fetchError.status === 503 || fetchError.status === 504)
+
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3 text-destructive">
-        <AlertCircle className="h-6 w-6" />
-        <p className="text-sm">{error}</p>
+      <div className="flex min-h-[400px] max-w-xl flex-col items-center justify-center gap-4 px-4 text-center">
+        <AlertCircle className="h-9 w-9 text-destructive" aria-hidden />
+        <div className="space-y-2">
+          <p className="text-base font-semibold text-gray-900">{title}</p>
+          {fetchError instanceof ApiError ? (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {fetchError.body}
+              </p>
+              {isGateway && (
+                <p className="text-xs text-muted-foreground italic">
+                  Technical details: Usually the gateway cannot reach the service. Please verify if the backend service is running and the upstream configuration is correct.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{fetchError.message}</p>
+          )}
+          <button
+            type="button"
+            className="mt-2 rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold hover:bg-muted"
+            onClick={() => {
+              void summaryQuery.refetch()
+              void payoutsQuery.refetch()
+            }}
+          >
+            Try again
+          </button>
+        </div>
       </div>
     )
   }

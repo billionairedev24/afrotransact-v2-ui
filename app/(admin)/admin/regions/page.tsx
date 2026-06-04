@@ -66,7 +66,7 @@ function RegionForm({
             type="text"
             value={form.code}
             onChange={(e) => onChange({ ...form, code: e.target.value })}
-            placeholder="us-tx-austin"
+            placeholder="us-tx-example"
             className={INPUT_CLASS}
             required
             disabled={isEdit}
@@ -78,7 +78,7 @@ function RegionForm({
             type="text"
             value={form.name}
             onChange={(e) => onChange({ ...form, name: e.target.value })}
-            placeholder="Austin, TX"
+            placeholder="Region display name"
             className={INPUT_CLASS}
             required
           />
@@ -114,7 +114,7 @@ function RegionForm({
             value={form.city}
             onChange={(e) => onChange({ ...form, city: e.target.value })}
             className={INPUT_CLASS}
-            placeholder="Austin"
+            placeholder="Primary city"
           />
         </div>
       </div>

@@ -62,35 +62,19 @@ const footerSections: { title: string; links: FooterLink[] }[] = [
   },
 ]
 
-const cities = [
-  "Austin, TX",
-  "Georgetown, TX",
-  "Round Rock, TX",
-  "Hutto, TX",
-  "Leander, TX",
-]
-
 export function Footer() {
   return (
     <footer className="bg-card border-t border-border pb-[max(1rem,env(safe-area-inset-bottom,0px))] md:pb-0">
-      {/* Cities bar */}
+      {/* Service hint — delivery area is handled at checkout; no city picker in beta */}
       <div className="border-b border-border bg-muted/30">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-3">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span className="flex items-center gap-1 font-semibold text-foreground">
               <MapPin className="h-3 w-3 text-primary" />
-              Serving:
+              Serving immigrant communities nationwide
             </span>
-            {cities.map((city, i) => (
-              <span key={city} className="flex items-center gap-4">
-                <span className="hover:text-primary transition-colors cursor-pointer">{city}</span>
-                {i < cities.length - 1 && (
-                  <span className="text-border">·</span>
-                )}
-              </span>
-            ))}
-            <span className="ml-auto text-[11px] text-muted-foreground/60">
-              More cities coming soon
+            <span className="text-[11px] text-muted-foreground/70">
+              Delivery options vary by seller and are confirmed at checkout.
             </span>
           </div>
         </div>
@@ -102,8 +86,7 @@ export function Footer() {
           {/* Brand column */}
           <div className="col-span-2 sm:col-span-3 md:col-span-1 space-y-4">
             <Link href="/" className="inline-flex items-center gap-0.5" aria-label="AfroTransact home">
-              <span className="text-xl font-black text-primary">Afro</span>
-              <span className="text-xl font-black text-foreground">Transact</span>
+              <span className="text-xl font-black text-foreground">AfroTransact</span>
             </Link>
 
             <p className="text-[13px] text-muted-foreground leading-relaxed">
@@ -196,8 +179,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
           <p>
-            &copy; {new Date().getFullYear()} AfroTransact, Inc. All rights reserved. Based in
-            Austin, TX.
+            &copy; {new Date().getFullYear()} AfroTransact, Inc. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:text-foreground transition-colors">

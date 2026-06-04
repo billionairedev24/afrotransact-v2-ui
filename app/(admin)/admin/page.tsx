@@ -265,7 +265,7 @@ export default function AdminOverviewPage() {
 function SellerDonut({ stats }: { stats: OnboardingStats }) {
   const segments = [
     { label: "Approved", value: stats.approved, color: "#34d399" },
-    { label: "Submitted", value: stats.submitted, color: "#facc15" },
+    { label: "Submitted", value: stats.submitted, color: "#F5C518" },
     { label: "In Review", value: stats.underReview, color: "#60a5fa" },
     { label: "Pending", value: stats.inProgress + stats.started, color: "#94a3b8" },
     { label: "Requires Info", value: stats.needsAction, color: "#fb923c" },
@@ -324,7 +324,7 @@ function FunnelChart({ stats }: { stats: OnboardingStats }) {
   const steps = [
     { label: "Registered", value: stats.totalSellers, color: "#a78bfa" },
     { label: "Started Onboarding", value: stats.started + stats.inProgress + stats.submitted + stats.approved + stats.rejected + stats.needsAction, color: "#38bdf8" },
-    { label: "Submitted", value: stats.submitted + stats.approved + stats.rejected + stats.needsAction, color: "#facc15" },
+    { label: "Submitted", value: stats.submitted + stats.approved + stats.rejected + stats.needsAction, color: "#F5C518" },
     { label: "Approved", value: stats.approved, color: "#34d399" },
   ]
 
@@ -370,7 +370,7 @@ function FunnelChart({ stats }: { stats: OnboardingStats }) {
 function HorizontalBarChart({ stats }: { stats: OnboardingStats }) {
   const bars = [
     { label: "Pending", value: stats.started + stats.inProgress, color: "#94a3b8", icon: <Clock className="h-3.5 w-3.5" /> },
-    { label: "Submitted", value: stats.submitted, color: "#facc15", icon: <ShoppingCart className="h-3.5 w-3.5" /> },
+    { label: "Submitted", value: stats.submitted, color: "#F5C518", icon: <ShoppingCart className="h-3.5 w-3.5" /> },
     { label: "In Review", value: stats.underReview, color: "#60a5fa", icon: <Clock className="h-3.5 w-3.5" /> },
     { label: "Approved", value: stats.approved, color: "#34d399", icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
     { label: "Requires Info", value: stats.needsAction, color: "#fb923c", icon: <AlertTriangle className="h-3.5 w-3.5" /> },

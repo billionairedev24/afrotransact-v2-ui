@@ -42,7 +42,7 @@ export const DEFAULT_ADS: AdConfig[] = [
     type: "banner",
     enabled: true,
     badgeText: "This Weekend Only",
-    title: "Free Delivery Across Austin",
+    title: "Free Local Delivery Offers",
     body: "Order from any store before Sunday midnight and get free delivery. No code needed.",
     ctaLabel: "Shop Now",
     ctaHref: "/search",

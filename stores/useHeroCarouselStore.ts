@@ -36,11 +36,11 @@ const DEFAULT_HERO_SLIDES: HeroCarouselSlideConfig[] = [
     id: "brand",
     enabled: true,
     order: 0,
-    badgeText: "Now in Austin, TX",
+    badgeText: "Your community marketplace",
     badgeColor: "border-primary/30 bg-primary/10 text-primary",
     headline: "Every Flavor of Home,\nDelivered to You.",
     subtext:
-      "Authentic food, spices, and cultural goods from 200+ immigrant-owned stores across Austin. Support your neighbors. Taste the world.",
+      "Authentic food, spices, and cultural goods from immigrant-owned sellers on AfroTransact. Support your neighbors. Taste the world.",
     primaryCtaLabel: "Start Shopping",
     primaryCtaHref: "/search",
     secondaryCtaLabel: "Browse Stores",

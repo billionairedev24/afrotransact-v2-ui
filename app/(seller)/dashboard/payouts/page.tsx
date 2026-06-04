@@ -31,6 +31,7 @@ import {
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
 import { createColumnHelper } from "@tanstack/react-table"
+import { pickPrimarySellerStoreId } from "@/lib/seller-store"
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -102,7 +103,7 @@ export default function PayoutsPage() {
       if (!token) throw new Error("Not authenticated")
       const s = await getCurrentSeller(token)
       const stores = await getSellerStores(token, s.id)
-      return stores[0]?.id ?? null
+      return pickPrimarySellerStoreId(stores)
     },
     enabled: status === "authenticated",
     staleTime: 10 * 60 * 1000,
@@ -215,6 +216,20 @@ export default function PayoutsPage() {
 
   if (status !== "authenticated") {
     return <div className="flex items-center justify-center min-h-[400px] text-gray-500">Sign in to view payouts</div>
+  }
+
+  if (!storeQuery.isLoading && storeQuery.isFetched && storeId === null && !storeQuery.error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-center px-4">
+        <AlertCircle className="h-10 w-10 text-amber-500" />
+        <div>
+          <p className="text-sm font-medium text-gray-900">No active store found</p>
+          <p className="text-sm text-gray-500 mt-1 max-w-md">
+            Payouts are loaded per storefront. Finish creating an active store in onboarding, then refresh — or verify your account has at least one store with &quot;active&quot; checked.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (loading && !summary) {

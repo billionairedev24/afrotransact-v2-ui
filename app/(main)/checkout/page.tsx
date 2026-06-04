@@ -22,17 +22,36 @@
  * session for every visitor.
  */
 
+import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import {
+  getRegionConfig,
+  getRegions,
   loadCheckoutShippingContext,
   type CheckoutShippingContext,
 } from "@/lib/api"
+import { resolveDefaultRegion } from "@/lib/regions"
 import CheckoutClient from "./CheckoutClient"
 
 export const dynamic = "force-dynamic"
 
 export default async function CheckoutPage() {
+  /** Server-side guard: avoids loading checkout when commerce kill-switches are off (client still banners). */
+  try {
+    const regions = await getRegions(undefined, true)
+    const region = resolveDefaultRegion(regions)
+    if (region) {
+      const cfg = await getRegionConfig(region.code)
+      const feats = cfg.features ?? {}
+      if (feats.marketplace_enabled === false || feats.stripe === false) {
+        redirect("/cart?notice=checkout_unavailable")
+      }
+    }
+  } catch {
+    // Upstream unreachable — CheckoutClient banners + order-service gates still defend.
+  }
+
   const session = await getServerSession(authOptions)
   const token = (session as { accessToken?: string } | null)?.accessToken
 

@@ -1,10 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useSession, signIn } from "next-auth/react"
-import { useCallback, useState } from "react"
+import { useSession } from "next-auth/react"
+import { useCallback } from "react"
 import { ArrowRight, Loader2 } from "lucide-react"
-import { toast } from "sonner"
 
 type Variant = "header" | "footer" | "button" | "inline" | "bare"
 
@@ -22,62 +21,30 @@ export function StartSellingLink({
   variant = "header",
   className,
   children,
-  planSlug,
   onNavigate,
 }: {
   variant?: Variant
   className?: string
   children?: React.ReactNode
-  /** Optional plan slug appended to onboarding callback (e.g. pricing page). */
+  /** @deprecated retained for backward compatibility — no longer routes per-plan. */
   planSlug?: string
   /** Called on click (e.g. close a menu). */
   onNavigate?: () => void
 }) {
   const { data: session, status } = useSession()
-  const [pending, setPending] = useState(false)
 
   const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
+  const isAdmin = roles.includes("admin")
   const isSeller = roles.includes("seller")
-
-  const onboardingUrl = planSlug
-    ? `/dashboard/onboarding?plan=${encodeURIComponent(planSlug)}`
-    : "/dashboard/onboarding"
-
-  const href =
-    status !== "authenticated"
-      ? "/auth/register?role=seller"
-      : isSeller
-        ? "/dashboard"
-        : onboardingUrl
 
   const baseClass = variantClass[variant]
   const mergedClass = [baseClass, className].filter(Boolean).join(" ").trim()
 
-  const goBuyerToSeller = useCallback(async () => {
-    setPending(true)
-    try {
-      const res = await fetch("/api/auth/become-seller", { method: "POST" })
-      const data = (await res.json().catch(() => ({}))) as { error?: string }
-      if (!res.ok) {
-        toast.error(data.error || "Could not enable seller access. Try again or contact support.")
-        return
-      }
-      await signIn("keycloak", { callbackUrl: onboardingUrl, redirect: true })
-    } catch {
-      toast.error("Something went wrong. Please try again.")
-    } finally {
-      setPending(false)
-    }
-  }, [onboardingUrl])
-
   const onClick = useCallback(
-    (e: React.MouseEvent) => {
+    (_e: React.MouseEvent) => {
       onNavigate?.()
-      if (status !== "authenticated" || isSeller || pending) return
-      e.preventDefault()
-      void goBuyerToSeller()
     },
-    [status, isSeller, pending, goBuyerToSeller, onNavigate],
+    [onNavigate],
   )
 
   if (status === "loading") {
@@ -88,6 +55,12 @@ export function StartSellingLink({
       </span>
     )
   }
+
+  // Seller onboarding is invite-only. Admins and existing sellers should not see this CTA.
+  if (isAdmin || isSeller) return null
+
+  // Everyone else (guests + logged-in customers) goes to the public /sell marketing page.
+  const href = "/sell"
 
   const defaultLabel =
     variant === "header" ? (
@@ -102,20 +75,8 @@ export function StartSellingLink({
     )
 
   return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className={mergedClass}
-      aria-busy={pending}
-    >
-      {pending ? (
-        <span className="inline-flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-          {children ?? defaultLabel}
-        </span>
-      ) : (
-        children ?? defaultLabel
-      )}
+    <Link href={href} onClick={onClick} className={mergedClass}>
+      {children ?? defaultLabel}
     </Link>
   )
 }
