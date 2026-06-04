@@ -287,7 +287,7 @@ export default function PaymentSettingsPage() {
                 <input
                   value={shippingCitiesInput}
                   onChange={(e) => setShippingCitiesInput(e.target.value)}
-                  placeholder="Austin, Dallas"
+                  placeholder="e.g. City A, City B"
                   className={INPUT_CLASS}
                 />
                 <p className="text-xs text-gray-400 mt-1.5">Optional. If set, only these cities get realtime rates.</p>

@@ -212,6 +212,7 @@ export default function CategoryPageClient() {
   const [featuredProduct, setFeaturedProduct] = useState<SearchResult | null>(null)
   const [products, setProducts] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
 
   useEffect(() => {
@@ -235,6 +236,7 @@ export default function CategoryPageClient() {
 
   useEffect(() => {
     setLoading(true)
+    setError(null)
     setFeaturedProduct(null)
 
     const fetchFeatured =
@@ -256,7 +258,9 @@ export default function CategoryPageClient() {
         // Total stays accurate: +1 only if featured isn't already counted in the search results
         setTotal(res.total)
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (err instanceof Error) setError(err.message)
+      })
       .finally(() => setLoading(false))
   }, [name, page, featuredId])
 
@@ -318,6 +322,16 @@ export default function CategoryPageClient() {
               </div>
             </div>
           ))}
+        </div>
+      ) : error ? (
+        <div className="text-center py-20 bg-white rounded-lg border border-red-100 p-6">
+          <p className="text-red-800 font-medium mb-2">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-primary text-sm font-bold hover:underline"
+          >
+            Try again
+          </button>
         </div>
       ) : displayedProducts.length === 0 ? (
         <div className="text-center py-20">

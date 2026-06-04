@@ -20,6 +20,7 @@ import {
 import type { OnboardingStats, AdminSellerDetail } from "@/lib/api"
 import { toast } from "sonner"
 import { logError } from "@/lib/errors"
+import { InviteSellerModal } from "@/components/admin/InviteSellerModal"
 import {
   Store,
   Users,
@@ -44,6 +45,7 @@ import {
   Loader2,
   Bell,
   Send,
+  UserPlus,
 } from "lucide-react"
 
 interface AdminSellerRow {
@@ -125,6 +127,7 @@ export default function AdminSellersPage() {
   
   const [panelAction, setPanelAction] = useState<ActionMode>("none")
   const [triggeringReminders, setTriggeringReminders] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   async function handleTriggerReminders() {
     setTriggeringReminders(true)
@@ -207,14 +210,23 @@ export default function AdminSellersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Seller Management</h1>
           <p className="text-sm text-gray-500 mt-1">Review applications, manage onboarding, and monitor seller status.</p>
         </div>
-        <button
-          onClick={handleTriggerReminders}
-          disabled={triggeringReminders}
-          className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50"
-        >
-          {triggeringReminders ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
-          Send Onboarding Reminders
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:brightness-110 transition-all"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Invite Seller
+          </button>
+          <button
+            onClick={handleTriggerReminders}
+            disabled={triggeringReminders}
+            className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            {triggeringReminders ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
+            Send Onboarding Reminders
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -370,6 +382,7 @@ export default function AdminSellersPage() {
         onClose={closeDetail}
         onReview={handleReview}
       />
+      <InviteSellerModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
   )
 }
@@ -379,7 +392,7 @@ export default function AdminSellersPage() {
 function DonutChart({ stats }: { stats: OnboardingStats }) {
   const segments = [
     { label: "Approved", value: stats.approved, color: "#34d399" },
-    { label: "Submitted", value: stats.submitted, color: "#facc15" },
+    { label: "Submitted", value: stats.submitted, color: "#F5C518" },
     { label: "In Review", value: stats.underReview, color: "#60a5fa" },
     { label: "Pending", value: stats.inProgress + stats.started, color: "#94a3b8" },
     { label: "Requires Info", value: stats.needsAction, color: "#fb923c" },

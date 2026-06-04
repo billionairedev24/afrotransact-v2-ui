@@ -397,7 +397,7 @@ export default function SellerAgreementPage() {
             <p>Questions about this Seller Agreement?</p>
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-1">
               <p className="font-semibold text-gray-900">{COMPANY} — Seller Relations</p>
-              <p>Austin, Texas, United States</p>
+              <p>Texas, United States</p>
               <p>
                 Email:{" "}
                 <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">

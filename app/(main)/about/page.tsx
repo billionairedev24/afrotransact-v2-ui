@@ -29,9 +29,8 @@ export default function AboutPage() {
           without barriers.
         </p>
         <p className="text-gray-600 leading-relaxed">
-          We started in Austin, Texas, home to one of the fastest-growing immigrant populations in the
-          United States. Our goal is to expand to every city where immigrant communities deserve better
-          access to the products that connect them to home.
+          We launched where our founding team lives — with a goal to grow alongside immigrant communities everywhere.
+          Expansion is driven by where our sellers and buyers are.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
@@ -55,20 +54,9 @@ export default function AboutPage() {
           <MapPin className="h-6 w-6 text-primary" /> Where we operate
         </h2>
         <p className="text-gray-600 leading-relaxed">
-          We currently serve the greater Austin metropolitan area across 5 cities, with delivery available
-          in more neighborhoods each week. Expansion to additional Texas cities is planned — driven by where
-          our community is growing.
+          We serve buyers and sellers in the areas configured on our platform. Available delivery methods,
+          timelines, and fees depend on each seller — you&apos;ll see what applies before you checkout.
         </p>
-        <div className="flex flex-wrap gap-2">
-          {["Austin, TX", "Georgetown, TX", "Round Rock, TX", "Hutto, TX", "Leander, TX"].map((city) => (
-            <span key={city} className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
-              <MapPin className="h-3.5 w-3.5" />{city}
-            </span>
-          ))}
-          <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-500">
-            + more cities coming
-          </span>
-        </div>
       </section>
 
       {/* CTA */}

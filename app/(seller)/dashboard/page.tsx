@@ -19,6 +19,7 @@ import {
   TrendingUp,
   DollarSign,
 } from "lucide-react"
+import { isSellerDashboardOnboardingReady } from "@/lib/seller-dashboard-access"
 import {
   getCurrentSeller,
   getSellerStores,
@@ -118,8 +119,9 @@ export default function DashboardOverview() {
         const sellerRes = await getCurrentSeller(token)
         if (cancelled) return
 
-        const onbStatus = sellerRes.onboardingStatus?.toLowerCase()
-        if (onbStatus && onbStatus !== "approved" && onbStatus !== "completed") {
+        const onbRaw =
+          sellerRes.onboardingStatus ?? (sellerRes as { status?: string }).status ?? ""
+        if (onbRaw && !isSellerDashboardOnboardingReady(onbRaw)) {
           router.replace("/dashboard/onboarding")
           return
         }

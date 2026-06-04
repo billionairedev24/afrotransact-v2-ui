@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation"
 import { useSession, signIn } from "next-auth/react"
 import {
   ShoppingCart,
-  MapPin,
   Search,
   ChevronDown,
   Leaf,
@@ -41,7 +40,7 @@ const SLUG_ICON_MAP: Record<string, { icon: typeof Leaf; accent: string }> = {
   spices:      { icon: Flame,   accent: "#ea580c" },
   meats:       { icon: Beef,    accent: "#dc2626" },
   fashion:     { icon: Shirt,   accent: "#9333ea" },
-  pantry:      { icon: Package, accent: "#ca8a04" },
+  pantry:      { icon: Package, accent: "#F5C518" },
   beverages:   { icon: Wine,    accent: "#0891b2" },
   home:        { icon: Home,    accent: "#7c3aed" },
 }
@@ -103,7 +102,6 @@ export function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [locationDisplay] = useState("Austin, TX")
   const inputRef = useRef<HTMLInputElement>(null)
   const mobileInputRef = useRef<HTMLInputElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
@@ -140,7 +138,7 @@ export function Header() {
       const style = getCategoryIcon(cat.slug)
       return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent, disabled: isServicesCategory(cat.slug) }
     }),
-    { name: "Deals", href: "/deals", icon: Tag, accent: "#ca8a04", disabled: false },
+    { name: "Deals", href: "/deals", icon: Tag, accent: "#F5C518", disabled: false },
   ]
 
   useEffect(() => {
@@ -234,24 +232,8 @@ export function Header() {
               {/* Logo */}
               <Link href="/" className="flex items-center gap-1.5 shrink-0 mr-1" aria-label="AfroTransact home">
                 <Image src="/logo.png" alt="" width={28} height={28} className="rounded-md" />
-                <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-primary leading-none">Afro</span>
-                <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-gray-900 leading-none">Transact</span>
+                <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-gray-900 leading-none">AfroTransact</span>
               </Link>
-
-              {/* Location — large desktop only */}
-              <button
-                className="hidden lg:flex flex-col items-start shrink-0 px-2 py-1 rounded hover:bg-gray-50 transition-colors"
-                aria-label="Change delivery location"
-              >
-                <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
-                  <MapPin className="h-2.5 w-2.5" />
-                  Deliver to
-                </span>
-                <span className="text-[13px] font-semibold text-gray-900 flex items-center gap-0.5 leading-tight">
-                  {locationDisplay}
-                  <ChevronDown className="h-3 w-3 text-gray-400" />
-                </span>
-              </button>
 
               {/* Search — desktop only */}
               <div className="hidden md:flex flex-1 relative" ref={searchRef}>
@@ -505,7 +487,7 @@ export function Header() {
                 className="flex items-center gap-1.5 px-3 h-full text-[13px] text-yellow-700 font-medium whitespace-nowrap hover:text-yellow-800 hover:bg-yellow-50 transition-colors"
               >
                 <Store className="h-3.5 w-3.5" />
-                Stores Near Me
+                Browse Stores
               </Link>
 
               <div className="flex-1" />
@@ -593,12 +575,6 @@ export function Header() {
                   <X className="h-5 w-5" strokeWidth={2} />
                 </button>
               </div>
-              {isAuthenticated ? (
-                <p className="mt-3 flex items-center gap-1.5 text-xs text-white/50">
-                  <MapPin className="h-3 w-3 shrink-0 text-primary/90" />
-                  <span>Delivering to {locationDisplay}</span>
-                </p>
-              ) : null}
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]">
@@ -627,7 +603,7 @@ export function Header() {
                 )
               })}
               <MobileMenuRow href="/stores" onClick={closeMobileMenu}>
-                Stores near you
+                Browse stores
               </MobileMenuRow>
               <MobileMenuRow href="/search" onClick={closeMobileMenu}>
                 Shop all products

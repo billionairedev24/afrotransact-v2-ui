@@ -10,7 +10,7 @@ const STEPS = [
 ]
 
 const FEATURES = [
-  { icon: <TrendingUp className="h-5 w-5 text-primary" />, title: "Reach thousands of buyers", desc: "AfroTransact is the go-to marketplace for immigrants across Austin." },
+  { icon: <TrendingUp className="h-5 w-5 text-primary" />, title: "Reach thousands of buyers", desc: "AfroTransact is the go-to marketplace for immigrant-owned businesses expanding their reach nationwide." },
   { icon: <ShieldCheck className="h-5 w-5 text-emerald-400" />, title: "Secure, fast payouts", desc: "Stripe Connect deposits your earnings directly to your bank — no delays." },
   { icon: <Sparkles className="h-5 w-5 text-yellow-400" />, title: "First month always free", desc: "Start selling with zero commitment. No subscription fee until your trial ends." },
   { icon: <Users className="h-5 w-5 text-sky-400" />, title: "Community-first platform", desc: "Built for immigrant entrepreneurs. Our support team understands your business." },

@@ -2,6 +2,11 @@ import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { SellerShell } from "@/components/seller/SellerShell"
+import type { SellerInfo } from "@/lib/api"
+import {
+  isSellerDashboardOnboardingReady,
+  parseSellerMeResponse,
+} from "@/lib/seller-dashboard-access"
 
 export default async function SellerLayout({
   children,
@@ -14,9 +19,13 @@ export default async function SellerLayout({
     redirect("/auth/login?callbackUrl=/dashboard")
   }
 
-  const isAdmin = session.user?.roles?.includes("admin") || session.user?.roles?.includes("realm-admin")
+  const roles = session.user?.roles ?? []
+  const registrationRole = (session.user?.registrationRole ?? "").toLowerCase()
+  const isAdmin = roles.includes("admin") || roles.includes("realm-admin")
 
-  // Admins bypass all seller checks
+  const jwtSellerIntent =
+    roles.includes("seller") || registrationRole === "seller"
+
   if (isAdmin) {
     return (
       <SellerShell
@@ -28,38 +37,77 @@ export default async function SellerLayout({
     )
   }
 
-  // For everyone else on /dashboard: check if they're an approved seller.
-  // If not, send them to onboarding. /dashboard is ONLY for approved sellers.
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+  const apiBase =
+    process.env.INTERNAL_API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:8080"
 
-  try {
-    const token = (session as { accessToken?: string }).accessToken
-    if (token) {
-      const res = await fetch(`${apiBase}/api/v1/seller/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      })
-      if (res.ok) {
-        const seller = await res.json()
-        const obStatus = (seller.onboardingStatus ?? "").toLowerCase()
-        if (obStatus === "approved") {
-          // Approved seller — show the full dashboard with sidebar
-          return (
-            <SellerShell
-              userName={session.user?.name ?? undefined}
-              userEmail={session.user?.email ?? undefined}
-              seller={seller}
-            >
-              {children}
-            </SellerShell>
-          )
-        }
-      }
-    }
-  } catch {
-    // API unreachable — fall through to onboarding redirect as safe default
+  const token = session.accessToken
+  if (!token) {
+    redirect("/auth/login?callbackUrl=/dashboard")
   }
 
-  // If we reach here: no seller record, or seller not approved → onboarding
-  redirect("/dashboard/onboarding")
+  const degradedShell = (
+    <SellerShell
+      userName={session.user?.name ?? undefined}
+      userEmail={session.user?.email ?? undefined}
+    >
+      {children}
+    </SellerShell>
+  )
+
+  try {
+    const res = await fetch(`${apiBase}/api/v1/seller/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
+
+    if (res.status === 401 || res.status === 403) {
+      redirect("/auth/login?callbackUrl=/dashboard")
+    }
+
+    const sellerRecord = await parseSellerMeResponse(res)
+
+    if (!sellerRecord) {
+      if (!res.ok) {
+        if (jwtSellerIntent && res.status >= 500) {
+          console.warn("[seller/layout] seller/me HTTP", res.status, "— degrading dashboard shell")
+          return degradedShell
+        }
+        if (jwtSellerIntent) {
+          redirect("/dashboard/onboarding")
+        }
+        redirect("/")
+      }
+      /* 204 No Content or empty JSON — treated as “no seller row yet” */
+      if (jwtSellerIntent) {
+        redirect("/dashboard/onboarding")
+      }
+      redirect("/")
+    }
+
+    const obStatusRaw =
+      sellerRecord.onboardingStatus ?? sellerRecord.status ?? ""
+
+    if (isSellerDashboardOnboardingReady(obStatusRaw)) {
+      return (
+        <SellerShell
+          userName={session.user?.name ?? undefined}
+          userEmail={session.user?.email ?? undefined}
+          seller={sellerRecord as unknown as SellerInfo}
+        >
+          {children}
+        </SellerShell>
+      )
+    }
+
+    redirect("/dashboard/onboarding")
+  } catch {
+    /* Network failures: don’t strand approved sellers behind onboarding forever */
+    if (jwtSellerIntent) {
+      console.warn("[seller/layout] seller/me fetch failed — degrading dashboard shell")
+      return degradedShell
+    }
+    redirect("/")
+  }
 }

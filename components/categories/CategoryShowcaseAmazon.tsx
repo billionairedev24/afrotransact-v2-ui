@@ -32,13 +32,18 @@ const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000
 const searchCache = new Map<string, { at: number; results: SearchResult[] }>()
 const searchInflight = new Map<string, Promise<SearchResult[]>>()
 
-const SEARCH_CONCURRENCY = 4
+const SEARCH_CONCURRENCY = 1
 let searchActive = 0
 const searchWaiting: Array<() => void> = []
 
 async function runLimited<T>(task: () => Promise<T>): Promise<T> {
   if (searchActive >= SEARCH_CONCURRENCY) {
-    await new Promise<void>((resolve) => searchWaiting.push(resolve))
+    // Add some jitter to avoid synchronized retry bursts
+    const wait = 500 + Math.random() * 1000
+    await new Promise<void>((resolve) => setTimeout(resolve, wait))
+    while (searchActive >= SEARCH_CONCURRENCY) {
+       await new Promise<void>((resolve) => searchWaiting.push(resolve))
+    }
   }
   searchActive++
   try {
@@ -303,6 +308,7 @@ export function CategoryShowcaseAmazon({
   const [tilesByParentId, setTilesByParentId] = useState<Record<string, (TilePick | null)[]>>(
     initialTiles ?? {},
   )
+  const [error, setError] = useState<string | null>(null)
   /** undefined = before first fetch pass; empty Set = done loading. */
   const [loadingIds, setLoadingIds] = useState<Set<string> | undefined>(
     hasInitial ? new Set() : undefined,
@@ -310,31 +316,49 @@ export function CategoryShowcaseAmazon({
 
   useEffect(() => {
     // Server-provided tiles win — don't refetch.
-    if (hasInitial) return
+    if (hasInitial) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[CategoryShowcaseAmazon] skipping client fetch, hasInitial:", hasInitial)
+      }
+      return
+    }
 
     if (roots.length === 0) {
       setLoadingIds(new Set())
       return
     }
     let cancelled = false
+    setError(null)
     setLoadingIds(new Set(roots.map((r) => r.id)))
 
     void (async () => {
-      const entries = await Promise.all(
-        roots.map(async (parent) => {
-          try {
-            const tiles = await fetchTilesForParent(parent)
-            return [parent.id, tiles] as const
-          } catch {
-            return [parent.id, [null, null, null, null] as (TilePick | null)[]] as const
-          }
-        }),
-      )
-      if (cancelled) return
-      const map: Record<string, (TilePick | null)[]> = {}
-      for (const [id, tiles] of entries) map[id] = tiles
-      setTilesByParentId(map)
-      setLoadingIds(new Set())
+      try {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[CategoryShowcaseAmazon] Falling back to client-side fetch! This may cause 429s.")
+        }
+        const entries = await Promise.all(
+          roots.map(async (parent) => {
+            try {
+              const tiles = await fetchTilesForParent(parent)
+              return [parent.id, tiles] as const
+            } catch (err) {
+              if (err instanceof Error && err.message.includes("429")) {
+                throw err // escalate rate limit to show global message
+              }
+              return [parent.id, [null, null, null, null] as (TilePick | null)[]] as const
+            }
+          }),
+        )
+        if (cancelled) return
+        const map: Record<string, (TilePick | null)[]> = {}
+        for (const [id, tiles] of entries) map[id] = tiles
+        setTilesByParentId(map)
+      } catch (err) {
+        if (cancelled) return
+        if (err instanceof Error) setError(err.message)
+      } finally {
+        if (!cancelled) setLoadingIds(new Set())
+      }
     })()
 
     return () => {
@@ -343,6 +367,22 @@ export function CategoryShowcaseAmazon({
   }, [roots, hasInitial])
 
   if (roots.length === 0) return null
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+        <p className="text-sm font-medium text-red-800">{error}</p>
+        {!hasInitial && (
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 text-xs font-bold text-red-600 hover:underline"
+          >
+            Refresh page
+          </button>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div

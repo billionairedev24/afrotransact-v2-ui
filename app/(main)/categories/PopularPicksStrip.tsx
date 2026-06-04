@@ -18,11 +18,14 @@ import { searchProducts, type SearchResult } from "@/lib/api"
 export function PopularPicksStrip() {
   const [items, setItems] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     searchProducts({ size: "20", sort_by: "rating" })
       .then((r) => setItems(r.results))
-      .catch(() => {})
+      .catch((err) => {
+        if (err instanceof Error) setError(err.message)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -35,6 +38,15 @@ export function PopularPicksStrip() {
             <div key={i} className="h-28 w-28 shrink-0 rounded-lg bg-gray-100 animate-pulse" />
           ))}
         </div>
+      </section>
+    )
+  }
+
+  if (error) {
+    return (
+      <section className="mt-10 border-t border-gray-200 pt-8">
+        <h2 className="text-lg font-bold text-gray-900 mb-2">Popular picks</h2>
+        <p className="text-sm text-muted-foreground">{error}</p>
       </section>
     )
   }

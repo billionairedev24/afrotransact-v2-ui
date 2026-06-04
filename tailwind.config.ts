@@ -48,8 +48,18 @@ const config: Config = {
           foreground: 'hsl(var(--sidebar-foreground))',
         },
         'sidebar-primary': 'hsl(var(--sidebar-primary))',
+        'sidebar-primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
         'sidebar-accent': 'hsl(var(--sidebar-accent))',
+        'sidebar-accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
         'sidebar-border': 'hsl(var(--sidebar-border))',
+        'sidebar-ring': 'hsl(var(--sidebar-ring))',
+        portal: {
+          main: 'hsl(var(--portal-main))',
+          admin: 'hsl(var(--portal-admin))',
+          seller: 'hsl(var(--portal-seller))',
+          service: 'hsl(var(--portal-service))',
+          dispatcher: 'hsl(var(--portal-dispatcher))',
+        },
         success: {
           DEFAULT: 'hsl(var(--success))',
           foreground: 'hsl(var(--success-foreground))',

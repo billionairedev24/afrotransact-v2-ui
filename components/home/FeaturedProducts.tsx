@@ -121,6 +121,7 @@ export function FeaturedProducts({
       searchProducts({ size: String(size), sort_by: sortBy }).then((res) => res.results),
     staleTime: 5 * 60 * 1000,
     initialData: initialProducts,
+    enabled: initialProducts === undefined || initialProducts.length === 0,
   })
   const loading = isLoading && (initialProducts === undefined)
 

@@ -21,7 +21,7 @@ import {
 type FormState = {
   label: string; line1: string; line2: string; city: string; state: string; postalCode: string; countryCode: string; isDefault: boolean
 }
-const EMPTY: FormState = { label: "", line1: "", line2: "", city: "Austin", state: "TX", postalCode: "", countryCode: "US", isDefault: false }
+const EMPTY: FormState = { label: "", line1: "", line2: "", city: "", state: "", postalCode: "", countryCode: "US", isDefault: false }
 
 export default function AddressesPage() {
   const { status } = useSession()
@@ -144,9 +144,9 @@ export default function AddressesPage() {
             {field("Label (e.g. Home, Work)", "label", "Home")}
             {field("Address Line 1", "line1", "123 Main St")}
             {field("Line 2 (optional)", "line2", "Apt 4B")}
-            {field("City", "city", "Austin")}
-            {field("State", "state", "TX")}
-            {field("ZIP Code", "postalCode", "78701")}
+            {field("City", "city", "City")}
+            {field("State", "state", "State")}
+            {field("ZIP Code", "postalCode", "ZIP")}
           </div>
           <div className="flex items-center gap-2 mt-4">
             <input

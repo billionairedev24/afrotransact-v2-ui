@@ -458,7 +458,7 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1.5">City allowlist (CSV)</label>
-                    <input value={shippingCitiesInput} onChange={(e) => setShippingCitiesInput(e.target.value)} placeholder="Austin, Dallas" className={INPUT_CLASS} />
+                    <input value={shippingCitiesInput} onChange={(e) => setShippingCitiesInput(e.target.value)} placeholder="e.g. City A, City B" className={INPUT_CLASS} />
                   </div>
                 </div>
                 <div className="border-t border-gray-100 pt-5">

@@ -55,3 +55,9 @@ tsconfig.tsbuildinfo
 *.bak
 *.tmp
 *.temp
+
+# Claude Code working directory
+.claude/
+
+# Local debug scripts
+test-redirect.js

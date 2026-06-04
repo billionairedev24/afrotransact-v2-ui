@@ -122,6 +122,11 @@ export async function fetchCategoryTiles(
 
   try {
     const res = await searchProducts({ size }, { revalidate })
+    if (res.results.length === 0) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[fetchCategoryTiles] search pool is empty, falling back to per-category searches")
+      }
+    }
     const tiles = buildTilesFromPool(parents, res.results ?? [])
 
     const empty = parents.filter((p) => {

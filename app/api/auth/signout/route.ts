@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
+import { kcIssuerPublic } from "@/lib/keycloak-issuers"
 
 /**
  * Clears all NextAuth-related cookies on the response.
@@ -42,12 +43,8 @@ function clearNextAuthCookies(req: NextRequest, response: NextResponse) {
 async function handleSignout(req: NextRequest) {
   const token = await getToken({ req })
 
-  // KEYCLOAK_ISSUER must be the public HTTPS URL users' browsers can reach
-  // (e.g. https://auth-uat.afrotransact.com/realms/afrotransact).
-  // This is the URL set in the Vercel/deployment environment.
-  const publicIssuer =
-    process.env.KEYCLOAK_ISSUER ||
-    "http://localhost:8180/realms/afrotransact"
+  // Browser redirect target for Keycloak end-session (`KEYCLOAK_ISSUER`).
+  const publicIssuer = kcIssuerPublic
 
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001"
 

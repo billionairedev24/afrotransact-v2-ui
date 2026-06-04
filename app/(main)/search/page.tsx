@@ -33,6 +33,7 @@ import {
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
 import { RemoteImage } from "@/components/ui/remote-image"
+import { resolveDefaultRegion } from "@/lib/regions"
 
 const SORT_OPTIONS = [
   { value: "relevance", label: "Most Relevant" },
@@ -575,6 +576,7 @@ function SearchContent() {
   const pathname = usePathname()
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<SearchResponse | null>(null)
   const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [flagsLoaded, setFlagsLoaded] = useState(false)
@@ -596,7 +598,7 @@ function SearchContent() {
     ;(async () => {
       try {
         const regions = await getRegions("", true).catch(() => [])
-        const r: Region | undefined = regions.find((r) => r.code === "us-tx-austin") ?? regions[0]
+        const r: Region | undefined = resolveDefaultRegion(regions)
         if (!r || cancelled) return
         const f = await getRegionFeatures(r.id).catch(() => [])
         if (!cancelled) setFlags(f)
@@ -612,6 +614,7 @@ function SearchContent() {
     if (!marketplaceEnabled) return
     let cancelled = false
     setLoading(true)
+    setError(null)
 
     const params: Record<string, string> = {
       page: String(page),
@@ -627,8 +630,9 @@ function SearchContent() {
       .then((res) => {
         if (!cancelled) setData(res)
       })
-      .catch(() => {
-        if (!cancelled)
+      .catch((err) => {
+        if (!cancelled) {
+          if (err instanceof Error) setError(err.message)
           setData({
             results: [],
             total: 0,
@@ -642,6 +646,7 @@ function SearchContent() {
             },
             did_you_mean: null,
           })
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -886,6 +891,18 @@ function SearchContent() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
               <p className="text-sm text-gray-400">Searching products...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="rounded-2xl bg-red-50 p-6 mb-5 border border-red-100">
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+              >
+                Try again
+              </button>
             </div>
           ) : results.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">

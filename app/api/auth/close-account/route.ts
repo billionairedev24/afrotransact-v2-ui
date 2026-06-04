@@ -11,6 +11,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { kcIssuerServer } from "@/lib/keycloak-issuers"
 
 function env(name: string, fallback: string) {
   return process.env[name] || fallback
@@ -22,9 +23,8 @@ function env(name: string, fallback: string) {
  * realm only — no master realm credentials in the application process.
  */
 async function getAdminToken(): Promise<string | null> {
-  const kcIssuer = env("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
   try {
-    const res = await fetch(`${kcIssuer}/protocol/openid-connect/token`, {
+    const res = await fetch(`${kcIssuerServer}/protocol/openid-connect/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -76,8 +76,7 @@ export async function POST() {
     )
   }
 
-  const kcIssuer = env("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
-  const kcBase = kcIssuer.replace(/\/realms\/.*$/, "")
+  const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
   const realm = env("KEYCLOAK_REALM", "afrotransact")
 
   try {

@@ -159,16 +159,24 @@ function ProductCard({ product }: { product: SearchResult }) {
   )
 }
 
+// AFT-1 (beta launch): "For You" calls the AI service's recommendations
+// endpoint. Gate behind the same NEXT_PUBLIC_AI_ENABLED flag the AiWidget uses
+// so the whole AI surface flips together.
+const AI_ENABLED = process.env.NEXT_PUBLIC_AI_ENABLED === "true"
+
 export function ForYouSection({ token }: { token?: string }) {
   const [data, setData] = useState<RecommendationsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(AI_ENABLED)
 
   useEffect(() => {
+    if (!AI_ENABLED) return
     getRecommendations(token, 8)
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false))
   }, [token])
+
+  if (!AI_ENABLED) return null
 
   // Don't render at all until loaded — avoids layout shift on first visit (no history)
   if (loading || !data || data.results.length === 0) return null

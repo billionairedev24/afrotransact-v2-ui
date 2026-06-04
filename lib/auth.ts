@@ -22,6 +22,7 @@ import type { JWT } from "next-auth/jwt"
 import type { OAuthConfig } from "next-auth/providers/oauth"
 import KeycloakProvider from "next-auth/providers/keycloak"
 import { grantSellerEntitlements } from "@/lib/keycloak-admin"
+import { kcIssuerPublic, kcIssuerServer } from "@/lib/keycloak-issuers"
 
 // Defense-in-depth: refuse to load in the browser. The secrets this module
 // references (KEYCLOAK_CLIENT_SECRET, etc.) must never be bundled client-side.
@@ -63,7 +64,13 @@ function optionalEnv(name: string, fallback: string): string {
   return process.env[name] || fallback
 }
 
-const kcIssuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
+if (kcIssuerPublic !== kcIssuerServer && process.env.NODE_ENV !== "test") {
+  console.info(
+    `[auth] Keycloak split issuers — public (browser redirects): ${kcIssuerPublic}; ` +
+      `server (token/userinfo/JWKS from Next.js): ${kcIssuerServer}`,
+  )
+}
+
 const kcClientId = optionalEnv("KEYCLOAK_CLIENT_ID", "afrotransact-web")
 const kcClientSecret = requireEnv("KEYCLOAK_CLIENT_SECRET")
 const kcScope = "openid email profile offline_access"
@@ -72,6 +79,56 @@ if (!process.env.NEXTAUTH_SECRET) {
   console.error(
     "[auth] NEXTAUTH_SECRET is not set. NextAuth cannot sign session cookies.",
   )
+}
+
+/**
+ * Regular Keycloak sign-in — browser hits public issuer `/auth`; server exchanges
+ * the code via token/userinfo/JWKS (often the internal issuer in Docker/K8s).
+ */
+function keycloakLoginProvider(): OAuthConfig<Record<string, unknown>> {
+  if (kcIssuerPublic === kcIssuerServer) {
+    return KeycloakProvider({
+      clientId: kcClientId,
+      clientSecret: kcClientSecret,
+      issuer: kcIssuerPublic,
+      authorization: { params: { scope: kcScope } },
+    }) as OAuthConfig<Record<string, unknown>>
+  }
+
+  return {
+    id: "keycloak",
+    name: "Keycloak",
+    type: "oauth",
+    issuer: kcIssuerPublic,
+    clientId: kcClientId,
+    clientSecret: kcClientSecret,
+    authorization: {
+      url: `${kcIssuerPublic}/protocol/openid-connect/auth`,
+      params: { scope: kcScope },
+    },
+    token: {
+      url: `${kcIssuerServer}/protocol/openid-connect/token`,
+    },
+    userinfo: {
+      url: `${kcIssuerServer}/protocol/openid-connect/userinfo`,
+    },
+    jwks_endpoint: `${kcIssuerServer}/protocol/openid-connect/certs`,
+    checks: ["pkce", "state"],
+    idToken: true,
+    profile(profile) {
+      return {
+        id: profile.sub as string,
+        name: (profile.name ?? profile.preferred_username) as string,
+        email: profile.email as string,
+        image: profile.picture as string | undefined,
+      }
+    },
+    style: {
+      logo: "/keycloak.svg",
+      bg: "#fff",
+      text: "#000",
+    },
+  }
 }
 
 /**
@@ -84,18 +141,23 @@ function keycloakRegisterBase(id: string, name: string): OAuthConfig<Record<stri
     id,
     name,
     type: "oauth",
+    issuer: kcIssuerPublic,
     clientId: kcClientId,
     clientSecret: kcClientSecret,
     authorization: {
-      url: `${kcIssuer}/protocol/openid-connect/registrations`,
+      url: `${kcIssuerPublic}/protocol/openid-connect/registrations`,
       params: { 
         scope: kcScope,
         registration_role: "seller" // Default to buyer, can be overridden by signIn params
       },
     },
-    token: `${kcIssuer}/protocol/openid-connect/token`,
-    userinfo: `${kcIssuer}/protocol/openid-connect/userinfo`,
-    issuer: kcIssuer,
+    token: {
+      url: `${kcIssuerServer}/protocol/openid-connect/token`,
+    },
+    userinfo: {
+      url: `${kcIssuerServer}/protocol/openid-connect/userinfo`,
+    },
+    jwks_endpoint: `${kcIssuerServer}/protocol/openid-connect/certs`,
     idToken: true,
     checks: ["state"],
     profile(profile) {
@@ -128,12 +190,7 @@ function KeycloakRegisterSellerProvider(): OAuthConfig<Record<string, unknown>> 
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    KeycloakProvider({
-      clientId: kcClientId,
-      clientSecret: kcClientSecret,
-      issuer: kcIssuer,
-      authorization: { params: { scope: kcScope } },
-    }),
+    keycloakLoginProvider(),
     KeycloakRegisterProvider(),
     KeycloakRegisterSellerProvider(),
   ],
@@ -249,9 +306,8 @@ export const authOptions: NextAuthOptions = {
       // is fully terminated even if the browser redirect fails.
       const token = message.token
       if (token?.refreshToken) {
-        const issuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
         try {
-          await fetch(`${issuer}/protocol/openid-connect/logout`, {
+          await fetch(`${kcIssuerServer}/protocol/openid-connect/logout`, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
@@ -274,8 +330,7 @@ async function refreshAccessToken(token: {
   expiresAt?: number
   [key: string]: unknown
 }) {
-  const issuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
-  const tokenUrl = `${issuer}/protocol/openid-connect/token`
+  const tokenUrl = `${kcIssuerServer}/protocol/openid-connect/token`
 
   const response = await fetch(tokenUrl, {
     method: "POST",

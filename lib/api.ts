@@ -1,4 +1,7 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+const API_BASE =
+  process.env.INTERNAL_API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:8080"
 
 /** Default request budget in ms. One slow downstream shouldn't hang the UI forever. */
 const DEFAULT_TIMEOUT_MS = 15_000
@@ -70,7 +73,9 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
       // Caller cancelled — propagate as-is for TanStack Query etc.
       throw err
     }
-    console.error(`[API] ${opts.method ?? "GET"} ${path} → network error`, err)
+    if (process.env.NEXT_PHASE !== "phase-production-build") {
+      console.error(`[API] ${opts.method ?? "GET"} ${path} → network error`, err)
+    }
     throw new ApiError(0, "Network error", path)
   } finally {
     if (timer) clearTimeout(timer)
@@ -79,12 +84,20 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     let userMessage = res.statusText
-    try {
-      const parsed = JSON.parse(text)
-      userMessage = parsed.error || parsed.message || res.statusText
-    } catch {
-      if (text) userMessage = text
+
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      userMessage = "The service is temporarily unavailable. Please try again in a few minutes. (HTTP " + res.status + ")"
+    } else if (res.status === 429) {
+      userMessage = "Too many requests. Please slow down and try again in a moment."
+    } else {
+      try {
+        const parsed = JSON.parse(text)
+        userMessage = parsed.error || parsed.message || res.statusText
+      } catch {
+        if (text) userMessage = text
+      }
     }
+
     // 401 from the API means our access token is no longer accepted (revoked,
     // expired beyond refresh, key rotated). Hand off to the session guard.
     if (res.status === 401 && on401Handler && typeof window !== "undefined") {
@@ -512,8 +525,13 @@ export interface SellerInfo {
   approvedAt: string | null
 }
 
-export function getCurrentSeller(token: string) {
-  return api<SellerInfo>("/api/v1/seller/me", { token })
+/** @throws {ApiError} 204 when user has no seller profile (backend returns No Content). */
+export async function getCurrentSeller(token: string): Promise<SellerInfo> {
+  const body = await api<SellerInfo | undefined>("/api/v1/seller/me", { token })
+  if (!body) {
+    throw new ApiError(204, "Not registered as seller", "/api/v1/seller/me")
+  }
+  return body
 }
 
 export function registerSeller(token: string, businessName: string, taxId?: string, contactEmail?: string) {
@@ -1407,9 +1425,10 @@ function mapRegion(r: RawRegion): Region {
   }
 }
 
-export async function getRegions(token: string, activeOnly = false): Promise<Region[]> {
+export async function getRegions(token?: string, activeOnly = false): Promise<Region[]> {
   const qs = activeOnly ? "?active=true" : ""
-  const res = await api<{ regions: RawRegion[] } | RawRegion[]>(`/api/v1/regions${qs}`, { token })
+  const opts = token ? { token } : {}
+  const res = await api<{ regions: RawRegion[] } | RawRegion[]>(`/api/v1/regions${qs}`, opts)
   const raw = Array.isArray(res) ? res : (res.regions ?? [])
   return raw.map(mapRegion)
 }
@@ -2155,10 +2174,17 @@ export interface HeroSlideConfig {
 }
 
 export async function getPublicAds(): Promise<import("@/lib/ads").AdConfig[]> {
-  const res = await fetch(`${API_BASE}/api/v1/config/ads`)
-  if (!res.ok) return []
-  const data = (await res.json()) as { ads?: import("@/lib/ads").AdConfig[] }
-  return data.ads ?? []
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/config/ads`)
+    if (!res.ok) return []
+    const data = (await res.json()) as { ads?: import("@/lib/ads").AdConfig[] }
+    return data.ads ?? []
+  } catch (err) {
+    if (process.env.NEXT_PHASE !== "phase-production-build") {
+      console.error("[API] GET /api/v1/config/ads → network error", err)
+    }
+    return []
+  }
 }
 
 export function upsertAdminAd(token: string, body: import("@/lib/ads").AdConfig) {
@@ -2174,10 +2200,17 @@ export async function getPublicHeroSlides(opts?: { revalidate?: number }): Promi
     opts?.revalidate !== undefined
       ? { next: { revalidate: opts.revalidate, tags: ["hero-carousel"] } }
       : { cache: "no-store" }
-  const res = await fetch(`${API_BASE}/api/v1/config/hero-carousel`, init)
-  if (!res.ok) return []
-  const data = (await res.json()) as { slides?: HeroSlideConfig[] }
-  return data.slides ?? []
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/config/hero-carousel`, init)
+    if (!res.ok) return []
+    const data = (await res.json()) as { slides?: HeroSlideConfig[] }
+    return data.slides ?? []
+  } catch (err) {
+    if (process.env.NEXT_PHASE !== "phase-production-build") {
+      console.error("[API] GET /api/v1/config/hero-carousel → network error", err)
+    }
+    return []
+  }
 }
 
 // Admin: Hero carousel
@@ -2276,13 +2309,17 @@ export interface AdminAnalyticsResponse {
   totalOrders: number
   avgOrderValueCents: number
   totalDiscountCents: number
+  allOrdersCreatedCount: number
+  cancelledOrderCount: number
+  paymentFailedOrderCount: number
+  cancelledOrderPercent: number
+  paymentFailedOrderPercent: number
   revenueByDay: AdminAnalyticsDailyPoint[]
   ordersByStatus: AdminAnalyticsStatusCount[]
   revenueByRegion: AdminAnalyticsRegionRevenue[]
   topStores: AdminAnalyticsStoreRevenue[]
   platformHealth?: AdminAnalyticsPlatformHealth
 }
-
 export interface SellerAnalyticsDailyPoint {
   day: string
   revenueCents: number
@@ -2378,17 +2415,35 @@ function normalizeAdminAnalytics(raw: unknown): AdminAnalyticsResponse {
       orderCount: pickNum(r, "orderCount", "order_count"),
     }
   }
-  return {
+  const rawPlatformHealth = o.platformHealth ?? o.platform_health
+
+  const out: AdminAnalyticsResponse = {
     totalRevenueCents: pickNum(o, "totalRevenueCents", "total_revenue_cents"),
     totalCommissionCents: pickNum(o, "totalCommissionCents", "total_commission_cents"),
     totalOrders: pickNum(o, "totalOrders", "total_orders"),
     avgOrderValueCents: pickNum(o, "avgOrderValueCents", "avg_order_value_cents"),
     totalDiscountCents: pickNum(o, "totalDiscountCents", "total_discount_cents"),
+    allOrdersCreatedCount: pickNum(o, "allOrdersCreatedCount", "all_orders_created_count"),
+    cancelledOrderCount: pickNum(o, "cancelledOrderCount", "cancelled_order_count"),
+    paymentFailedOrderCount: pickNum(o, "paymentFailedOrderCount", "payment_failed_order_count"),
+    cancelledOrderPercent: pickNum(o, "cancelledOrderPercent", "cancelled_order_percent"),
+    paymentFailedOrderPercent: pickNum(o, "paymentFailedOrderPercent", "payment_failed_order_percent"),
     revenueByDay: pickArr(o, "revenueByDay", "revenue_by_day").map(mapDay),
     ordersByStatus: pickArr(o, "ordersByStatus", "orders_by_status").map(mapStatus),
     revenueByRegion: pickArr(o, "revenueByRegion", "revenue_by_region").map(mapRegion),
     topStores: pickArr(o, "topStores", "top_stores").map(mapStore),
   }
+
+  if (
+    rawPlatformHealth !== null &&
+    rawPlatformHealth !== undefined &&
+    typeof rawPlatformHealth === "object" &&
+    !Array.isArray(rawPlatformHealth)
+  ) {
+    out.platformHealth = rawPlatformHealth as AdminAnalyticsPlatformHealth
+  }
+
+  return out
 }
 
 function mapSellerAnalyticsDay(row: unknown): SellerAnalyticsDailyPoint {
@@ -2700,6 +2755,69 @@ export async function getRecommendations(
   const clientId = getOrCreateClientId()
   const qs = new URLSearchParams({ limit: String(limit), client_id: clientId })
   return api<RecommendationsResponse>(`/api/v1/ai/recommendations?${qs}`, token ? { token } : {})
+}
+
+// ── Seller Invites ────────────────────────────────────────────────────────────
+
+export type SellerInviteStatus = "pending" | "used" | "expired" | "revoked"
+
+export interface SellerInvite {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  kcUserId: string
+  expiresAt: string
+  status: SellerInviteStatus
+  createdAt: string
+  notes?: string | null
+}
+
+export interface CreateSellerInvitePayload {
+  email: string
+  firstName: string
+  lastName: string
+  expiresInHours?: number
+  notes?: string
+}
+
+export function createSellerInvite(token: string, payload: CreateSellerInvitePayload) {
+  return api<SellerInvite>("/api/v1/admin/seller-invites", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
+
+export function resendSellerInvite(token: string, inviteId: string) {
+  return api<SellerInvite>(
+    `/api/v1/admin/seller-invites/${encodeURIComponent(inviteId)}/resend`,
+    { method: "POST", token },
+  )
+}
+
+export interface ListSellerInvitesParams {
+  status?: SellerInviteStatus
+  email?: string
+  page?: number
+  size?: number
+}
+
+export function listSellerInvites(token: string, params: ListSellerInvitesParams = {}) {
+  const qs = new URLSearchParams()
+  if (params.status) qs.set("status", params.status)
+  if (params.email) qs.set("email", params.email)
+  if (params.page !== undefined) qs.set("page", String(params.page))
+  if (params.size !== undefined) qs.set("size", String(params.size))
+  const suffix = qs.toString() ? `?${qs.toString()}` : ""
+  return api<Page<SellerInvite>>(`/api/v1/admin/seller-invites${suffix}`, { token })
+}
+
+export function revokeSellerInvite(token: string, id: string) {
+  return api<{ id: string; status: "revoked" }>(
+    `/api/v1/admin/seller-invites/${encodeURIComponent(id)}/revoke`,
+    { method: "POST", token },
+  )
 }
 
 export { API_BASE }

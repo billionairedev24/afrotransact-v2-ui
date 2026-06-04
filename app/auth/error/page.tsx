@@ -65,6 +65,17 @@ function AuthErrorContent() {
             <p className="text-sm text-muted-foreground">{description}</p>
           </div>
 
+          {/* Helper for redirect_uri_mismatch if relevant */}
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-left space-y-2">
+            <p className="text-[0.7rem] font-semibold text-amber-800 uppercase tracking-wider">Developer Note</p>
+            <p className="text-xs text-amber-700 leading-normal">
+              If Google shows <code className="font-mono text-[0.65rem] bg-amber-100 px-1 rounded">redirect_uri_mismatch</code>, you must register the Keycloak broker endpoint in your Google Cloud Console:
+            </p>
+            <code className="block break-all rounded bg-white/50 p-2 text-[0.65rem] font-mono text-amber-900 border border-amber-200/50">
+              {process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER}/broker/google/endpoint
+            </code>
+          </div>
+
           <div className="flex flex-col gap-3">
             <Link
               href="/auth/login"

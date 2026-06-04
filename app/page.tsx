@@ -22,7 +22,7 @@ import { AdSlot } from "@/components/home/AdSlot"
 import { FeaturedProducts } from "@/components/home/FeaturedProducts"
 import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
 import { ForYouSection } from "@/components/home/ForYouSection"
-import { buildTilesFromPool } from "@/lib/category-tiles"
+import { fetchCategoryTiles } from "@/lib/category-tiles"
 import {
   getCategories,
   getAllStores,
@@ -75,7 +75,7 @@ const trustPoints = [
   {
     icon: Truck,
     title: "Same-Day Local Delivery",
-    body: "Orders placed before 2 PM delivered today across Austin, Georgetown, Round Rock, and Leander.",
+    body: "Orders placed early in the day are often fulfilled the same day when sellers offer local delivery.",
     color: "text-sky-400",
     bg: "bg-sky-500/10 border-sky-500/20",
   },
@@ -101,8 +101,8 @@ export default async function HomePage() {
       safe<PlatformDealData[]>(getPublicPlatformDeals(undefined, { revalidate: 60 }), []),
       safe(getPublicHeroSlides({ revalidate: 60 }), []),
       // Rating-sorted pool: doubles as both the "Fresh Near You" featured
-      // section (first 8) AND the source for server-computed category tiles
-      // (all ~96). Keeps server→gateway traffic at 1 request for both uses.
+      // section (first 8) AND the source for server-computed category tiles.
+      // We'll use the robust fetchCategoryTiles helper for the latter.
       safe(
         searchProducts({ size: "96", sort_by: "rating" }, { revalidate: 300 }),
         { results: [] as SearchResult[] } as Awaited<ReturnType<typeof searchProducts>>,
@@ -113,16 +113,17 @@ export default async function HomePage() {
       ),
     ])
 
+  const roots = categories.filter((c) => c.parentId == null).slice(0, 4)
+
+  // Use the robust fetchCategoryTiles helper which handles fallback per-category
+  // searches if the pool (featuredRating) doesn't have matches.
+  // This keeps client-side traffic at zero.
+  const categoryTiles = await fetchCategoryTiles(roots, { revalidate: 300 })
+  const featuredRatingInitial = featuredRating.results.slice(0, 8)
+  const featuredNewestInitial = featuredNewest.results.slice(0, 8)
+  
   const stores = allStores.slice(0, 6)
   const platformDeals = platformDealsRaw.slice(0, 3)
-  // Pre-compute category tile images on the server using the rating pool
-  // we already fetched. Client renders tiles synchronously — no
-  // `/api/v1/search?category=…` calls from the browser, no 429s.
-  const categoryTiles = buildTilesFromPool(
-    categories.filter((c) => c.parentId == null).slice(0, 4),
-    featuredRating.results,
-  )
-  const featuredRatingInitial = featuredRating.results.slice(0, 8)
   // HeroCarousel is a client component — pass raw configs and let it map
   // them to slides on the client (JSX in `mapConfigToSlide` can't be
   // invoked across the server/client boundary).
@@ -260,7 +261,7 @@ export default async function HomePage() {
 
         <FeaturedProducts
           title="Fresh Near You"
-          subtitle="Based on Austin, TX"
+          subtitle="Highly rated picks from the marketplace"
           sortBy="rating"
           size={8}
           viewAllHref="/search?sort=rating"
@@ -274,7 +275,7 @@ export default async function HomePage() {
           size={8}
           viewAllHref="/search?sort=newest"
           icon={<Sparkles className="h-3.5 w-3.5 text-primary" />}
-          initialProducts={featuredNewest.results}
+          initialProducts={featuredNewestInitial}
         />
 
         <ForYouSection />
@@ -416,7 +417,7 @@ export default async function HomePage() {
               </h2>
               <p className="text-muted-foreground text-base leading-relaxed">
                 Join 200+ immigrant entrepreneurs already selling on AfroTransact. Set up your store in
-                minutes, reach thousands of customers in Austin, and grow on your own terms.
+                minutes, reach customers in your community, and grow on your own terms.
               </p>
 
               <div className="grid grid-cols-3 gap-3 max-w-lg mx-auto pt-2">

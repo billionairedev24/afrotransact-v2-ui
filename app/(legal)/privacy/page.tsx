@@ -309,7 +309,7 @@ export default function PrivacyPage() {
             <p>For privacy-related questions, requests, or concerns:</p>
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-1">
               <p className="font-semibold text-gray-900">{COMPANY} — Privacy Team</p>
-              <p>Austin, Texas, United States</p>
+              <p>Texas, United States</p>
               <p>
                 Email:{" "}
                 <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">

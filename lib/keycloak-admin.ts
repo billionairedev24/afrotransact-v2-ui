@@ -11,6 +11,8 @@
  * in a browser context (defense-in-depth beyond Next's server/client
  * component boundary rules).
  */
+import { kcIssuerServer } from "@/lib/keycloak-issuers"
+
 if (typeof window !== "undefined") {
   throw new Error(
     "[keycloak-admin] This module is server-only and must not be imported from the client.",
@@ -51,8 +53,7 @@ async function requestAdminToken(
  * No master realm credentials are used.
  */
 async function getKeycloakAdminAccessToken(): Promise<string | null> {
-  const kcIssuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
-  const tokenUrl = `${kcIssuer}/protocol/openid-connect/token`
+  const tokenUrl = `${kcIssuerServer}/protocol/openid-connect/token`
 
   // Preferred: service-account client credentials.
   const adminApiClientId = optionalEnv("KEYCLOAK_ADMIN_API_CLIENT_ID", "afrotransact-admin-api")
@@ -78,7 +79,9 @@ async function getKeycloakAdminAccessToken(): Promise<string | null> {
   if (adminUsername && adminPassword) {
     const adminClientId = optionalEnv("KEYCLOAK_ADMIN_CLIENT_ID", "admin-cli")
     // admin-cli is registered in the master realm — derive its token URL from the base server URL.
-    const masterTokenUrl = kcIssuer.replace(/\/realms\/[^/]+/, "/realms/master") + "/protocol/openid-connect/token"
+    const masterTokenUrl =
+      kcIssuerServer.replace(/\/realms\/[^/]+/, "/realms/master") +
+      "/protocol/openid-connect/token"
     const params = new URLSearchParams({
       grant_type: "password",
       client_id: adminClientId,
@@ -111,8 +114,7 @@ function stripReadOnlyUserFields(user: KcUser): KcUser {
  * Keycloak requires a full user representation on PUT — merge into the existing user from GET.
  */
 export async function setRegistrationRoleSeller(userId: string): Promise<boolean> {
-  const kcIssuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
-  const kcBase = kcIssuer.replace(/\/realms\/.*$/, "")
+  const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
   const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
   const access_token = await getKeycloakAdminAccessToken()
   if (!access_token) {
@@ -161,8 +163,7 @@ export async function setRegistrationRoleSeller(userId: string): Promise<boolean
  * Assign a realm role to the user (appears in access token realm_access.roles).
  */
 export async function addRealmRoleToUser(userId: string, roleName: string): Promise<boolean> {
-  const kcIssuer = optionalEnv("KEYCLOAK_ISSUER", "http://localhost:8180/realms/afrotransact")
-  const kcBase = kcIssuer.replace(/\/realms\/.*$/, "")
+  const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
   const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
   const access_token = await getKeycloakAdminAccessToken()
   if (!access_token) return false

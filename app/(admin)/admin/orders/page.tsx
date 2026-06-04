@@ -282,8 +282,36 @@ function AdminOrderDetailSheet({
                 </div>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Total</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Buyer total</p>
                 <p className="mt-1 text-sm font-medium text-gray-900">{formatCents(order.totalCents, order.currency)}</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Charges &amp; fees (buyer)</p>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-mono tabular-nums">{formatCents(order.raw.subtotalCents, order.currency)}</span>
+                </div>
+                {(order.raw.discountCents ?? 0) > 0 && (
+                  <div className="flex justify-between gap-4 text-green-700">
+                    <span>{order.raw.couponCode ? `Coupon (${order.raw.couponCode})` : "Coupon"}</span>
+                    <span className="font-mono tabular-nums">−{formatCents(order.raw.discountCents ?? 0, order.currency)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between gap-4">
+                  <span className="text-gray-600">Tax collected</span>
+                  <span className="font-mono tabular-nums">{formatCents(order.raw.taxCents ?? 0, order.currency)}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-gray-600">Shipping collected</span>
+                  <span className="font-mono tabular-nums">{formatCents(order.raw.shippingCostCents ?? 0, order.currency)}</span>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-gray-200 pt-2 font-semibold text-gray-900">
+                  <span>Order total</span>
+                  <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents, order.currency)}</span>
+                </div>
               </div>
             </div>
 

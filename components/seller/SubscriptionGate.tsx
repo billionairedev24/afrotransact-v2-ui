@@ -6,6 +6,10 @@ import { usePathname, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getSubscription, getPublicPlans, type SubscriptionPlan } from "@/lib/api"
+import {
+  isSellerDashboardOnboardingReady,
+  parseSellerMeResponse,
+} from "@/lib/seller-dashboard-access"
 import { Loader2, ShieldCheck, Sparkles, Check } from "lucide-react"
 
 function formatPrice(cents: number) {
@@ -49,10 +53,16 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
           const sellerRes = await fetch(`${API_BASE}/api/v1/seller/me`, {
             headers: { Authorization: `Bearer ${token}` },
           })
-          if (sellerRes.ok) {
-            const seller = await sellerRes.json()
-            const obStatus = (seller.onboardingStatus ?? "").toLowerCase()
-            if (obStatus && obStatus !== "approved") {
+          const sellerRow = await parseSellerMeResponse(sellerRes)
+          if (sellerRow) {
+            const rawOb = sellerRow.onboardingStatus ?? sellerRow.status
+            const raw =
+              typeof rawOb === "string"
+                ? rawOb
+                : rawOb != null
+                  ? String(rawOb)
+                  : ""
+            if (raw.trim() !== "" && !isSellerDashboardOnboardingReady(raw)) {
               if (!cancelled) router.replace("/dashboard/onboarding")
               return
             }

@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
-import { useCartStore } from "@/stores/cart-store"
-import { Suspense } from "react"
+import { useCartStore, clearGuestCart } from "@/stores/cart-store"
+import { getAccessToken } from "@/lib/auth-helpers"
+import { clearServerCart } from "@/lib/api"
 
 function CheckoutCompleteContent() {
   const router = useRouter()
@@ -14,16 +15,29 @@ function CheckoutCompleteContent() {
   const status = redirectStatus === "failed" ? "failed" : "success"
 
   useEffect(() => {
-    // Only clear on an explicit Stripe success. Previously this was
-    // `!== "failed"`, which also cleared when there was no query param at
-    // all (e.g. browser Back landing on this route) or when status was
-    // "processing" / "requires_action" / "requires_payment_method" — all
-    // cases where the cart should stay intact so the buyer can retry.
-    // Server-side, OrderService no longer clears the cart at order
-    // creation either; the authoritative clear happens in
-    // PaymentEventConsumer on payment.completed.
-    if (redirectStatus === "succeeded") {
-      clearCart()
+    if (redirectStatus !== "succeeded") return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const token = await getAccessToken()
+        if (cancelled) return
+        if (token) {
+          await clearServerCart(token)
+        }
+      } catch {
+        // Webhook may clear the server cart later — still clear local UI state
+      }
+      if (!cancelled) {
+        clearCart()
+        try {
+          clearGuestCart()
+        } catch {
+          // non-fatal
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
     }
   }, [redirectStatus, clearCart])
 

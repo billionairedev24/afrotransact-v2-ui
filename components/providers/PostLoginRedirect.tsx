@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, usePathname } from "next/navigation"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { isSellerDashboardOnboardingReady } from "@/lib/seller-dashboard-access"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
 
@@ -72,7 +73,7 @@ export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
       const obStatus = await fetchOnboardingStatus(token)
       const isOnDashboard = pathname?.startsWith("/dashboard")
 
-      if (obStatus === "approved" || obStatus === "completed") {
+      if (obStatus !== null && isSellerDashboardOnboardingReady(obStatus)) {
         if (!isOnDashboard) router.replace("/dashboard")
       } else if (obStatus !== null) {
         router.replace("/dashboard/onboarding")
