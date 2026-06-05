@@ -208,3 +208,11 @@
 .progress-bar-animate {
   animation: progressBar var(--pb-duration, 6000ms) linear;
 }
+
+/* Storefront preview mode: hides the customer-side global header and footer
+   so sellers see their store chrome-free when previewing from the dashboard.
+   Toggled by adding `storefront-preview` to <body> (see store/[slug] page). */
+body.storefront-preview header,
+body.storefront-preview footer {
+  display: none !important;
+}

@@ -93,6 +93,10 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/sell") ||
+    pathname.startsWith("/store/") ||
+    pathname.startsWith("/stores") ||
+    pathname.startsWith("/product/") ||
+    pathname.startsWith("/category/") ||
     pathname.startsWith("/o/") ||
     pathname === "/d" ||
     pathname === "/ob"

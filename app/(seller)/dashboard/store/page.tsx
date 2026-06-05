@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
@@ -203,7 +204,14 @@ function ImageUploadField({
 
 export default function StoreSettingsPage() {
   const { status: sessionStatus } = useSession()
+  const router = useRouter()
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (sessionStatus === "unauthenticated") {
+      router.replace("/auth/login?callbackUrl=/dashboard/store")
+    }
+  }, [sessionStatus, router])
   const { data: seller, isLoading: sellerLoading } = useSellerMe()
   const { data: stores = [], isLoading: storesLoading } = useSellerStores(seller?.id)
   const store = stores[0]
@@ -387,15 +395,16 @@ export default function StoreSettingsPage() {
               : "Create your store to start selling"}
           </p>
         </div>
-        {store && (
+        {store && store.slug && (
           <a
-            href={`/store/${store.slug}`}
+            href={`/store/${store.slug}?preview=1`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground shadow-sm hover:bg-brand-gold-hover transition-colors"
+            title={`/store/${store.slug}`}
           >
             <Store className="h-4 w-4" />
-            View Store
+            Preview Storefront
           </a>
         )}
       </div>
@@ -465,11 +474,18 @@ export default function StoreSettingsPage() {
             {store && (
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
-                  Store Slug
+                  Store URL
                 </label>
-                <p className="text-sm text-foreground">{store.slug}</p>
+                <a
+                  href={`/store/${store.slug}?preview=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
+                >
+                  /store/{store.slug}
+                </a>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Auto-generated from store name. Used in store URLs.
+                  Auto-generated from your store name. Click to preview your storefront.
                 </p>
               </div>
             )}
