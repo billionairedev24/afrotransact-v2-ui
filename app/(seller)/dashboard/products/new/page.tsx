@@ -19,6 +19,10 @@ import {
   Star,
   Check,
   Tag,
+  Bold,
+  Italic,
+  List,
+  Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -124,7 +128,9 @@ function defaultVariant(): VariantRow {
   }
 }
 
-const CARD = "rounded-2xl border border-gray-200 bg-white p-6"
+// Mockup card chrome (create-product-and-side-bar.html line 261): white
+// surface, soft border, generous padding, 12px radius.
+const CARD = "rounded-xl border border-gray-200 bg-white p-6"
 
 function inputCls(error?: string) {
   return cn(
@@ -722,7 +728,7 @@ export default function NewProductPage() {
   if (sessionStatus === "loading" || loading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
     )
   }
@@ -732,20 +738,59 @@ export default function NewProductPage() {
   /* ================================================================ */
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 pb-12">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link
-          href="/dashboard/products"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create Product</h1>
-          <p className="mt-0.5 text-sm text-gray-500">Add a new product to your store</p>
+    <div className="mx-auto -mx-4 -my-6 sm:-mx-6 lg:-mx-8 lg:-my-8 pb-12">
+      {/* Sticky header — mockup lines 233-252: title left, badge + action
+          buttons right. Falls back to a stacked layout on mobile. */}
+      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 mb-6">
+        <div className="mx-auto max-w-7xl flex flex-col gap-4 lg:flex-row lg:items-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link
+              href="/dashboard/products"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-foreground"
+              aria-label="Back to products"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground leading-tight">
+                Create Product
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Add a new product to your store inventory.
+              </p>
+            </div>
+          </div>
+          <div className="lg:ml-auto flex flex-wrap items-center gap-2">
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded border border-gray-200 bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600">
+              <AlertCircle className="h-3 w-3" /> Subject to admin review
+            </span>
+            <Link
+              href="/dashboard/products"
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-foreground bg-white hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </Link>
+            <button
+              type="button"
+              disabled={!canSubmit}
+              onClick={() => { setSubmitAction("draft"); (document.getElementById("create-product-form") as HTMLFormElement | null)?.requestSubmit() }}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-foreground bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              <Save className="h-3.5 w-3.5" /> Save Draft
+            </button>
+            <button
+              type="button"
+              disabled={!canSubmit}
+              onClick={() => { setSubmitAction("pending_review"); (document.getElementById("create-product-form") as HTMLFormElement | null)?.requestSubmit() }}
+              className="px-5 py-2 rounded-lg bg-brand-gold text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              Submit for Review
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
 
       {/* Global error */}
       {globalError && (
@@ -760,14 +805,14 @@ export default function NewProductPage() {
         <div className={CARD}>
           <p className="text-sm text-gray-500">
             You need to create a store before adding products.{" "}
-            <Link href="/dashboard/store" className="text-primary hover:underline">
+            <Link href="/dashboard/store" className="text-foreground hover:underline">
               Go to Store Settings
             </Link>
           </p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form id="create-product-form" onSubmit={handleSubmit} className="space-y-8">
         {/* Store selector */}
         {stores.length > 1 && (
           <section className={CARD}>
@@ -787,15 +832,17 @@ export default function NewProductPage() {
           </section>
         )}
 
-        {/* ─── Section 1: Basic Info ─── */}
-        <section className={CARD}>
-          <h2 className="text-lg font-semibold text-gray-900">Basic Information</h2>
-          <p className="mt-1 text-sm text-gray-500">Core product details</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        {/* ─── Section 1: Basic Info — MAIN — mockup lines 261-304 ─── */}
+        <section className={cn(CARD, "lg:col-span-2")}>
+          <h3 className="text-xl font-bold text-foreground">Basic Information</h3>
+          <p className="mt-1 text-sm text-gray-500">Core details about what you&apos;re selling.</p>
 
           <div className="mt-6 space-y-5">
             {/* Product Name */}
             <div>
-              <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-gray-900">
+              <label htmlFor="name" className="mb-2 block text-sm font-semibold text-foreground">
                 Product Name <span className="text-red-600">*</span>
               </label>
               <input
@@ -804,47 +851,139 @@ export default function NewProductPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onBlur={() => touch("name")}
-                placeholder="e.g. Organic Shea Butter"
+                placeholder="e.g. Organic Raw Shea Butter (500g)"
                 className={inputCls(err("name"))}
               />
               <FieldError msg={err("name")} />
             </div>
 
-            {/* Description */}
+            {/* Description — with rich-text toolbar matching mockup lines 273-280.
+                Each button wraps the current selection (or caret) with the
+                appropriate plain-text/Markdown markers so the value the buyer
+                ultimately ships is a string the catalog renderer can split on
+                bullets / read as inline text. No third-party editor needed. */}
             <div>
-              <label htmlFor="desc" className="mb-1.5 block text-sm font-medium text-gray-900">
+              <label htmlFor="desc" className="mb-2 block text-sm font-semibold text-foreground">
                 Description <span className="text-red-600">*</span>
               </label>
+              <div className="flex gap-1 rounded-t-lg border border-b-0 border-gray-200 bg-gray-50 px-2 py-1.5">
+                <button
+                  type="button"
+                  title="Bold"
+                  onClick={() => {
+                    const ta = document.getElementById("desc") as HTMLTextAreaElement | null
+                    if (!ta) return
+                    const s = ta.selectionStart, e = ta.selectionEnd
+                    const sel = ta.value.slice(s, e) || "text"
+                    const next = ta.value.slice(0, s) + `**${sel}**` + ta.value.slice(e)
+                    setDescription(next)
+                    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(s + 2, s + 2 + sel.length) })
+                  }}
+                  className="p-1.5 text-gray-600 hover:bg-gray-200 hover:text-foreground rounded transition-colors"
+                >
+                  <Bold className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Italic"
+                  onClick={() => {
+                    const ta = document.getElementById("desc") as HTMLTextAreaElement | null
+                    if (!ta) return
+                    const s = ta.selectionStart, e = ta.selectionEnd
+                    const sel = ta.value.slice(s, e) || "text"
+                    const next = ta.value.slice(0, s) + `_${sel}_` + ta.value.slice(e)
+                    setDescription(next)
+                    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(s + 1, s + 1 + sel.length) })
+                  }}
+                  className="p-1.5 text-gray-600 hover:bg-gray-200 hover:text-foreground rounded transition-colors"
+                >
+                  <Italic className="h-3.5 w-3.5" />
+                </button>
+                <div className="w-px h-5 bg-gray-300 my-auto mx-1" aria-hidden />
+                <button
+                  type="button"
+                  title="Bullet list"
+                  onClick={() => {
+                    const ta = document.getElementById("desc") as HTMLTextAreaElement | null
+                    if (!ta) return
+                    const s = ta.selectionStart, e = ta.selectionEnd
+                    // Find start of line containing selection start.
+                    const before = ta.value.slice(0, s)
+                    const lineStart = before.lastIndexOf("\n") + 1
+                    const selText = ta.value.slice(lineStart, e) || "List item"
+                    const bulleted = selText.split("\n").map((l) => l.startsWith("- ") ? l : `- ${l}`).join("\n")
+                    const next = ta.value.slice(0, lineStart) + bulleted + ta.value.slice(e)
+                    setDescription(next)
+                    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(lineStart, lineStart + bulleted.length) })
+                  }}
+                  className="p-1.5 text-gray-600 hover:bg-gray-200 hover:text-foreground rounded transition-colors"
+                >
+                  <List className="h-3.5 w-3.5" />
+                </button>
+              </div>
               <textarea
                 id="desc"
-                rows={4}
+                rows={6}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 onBlur={() => touch("description")}
-                placeholder="Describe your product in detail…"
-                className={textareaCls(err("description"))}
+                placeholder="Describe the origin, benefits, and usage of your product..."
+                className={cn(
+                  textareaCls(err("description")),
+                  "rounded-t-none border-t-0 focus:border-t",
+                )}
               />
               <FieldError msg={err("description")} />
+              <p className="mt-1 text-xs text-gray-500">
+                Use the toolbar for <strong>**bold**</strong>, <em>_italic_</em>, or bulleted lists (<code>- item</code>). The product page parses bullets automatically.
+              </p>
             </div>
 
-            {/* Brand */}
-            <div>
-              <label htmlFor="brand" className="mb-1.5 block text-sm font-medium text-gray-900">
-                Brand
-              </label>
-              <input
-                id="brand"
-                type="text"
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                placeholder="e.g. Afrot Naturals"
-                className={inputCls()}
-              />
+            {/* Brand + Category row — mockup lines 282-301 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label htmlFor="brand" className="mb-2 block text-sm font-semibold text-foreground">
+                  Brand <span className="text-gray-400 font-normal">(Optional)</span>
+                </label>
+                <input
+                  id="brand"
+                  type="text"
+                  value={brand}
+                  onChange={(e) => setBrand(e.target.value)}
+                  placeholder="e.g. Afrot Naturals"
+                  className={inputCls()}
+                />
+              </div>
+              <div>
+                <label htmlFor="category" className="mb-2 block text-sm font-semibold text-foreground">
+                  Category <span className="text-red-600">*</span>
+                </label>
+                <select
+                  id="category"
+                  value={categoryId}
+                  onChange={(e) => { setCategoryId(e.target.value); touch("categoryId") }}
+                  onBlur={() => touch("categoryId")}
+                  className={cn(inputCls(err("categoryId")), !categoryId && "text-gray-500")}
+                >
+                  <option value="">Select a category…</option>
+                  {flatCategories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+                <FieldError msg={err("categoryId")} />
+              </div>
             </div>
 
-            {/* Weight + Unit */}
+          </div>
+        </section>
+
+        {/* ─── Shipping & Weight — SIDEBAR row 2 — mockup lines 396-430 ─── */}
+        <section className={cn(CARD, "lg:col-span-1 lg:col-start-3 lg:row-start-2")}>
+          <h3 className="text-xl font-bold text-foreground">Shipping &amp; Weight</h3>
+          <p className="mt-1 text-sm text-gray-500">Used to calculate shipping rates.</p>
+          <div className="mt-4 space-y-4">
             <div>
-              <label htmlFor="weight" className="mb-1.5 block text-sm font-medium text-gray-900">
+              <label htmlFor="weight" className="mb-2 block text-sm font-semibold text-foreground">
                 Weight <span className="text-red-600">*</span>
               </label>
               <div className="flex gap-2">
@@ -865,9 +1004,7 @@ export default function NewProductPage() {
                   className={cn(inputCls(), "w-20")}
                 >
                   {WEIGHT_UNITS.map((u) => (
-                    <option key={u.value} value={u.value}>
-                      {u.label}
-                    </option>
+                    <option key={u.value} value={u.value}>{u.label}</option>
                   ))}
                 </select>
               </div>
@@ -875,80 +1012,73 @@ export default function NewProductPage() {
             </div>
 
             <div>
-              <p className="mb-1.5 text-sm font-medium text-gray-900">
-                Parcel size (inches)
+              <p className="mb-2 text-sm font-semibold text-foreground">
+                Parcel Size (inches)
                 {carrierShippingEnabled ? <span className="text-red-600"> *</span> : null}
-              </p>
-              <p className="mb-2 text-xs text-gray-500">
-                Used for live carrier rates (length × width × height per unit). Optional when realtime shipping is off.
               </p>
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="mb-1 block text-xs text-gray-600">L</label>
                   <input
+                    aria-label="Length"
                     type="number"
                     step="0.01"
                     min="0"
                     value={parcelLengthIn}
                     onChange={(e) => setParcelLengthIn(e.target.value)}
                     onBlur={() => touch("parcelLengthIn")}
-                    placeholder="12"
-                    className={cn(inputCls(err("parcelLengthIn")), "w-full")}
+                    placeholder="L"
+                    className={cn(inputCls(err("parcelLengthIn")), "w-full text-center")}
                   />
                   <FieldError msg={err("parcelLengthIn")} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-600">W</label>
                   <input
+                    aria-label="Width"
                     type="number"
                     step="0.01"
                     min="0"
                     value={parcelWidthIn}
                     onChange={(e) => setParcelWidthIn(e.target.value)}
                     onBlur={() => touch("parcelWidthIn")}
-                    placeholder="9"
-                    className={cn(inputCls(err("parcelWidthIn")), "w-full")}
+                    placeholder="W"
+                    className={cn(inputCls(err("parcelWidthIn")), "w-full text-center")}
                   />
                   <FieldError msg={err("parcelWidthIn")} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-600">H</label>
                   <input
+                    aria-label="Height"
                     type="number"
                     step="0.01"
                     min="0"
                     value={parcelHeightIn}
                     onChange={(e) => setParcelHeightIn(e.target.value)}
                     onBlur={() => touch("parcelHeightIn")}
-                    placeholder="6"
-                    className={cn(inputCls(err("parcelHeightIn")), "w-full")}
+                    placeholder="H"
+                    className={cn(inputCls(err("parcelHeightIn")), "w-full text-center")}
                   />
                   <FieldError msg={err("parcelHeightIn")} />
                 </div>
               </div>
             </div>
-
-            {/* Status info */}
-            <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3">
-              <p className="text-sm text-yellow-700 font-medium">Product will be submitted for review</p>
-              <p className="text-xs text-gray-500 mt-1">Your product will be reviewed by an admin before it appears on the marketplace.</p>
-            </div>
           </div>
         </section>
 
-        {/* ─── Section 1b: Pricing & Inventory (no variants) ─── */}
-        {variants.length === 0 && (
-          <section className={CARD}>
-            <h2 className="text-lg font-semibold text-gray-900">Pricing & Inventory</h2>
-            <p className="mt-1 text-sm text-gray-500">Set price and stock for your product</p>
+        {/* ─── Pricing & Inventory — MAIN — mockup lines 306-374.
+             Always visible. Variants live INSIDE this section as a sub-table. */}
+        <section className={cn(CARD, "lg:col-span-2")}>
+          <h3 className="text-xl font-bold text-foreground">Pricing &amp; Inventory</h3>
+          <p className="mt-1 text-sm text-gray-500">Set your base price and manage stock levels.</p>
 
-            <div className="mt-6 space-y-5">
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                {/* Price */}
-                <div>
-                  <label htmlFor="price" className="mb-1.5 block text-sm font-medium text-gray-900">
-                    Price ($) <span className="text-red-600">*</span>
-                  </label>
+          <div className="mt-6 space-y-5">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              {/* Price */}
+              <div>
+                <label htmlFor="price" className="mb-2 block text-sm font-semibold text-foreground">
+                  Price (USD) <span className="text-red-600">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
                   <input
                     id="price"
                     type="number"
@@ -958,16 +1088,19 @@ export default function NewProductPage() {
                     onChange={(e) => setPrice(e.target.value)}
                     onBlur={() => touch("price")}
                     placeholder="0.00"
-                    className={inputCls(err("price"))}
+                    className={cn(inputCls(err("price")), "pl-8")}
                   />
-                  <FieldError msg={err("price")} />
                 </div>
+                <FieldError msg={err("price")} />
+              </div>
 
-                {/* Compare at Price */}
-                <div>
-                  <label htmlFor="compareAtPrice" className="mb-1.5 block text-sm font-medium text-gray-900">
-                    Compare at Price ($)
-                  </label>
+              {/* Compare at Price */}
+              <div>
+                <label htmlFor="compareAtPrice" className="mb-2 block text-sm font-semibold text-foreground">
+                  Compare at Price (USD)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
                   <input
                     id="compareAtPrice"
                     type="number"
@@ -977,70 +1110,143 @@ export default function NewProductPage() {
                     onChange={(e) => setCompareAtPrice(e.target.value)}
                     onBlur={() => touch("compareAtPrice")}
                     placeholder="0.00"
-                    className={inputCls(err("compareAtPrice"))}
+                    className={cn(inputCls(err("compareAtPrice")), "pl-8")}
                   />
-                  <FieldError msg={err("compareAtPrice")} />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                {/* Stock Quantity */}
-                <div>
-                  <label htmlFor="stockQuantity" className="mb-1.5 block text-sm font-medium text-gray-900">
-                    Stock Quantity <span className="text-red-600">*</span>
-                  </label>
-                  <input
-                    id="stockQuantity"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={stockQuantity}
-                    onChange={(e) => setStockQuantity(e.target.value)}
-                    onBlur={() => touch("stockQuantity")}
-                    placeholder="0"
-                    className={inputCls(err("stockQuantity"))}
-                  />
-                  <FieldError msg={err("stockQuantity")} />
-                </div>
+                <p className="mt-1 text-xs text-gray-500">Shows a strikethrough price for discounts.</p>
+                <FieldError msg={err("compareAtPrice")} />
               </div>
             </div>
-          </section>
-        )}
 
-        {/* ─── Section 2: Category & Tags ─── */}
-        <section className={CARD}>
-          <h2 className="text-lg font-semibold text-gray-900">Category & Tags</h2>
-          <p className="mt-1 text-sm text-gray-500">Organize your product</p>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              {/* Stock Quantity */}
+              <div>
+                <label htmlFor="stockQuantity" className="mb-2 block text-sm font-semibold text-foreground">
+                  Stock Quantity <span className="text-red-600">*</span>
+                </label>
+                <input
+                  id="stockQuantity"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={stockQuantity}
+                  onChange={(e) => setStockQuantity(e.target.value)}
+                  onBlur={() => touch("stockQuantity")}
+                  placeholder="0"
+                  className={inputCls(err("stockQuantity"))}
+                />
+                <FieldError msg={err("stockQuantity")} />
+              </div>
+            </div>
+          </div>
 
-          <div className="mt-6 space-y-5">
-            {/* Category */}
+          {/* ─── Product Variants (sub-section of Pricing & Inventory) ─── */}
+          <hr className="my-6 border-gray-200" />
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <label htmlFor="category" className="mb-1.5 block text-sm font-medium text-gray-900">
-                Category <span className="text-red-600">*</span>
-              </label>
-              <select
-                id="category"
-                value={categoryId}
-                onChange={(e) => {
-                  setCategoryId(e.target.value)
-                  touch("categoryId")
-                }}
-                onBlur={() => touch("categoryId")}
-                className={cn(
-                  inputCls(err("categoryId")),
-                  !categoryId && "text-gray-500",
-                )}
-              >
-                <option value="">Select a category</option>
-                {flatCategories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-              <FieldError msg={err("categoryId")} />
+              <h4 className="text-base font-bold text-foreground">Product Variants</h4>
+              <p className="mt-0.5 text-sm text-gray-500">
+                Manage size, color, and material options.
+              </p>
             </div>
+            <a
+              href="#custom-attributes"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shrink-0"
+            >
+              <Settings className="h-4 w-4" />
+              Configure Attributes
+            </a>
+          </div>
 
+          {/* Variants table — mockup lines 344-373 */}
+          <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Variant</th>
+                  <th className="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Price Override</th>
+                  <th className="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">Stock</th>
+                  <th className="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-500">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {variants.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
+                      No variants yet — the product will use the base price &amp; stock above.
+                    </td>
+                  </tr>
+                ) : (
+                  variants.map((variant, idx) => {
+                    const displayName =
+                      variant.options.filter((o) => o.value.trim()).map((o) => o.value).join(" / ") ||
+                      variant.name ||
+                      `Variant ${idx + 1}`
+                    return (
+                      <tr key={variant.id}>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={variant.name}
+                            onChange={(e) => updateVariantField(variant.id, "name", e.target.value)}
+                            placeholder={displayName}
+                            className="w-full rounded border border-gray-200 bg-white px-3 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={variant.price}
+                            onChange={(e) => updateVariantField(variant.id, "price", e.target.value)}
+                            placeholder="$0.00"
+                            className="w-24 rounded border border-gray-200 bg-white px-2 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            min="0"
+                            value={variant.stockQuantity}
+                            onChange={(e) => updateVariantField(variant.id, "stockQuantity", e.target.value)}
+                            placeholder="0"
+                            className="w-20 rounded border border-gray-200 bg-white px-2 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => removeVariant(variant.id)}
+                            aria-label="Remove variant"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="h-4 w-4" strokeWidth={2} />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <button
+            type="button"
+            onClick={addVariant}
+            className="mt-3 w-full rounded-lg border-2 border-dashed border-brand-gold py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/5 transition-colors"
+          >
+            + Add New Variant Combination
+          </button>
+        </section>
+
+        {/* ─── Tags & Discoverability — SIDEBAR row 3 — mockup lines 432-455 ─── */}
+        <section className={cn(CARD, "lg:col-span-1 lg:col-start-3 lg:row-start-3")}>
+          <h3 className="text-xl font-bold text-foreground">Tags &amp; Discoverability</h3>
+          <p className="mt-1 text-sm text-gray-500">Help buyers find this item.</p>
+
+          <div className="mt-5 space-y-5">
             {/* Tags */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-900">Tags</label>
@@ -1053,13 +1259,13 @@ export default function NewProductPage() {
                 {tags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                    className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-foreground"
                   >
                     {tag}
                     <button
                       type="button"
                       onClick={() => setTags((p) => p.filter((t) => t !== tag))}
-                      className="text-primary/50 hover:text-primary"
+                      className="text-foreground/50 hover:text-foreground"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1088,24 +1294,24 @@ export default function NewProductPage() {
           </div>
         </section>
 
-        {/* ─── Section 3: Images ─── */}
-        <section className={CARD}>
-          <h2 className="text-lg font-semibold text-gray-900">Product Images</h2>
+        {/* ─── Media (Images) — SIDEBAR row 1 (top) — mockup lines 380-394 ─── */}
+        <section className={cn(CARD, "lg:col-span-1 lg:col-start-3 lg:row-start-1")}>
+          <h3 className="text-xl font-bold text-foreground">Media</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Upload up to {maxImages} images. Click the star to set the main image.
+            Upload up to {maxImages} images.
           </p>
 
-          <div className="mt-5 space-y-4">
-            {/* Upload zone + Library button */}
+          <div className="mt-4 space-y-3">
+            {/* Compact upload zone — mockup lines 384-390 */}
             {images.length < maxImages && (
-              <div className="space-y-3">
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-primary/40 hover:bg-primary/90/5">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
-                    <Upload className="h-6 w-6 text-gray-500" />
+              <>
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 py-8 transition-colors hover:border-brand-gold/40 hover:bg-brand-gold/5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-gray-100">
+                    <Upload className="h-5 w-5 text-gray-500" />
                   </div>
-                  <p className="mt-3 text-sm font-medium text-gray-900">Click to upload images</p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    JPEG, PNG, WebP, GIF &middot; {maxImages - images.length} remaining
+                  <p className="mt-2 text-sm font-semibold text-foreground">Click to upload images</p>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    JPEG, PNG, WebP &middot; Max 5MB
                   </p>
                   <input
                     type="file"
@@ -1118,17 +1324,17 @@ export default function NewProductPage() {
                 <button
                   type="button"
                   onClick={openMediaPicker}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-brand-gold/30 bg-brand-gold/10 px-3 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/20 transition-colors"
                 >
                   <ImageIcon className="h-4 w-4" />
                   Select from Library
                 </button>
-              </div>
+              </>
             )}
 
-            {/* Image grid */}
+            {/* Image grid — sidebar is narrow so cap at 3 cols */}
             {images.length > 0 && (
-              <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 md:grid-cols-8">
+              <div className="grid grid-cols-3 gap-2">
                 {images.map((img) => (
                   <div
                     key={img.id}
@@ -1150,7 +1356,7 @@ export default function NewProductPage() {
 
                     {img.status === "uploading" && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <Loader2 className="h-5 w-5 animate-spin text-foreground" />
                       </div>
                     )}
 
@@ -1172,7 +1378,7 @@ export default function NewProductPage() {
                         className={cn(
                           "h-4 w-4",
                           img.isPrimary
-                            ? "fill-primary text-primary"
+                            ? "fill-primary text-foreground"
                             : "text-gray-500 hover:text-gray-600",
                         )}
                       />
@@ -1193,8 +1399,13 @@ export default function NewProductPage() {
           </div>
         </section>
 
-        {/* ─── Section 4: Variants (Optional) ─── */}
-        <section className={CARD}>
+        {/* ─── Standalone Variants section retired — variants now live inside
+             Pricing & Inventory as a table (mockup lines 336-373). The full
+             advanced editor below is gated off; kept for one revision in case
+             we need the variant-image / compare-at-price / options key-value
+             fields back. Delete this block on the next pass. ─── */}
+        {false && (
+        <section className={cn(CARD)}>
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Variants</h2>
@@ -1258,7 +1469,7 @@ export default function NewProductPage() {
                   {/* Price */}
                   <div>
                     <label className="mb-1 block text-xs text-gray-500">
-                      Price ($) <span className="text-red-600">*</span>
+                      Price (USD) <span className="text-red-600">*</span>
                     </label>
                     <input
                       type="number"
@@ -1313,7 +1524,7 @@ export default function NewProductPage() {
                     <button
                       type="button"
                       onClick={() => addVariantOption(variant.id)}
-                      className="text-xs text-primary hover:underline"
+                      className="text-xs text-foreground hover:underline"
                     >
                       + Add Option
                     </button>
@@ -1366,7 +1577,7 @@ export default function NewProductPage() {
                       />
                       {variant.imageStatus === "uploading" && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <Loader2 className="h-4 w-4 animate-spin text-foreground" />
                         </div>
                       )}
                       <button
@@ -1395,9 +1606,10 @@ export default function NewProductPage() {
           </div>
           )}
         </section>
+        )}{/* end of retired standalone Variants section */}
 
-        {/* ─── Section 5: Attributes ─── */}
-        <section className={CARD}>
+        {/* ─── Section 5: Attributes — MAIN ─── */}
+        <section id="custom-attributes" className={cn(CARD, "lg:col-span-2")}>
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Custom Attributes</h2>
@@ -1450,35 +1662,31 @@ export default function NewProductPage() {
           )}
         </section>
 
-        {/* ─── Section 6: Deal (Optional) ─── */}
-        <section className={CARD}>
-          <div className="flex items-center justify-between">
+        {/* ─── Launch with a Deal — SIDEBAR row 4 — mockup lines 444-454.
+             Simple toggle row with no card heading; expanded form drops below
+             when on. Lives at the bottom of the sidebar so it doesn't push
+             the rest of the discoverability content down. ─── */}
+        <section className={cn(CARD, "lg:col-span-1 lg:col-start-3 lg:row-start-4")}>
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Launch with a Deal</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Optionally create a deal for this product right away
-              </p>
+              <h4 className="text-base font-bold text-foreground">Launch with a Deal</h4>
+              <p className="mt-0.5 text-xs text-gray-500">Add to &lsquo;Today&apos;s Deals&rsquo;</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setCreateDeal(!createDeal)}
-              className={cn(
-                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                createDeal ? "bg-primary" : "bg-gray-200",
-              )}
-            >
-              <span
-                className={cn(
-                  "inline-block h-4 w-4 rounded-full bg-white transition-transform",
-                  createDeal ? "translate-x-6" : "translate-x-1",
-                )}
+            {/* Mockup toggle — peer-checked pattern, gold filled track */}
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={createDeal}
+                onChange={(e) => setCreateDeal(e.target.checked)}
+                className="sr-only peer"
               />
-            </button>
+              <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-brand-gold transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-gray-200 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+            </label>
           </div>
 
           {createDeal && (
-            <div className="mt-5 space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <Tag className="h-4 w-4" />
                 Deal Details
               </div>
@@ -1566,6 +1774,8 @@ export default function NewProductPage() {
           )}
         </section>
 
+        </div>{/* end of 2-column grid */}
+
         {/* ─── Submit bar ─── */}
         <div className="flex flex-col-reverse items-center justify-end gap-3 border-t border-gray-200 pt-6 sm:flex-row">
           <Link
@@ -1596,7 +1806,7 @@ export default function NewProductPage() {
             type="submit"
             disabled={!canSubmit}
             onClick={() => setSubmitAction("pending_review")}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-gold px-6 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           >
             {saving && submitAction === "pending_review" ? (
               <>
@@ -1623,7 +1833,7 @@ export default function NewProductPage() {
             <div className="overflow-y-auto p-6" style={{ maxHeight: "calc(80vh - 80px)" }}>
               {loadingLibrary ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <Loader2 className="h-6 w-6 animate-spin text-foreground" />
                 </div>
               ) : mediaLibrary.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -1666,6 +1876,7 @@ export default function NewProductPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

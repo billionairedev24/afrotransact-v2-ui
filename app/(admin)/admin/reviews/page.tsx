@@ -64,7 +64,7 @@ function Stars({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) 
       {Array.from({ length: 5 }, (_, i) => (
         <Star
           key={i}
-          className={`${cls} ${i < rating ? "fill-primary text-primary" : "text-muted-foreground/40"}`}
+          className={`${cls} ${i < rating ? "fill-primary text-foreground" : "text-muted-foreground/40"}`}
         />
       ))}
     </span>

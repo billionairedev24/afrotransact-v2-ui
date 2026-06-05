@@ -2,19 +2,12 @@
 
 import { SessionProvider } from "next-auth/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { CartMergeProvider } from "@/components/providers/CartMergeProvider"
 import { SessionGuard } from "@/components/providers/SessionGuard"
 import { PostLoginRedirect } from "@/components/providers/PostLoginRedirect"
 import { IdleTimeoutProvider } from "@/components/providers/IdleTimeoutProvider"
 import { Toaster } from "sonner"
-import { useAdsStore } from "@/stores/useAdsStore"
-
-function AdsLoader() {
-  const loadFromApi = useAdsStore((s) => s.loadFromApi)
-  useEffect(() => { loadFromApi() }, [loadFromApi])
-  return null
-}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -39,7 +32,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <PostLoginRedirect>
           <QueryClientProvider client={queryClient}>
             <CartMergeProvider>
-              <AdsLoader />
               {children}
             <Toaster
               theme="light"

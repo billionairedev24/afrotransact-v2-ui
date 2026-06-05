@@ -791,7 +791,7 @@ export default function EditProductPage() {
   if (sessionStatus === "loading" || loading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
     )
   }
@@ -804,7 +804,7 @@ export default function EditProductPage() {
         </div>
         <Link
           href="/dashboard/products"
-          className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+          className="inline-flex items-center gap-2 text-sm text-foreground hover:underline"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Products
@@ -843,7 +843,7 @@ export default function EditProductPage() {
 
       {/* Success */}
       {success && (
-        <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+        <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
           <CheckCircle className="h-4 w-4 shrink-0" />
           Product saved successfully.
         </div>
@@ -1000,7 +1000,7 @@ export default function EditProductPage() {
                     className={cn(
                       "rounded-lg border px-5 py-2 text-sm font-medium capitalize transition-colors",
                       status === s
-                        ? "border-primary bg-primary/10 text-primary"
+                        ? "border-primary bg-primary/10 text-foreground"
                         : "border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-600",
                     )}
                   >
@@ -1055,13 +1055,13 @@ export default function EditProductPage() {
                 {tags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                    className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-foreground"
                   >
                     {tag}
                     <button
                       type="button"
                       onClick={() => setTags((p) => p.filter((t) => t !== tag))}
-                      className="text-primary/50 hover:text-primary"
+                      className="text-foreground/50 hover:text-foreground"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1117,7 +1117,7 @@ export default function EditProductPage() {
                           className={cn(
                             "h-4 w-4",
                             img.isPrimary
-                              ? "fill-primary text-primary"
+                              ? "fill-primary text-foreground"
                               : "text-gray-500 hover:text-gray-600",
                           )}
                         />
@@ -1159,7 +1159,7 @@ export default function EditProductPage() {
 
             {/* Upload zone */}
             {totalImageCount < MAX_IMAGES && (
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-primary/40 hover:bg-primary/90/5">
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-primary/40 hover:bg-brand-gold/90/5">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
                   <Upload className="h-6 w-6 text-gray-500" />
                 </div>
@@ -1197,7 +1197,7 @@ export default function EditProductPage() {
                     )}
                     {img.status === "uploading" && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <Loader2 className="h-5 w-5 animate-spin text-foreground" />
                       </div>
                     )}
                     {img.status === "error" && (
@@ -1334,7 +1334,7 @@ export default function EditProductPage() {
                     <button
                       type="button"
                       onClick={() => addVariantOption(variant.id)}
-                      className="text-xs text-primary hover:underline"
+                      className="text-xs text-foreground hover:underline"
                     >
                       + Add Option
                     </button>
@@ -1387,7 +1387,7 @@ export default function EditProductPage() {
                       />
                       {variant.imageStatus === "uploading" && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <Loader2 className="h-4 w-4 animate-spin text-foreground" />
                         </div>
                       )}
                       <button
@@ -1482,7 +1482,7 @@ export default function EditProductPage() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-gold px-6 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {saving ? (
                 <>

@@ -5,23 +5,23 @@ import {
   MapPin,
   Star,
   Store,
-  Truck,
-  ShieldCheck,
-  Users,
-  TrendingUp,
-  Sparkles,
-  Tag,
-  Gift,
 } from "lucide-react"
 
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
-import { StartSellingLink } from "@/components/selling/StartSellingLink"
-import { HeroCarousel } from "@/components/home/HeroCarousel"
-import { AdSlot } from "@/components/home/AdSlot"
-import { FeaturedProducts } from "@/components/home/FeaturedProducts"
-import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
-import { ForYouSection } from "@/components/home/ForYouSection"
+// REPLACED BY <HeroCarousel> (components/landing/HeroCarousel): kept import
+// commented so an operator can revert by swapping the two imports/mounts.
+// import { HeroCarousel } from "@/components/home/HeroCarousel"
+import { HeroCarousel } from "@/components/landing/HeroCarousel"
+// REPLACED BY <CategoriesBentoGrid> + <TrustMissionBand>: kept commented for
+// quick revert if there's a visual regression.
+// import { FeaturedProducts } from "@/components/home/FeaturedProducts"
+// import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
+// import { FeaturedCategories } from "@/components/landing/FeaturedCategories"
+// import { ForYouSection } from "@/components/home/ForYouSection"
+import { CategoriesBentoGrid } from "@/components/landing/CategoriesBentoGrid"
+import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
+import { ProductRow } from "@/components/landing/ProductRow"
 import { fetchCategoryTiles } from "@/lib/category-tiles"
 import {
   getCategories,
@@ -50,37 +50,6 @@ const BANNER_GRADIENTS = [
   "linear-gradient(135deg, #1a2e2e, #0f1f1f)",
 ]
 
-const DEFAULT_DEAL_COLORS = [
-  "bg-orange-900 border-orange-700",
-  "bg-emerald-900 border-emerald-700",
-  "bg-blue-900 border-blue-700",
-  "bg-purple-900 border-purple-700",
-]
-
-const trustPoints = [
-  {
-    icon: Users,
-    title: "Community-Owned",
-    body: "Every vendor is a member of your immigrant community. Your purchase directly supports a neighbor.",
-    color: "text-primary",
-    bg: "bg-primary/10 border-primary/20",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Verified & Trusted",
-    body: "All sellers are identity-verified and held to our quality standards. Shop with complete confidence.",
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10 border-emerald-500/20",
-  },
-  {
-    icon: Truck,
-    title: "Same-Day Local Delivery",
-    body: "Orders placed early in the day are often fulfilled the same day when sellers offer local delivery.",
-    color: "text-sky-400",
-    bg: "bg-sky-500/10 border-sky-500/20",
-  },
-]
-
 async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
   try {
     return await p
@@ -90,208 +59,118 @@ async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
 }
 
 export default async function HomePage() {
-  // All catalog data fetched in parallel on the server (Edge-cached via `next.revalidate`).
-  // Each call degrades gracefully to an empty fallback so one slow/broken service
-  // never blocks the whole page.
-  const [categories, allStores, deals, platformDealsRaw, heroConfig, featuredRating, featuredNewest] =
-    await Promise.all([
-      safe<CategoryRef[]>(getCategories({ revalidate: 300 }), []),
-      safe<StoreInfo[]>(getAllStores({ revalidate: 120 }), []),
-      safe<DealData[]>(getFeaturedDeals({ revalidate: 60 }), []),
-      safe<PlatformDealData[]>(getPublicPlatformDeals(undefined, { revalidate: 60 }), []),
-      safe(getPublicHeroSlides({ revalidate: 60 }), []),
-      // Rating-sorted pool: doubles as both the "Fresh Near You" featured
-      // section (first 8) AND the source for server-computed category tiles.
-      // We'll use the robust fetchCategoryTiles helper for the latter.
-      safe(
-        searchProducts({ size: "96", sort_by: "rating" }, { revalidate: 300 }),
-        { results: [] as SearchResult[] } as Awaited<ReturnType<typeof searchProducts>>,
+  const emptySearch = { results: [] as SearchResult[] } as Awaited<ReturnType<typeof searchProducts>>
+  const [
+    categories,
+    allStores,
+    _deals,
+    _platformDealsRaw,
+    heroConfig,
+    featuredRating,
+    _featuredNewest,
+    todaysDealsRes,
+    trendingAustinRes,
+    newLocalRes,
+  ] = await Promise.all([
+    safe<CategoryRef[]>(getCategories({ revalidate: 300 }), []),
+    safe<StoreInfo[]>(getAllStores({ revalidate: 120 }), []),
+    safe<DealData[]>(getFeaturedDeals({ revalidate: 60 }), []),
+    safe<PlatformDealData[]>(getPublicPlatformDeals(undefined, { revalidate: 60 }), []),
+    safe(getPublicHeroSlides({ revalidate: 60 }), []),
+    safe(
+      searchProducts({ size: "96", sort_by: "rating" }, { revalidate: 300 }),
+      emptySearch,
+    ),
+    safe(
+      searchProducts({ size: "8", sort_by: "newest" }, { revalidate: 60 }),
+      emptySearch,
+    ),
+    safe(searchProducts({ is_deal: "true", size: "20" }, { revalidate: 60 }), emptySearch),
+    safe(
+      searchProducts(
+        { region_code: "us-tx-austin", sort: "popularity", size: "20" },
+        { revalidate: 120 },
       ),
-      safe(
-        searchProducts({ size: "8", sort_by: "newest" }, { revalidate: 60 }),
-        { results: [] as SearchResult[] } as Awaited<ReturnType<typeof searchProducts>>,
-      ),
-    ])
+      emptySearch,
+    ),
+    safe(searchProducts({ sort: "newest", size: "20" }, { revalidate: 60 }), emptySearch),
+  ])
 
-  const roots = categories.filter((c) => c.parentId == null).slice(0, 4)
+  // Exclude `services` everywhere in the landing render (closed-beta requirement).
+  const roots = categories
+    .filter((c) => c.parentId == null && c.slug !== "services")
+    .slice(0, 4)
 
-  // Use the robust fetchCategoryTiles helper which handles fallback per-category
-  // searches if the pool (featuredRating) doesn't have matches.
-  // This keeps client-side traffic at zero.
-  const categoryTiles = await fetchCategoryTiles(roots, { revalidate: 300 })
-  const featuredRatingInitial = featuredRating.results.slice(0, 8)
-  const featuredNewestInitial = featuredNewest.results.slice(0, 8)
-  
+  // Warm the category tiles fetcher (keeps client traffic at zero / parity with
+  // previous page). Result is unused now that the bento grid pulls from
+  // productsByCategoryId, but the fetcher dedupes against future mounts.
+  await fetchCategoryTiles(roots, { revalidate: 300 })
+
+  // Build productsByCategoryId from the rating pool by name match.
+  const productsByCategoryId: Record<string, SearchResult[]> = {}
+  for (const cat of roots) {
+    const lower = cat.name.toLowerCase()
+    productsByCategoryId[cat.id] = featuredRating.results
+      .filter((p) => p.categories?.some((c) => c.toLowerCase() === lower))
+      .slice(0, 4)
+  }
+
   const stores = allStores.slice(0, 6)
-  const platformDeals = platformDealsRaw.slice(0, 3)
-  // HeroCarousel is a client component — pass raw configs and let it map
-  // them to slides on the client (JSX in `mapConfigToSlide` can't be
-  // invoked across the server/client boundary).
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
 
-      <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0">
+      <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0 space-y-10">
+        {/* 1. Hero Carousel */}
         <HeroCarousel serverHeroConfigs={heroConfig} />
 
-        <section className="bg-card/70 border-y border-border">
-          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-3">
-            <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
-              <span className="shrink-0 text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-1">
-                <TrendingUp className="h-3.5 w-3.5" />
-                Today&apos;s Deals
-              </span>
-              <span className="w-px h-5 bg-border shrink-0" />
-              {deals.map((deal, idx) => {
-                const color = DEFAULT_DEAL_COLORS[idx % DEFAULT_DEAL_COLORS.length]
-                return (
-                  <Link
-                    key={deal.id}
-                    href={deal.productSlug ? `/product/${deal.productSlug}` : "/deals"}
-                    className={`shrink-0 flex items-center gap-2 rounded-lg border ${color} px-3 py-1.5 text-xs font-medium text-white/90 hover:brightness-110 transition-all`}
-                  >
-                    <span>{deal.badgeText || "Deal"}</span>
-                    <span className="text-white/70">·</span>
-                    <span className="text-white/80">{deal.title}</span>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        </section>
-
-        <AdSlot slotId="mid-page-1" />
-
-        {platformDeals.length > 0 && (
-          <section className="mx-auto max-w-[1440px] px-4 sm:px-6 py-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {platformDeals.map((deal) => (
-                <div
-                  key={deal.id}
-                  className="group relative rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
-                  style={{
-                    background: deal.bannerImageUrl
-                      ? `url(${deal.bannerImageUrl}) center/cover no-repeat`
-                      : `linear-gradient(135deg, ${deal.secondaryColor}, ${deal.primaryColor}40)`,
-                  }}
-                >
-                  <div
-                    className="relative p-5 min-h-[150px] flex flex-col justify-between"
-                    style={{ background: deal.bannerImageUrl ? "rgba(0,0,0,0.45)" : undefined }}
-                  >
-                    <div>
-                      {deal.badgeText && (
-                        <span
-                          className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold mb-2"
-                          style={{ backgroundColor: deal.primaryColor, color: deal.secondaryColor }}
-                        >
-                          {deal.badgeText}
-                        </span>
-                      )}
-                      <h3 className="text-lg font-bold leading-snug" style={{ color: deal.textColor }}>
-                        {deal.title}
-                      </h3>
-                      {deal.description && (
-                        <p className="text-xs opacity-75 mt-1 line-clamp-2" style={{ color: deal.textColor }}>
-                          {deal.description}
-                        </p>
-                      )}
-                    </div>
-                    {deal.ctaLink && (
-                      <Link
-                        href={deal.ctaLink}
-                        className="mt-3 inline-flex items-center gap-1 text-xs font-bold rounded-lg px-3 py-1.5 self-start hover:scale-105 transition-transform"
-                        style={{ backgroundColor: deal.primaryColor, color: deal.secondaryColor }}
-                      >
-                        {deal.ctaText || "Learn More"} <ChevronRight className="h-3 w-3" />
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="bg-[#eaeded] border-y border-gray-200">
-          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-10 sm:py-12">
-            <div className="flex items-end justify-between mb-5 sm:mb-6 gap-4">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Shop by category</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Explore subcategories with real product photos
-                </p>
-              </div>
-              <Link
-                href="/categories"
-                className="text-sm font-medium text-blue-700 hover:text-blue-900 shrink-0 flex items-center gap-1"
-              >
-                View all <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            {categories.length > 0 ? (
-              // Capped to 4 parents (down from 12) to reduce the N×5 search fan-out
-              // until a dedicated "category tiles" BFF endpoint lands.
-              <CategoryShowcaseAmazon
-                categories={categories}
-                maxParents={4}
-                initialTiles={categoryTiles}
-              />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm animate-pulse"
-                  >
-                    <div className="h-5 bg-gray-100 rounded w-2/3 mb-3" />
-                    <div className="grid grid-cols-2 gap-2">
-                      {Array.from({ length: 4 }).map((__, j) => (
-                        <div key={j} className="aspect-square bg-gray-100 rounded-md" />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <FeaturedProducts
-          title="Fresh Near You"
-          subtitle="Highly rated picks from the marketplace"
-          sortBy="rating"
-          size={8}
-          viewAllHref="/search?sort=rating"
-          initialProducts={featuredRatingInitial}
+        {/* 2. Categories Bento Grid */}
+        <CategoriesBentoGrid
+          categories={roots}
+          productsByCategoryId={productsByCategoryId}
         />
 
-        <FeaturedProducts
+        {/* 3. Today's Deals */}
+        <ProductRow
+          title="Today's Deals"
+          badge="Ending soon"
+          products={todaysDealsRes.results}
+          viewAllHref="/search?is_deal=true"
+          viewAllLabel="See all deals"
+        />
+
+        {/* 4. Trust & Mission Band */}
+        <TrustMissionBand />
+
+        {/* 5. New Arrivals */}
+        <ProductRow
           title="New Arrivals"
-          subtitle="Recently added products"
-          sortBy="newest"
-          size={8}
+          products={newLocalRes.results}
           viewAllHref="/search?sort=newest"
-          icon={<Sparkles className="h-3.5 w-3.5 text-primary" />}
-          initialProducts={featuredNewestInitial}
+          viewAllLabel="Explore all new items"
         />
 
-        <ForYouSection />
+        {/* 6. Trending in Austin (keeps the regional surface even though it's not in the mockup) */}
+        <ProductRow
+          title="Trending in Austin"
+          products={trendingAustinRes.results}
+          viewAllHref="/search?region_code=us-tx-austin&sort=popularity"
+        />
 
-        <AdSlot slotId="mid-page-2" />
-
+        {/* Top Stores — retained from previous landing for vendor discovery */}
         <section className="bg-card/40 border-y border-border">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-12">
             <div className="flex items-end justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-foreground">Top Stores</h2>
-                <p className="text-sm text-muted-foreground mt-1">Discover vendors in your community</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Discover vendors in your community
+                </p>
               </div>
               <Link
                 href="/stores"
-                className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+                className="text-sm font-medium text-foreground hover:text-foreground flex items-center gap-1 transition-colors"
               >
                 All stores <ChevronRight className="h-4 w-4" />
               </Link>
@@ -328,28 +207,32 @@ export default async function HomePage() {
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <Store className="h-6 w-6 text-primary" />
+                            <Store className="h-6 w-6 text-foreground" />
                           )}
                         </div>
                       </div>
 
                       <div className="pt-8 px-4 pb-4 space-y-2">
                         <div>
-                          <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
+                          <h3 className="font-bold text-foreground group-hover:text-foreground transition-colors">
                             {store.name}
                           </h3>
                           {store.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">{store.description}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {store.description}
+                            </p>
                           )}
                         </div>
 
                         <div className="flex items-center gap-3 text-xs">
                           {store.rating > 0 && (
                             <span className="flex items-center gap-1 font-medium text-foreground">
-                              <Star className="h-3 w-3 fill-primary text-primary" />
+                              <Star className="h-3 w-3 fill-primary text-foreground" />
                               {store.rating.toFixed(1)}
                               {store.reviewCount > 0 && (
-                                <span className="text-muted-foreground font-normal">({store.reviewCount})</span>
+                                <span className="text-muted-foreground font-normal">
+                                  ({store.reviewCount})
+                                </span>
                               )}
                             </span>
                           )}
@@ -364,112 +247,6 @@ export default async function HomePage() {
                     </Link>
                   ))
                 : Array.from({ length: 3 }).map((_, i) => <StoreCardSkeleton key={i} />)}
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-[1440px] px-4 sm:px-6 py-16">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-              Why thousands of immigrants shop with us
-            </h2>
-            <p className="text-muted-foreground mt-2 max-w-xl mx-auto">
-              More than a marketplace — a bridge between your new home and your roots.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {trustPoints.map((point) => {
-              const Icon = point.icon
-              return (
-                <div key={point.title} className={`rounded-2xl border ${point.bg} p-6 space-y-3`}>
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${point.color}`}>
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <h3 className="text-[17px] font-bold text-foreground">{point.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{point.body}</p>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
-        <AdSlot slotId="bottom-strip" />
-
-        <section className="relative overflow-hidden bg-gradient-to-br from-primary/15 via-card to-secondary/10 border-y border-border">
-          <div
-            aria-hidden
-            className="absolute inset-0 pointer-events-none opacity-5"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 20% 50%, rgba(212,168,83,0.4) 0%, transparent 50%), " +
-                "radial-gradient(circle at 80% 50%, rgba(34,197,94,0.3) 0%, transparent 50%)",
-            }}
-          />
-          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-16 relative">
-            <div className="max-w-2xl mx-auto text-center space-y-5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                <Store className="h-3 w-3" />
-                For Vendors
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-black text-foreground leading-tight">
-                Turn your passion into <span className="text-primary">a thriving business</span>
-              </h2>
-              <p className="text-muted-foreground text-base leading-relaxed">
-                Join 200+ immigrant entrepreneurs already selling on AfroTransact. Set up your store in
-                minutes, reach customers in your community, and grow on your own terms.
-              </p>
-
-              <div className="grid grid-cols-3 gap-3 max-w-lg mx-auto pt-2">
-                {[
-                  { name: "Starter", price: "$29.99", tag: "Most popular" },
-                  { name: "Growth", price: "$79.99", tag: "Scale faster" },
-                  { name: "Pro", price: "$149.99", tag: "Full power" },
-                ].map((plan) => (
-                  <div
-                    key={plan.name}
-                    className="rounded-xl border border-gray-200 bg-white p-3 text-center"
-                  >
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">{plan.name}</p>
-                    <p className="text-sm font-bold text-gray-900">
-                      {plan.price}
-                      <span className="text-[10px] font-normal text-gray-400">/mo</span>
-                    </p>
-                    <p className="text-[10px] text-emerald-400 mt-0.5">{plan.tag}</p>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-primary font-semibold">First month free.</span>{" "}
-                Second month free if you list 9+ products. Then pay monthly.
-              </p>
-
-              <div className="flex flex-wrap justify-center gap-3 pt-2">
-                <StartSellingLink variant="button">
-                  Start Selling Today
-                  <ChevronRight className="h-4 w-4" />
-                </StartSellingLink>
-                <Link
-                  href="/sell/pricing"
-                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-white px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-50 transition-all"
-                >
-                  View Pricing
-                </Link>
-              </div>
-
-              <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-2 text-sm text-muted-foreground">
-                {[
-                  { icon: <ShieldCheck className="h-4 w-4 text-emerald-400" />, text: "No hidden fees" },
-                  { icon: <Sparkles className="h-4 w-4 text-primary" />, text: "1st month free" },
-                  { icon: <Gift className="h-4 w-4 text-violet-400" />, text: "Free onboarding support" },
-                  { icon: <Tag className="h-4 w-4 text-sky-400" />, text: "Cancel anytime" },
-                ].map(({ icon, text }) => (
-                  <span key={text} className="flex items-center gap-1.5">
-                    {icon}
-                    {text}
-                  </span>
-                ))}
-              </div>
             </div>
           </div>
         </section>

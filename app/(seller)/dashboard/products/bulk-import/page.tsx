@@ -61,7 +61,7 @@ function StepIndicator({ step }: { step: number }) {
                   done
                     ? "bg-emerald-500 text-white"
                     : active
-                      ? "bg-primary text-black"
+                      ? "bg-brand-gold text-brand-gold-foreground"
                       : "bg-gray-100 text-gray-400",
                 )}
               >
@@ -194,7 +194,7 @@ function PrepareStep({
             </p>
           </div>
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-            <ImageIcon className="h-5 w-5 text-primary" />
+            <ImageIcon className="h-5 w-5 text-foreground" />
           </div>
         </div>
 
@@ -246,7 +246,7 @@ function PrepareStep({
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={onDownload}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-black hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors"
           >
             <Download className="h-4 w-4" />
             Download Excel Template (.xlsx)
@@ -407,12 +407,12 @@ function ReviewStep({
             ? "border-primary bg-primary/5 scale-[1.01]"
             : rows
               ? "border-emerald-300 bg-emerald-50"
-              : "border-gray-200 bg-gray-50 hover:border-primary/50 hover:bg-primary/90/5",
+              : "border-gray-200 bg-gray-50 hover:border-primary/50 hover:bg-brand-gold/90/5",
         )}
       >
         {parsing ? (
           <>
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <Loader2 className="h-10 w-10 animate-spin text-foreground" />
             <p className="mt-3 text-sm font-medium text-gray-900">Parsing your file…</p>
           </>
         ) : rows ? (
@@ -427,7 +427,7 @@ function ReviewStep({
               "flex h-14 w-14 items-center justify-center rounded-2xl transition-colors",
               dragging ? "bg-primary/20" : "bg-gray-100"
             )}>
-              <Upload className={cn("h-6 w-6 transition-colors", dragging ? "text-primary" : "text-gray-400")} />
+              <Upload className={cn("h-6 w-6 transition-colors", dragging ? "text-foreground" : "text-gray-400")} />
             </div>
             <p className="mt-3 text-sm font-medium text-gray-900">
               Drag & drop your file, or click to browse
@@ -605,7 +605,7 @@ function ReviewStep({
               <button
                 onClick={() => onValidated(rows)}
                 disabled={importableCount === 0 || errorCount > 0}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-black hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="h-4 w-4" />
                 Import {importableCount} product{importableCount !== 1 ? "s" : ""}
@@ -750,7 +750,7 @@ function ImportStep({
         {!done &&
           importable.slice(results.length, results.length + 3).map((row) => (
             <div key={row.rowNumber} className="flex items-center gap-3 px-5 py-3 opacity-50">
-              <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+              <Loader2 className="h-4 w-4 animate-spin text-foreground shrink-0" />
               <p className="text-sm text-gray-500 truncate">{row.raw.product_name}</p>
             </div>
           ))}
@@ -760,7 +760,7 @@ function ImportStep({
         <div className="flex justify-end">
           <Link
             href="/dashboard/products"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-black hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors"
           >
             <Package className="h-4 w-4" />
             View My Products
@@ -856,7 +856,7 @@ export default function BulkImportPage() {
   if (loading || sessionStatus === "loading") {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
     )
   }

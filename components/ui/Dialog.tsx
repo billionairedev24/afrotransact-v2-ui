@@ -110,7 +110,7 @@ export function ConfirmDialog({
   const btnClass =
     variant === "danger"
       ? "bg-destructive/15 text-destructive hover:bg-destructive/25"
-      : "bg-primary/15 text-primary hover:bg-primary/25"
+      : "bg-brand-gold/15 text-foreground hover:bg-brand-gold/25"
 
   return (
     <Dialog open={open} onClose={onClose} className="max-w-md">

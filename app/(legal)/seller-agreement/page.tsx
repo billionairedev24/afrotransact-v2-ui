@@ -9,7 +9,7 @@ const CONTACT_EMAIL = "sellers@afrotransact.com"
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="space-y-3 scroll-mt-20">
-      <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2">{title}</h2>
+      <h2 className="text-xl font-bold text-gray-900 border-b border-primary/30 pb-2">{title}</h2>
       <div className="text-sm text-gray-600 leading-relaxed space-y-3">{children}</div>
     </section>
   )
@@ -40,21 +40,21 @@ export default function SellerAgreementPage() {
     <main className="mx-auto max-w-4xl px-4 sm:px-6 py-12">
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-4">
-          <Store className="h-6 w-6 text-primary" />
-          <span className="text-sm text-gray-500">Legal — Sellers</span>
+          <Store className="h-6 w-6 text-foreground" />
+          <span className="text-sm text-foreground font-medium">Legal — Sellers</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-gray-900">Seller Agreement</h1>
         <p className="text-gray-500 mt-3 text-sm">
           Effective Date: <span className="font-medium text-gray-900">{EFFECTIVE_DATE}</span>
           {" · "}
-          <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>
+          <Link href="/terms" className="text-foreground hover:underline">Terms of Service</Link>
           {" · "}
-          <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+          <Link href="/privacy" className="text-foreground hover:underline">Privacy Policy</Link>
         </p>
         <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-gray-700 leading-relaxed">
           This Seller Agreement (&quot;Agreement&quot;) is a legal contract between you (&quot;Seller&quot;) and{" "}
           {COMPANY} (&quot;{COMPANY_SHORT}&quot;). It supplements our general{" "}
-          <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and governs
+          <Link href="/terms" className="text-foreground hover:underline">Terms of Service</Link> and governs
           your use of AfroTransact as a merchant. By registering as a seller, you agree to be bound by
           this Agreement.
         </div>
@@ -63,7 +63,7 @@ export default function SellerAgreementPage() {
       <div className="flex gap-10 lg:gap-16">
         <aside className="hidden lg:block w-56 shrink-0">
           <div className="sticky top-24 space-y-1">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <p className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
               <FileText className="h-3.5 w-3.5" />
               Contents
             </p>
@@ -71,7 +71,7 @@ export default function SellerAgreementPage() {
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className="block text-xs text-gray-500 hover:text-primary transition-colors py-0.5"
+                className="block text-xs text-gray-500 hover:text-foreground transition-colors py-0.5"
               >
                 {item.label}
               </a>
@@ -197,7 +197,7 @@ export default function SellerAgreementPage() {
               <strong className="text-gray-900">B. Monthly Subscription Fee:</strong> A recurring
               subscription charged to maintain access to the platform and seller tools. Pricing is
               available at{" "}
-              <Link href="/sell/pricing" className="text-primary hover:underline">
+              <Link href="/sell/pricing" className="text-foreground hover:underline">
                 afrotransact.com/sell/pricing
               </Link>.
             </p>
@@ -395,18 +395,18 @@ export default function SellerAgreementPage() {
 
           <Section id="contact" title="17. Contact">
             <p>Questions about this Seller Agreement?</p>
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-1">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-1">
               <p className="font-semibold text-gray-900">{COMPANY} — Seller Relations</p>
               <p>Texas, United States</p>
               <p>
                 Email:{" "}
-                <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-foreground hover:underline">
                   {CONTACT_EMAIL}
                 </a>
               </p>
               <p>
                 General Support:{" "}
-                <a href="mailto:support@afrotransact.com" className="text-primary hover:underline">
+                <a href="mailto:support@afrotransact.com" className="text-foreground hover:underline">
                   support@afrotransact.com
                 </a>
               </p>

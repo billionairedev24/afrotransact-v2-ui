@@ -443,7 +443,7 @@ export default function AdminAnalyticsPage() {
               type="button"
               onClick={handlePrint}
               disabled={!data}
-              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:min-h-0"
+              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-primary/40 bg-brand-gold/10 px-3 py-2 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-brand-gold/15 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:min-h-0"
             >
               <Printer className="h-4 w-4 shrink-0" />
               PDF
@@ -463,7 +463,7 @@ export default function AdminAnalyticsPage() {
               className={[
                 "min-h-9 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
                 activePreset() === p.label
-                  ? "border-primary bg-primary/15 text-primary"
+                  ? "border-primary bg-primary/15 text-foreground"
                   : "border-border bg-muted/50 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
               ].join(" ")}
             >

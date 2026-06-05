@@ -198,7 +198,7 @@ function PasswordSection({ email }: { email: string }) {
             <button
               type="submit"
               disabled={saving || !current || !next || !confirm}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-black transition hover:bg-primary/90 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2 text-sm font-semibold text-brand-gold-foreground transition hover:bg-brand-gold/90 disabled:opacity-50"
             >
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {saving ? "Updating…" : "Update Password"}
@@ -498,7 +498,7 @@ export default function SettingsPage() {
                   onClick={() => setActiveSection(item.id)}
                   className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                     activeSection === item.id
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary/10 text-foreground"
                       : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                   } ${item.id === "danger" ? "text-red-500 hover:bg-red-50 hover:text-red-600" : ""}`}
                 >
@@ -550,7 +550,7 @@ export default function SettingsPage() {
                 <div className="bg-gray-50/80 px-5 py-3 border-t border-gray-100">
                   <p className="text-xs text-gray-400">
                     Name and email are managed by your identity provider.{" "}
-                    <Link href="/help" className="text-primary underline underline-offset-2 hover:no-underline">Contact support</Link>{" "}
+                    <Link href="/help" className="text-foreground underline underline-offset-2 hover:no-underline">Contact support</Link>{" "}
                     to update them.
                   </p>
                 </div>

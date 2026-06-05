@@ -78,7 +78,7 @@ export default function CartPage() {
         {/* Illustration */}
         <div className="relative mb-8">
           <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/10">
-            <ShoppingCart className="h-14 w-14 text-primary/40" strokeWidth={1.5} />
+            <ShoppingCart className="h-14 w-14 text-foreground/40" strokeWidth={1.5} />
           </div>
           {/* floating icons */}
           <span className="absolute -top-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 border-2 border-white shadow-sm">
@@ -100,7 +100,7 @@ export default function CartPage() {
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-xs sm:max-w-none sm:w-auto">
           <Link
             href="/"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-3.5 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-gold px-8 py-3.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors shadow-lg shadow-primary/20"
           >
             <ShoppingCart className="h-4 w-4" />
             Start Shopping
@@ -124,7 +124,7 @@ export default function CartPage() {
             <Link
               key={href}
               href={href}
-              className="rounded-full border border-border px-4 py-1.5 hover:border-primary/40 hover:text-primary transition-colors"
+              className="rounded-full border border-border px-4 py-1.5 hover:border-primary/40 hover:text-foreground transition-colors"
             >
               {label}
             </Link>
@@ -182,7 +182,7 @@ export default function CartPage() {
                           <div className="min-w-0">
                             <p className="text-gray-900 font-medium text-sm leading-snug">{item.title}</p>
                             <p className="text-gray-500 text-xs mt-0.5">{item.variantName}</p>
-                            <p className="text-primary font-semibold text-sm mt-1">
+                            <p className="text-foreground font-semibold text-sm mt-1">
                               {formatCents(item.price)}
                             </p>
                           </div>
@@ -295,7 +295,7 @@ export default function CartPage() {
               className={`mt-5 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-colors ${
                 !mounted || commerceGatesLoading || !canEnterCheckoutFlow
                   ? "cursor-not-allowed bg-gray-200 text-gray-500"
-                  : "bg-primary text-[#0f0f10] hover:bg-primary/90"
+                  : "bg-brand-gold text-[#0f0f10] hover:bg-brand-gold/90"
               }`}
             >
               Proceed to Checkout

@@ -282,7 +282,7 @@ export default function PayoutsPage() {
 
       {/* How payouts work */}
       <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <DollarSign className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+        <DollarSign className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
         <div>
           <p className="text-sm text-gray-900 font-medium">How payouts work</p>
           <p className="text-xs text-gray-500 mt-1 leading-relaxed">
@@ -340,7 +340,7 @@ export default function PayoutsPage() {
       <Sheet open={!!selected} onClose={() => setSelected(null)}>
         <SheetHeader onClose={() => setSelected(null)}>
           <div className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-primary" />
+            <Receipt className="h-5 w-5 text-foreground" />
             Payout Breakdown
           </div>
         </SheetHeader>

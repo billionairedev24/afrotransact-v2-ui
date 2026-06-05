@@ -98,7 +98,7 @@ function Section({
         <ChevronRight
           className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-150 ${open ? "rotate-90" : ""}`}
         />
-        <Icon className="h-4 w-4 shrink-0 text-primary" />
+        <Icon className="h-4 w-4 shrink-0 text-foreground" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-gray-900">{title}</span>
@@ -280,7 +280,7 @@ export default function SettingsPage() {
           subtitle="Powers Victory (chat, seller coach, moderation, analytics)."
           badge={
             aiSettings && (
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
+              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-foreground capitalize">
                 {aiSettings.provider} active
               </span>
             )
@@ -323,7 +323,7 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       {isSelected && (
-                        <span className="absolute bottom-2 right-3 text-[10px] font-bold text-primary uppercase tracking-wide">
+                        <span className="absolute bottom-2 right-3 text-[10px] font-bold text-foreground uppercase tracking-wide">
                           Selected
                         </span>
                       )}
@@ -336,7 +336,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleSaveAi}
                   disabled={savingAi || !activeProviderChanged}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors disabled:opacity-50"
                 >
                   {savingAi ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Apply
@@ -415,7 +415,7 @@ export default function SettingsPage() {
                   <p className="text-xs text-gray-500 mt-0.5 max-w-md">
                     On: Shippo/EasyPost quote shipping at checkout based on real parcels.
                     Off: Platform rates use per-region cents-per-pound + free-shipping threshold
-                    from the <Link href="/admin/regions" className="underline text-gray-700 hover:text-primary">Regions</Link> page.
+                    from the <Link href="/admin/regions" className="underline text-gray-700 hover:text-foreground">Regions</Link> page.
                   </p>
                 </div>
                 <Toggle
@@ -495,7 +495,7 @@ export default function SettingsPage() {
                     Checkout uses each region&apos;s <code className="bg-white px-1 rounded text-[11px]">shipping_rate_cents_per_lb</code> and
                     <code className="bg-white px-1 rounded ml-1 text-[11px]">free_shipping_threshold_cents</code> values.
                     Edit those on the{" "}
-                    <Link href="/admin/regions" className="font-medium text-primary hover:underline">
+                    <Link href="/admin/regions" className="font-medium text-foreground hover:underline">
                       Regions
                     </Link>{" "}
                     page.
@@ -534,7 +534,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={savingPayment}
-            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-60"
+            className="flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors disabled:opacity-60"
           >
             {savingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save Platform Settings

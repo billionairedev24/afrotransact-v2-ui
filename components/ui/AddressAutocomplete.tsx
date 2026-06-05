@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { MapPin } from "lucide-react"
 
+// `google` namespace comes from @types/google.maps, surfaced via the
+// `types: ["google.maps"]` entry in tsconfig.json so all *.tsx files can
+// reference `google.maps.*` without further imports.
 declare global {
   interface Window {
     google: typeof google
@@ -180,7 +183,7 @@ export function AddressAutocomplete({
 
   return (
     <div className="relative">
-      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/60" />
+      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/60" />
       <input
         ref={inputRef}
         value={value}

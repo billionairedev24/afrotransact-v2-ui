@@ -76,11 +76,11 @@ function AiProductCard({ product }: { product: ProductCard }) {
           )}
         </div>
         <div className="px-2.5 pt-2 pb-1.5 space-y-0.5">
-          <p className="text-[11px] font-semibold text-card-foreground line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+          <p className="text-[11px] font-semibold text-card-foreground line-clamp-2 leading-tight group-hover:text-foreground transition-colors">
             {product.title}
           </p>
           <div className="flex items-baseline gap-1">
-            <span className="text-[13px] font-bold text-primary">${product.min_price.toFixed(2)}</span>
+            <span className="text-[13px] font-bold text-foreground">${product.min_price.toFixed(2)}</span>
             {product.max_price > product.min_price && (
               <span className="text-[10px] text-muted-foreground">–${product.max_price.toFixed(2)}</span>
             )}
@@ -119,7 +119,7 @@ function AiProductCard({ product }: { product: ProductCard }) {
           <button
             onClick={handleAdd}
             disabled={adding}
-            className="w-full flex items-center justify-center gap-1 rounded-lg bg-primary py-1.5 text-[10px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors"
+            className="w-full flex items-center justify-center gap-1 rounded-lg bg-brand-gold py-1.5 text-[10px] font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-60 transition-colors"
           >
             {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingCart className="h-3 w-3" />}
             {adding ? "Adding…" : "Add to Cart"}

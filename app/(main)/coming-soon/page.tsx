@@ -12,7 +12,7 @@ function ComingSoonContent() {
   return (
     <main className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
       <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 mb-6">
-        <Rocket className="h-10 w-10 text-primary" />
+        <Rocket className="h-10 w-10 text-foreground" />
       </div>
 
       <h1 className="text-3xl font-bold text-foreground mb-3">Coming Soon</h1>
@@ -24,7 +24,7 @@ function ComingSoonContent() {
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-accent transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-semibold text-brand-gold-foreground hover:bg-accent transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Home

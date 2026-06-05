@@ -157,7 +157,7 @@ export default function SellerCouponsPage() {
         </div>
         <button
           onClick={() => { setEditing(null); setShowForm(true) }}
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-primary/90"
+          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90"
         >
           <Plus className="h-4 w-4" /> Create Coupon
         </button>
@@ -296,7 +296,7 @@ function CouponForm({
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>
-        <button type="submit" disabled={submitting} className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-50 transition-colors">
+        <button type="submit" disabled={submitting} className="rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-50 transition-colors">
           {submitting ? "Saving…" : coupon ? "Update" : "Create"}
         </button>
       </div>

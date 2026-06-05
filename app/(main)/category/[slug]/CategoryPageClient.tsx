@@ -119,7 +119,7 @@ function AddToCartButton({ item }: { item: SearchResult }) {
     <button
       onClick={handleAdd}
       disabled={loading}
-      className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60"
+      className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-60"
     >
       {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5" />}
       Add to Cart
@@ -166,18 +166,18 @@ function ProductCard({ product, featured = false }: { product: SearchResult; fea
         )}
       </div>
       <div className="p-2 sm:p-3 space-y-1 sm:space-y-1.5 min-w-0 flex-1">
-        <h3 className="text-[11px] sm:text-[13px] font-semibold text-card-foreground group-hover:text-primary transition-colors leading-tight line-clamp-2">
+        <h3 className="text-[11px] sm:text-[13px] font-semibold text-card-foreground group-hover:text-foreground transition-colors leading-tight line-clamp-2">
           {product.title}
         </h3>
         <div className="flex items-center gap-1 flex-wrap">
-          <span className="text-sm sm:text-[15px] font-bold text-primary">${product.min_price.toFixed(2)}</span>
+          <span className="text-sm sm:text-[15px] font-bold text-foreground">${product.min_price.toFixed(2)}</span>
           {product.max_price > product.min_price && (
             <span className="text-[10px] sm:text-[11px] text-muted-foreground">– ${product.max_price.toFixed(2)}</span>
           )}
         </div>
         {product.avg_rating > 0 && (
           <div className="hidden sm:flex items-center gap-1">
-            <Star className="h-3 w-3 fill-primary text-primary" />
+            <Star className="h-3 w-3 fill-primary text-foreground" />
             <span className="text-[11px] font-medium text-foreground">{product.avg_rating.toFixed(1)}</span>
             <span className="text-[11px] text-muted-foreground">({product.review_count})</span>
           </div>
@@ -304,7 +304,7 @@ export default function CategoryPageClient() {
         {page > 1 && (
           <button
             onClick={() => updatePage(1)}
-            className="text-sm text-primary hover:text-primary/80 transition-colors shrink-0"
+            className="text-sm text-foreground hover:text-foreground transition-colors shrink-0"
           >
             ← First page
           </button>
@@ -328,7 +328,7 @@ export default function CategoryPageClient() {
           <p className="text-red-800 font-medium mb-2">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="text-primary text-sm font-bold hover:underline"
+            className="text-foreground text-sm font-bold hover:underline"
           >
             Try again
           </button>
@@ -337,7 +337,7 @@ export default function CategoryPageClient() {
         <div className="text-center py-20">
           <Leaf className="h-12 w-12 text-gray-400 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">No products in this category yet.</p>
-          <Link href="/" className="text-primary text-sm mt-2 inline-block hover:text-primary/80">
+          <Link href="/" className="text-foreground text-sm mt-2 inline-block hover:text-foreground">
             Browse all products →
           </Link>
         </div>

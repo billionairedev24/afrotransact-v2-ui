@@ -120,7 +120,7 @@ function LoginRedirect() {
           <button
             onClick={triggerKeycloakSignIn}
             disabled={isLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-110 disabled:opacity-80 disabled:cursor-wait"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-3 text-sm font-semibold text-brand-gold-foreground shadow-md transition-all hover:brightness-110 disabled:opacity-80 disabled:cursor-wait"
           >
             {isLoading ? (
               <><Loader2 className="h-4 w-4 animate-spin" />Signing in&hellip;</>
@@ -149,7 +149,7 @@ function LoginRedirect() {
           <button
             onClick={triggerKeycloakSignIn}
             disabled={isLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-110 disabled:opacity-80 disabled:cursor-wait"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-3 text-sm font-semibold text-brand-gold-foreground shadow-md transition-all hover:brightness-110 disabled:opacity-80 disabled:cursor-wait"
           >
             {isLoading ? (
               <><Loader2 className="h-4 w-4 animate-spin" />Signing in&hellip;</>
@@ -197,7 +197,7 @@ function LoginRedirect() {
           <button
             onClick={triggerKeycloakSignIn}
             disabled={isLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-80 disabled:cursor-wait"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground disabled:opacity-80 disabled:cursor-wait"
           >
             {isLoading ? (
               <><Loader2 className="h-4 w-4 animate-spin" />Signing in&hellip;</>
@@ -209,7 +209,7 @@ function LoginRedirect() {
             Stuck with an old <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">?error=</code> in the URL?{" "}
             <Link
               href={loginHrefWithoutOauthError(new URLSearchParams(searchParams.toString()))}
-              className="font-medium text-primary underline-offset-4 hover:underline"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
             >
               Clear error and use automatic redirect
             </Link>

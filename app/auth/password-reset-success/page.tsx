@@ -9,7 +9,7 @@ export default function PasswordResetSuccessPage() {
         <Link href="/" className="flex items-center justify-center gap-3">
           <Image src="/logo.png" alt="AfroTransact" width={40} height={40} className="rounded-xl" />
           <div>
-            <span className="text-3xl font-bold text-primary">Afro</span>
+            <span className="text-3xl font-bold text-foreground">Afro</span>
             <span className="text-3xl font-bold text-foreground">Transact</span>
           </div>
         </Link>
@@ -29,7 +29,7 @@ export default function PasswordResetSuccessPage() {
           <div className="flex flex-col gap-3">
             <Link
               href="/auth/login"
-              className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-colors hover:bg-accent"
+              className="inline-flex items-center justify-center rounded-lg bg-brand-gold px-4 py-3 text-sm font-semibold text-brand-gold-foreground shadow-lg shadow-primary/25 transition-colors hover:bg-accent"
             >
               Sign in
             </Link>

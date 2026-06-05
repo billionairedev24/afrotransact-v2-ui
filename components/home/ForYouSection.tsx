@@ -90,7 +90,7 @@ function AddToCartButton({ item }: { item: SearchResult }) {
     <button
       onClick={handleAdd}
       disabled={loading}
-      className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60"
+      className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-60"
     >
       {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5" />}
       Add to Cart
@@ -127,18 +127,18 @@ function ProductCard({ product }: { product: SearchResult }) {
         )}
       </div>
       <div className="p-2 sm:p-3 space-y-1 sm:space-y-1.5 flex-1 min-w-0">
-        <h3 className="text-[11px] sm:text-[13px] font-semibold text-card-foreground group-hover:text-primary transition-colors leading-tight line-clamp-2">
+        <h3 className="text-[11px] sm:text-[13px] font-semibold text-card-foreground group-hover:text-foreground transition-colors leading-tight line-clamp-2">
           {product.title}
         </h3>
         <div className="flex items-center gap-1 flex-wrap">
-          <span className="text-sm sm:text-[15px] font-bold text-primary">${product.min_price.toFixed(2)}</span>
+          <span className="text-sm sm:text-[15px] font-bold text-foreground">${product.min_price.toFixed(2)}</span>
           {product.max_price > product.min_price && (
             <span className="text-[10px] sm:text-[11px] text-muted-foreground">– ${product.max_price.toFixed(2)}</span>
           )}
         </div>
         {product.avg_rating > 0 && (
           <div className="hidden sm:flex items-center gap-1">
-            <Star className="h-3 w-3 fill-primary text-primary" />
+            <Star className="h-3 w-3 fill-primary text-foreground" />
             <span className="text-[11px] font-medium text-foreground">{product.avg_rating.toFixed(1)}</span>
             <span className="text-[11px] text-muted-foreground">({product.review_count})</span>
           </div>
@@ -188,14 +188,14 @@ export function ForYouSection({ token }: { token?: string }) {
       <div className="flex items-end justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
+            <Sparkles className="h-5 w-5 text-foreground" />
             For You
           </h2>
           <p className="text-sm text-muted-foreground mt-1">{label}</p>
         </div>
         <Link
           href="/search?sort=rating"
-          className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+          className="text-sm font-medium text-foreground hover:text-foreground flex items-center gap-1 transition-colors"
         >
           See more <ChevronRight className="h-4 w-4" />
         </Link>

@@ -268,7 +268,7 @@ export default function ProductsPage() {
           </Link>
           <Link
             href="/dashboard/products/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add Product
@@ -531,7 +531,7 @@ function ProductDetailSheet({
       <SheetBody className="space-y-6">
         {loading && (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-foreground" />
           </div>
         )}
 
@@ -589,7 +589,7 @@ function ProductDetailSheet({
                     />
                     {idx === 0 && (
                       <div className="absolute bottom-0.5 left-0.5">
-                        <Star className="h-3 w-3 fill-primary text-primary" />
+                        <Star className="h-3 w-3 fill-primary text-foreground" />
                       </div>
                     )}
                     {editing && (
@@ -608,7 +608,7 @@ function ProductDetailSheet({
                   </div>
                 )}
                 {editing && (
-                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-200 text-gray-500 hover:border-primary/40 hover:text-primary transition-colors">
+                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-200 text-gray-500 hover:border-primary/40 hover:text-foreground transition-colors">
                     {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
                   </label>
@@ -723,7 +723,7 @@ function ProductDetailSheet({
               <button
                 onClick={handleSaveBasicInfo}
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Save Changes
@@ -735,7 +735,7 @@ function ProductDetailSheet({
                 <button
                   onClick={handleSubmitForReview}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
                 >
                   {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   Submit for Review

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
@@ -203,7 +204,14 @@ function ImageUploadField({
 
 export default function StoreSettingsPage() {
   const { status: sessionStatus } = useSession()
+  const router = useRouter()
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (sessionStatus === "unauthenticated") {
+      router.replace("/auth/login?callbackUrl=/dashboard/store")
+    }
+  }, [sessionStatus, router])
   const { data: seller, isLoading: sellerLoading } = useSellerMe()
   const { data: stores = [], isLoading: storesLoading } = useSellerStores(seller?.id)
   const store = stores[0]
@@ -358,7 +366,7 @@ export default function StoreSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-3 py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <Loader2 className="h-6 w-6 animate-spin text-foreground" />
         <span className="text-sm text-muted-foreground">Loading store...</span>
       </div>
     )
@@ -387,15 +395,16 @@ export default function StoreSettingsPage() {
               : "Create your store to start selling"}
           </p>
         </div>
-        {store && (
+        {store && store.slug && (
           <a
-            href={`/store/${store.slug}`}
+            href={`/store/${store.slug}?preview=1`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground shadow-sm hover:bg-brand-gold-hover transition-colors"
+            title={`/store/${store.slug}`}
           >
             <Store className="h-4 w-4" />
-            View Store
+            Preview Storefront
           </a>
         )}
       </div>
@@ -432,7 +441,7 @@ export default function StoreSettingsPage() {
         <section className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-              <Store className="h-4 w-4 text-primary" />
+              <Store className="h-4 w-4 text-foreground" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">
@@ -465,11 +474,18 @@ export default function StoreSettingsPage() {
             {store && (
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
-                  Store Slug
+                  Store URL
                 </label>
-                <p className="text-sm text-foreground">{store.slug}</p>
+                <a
+                  href={`/store/${store.slug}?preview=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-foreground underline-offset-2 hover:text-primary hover:underline"
+                >
+                  /store/{store.slug}
+                </a>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Auto-generated from store name. Used in store URLs.
+                  Auto-generated from your store name. Click to preview your storefront.
                 </p>
               </div>
             )}
@@ -650,7 +666,7 @@ export default function StoreSettingsPage() {
         {carrierShippingEnabled && <section className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-              <MapPin className="h-4 w-4 text-primary" />
+              <MapPin className="h-4 w-4 text-foreground" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">Shipping Preferences</h2>
@@ -680,7 +696,7 @@ export default function StoreSettingsPage() {
                       }
                       className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                         checked
-                          ? "border-primary/40 bg-primary/10 text-primary"
+                          ? "border-primary/40 bg-primary/10 text-foreground"
                           : "border-border text-muted-foreground hover:bg-muted"
                       }`}
                     >
@@ -697,7 +713,7 @@ export default function StoreSettingsPage() {
                   type="checkbox"
                   checked={form.shipFromSameAsBusiness}
                   onChange={(e) => update("shipFromSameAsBusiness", e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary"
+                  className="h-4 w-4 rounded border-border text-foreground"
                 />
                 Ship-from address is same as business address
               </label>
@@ -811,7 +827,7 @@ export default function StoreSettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:opacity-50"
           >
             {saving ? (
               <>

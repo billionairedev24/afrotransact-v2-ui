@@ -240,7 +240,7 @@ export default function WorkQueuePage() {
           >
             {t.label}
             {t.count > 0 && (
-              <span className="ml-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary/20 px-1.5 text-[10px] font-bold text-primary">
+              <span className="ml-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary/20 px-1.5 text-[10px] font-bold text-foreground">
                 {t.count}
               </span>
             )}
@@ -250,7 +250,7 @@ export default function WorkQueuePage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-foreground" />
         </div>
       ) : totalCount === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-gray-200 bg-white p-12">
@@ -693,7 +693,7 @@ function SellerReviewSheet({
     <Sheet open={true} onClose={onClose}>
       <SheetHeader onClose={onClose}>
         <span className="flex items-center gap-2">
-          <Store className="h-5 w-5 text-primary" />
+          <Store className="h-5 w-5 text-foreground" />
           Seller Application Review
         </span>
       </SheetHeader>
@@ -739,7 +739,7 @@ function SellerReviewSheet({
             {seller.contactEmail && (
               <div className={fieldCls}>
                 <Mail className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
-                <a href={`mailto:${seller.contactEmail}`} className="text-primary hover:underline text-sm">{seller.contactEmail}</a>
+                <a href={`mailto:${seller.contactEmail}`} className="text-foreground hover:underline text-sm">{seller.contactEmail}</a>
               </div>
             )}
             {seller.contactPhone && (
@@ -751,7 +751,7 @@ function SellerReviewSheet({
             {seller.website && (
               <div className={fieldCls}>
                 <Globe className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
-                <a href={seller.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm inline-flex items-center gap-1">
+                <a href={seller.website} target="_blank" rel="noopener noreferrer" className="text-foreground hover:underline text-sm inline-flex items-center gap-1">
                   {seller.website} <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
@@ -843,7 +843,7 @@ function SellerReviewSheet({
                     <p className="text-sm text-gray-700 truncate">{doc.fileName || doc.documentType}</p>
                     <p className="text-[10px] text-gray-500 uppercase">{doc.documentType.replace(/_/g, " ")}</p>
                   </div>
-                  <ExternalLink className="h-3.5 w-3.5 text-gray-500 group-hover:text-primary transition-colors shrink-0" />
+                  <ExternalLink className="h-3.5 w-3.5 text-gray-500 group-hover:text-foreground transition-colors shrink-0" />
                 </a>
               ))}
             </div>

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Product - AfroTransact Seller</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700;900&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "surface": "#f9f9f9",
+                "secondary-fixed": "#dde3ee",
+                "outline-variant": "#d4c5ab",
+                "on-primary-fixed": "#261a00",
+                "surface-bright": "#f9f9f9",
+                "primary-fixed": "#ffdf9e",
+                "surface-variant": "#e2e2e2",
+                "secondary-fixed-dim": "#c1c7d2",
+                "on-surface-variant": "#4f4632",
+                "on-primary-fixed-variant": "#5b4300",
+                "on-secondary-fixed": "#161c24",
+                "tertiary-container": "#bfccdf",
+                "secondary": "#595f68",
+                "on-tertiary": "#ffffff",
+                "secondary-container": "#dae0eb",
+                "surface-container-highest": "#e2e2e2",
+                "on-secondary-container": "#5d636d",
+                "error-container": "#ffdad6",
+                "primary-fixed-dim": "#fabd00",
+                "surface-container-lowest": "#ffffff",
+                "on-error-container": "#93000a",
+                "surface-dim": "#dadada",
+                "tertiary-fixed": "#d7e3f7",
+                "on-error": "#ffffff",
+                "on-background": "#1a1c1c",
+                "error": "#ba1a1a",
+                "on-secondary": "#ffffff",
+                "on-secondary-fixed-variant": "#414750",
+                "inverse-primary": "#fabd00",
+                "background": "#f9f9f9",
+                "surface-container-high": "#e8e8e8",
+                "on-tertiary-fixed-variant": "#3c4858",
+                "on-tertiary-container": "#4a5667",
+                "outline": "#827660",
+                "inverse-surface": "#2f3131",
+                "surface-container-low": "#f3f3f3",
+                "surface-container": "#eeeeee",
+                "on-primary": "#ffffff",
+                "tertiary": "#535f70",
+                "tertiary-fixed-dim": "#bbc7db",
+                "primary-container": "#ffc107",
+                "primary": "#785900",
+                "surface-tint": "#785900",
+                "inverse-on-surface": "#f1f1f1",
+                "on-primary-container": "#6d5100",
+                "on-tertiary-fixed": "#101c2b",
+                "on-surface": "#1a1c1c"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+        },
+        "spacing": {
+                "container-max": "1440px",
+                "section-gap": "2.5rem",
+                "gutter": "1.25rem",
+                "stack-sm": "0.5rem",
+                "stack-md": "1rem",
+                "margin-mobile": "1rem"
+        },
+        "fontFamily": {
+                "body-md": [
+                        "Inter"
+                ],
+                "price-lg": [
+                        "Inter"
+                ],
+                "headline-lg-mobile": [
+                        "Hanken Grotesk"
+                ],
+                "label-sm": [
+                        "Inter"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "headline-md": [
+                        "Hanken Grotesk"
+                ],
+                "headline-lg": [
+                        "Hanken Grotesk"
+                ]
+        },
+        "fontSize": {
+                "body-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "price-lg": [
+                        "24px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "24px",
+                        {
+                                "lineHeight": "30px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.02em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-lg": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-md": [
+                        "20px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "fontWeight": "700"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .material-symbols-outlined[data-weight="fill"] {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+</style>
+</head>
+<body class="bg-surface text-on-surface font-body-md antialiased min-h-screen flex">
+<!-- SideNavBar Component -->
+<nav class="bg-on-surface dark:bg-surface-container-lowest h-screen w-64 fixed left-0 top-0 border-r border-outline-variant dark:border-outline flex flex-col h-full p-gutter z-50">
+<!-- Brand Header -->
+<div class="flex items-center gap-2 mb-8 px-2">
+<h1 class="font-headline-md text-headline-md font-bold text-primary-fixed dark:text-primary">AfroTransact</h1>
+<span class="bg-primary-container text-on-primary-container text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider">Seller</span>
+</div>
+<!-- Navigation Links -->
+<div class="flex-1 flex flex-col gap-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-4 py-3 text-secondary-fixed-dim dark:text-on-surface-variant hover:text-primary-fixed hover:bg-surface-variant/10 transition-colors duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98] transition-transform" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<!-- Active State (Intent: Adding a Product conceptually lives under Inventory/Products, though label is Inventory) -->
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-container text-on-primary-container rounded-lg font-bold group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98] transition-transform" data-icon="inventory_2" data-weight="fill">inventory_2</span>
+<span class="font-body-md text-body-md">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary-fixed-dim dark:text-on-surface-variant hover:text-primary-fixed hover:bg-surface-variant/10 transition-colors duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98] transition-transform" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-body-md text-body-md">Orders</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary-fixed-dim dark:text-on-surface-variant hover:text-primary-fixed hover:bg-surface-variant/10 transition-colors duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98] transition-transform" data-icon="payments">payments</span>
+<span class="font-body-md text-body-md">Payments</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary-fixed-dim dark:text-on-surface-variant hover:text-primary-fixed hover:bg-surface-variant/10 transition-colors duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98] transition-transform" data-icon="group">group</span>
+<span class="font-body-md text-body-md">Customers</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-secondary-fixed-dim dark:text-on-surface-variant hover:text-primary-fixed hover:bg-surface-variant/10 transition-colors duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98] transition-transform" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</div>
+<!-- User Profile & Footer Actions -->
+<div class="mt-auto pt-6 border-t border-outline-variant dark:border-outline flex flex-col gap-2">
+<!-- Seller Profile Snippet -->
+<div class="flex items-center gap-3 px-2 mb-4">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant font-bold border-2 border-primary-container shrink-0 overflow-hidden">
+<img alt="Seller Profile Picture" class="w-full h-full object-cover" data-alt="A close-up portrait of a professional African seller in a modern setting, conveying trust and competence. Soft, flattering lighting, neutral background, realistic photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBS54Dm1FEqr5VkE5jFhtD-HxP5vz_x8iYEx5_utHppddr1eyaR753yHJOUiqYqDsCGW6QBLxESA0xMXbjqIWpLJaqvdNV9VPxhHvXtgotYMuEN_SrLGAMtlPBEdTz4cCEoZWu7VqUGCzukJgTqd-6N0uqlesvh1_9otsX51o_yKOetpwvSKHScQHRt1uSldFo1BXtu7LeJuHaDJa2XVyedU3K72REuAzcuaJK0JFs_-IoIwyChfYVKBcLOUHlg5Ocd5nVfJL5tnnw"/>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-secondary-fixed font-semibold line-clamp-1">AfroTransact</span>
+<span class="font-label-sm text-label-sm text-secondary-fixed-dim">Verified Merchant</span>
+</div>
+</div>
+<button class="w-full bg-primary-container text-on-primary-container font-bold py-2 rounded-lg hover:brightness-95 transition-all">
+        Add Product
+      </button>
+<div class="flex gap-2 mt-2">
+<a class="flex-1 flex flex-col items-center justify-center py-2 text-secondary-fixed-dim hover:text-primary-fixed transition-colors" href="#">
+<span class="material-symbols-outlined text-lg mb-1" data-icon="help">help</span>
+<span class="text-[10px]">Help Center</span>
+</a>
+<a class="flex-1 flex flex-col items-center justify-center py-2 text-secondary-fixed-dim hover:text-error transition-colors" href="#">
+<span class="material-symbols-outlined text-lg mb-1" data-icon="logout">logout</span>
+<span class="text-[10px]">Logout</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Main Canvas -->
+<main class="ml-64 flex-1 flex flex-col min-h-screen">
+<!-- Header Area -->
+<header class="bg-surface-container-lowest sticky top-0 z-40 border-b border-surface-variant px-8 py-5 flex items-center gap-4">
+<button class="w-10 h-10 rounded-full border border-surface-variant flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors" title="Back">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<div>
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface m-0 leading-tight">Create Product</h2>
+<p class="font-body-md text-body-md text-secondary m-0">Add a new product to your store inventory.</p>
+</div>
+<!-- Actions at Top Right -->
+<div class="ml-auto flex gap-3"><div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container border border-surface-variant rounded text-secondary mr-2">
+<span class="material-symbols-outlined text-sm" data-icon="info">info</span>
+<span class="text-[12px] font-medium">Subject to admin review</span>
+</div>
+<button class="px-5 py-2 rounded border border-surface-variant text-on-surface font-body-md text-body-md font-semibold hover:bg-surface-variant transition-colors bg-surface-container-lowest">Cancel</button>
+<button class="px-5 py-2 rounded border border-surface-variant text-on-surface font-body-md text-body-md font-semibold hover:bg-surface-variant transition-colors flex items-center gap-2 bg-surface-container-lowest">
+<span class="material-symbols-outlined text-sm" data-icon="draft">draft</span> Save Draft
+        </button>
+<button class="px-6 py-2 rounded bg-primary-container text-on-primary-container font-body-md text-body-md font-bold hover:brightness-95 transition-all shadow-sm">Submit for Review</button>
+</div>
+</header>
+<!-- Content Area (Scrollable) -->
+<div class="p-8 max-w-[1200px] w-full mx-auto pb-8">
+<!-- Progress/Section Nav (Visual Anchor) -->
+<!-- Form Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Main Info (Spans 2 columns) -->
+<div class="lg:col-span-2 space-y-8">
+<!-- Basic Information Card -->
+<section class="bg-surface-container-lowest border border-surface-variant rounded-xl p-6">
+<h3 class="font-headline-md text-headline-md font-bold mb-1">Basic Information</h3>
+<p class="font-body-md text-body-md text-secondary mb-6">Core details about what you're selling.</p>
+<div class="space-y-5">
+<!-- Product Name -->
+<div>
+<label class="block font-body-md text-body-md font-semibold text-on-surface mb-2" for="product-name">Product Name <span class="text-error">*</span></label>
+<input class="w-full px-4 py-3 bg-surface border border-surface-variant rounded focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent font-body-md text-body-md" id="product-name" placeholder="e.g. Organic Raw Shea Butter (500g)" type="text"/>
+</div>
+<!-- Description -->
+<div>
+<label class="block font-body-md text-body-md font-semibold text-on-surface mb-2" for="product-desc">Description <span class="text-error">*</span></label>
+<!-- Rich Text Toolbar Mock -->
+<div class="border border-surface-variant border-b-0 rounded-t bg-surface-container-low px-2 py-1 flex gap-1">
+<button class="p-1.5 text-secondary hover:bg-surface-variant rounded" title="Bold"><span class="material-symbols-outlined text-sm" data-icon="format_bold">format_bold</span></button>
+<button class="p-1.5 text-secondary hover:bg-surface-variant rounded" title="Italic"><span class="material-symbols-outlined text-sm" data-icon="format_italic">format_italic</span></button>
+<div class="w-px h-6 bg-surface-variant my-auto mx-1"></div>
+<button class="p-1.5 text-secondary hover:bg-surface-variant rounded" title="Bullet List"><span class="material-symbols-outlined text-sm" data-icon="format_list_bulleted">format_list_bulleted</span></button>
+</div>
+<textarea class="w-full px-4 py-3 bg-surface border border-surface-variant rounded-b focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent font-body-md text-body-md resize-y" id="product-desc" placeholder="Describe the origin, benefits, and usage of your product..." rows="6"></textarea>
+</div>
+<!-- Brand & Category Row -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+<div>
+<label class="block font-body-md text-body-md font-semibold text-on-surface mb-2" for="brand">Brand (Optional)</label>
+<input class="w-full px-4 py-3 bg-surface border border-surface-variant rounded focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent font-body-md text-body-md" id="brand" placeholder="e.g. Afrot Naturals" type="text"/>
+</div>
+<div>
+<label class="block font-body-md text-body-md font-semibold text-on-surface mb-2" for="category">Category <span class="text-error">*</span></label>
+<div class="relative">
+<select class="w-full pl-4 pr-10 py-3 bg-surface border border-surface-variant rounded focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent font-body-md text-body-md appearance-none" id="category">
+<option disabled="" selected="" value="">Select a category...</option>
+<option value="beauty">Health &amp; Beauty</option>
+<option value="food">Groceries &amp; Spices</option>
+<option value="fashion">Fashion &amp; Apparel</option>
+<option value="art">Art &amp; Craft</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Warning/Info Banner -->
+</section>
+<!-- Pricing & Inventory -->
+<section class="bg-surface-container-lowest border border-surface-variant rounded-xl p-6">
+<h3 class="font-headline-md text-headline-md font-bold mb-1">Pricing &amp; Inventory</h3>
+<p class="font-body-md text-body-md text-secondary mb-6">Set your base price and manage stock levels.</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-6">
+<!-- Price -->
+<div>
+<label class="block font-body-md text-body-md font-semibold text-on-surface mb-2" for="price">Price (USD) <span class="text-error">*</span></label>
+<div class="relative">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 text-secondary font-bold">$</span>
+<input class="w-full pl-8 pr-4 py-3 bg-surface border border-surface-variant rounded focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent font-body-md text-body-md" id="price" placeholder="0.00" type="number"/>
+</div>
+</div>
+<!-- Compare Price -->
+<div>
+<label class="block font-body-md text-body-md font-semibold text-on-surface mb-2" for="compare-price">Compare at Price (USD)</label>
+<div class="relative">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 text-secondary font-bold">$</span>
+<input class="w-full pl-8 pr-4 py-3 bg-surface border border-surface-variant rounded focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent font-body-md text-body-md" id="compare-price" placeholder="0.00" type="number"/>
+</div>
+<p class="font-label-sm text-label-sm text-secondary mt-1 font-normal">Shows a strikethrough price for discounts.</p>
+</div>
+<!-- SKU -->
+<!-- Stock Quantity -->
+<div>
+<label class="block font-body-md text-body-md font-semibold text-on-surface mb-2" for="stock">Stock Quantity <span class="text-error">*</span></label>
+<input class="w-full px-4 py-3 bg-surface border border-surface-variant rounded focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent font-body-md text-body-md" id="stock" placeholder="0" type="number"/>
+</div>
+</div>
+<hr class="border-surface-variant my-6"/>
+<div class="flex items-center justify-between"><div class="w-full space-y-4">
+<div class="flex items-center justify-between">
+<div>
+<h4 class="font-body-md text-body-md font-bold text-on-surface">Product Variants</h4>
+<p class="font-body-md text-body-md text-secondary">Manage size, color, and material options.</p>
+</div>
+<button class="px-4 py-2 rounded bg-surface-container border border-surface-variant text-on-surface font-body-md text-body-md font-semibold hover:bg-surface-variant transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="settings">settings</span> Configure Attributes
+</button>
+</div>
+<div class="overflow-x-auto border border-surface-variant rounded-lg">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-surface-variant">
+<tr>
+<th class="px-4 py-2 font-label-sm text-label-sm text-secondary uppercase">Variant</th>
+<th class="px-4 py-2 font-label-sm text-label-sm text-secondary uppercase">Price Override</th>
+<th class="px-4 py-2 font-label-sm text-label-sm text-secondary uppercase">Stock</th>
+<th class="px-4 py-2 font-label-sm text-label-sm text-secondary uppercase text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-variant">
+<tr>
+<td class="px-4 py-3 font-body-md text-on-surface">Small / Black</td>
+<td class="px-4 py-3"><input class="w-24 px-2 py-1 bg-surface border border-surface-variant rounded text-sm" placeholder="$0.00" type="text"/></td>
+<td class="px-4 py-3"><input class="w-20 px-2 py-1 bg-surface border border-surface-variant rounded text-sm" placeholder="0" type="number"/></td>
+<td class="px-4 py-3 text-right"><button class="text-error hover:bg-error-container/10 p-1 rounded"><span class="material-symbols-outlined text-sm" data-icon="delete">delete</span></button></td>
+</tr>
+<tr>
+<td class="px-4 py-3 font-body-md text-on-surface">Large / Black</td>
+<td class="px-4 py-3"><input class="w-24 px-2 py-1 bg-surface border border-surface-variant rounded text-sm" placeholder="$0.00" type="text"/></td>
+<td class="px-4 py-3"><input class="w-20 px-2 py-1 bg-surface border border-surface-variant rounded text-sm" placeholder="0" type="number"/></td>
+<td class="px-4 py-3 text-right"><button class="text-error hover:bg-error-container/10 p-1 rounded"><span class="material-symbols-outlined text-sm" data-icon="delete">delete</span></button></td>
+</tr>
+</tbody>
+</table>
+</div>
+<button class="w-full py-2 border border-dashed border-outline-variant rounded-lg text-primary font-bold text-sm hover:bg-primary-container/5 transition-colors">
++ Add New Variant Combination
+</button>
+</div></div>
+</section>
+</div>
+<!-- Right Column: Media, Tags, Logistics (Spans 1 column) -->
+<div class="space-y-8">
+<!-- Product Images -->
+<section class="bg-surface-container-lowest border border-surface-variant rounded-xl p-6">
+<h3 class="font-headline-md text-headline-md font-bold mb-1">Media</h3>
+<p class="font-body-md text-body-md text-secondary mb-4">Upload up to 8 images.</p>
+<!-- Upload Dropzone -->
+<div class="border-2 border-dashed border-surface-variant rounded-lg p-8 flex flex-col items-center justify-center text-center bg-surface hover:bg-surface-variant/50 transition-colors cursor-pointer group mb-4">
+<div class="w-12 h-12 rounded-full bg-surface-variant text-on-surface flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" data-icon="upload">upload</span>
+</div>
+<span class="font-body-md text-body-md font-bold text-on-surface">Click to upload images</span>
+<span class="font-label-sm text-label-sm text-secondary font-normal mt-1">JPEG, PNG, WebP · Max 5MB</span>
+</div>
+<button class="w-full py-2 rounded border border-surface-variant text-on-surface font-body-md text-body-md font-semibold hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="photo_library">photo_library</span> Select from Library
+            </button>
+</section>
+<!-- Logistics -->
+<section class="bg-surface-container-lowest border border-surface-variant rounded-xl p-6">
+<h3 class="font-headline-md text-headline-md font-bold mb-1">Shipping &amp; Weight</h3>
+<p class="font-body-md text-body-md text-secondary mb-4">Used to calculate shipping rates.</p>
+<div class="space-y-4">
+<!-- Weight -->
+<div>
+<label class="block font-body-md text-body-md font-semibold text-on-surface mb-2" for="weight">Weight <span class="text-error">*</span></label>
+<div class="flex">
+<input class="w-full px-4 py-3 bg-surface border border-surface-variant border-r-0 rounded-l focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent font-body-md text-body-md" id="weight" placeholder="0.00" type="number"/>
+<select class="px-3 py-3 bg-surface-container border border-surface-variant rounded-r focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent font-body-md text-body-md text-secondary font-semibold">
+<option>lb</option>
+<option>kg</option>
+<option>oz</option>
+</select>
+</div>
+</div>
+<!-- Dimensions -->
+<div>
+<label class="block font-body-md text-body-md font-semibold text-on-surface mb-2">Parcel Size (inches)</label>
+<div class="flex gap-2">
+<div class="flex-1">
+<input class="w-full px-3 py-2 bg-surface border border-surface-variant rounded focus:outline-none focus:ring-2 focus:ring-primary-container font-body-md text-body-md text-center" placeholder="L" type="number"/>
+</div>
+<div class="flex items-center text-secondary">×</div>
+<div class="flex-1">
+<input class="w-full px-3 py-2 bg-surface border border-surface-variant rounded focus:outline-none focus:ring-2 focus:ring-primary-container font-body-md text-body-md text-center" placeholder="W" type="number"/>
+</div>
+<div class="flex items-center text-secondary">×</div>
+<div class="flex-1">
+<input class="w-full px-3 py-2 bg-surface border border-surface-variant rounded focus:outline-none focus:ring-2 focus:ring-primary-container font-body-md text-body-md text-center" placeholder="H" type="number"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Tags -->
+<section class="bg-surface-container-lowest border border-surface-variant rounded-xl p-6">
+<h3 class="font-headline-md text-headline-md font-bold mb-1">Tags &amp; Discoverability</h3>
+<p class="font-body-md text-body-md text-secondary mb-4">Help buyers find this item.</p>
+<div>
+<label class="block font-body-md text-body-md font-semibold text-on-surface mb-2" for="tags">Tags</label>
+<input class="w-full px-4 py-3 bg-surface border border-surface-variant rounded focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent font-body-md text-body-md mb-2" id="tags" placeholder="e.g. natural, organic, skincare" type="text"/>
+<div class="flex flex-wrap gap-2">
+<span class="bg-surface-variant px-3 py-1 rounded-full font-body-md text-label-sm text-on-surface flex items-center gap-1">shea butter <button class="material-symbols-outlined text-[14px] hover:text-error" data-icon="close">close</button></span>
+<span class="bg-surface-variant px-3 py-1 rounded-full font-body-md text-label-sm text-on-surface flex items-center gap-1">vegan <button class="material-symbols-outlined text-[14px] hover:text-error" data-icon="close">close</button></span>
+</div>
+</div>
+<hr class="border-surface-variant my-5"/>
+<!-- Launch Deal Toggle -->
+<div class="flex items-center justify-between">
+<div>
+<h4 class="font-body-md text-body-md font-bold text-on-surface">Launch with a Deal</h4>
+<p class="font-label-sm text-label-sm text-secondary font-normal">Add to 'Today's Deals'</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+</body></html>

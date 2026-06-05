@@ -179,7 +179,7 @@ function ColumnVisibilityDropdown({
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   {visible ? (
-                    <Eye className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    <Eye className="h-3.5 w-3.5 shrink-0 text-foreground" />
                   ) : (
                     <EyeOff className="h-3.5 w-3.5 shrink-0" />
                   )}
@@ -222,7 +222,7 @@ function LoadingRow({ cols }: { cols: number }) {
     <tr>
       <td colSpan={cols} className="px-4 py-16 text-center">
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <Loader2 className="h-6 w-6 animate-spin text-foreground" />
           <p className="text-sm">Loading…</p>
         </div>
       </td>
@@ -434,9 +434,9 @@ export function DataTable<TData>({
                         {sortable && (
                           <span className="inline-flex flex-col">
                             {sorted === "asc" ? (
-                              <ChevronUp className="h-3.5 w-3.5 text-primary" />
+                              <ChevronUp className="h-3.5 w-3.5 text-foreground" />
                             ) : sorted === "desc" ? (
-                              <ChevronDown className="h-3.5 w-3.5 text-primary" />
+                              <ChevronDown className="h-3.5 w-3.5 text-foreground" />
                             ) : (
                               <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
                             )}

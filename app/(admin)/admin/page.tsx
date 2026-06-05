@@ -11,7 +11,6 @@ import {
   Store,
   Package,
   LayoutGrid,
-  Megaphone,
   Loader2,
   Clock,
   Globe,
@@ -56,7 +55,6 @@ const QUICK_LINKS = [
   { href: "/admin/feature-flags", label: "Feature Flags", icon: ToggleLeft, desc: "Toggle features per region" },
   { href: "/admin/commission", label: "Commission", icon: Percent, desc: "Set rates per region" },
   { href: "/admin/subscription", label: "Subscriptions", icon: CreditCard, desc: "Manage plans & billing" },
-  { href: "/admin/ads", label: "Ad Slots", icon: Megaphone, desc: "Manage promotional slots" },
 ]
 
 export default function AdminOverviewPage() {
@@ -72,7 +70,7 @@ export default function AdminOverviewPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 gap-3">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <Loader2 className="h-6 w-6 animate-spin text-foreground" />
         <span className="text-sm text-gray-500">Loading dashboard...</span>
       </div>
     )
@@ -92,7 +90,7 @@ export default function AdminOverviewPage() {
   const rejectedSellers = sellerStats?.rejected ?? 0
 
   const statCards = [
-    { label: "Total Sellers", value: totalSellers, icon: Store, color: "text-primary", bgColor: "bg-primary/10" },
+    { label: "Total Sellers", value: totalSellers, icon: Store, color: "text-foreground", bgColor: "bg-primary/10" },
     { label: "Pending", value: pendingSellers, icon: Clock, color: "text-gray-400", bgColor: "bg-gray-500/10" },
     { label: "Submitted", value: submittedSellers, icon: Clock, color: "text-yellow-400", bgColor: "bg-yellow-500/10" },
     { label: "Approved", value: approvedSellers, icon: CheckCircle2, color: "text-emerald-400", bgColor: "bg-emerald-500/10" },
@@ -191,7 +189,7 @@ export default function AdminOverviewPage() {
         <div className="rounded-2xl border border-gray-100" style={{ background: CARD_BG }}>
           <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
             <h2 className="text-sm font-semibold text-gray-900">Pending Applications</h2>
-            <Link href="/admin/sellers" className="flex items-center gap-1 text-xs text-primary hover:underline">
+            <Link href="/admin/sellers" className="flex items-center gap-1 text-xs text-foreground hover:underline">
               View all <ArrowUpRight className="h-3 w-3" />
             </Link>
           </div>
@@ -244,11 +242,11 @@ export default function AdminOverviewPage() {
                 className="group flex items-center gap-4 rounded-2xl border border-gray-100 p-4 hover:border-gray-300 transition-all"
                 style={{ background: CARD_BG }}
               >
-                <div className="p-2.5 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                  <Icon className="h-5 w-5 text-primary" />
+                <div className="p-2.5 rounded-xl bg-brand-gold/10 group-hover:bg-brand-gold/20 transition-colors">
+                  <Icon className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
-                  <p className="text-gray-900 font-semibold text-sm group-hover:text-primary transition-colors">{link.label}</p>
+                  <p className="text-gray-900 font-semibold text-sm group-hover:text-foreground transition-colors">{link.label}</p>
                   <p className="text-gray-500 text-xs mt-0.5">{link.desc}</p>
                 </div>
               </Link>

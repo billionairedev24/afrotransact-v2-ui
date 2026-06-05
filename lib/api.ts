@@ -2173,28 +2173,6 @@ export interface HeroSlideConfig {
   updatedAt: string
 }
 
-export async function getPublicAds(): Promise<import("@/lib/ads").AdConfig[]> {
-  try {
-    const res = await fetch(`${API_BASE}/api/v1/config/ads`)
-    if (!res.ok) return []
-    const data = (await res.json()) as { ads?: import("@/lib/ads").AdConfig[] }
-    return data.ads ?? []
-  } catch (err) {
-    if (process.env.NEXT_PHASE !== "phase-production-build") {
-      console.error("[API] GET /api/v1/config/ads → network error", err)
-    }
-    return []
-  }
-}
-
-export function upsertAdminAd(token: string, body: import("@/lib/ads").AdConfig) {
-  return api<{ status: string }>("/api/v1/admin/ads", { method: "POST", body, token })
-}
-
-export function deleteAdminAd(token: string, id: string) {
-  return api<{ status: string }>(`/api/v1/admin/ads/${id}`, { method: "DELETE", token })
-}
-
 export async function getPublicHeroSlides(opts?: { revalidate?: number }): Promise<HeroSlideConfig[]> {
   const init: RequestInit =
     opts?.revalidate !== undefined

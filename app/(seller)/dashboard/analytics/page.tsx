@@ -342,7 +342,7 @@ export default function SellerAnalyticsPage() {
                 className={[
                   "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
                   activePreset() === p.label
-                    ? "border-primary bg-primary/15 text-primary"
+                    ? "border-primary bg-primary/15 text-foreground"
                     : "border-border bg-muted text-muted-foreground hover:text-foreground hover:border-foreground/30",
                 ].join(" ")}
               >

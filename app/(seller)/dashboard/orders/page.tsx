@@ -476,7 +476,7 @@ function OrderDetailModal({
                   onClick={() => handleUpdateStatus(s)}
                   className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40
                     ${s === currentFulfillment
-                      ? "border-primary/40 bg-primary/10 text-primary"
+                      ? "border-primary/40 bg-primary/10 text-foreground"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                 >
                   {updating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (FULFILLMENT_BADGE[s]?.icon ?? <Package className="h-3.5 w-3.5" />)}

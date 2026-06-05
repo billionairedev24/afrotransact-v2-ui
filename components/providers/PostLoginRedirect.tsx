@@ -52,8 +52,24 @@ export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
     const isOnAuthPage = pathname?.startsWith("/auth/")
     const isOnApiPage = pathname?.startsWith("/api/")
     const isOnAdmin = pathname?.startsWith("/admin")
+    // Public storefront surfaces sellers must be able to visit (e.g. preview
+    // their own storefront from the dashboard). Without this bypass the
+    // post-login redirect bounces them back to /dashboard.
+    const isOnPublicStorefront =
+      pathname?.startsWith("/store/") ||
+      pathname?.startsWith("/stores") ||
+      pathname?.startsWith("/product/") ||
+      pathname?.startsWith("/category/") ||
+      pathname?.startsWith("/categories") ||
+      pathname?.startsWith("/search") ||
+      pathname?.startsWith("/cart") ||
+      pathname?.startsWith("/checkout") ||
+      pathname?.startsWith("/help") ||
+      pathname?.startsWith("/about") ||
+      pathname?.startsWith("/sell") ||
+      pathname?.startsWith("/o/")
 
-    if (isOnAuthPage || isOnApiPage || isOnOnboarding || isOnAdmin) return
+    if (isOnAuthPage || isOnApiPage || isOnOnboarding || isOnAdmin || isOnPublicStorefront) return
 
     // Check JWT roles first — authoritative, no API call needed
     const jwtRoles = (session?.user?.roles as string[] | undefined) ?? []

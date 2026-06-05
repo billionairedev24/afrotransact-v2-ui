@@ -186,7 +186,7 @@ export default function UsersPage() {
         const user = info.row.original
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-semibold text-primary">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-semibold text-foreground">
               {(user.firstName?.[0] || user.username?.[0] || "?").toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -293,7 +293,7 @@ export default function UsersPage() {
             <div className="space-y-6">
               {/* Header */}
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-xl font-bold text-primary">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-xl font-bold text-foreground">
                   {(viewUser.firstName?.[0] || viewUser.username?.[0] || "?").toUpperCase()}
                 </div>
                 <div>

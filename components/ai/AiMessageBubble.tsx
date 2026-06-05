@@ -8,7 +8,7 @@ import { type AiMessage } from "@/stores/ai-store"
 import { AiProductCards } from "./AiProductCards"
 
 const AFROBI_AVATAR = (
-  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-black select-none">
+  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-gold text-brand-gold-foreground text-xs font-black select-none">
     A
   </div>
 )
@@ -33,13 +33,13 @@ function SmartLink({ href, children }: { href?: string; children: React.ReactNod
   // Relative paths are always internal
   if (href.startsWith("/")) {
     return (
-      <Link href={href} className="text-primary underline underline-offset-2 hover:no-underline font-medium">
+      <Link href={href} className="text-foreground underline underline-offset-2 hover:no-underline font-medium">
         {children}
       </Link>
     )
   }
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:no-underline">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-2 hover:no-underline">
       {children}
     </a>
   )
@@ -56,7 +56,7 @@ export function AiMessageBubble({ message, onRetry }: AiMessageBubbleProps) {
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[82%] rounded-2xl rounded-br-sm bg-primary px-3.5 py-2.5 text-sm text-primary-foreground leading-relaxed shadow-sm">
+        <div className="max-w-[82%] rounded-2xl rounded-br-sm bg-brand-gold px-3.5 py-2.5 text-sm text-brand-gold-foreground leading-relaxed shadow-sm">
           {message.content}
         </div>
       </div>

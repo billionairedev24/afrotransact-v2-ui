@@ -9,9 +9,12 @@ interface SearchFiltersProps {
   onCategoryChange: (category: string) => void
 }
 
+// Services category removed during closed beta — AfroTransact is product-only.
+// (Server enforces via V13__remove_services_category.sql; this list is a hardcoded
+// filter sidebar that ideally should be sourced from getCategories() API — a
+// post-launch refactor.)
 const CATEGORIES = [
   { slug: "food-grocery", name: "Food & Grocery", count: 124 },
-  { slug: "services", name: "Services", count: 45 },
   { slug: "electronics", name: "Electronics", count: 38 },
   { slug: "fashion", name: "Fashion", count: 67 },
   { slug: "home-garden", name: "Home & Garden", count: 29 },
@@ -39,7 +42,7 @@ export function SearchFilters({ category, onCategoryChange }: SearchFiltersProps
             setMaxPrice("")
             setMinRating(0)
           }}
-          className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+          className="flex items-center gap-2 text-sm text-foreground hover:text-foreground transition-colors"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           Clear all filters
@@ -61,7 +64,7 @@ export function SearchFilters({ category, onCategoryChange }: SearchFiltersProps
               className={cn(
                 "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors",
                 category === cat.slug
-                  ? "bg-primary/10 text-primary font-medium"
+                  ? "bg-primary/10 text-foreground font-medium"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
@@ -75,7 +78,7 @@ export function SearchFilters({ category, onCategoryChange }: SearchFiltersProps
       {/* Distance */}
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">
-          Distance: <span className="text-primary">{distance} mi</span>
+          Distance: <span className="text-foreground">{distance} mi</span>
         </h3>
         <input
           type="range"
@@ -139,7 +142,7 @@ export function SearchFilters({ category, onCategoryChange }: SearchFiltersProps
               className={cn(
                 "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                 minRating === rating
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/10 text-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
@@ -150,7 +153,7 @@ export function SearchFilters({ category, onCategoryChange }: SearchFiltersProps
                     className={cn(
                       "h-3.5 w-3.5",
                       i < rating
-                        ? "fill-primary text-primary"
+                        ? "fill-primary text-foreground"
                         : "text-muted-foreground/30"
                     )}
                   />

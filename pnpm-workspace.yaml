@@ -1,0 +1,16 @@
+# pnpm 11+ reads workspace-level settings from this file. Two things live
+# here that used to live in package.json under "pnpm":
+#   1. allowBuilds — packages with postinstall scripts we explicitly trust
+#      to run on install. Without this, pnpm 11 refuses to run their build
+#      steps and downstream things break (e.g. sharp's native binaries →
+#      next/image image processing fails).
+#   2. overrides — pin @types/react versions to match react 19 so the
+#      type-checker doesn't pick mismatched ambient types.
+allowBuilds:
+  msgpackr-extract: true
+  sharp: true
+  unrs-resolver: true
+
+overrides:
+  "@types/react": "19.2.16"
+  "@types/react-dom": "19.2.3"

@@ -71,7 +71,7 @@ function CheckoutCompleteContent() {
       <div className="flex justify-center gap-3 mt-6">
         <button
           onClick={() => router.push("/orders")}
-          className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors"
+          className="rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
         >
           View Orders
         </button>
@@ -90,7 +90,7 @@ export default function CheckoutCompletePage() {
   return (
     <Suspense fallback={
       <main className="mx-auto max-w-[600px] px-4 py-20 text-center">
-        <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+        <Loader2 className="mx-auto h-10 w-10 animate-spin text-foreground" />
         <p className="mt-4 text-gray-500">Loading…</p>
       </main>
     }>

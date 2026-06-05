@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Customer Orders</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed-dim": "#fabd00",
+                        "on-tertiary": "#ffffff",
+                        "primary-container": "#ffc107",
+                        "on-secondary-fixed-variant": "#414750",
+                        "tertiary-fixed": "#d7e3f7",
+                        "tertiary-fixed-dim": "#bbc7db",
+                        "on-primary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#d4c5ab",
+                        "surface-tint": "#785900",
+                        "on-surface-variant": "#4f4632",
+                        "surface-container-highest": "#e2e2e2",
+                        "background": "#f9f9f9",
+                        "on-primary-container": "#6d5100",
+                        "on-secondary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "primary-fixed": "#ffdf9e",
+                        "tertiary-container": "#bfccdf",
+                        "secondary-fixed-dim": "#c1c7d2",
+                        "on-secondary-container": "#5d636d",
+                        "surface-container": "#eeeeee",
+                        "inverse-surface": "#2f3131",
+                        "surface-bright": "#f9f9f9",
+                        "surface": "#f9f9f9",
+                        "on-tertiary-fixed": "#101c2b",
+                        "on-secondary-fixed": "#161c24",
+                        "surface-variant": "#e2e2e2",
+                        "secondary-container": "#dae0eb",
+                        "on-primary-fixed-variant": "#5b4300",
+                        "inverse-primary": "#fabd00",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#dde3ee",
+                        "inverse-on-surface": "#f1f1f1",
+                        "on-surface": "#1a1c1c",
+                        "surface-dim": "#dadada",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#3c4858",
+                        "on-error": "#ffffff",
+                        "secondary": "#595f68",
+                        "on-background": "#1a1c1c",
+                        "tertiary": "#535f70",
+                        "outline": "#827660",
+                        "surface-container-low": "#f3f3f3",
+                        "on-primary-fixed": "#261a00",
+                        "primary": "#785900",
+                        "surface-container-high": "#e8e8e8",
+                        "on-tertiary-container": "#4a5667"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "section-gap": "2.5rem",
+                        "margin-mobile": "1rem",
+                        "gutter": "1.25rem",
+                        "stack-sm": "0.5rem",
+                        "stack-md": "1rem",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "price-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "price-lg": ["24px", { "lineHeight": "24px", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="bg-inverse-surface dark:bg-surface-container-lowest text-primary-fixed dark:text-primary-fixed-dim font-headline-md text-headline-md font-body-md text-body-md font-label-sm text-label-sm docked full-width top-0 shadow-md flex justify-between items-center px-gutter py-stack-sm max-w-container-max mx-auto hidden md:flex w-full sticky z-50">
+<div class="flex items-center gap-stack-md">
+<span class="text-headline-lg font-headline-lg text-primary-fixed dark:text-primary-fixed-dim">AfroTransact</span>
+<div class="flex gap-stack-md ml-8">
+<a class="text-on-primary dark:text-on-surface-variant hover:text-primary-fixed transition-colors duration-200" href="#">Deals</a>
+<a class="text-on-primary dark:text-on-surface-variant hover:text-primary-fixed transition-colors duration-200" href="#">Department</a>
+<a class="text-on-primary dark:text-on-surface-variant hover:text-primary-fixed transition-colors duration-200" href="#">New Arrivals</a>
+<a class="text-on-primary dark:text-on-surface-variant hover:text-primary-fixed transition-colors duration-200" href="#">Best Sellers</a>
+<a class="text-primary-fixed-dim font-bold border-b-2 border-primary-fixed-dim pb-1 opacity-80 transition-all duration-150" href="#">Orders</a>
+</div>
+</div>
+<div class="flex items-center gap-stack-md">
+<div class="relative hidden lg:block">
+<input class="bg-surface-container-lowest text-on-surface border-outline-variant rounded-full pl-4 pr-10 py-2 focus:ring-primary-container focus:border-primary-container outline-none font-body-md" placeholder="Search..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer">search</span>
+</div>
+<button class="text-primary-fixed hover:text-primary-fixed-dim transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+</button>
+<button class="text-primary-fixed hover:text-primary-fixed-dim transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-container-max mx-auto px-margin-mobile md:px-gutter py-section-gap flex flex-col gap-section-gap">
+<!-- Header & Search -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-stack-md">
+<div>
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Your Orders</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Manage and track your recent purchases.</p>
+</div>
+<div class="w-full md:w-auto flex items-center gap-stack-sm relative">
+<input class="w-full md:w-80 bg-surface-container-lowest text-on-surface border border-outline-variant rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary-container focus:border-transparent outline-none font-body-md shadow-sm" placeholder="Search orders by ID or product..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">search</span>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex overflow-x-auto hide-scrollbar border-b border-outline-variant gap-stack-md pb-stack-sm">
+<button class="font-label-sm text-label-sm text-on-surface font-bold border-b-2 border-primary-container pb-2 px-1 whitespace-nowrap">All Orders</button>
+<button class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-colors pb-2 px-1 whitespace-nowrap">To Ship (2)</button>
+<button class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-colors pb-2 px-1 whitespace-nowrap">To Receive (1)</button>
+<button class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-colors pb-2 px-1 whitespace-nowrap">Completed</button>
+<button class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-colors pb-2 px-1 whitespace-nowrap">Cancelled</button>
+</div>
+<!-- Order List (Bento Grid Style) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-stack-md">
+<!-- Order Card 1: In Transit -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md flex flex-col gap-stack-md hover:shadow-md transition-shadow">
+<div class="flex justify-between items-center border-b border-outline-variant pb-stack-sm">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-on-surface-variant">inventory_2</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Order #AF-98234-X</span>
+</div>
+<span class="bg-secondary-container text-on-secondary-container font-label-sm text-label-sm px-2 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">local_shipping</span> In Transit
+                    </span>
+</div>
+<div class="flex gap-stack-md">
+<div class="w-24 h-24 bg-surface-container-highest rounded-lg overflow-hidden flex-shrink-0">
+<img alt="Customer order details showing multiple product images in a high-density layout. The visual style is modern, with bright, clean lighting typical of an e-commerce platform. The products include a mix of electronics and accessories, arranged to imply a recent purchase history. The overall aesthetic is functional and organized, fitting a corporate marketplace theme." class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtqLGEDSfllHzEg4TMcQ1ir1tPs3wluDNXwa-CKZwbnA9lJCUOrPKDpZ1NLORXp45gZriEkGC3RHwpeLTT7eRQYRsJbBQ6ZctNMTeZZJZpmAZZajH9veUSx3B9rQh89HAYAe6-Ednm77iKKj0p4R9yOi4eJEXZkkUbQvf_n9clUkUH3WzmIxat09a85UWFWjhxqHUEGy6TeBBwBZFnhVlpE9BdYmqskTRn8xM1oTEgxwSOW8STkBR9Ouvrnk47E7qiev-YJZYX4Gw"/>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface line-clamp-1">Wireless Noise-Cancelling Headphones Pro</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Color: Midnight Black | Qty: 1</p>
+</div>
+<div class="flex justify-between items-end mt-2">
+<span class="font-price-lg text-price-lg text-on-surface">$249.99</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Ordered: Oct 24, 2024</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col md:flex-row justify-between items-center gap-stack-sm pt-stack-sm border-t border-outline-variant mt-auto">
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed-dim">event_available</span>
+                        Estimated Delivery: Oct 28
+                    </p>
+<div class="flex gap-stack-sm w-full md:w-auto">
+<button class="flex-1 md:flex-none border border-outline-variant text-on-surface font-label-sm text-label-sm py-2 px-4 rounded-lg hover:bg-surface-container-high transition-colors">Details</button>
+<button class="flex-1 md:flex-none bg-primary-container text-on-primary-container font-label-sm text-label-sm py-2 px-4 rounded-lg hover:bg-primary-fixed transition-colors font-bold shadow-sm">Track Order</button>
+</div>
+</div>
+</div>
+<!-- Order Card 2: To Ship -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md flex flex-col gap-stack-md hover:shadow-md transition-shadow">
+<div class="flex justify-between items-center border-b border-outline-variant pb-stack-sm">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-on-surface-variant">inventory_2</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Order #AF-98235-Y</span>
+</div>
+<span class="bg-tertiary-container text-on-tertiary-container font-label-sm text-label-sm px-2 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">package</span> To Ship
+                    </span>
+</div>
+<div class="flex gap-stack-md">
+<div class="w-24 h-24 bg-surface-container-highest rounded-lg overflow-hidden flex-shrink-0">
+<div class="w-full h-full bg-gradient-to-br from-surface-container-highest to-surface-dim flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-3xl">image</span>
+</div>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface line-clamp-1">Smart Home Hub V2</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Color: Glacier White | Qty: 2</p>
+</div>
+<div class="flex justify-between items-end mt-2">
+<span class="font-price-lg text-price-lg text-on-surface">$179.98</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Ordered: Oct 25, 2024</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col md:flex-row justify-between items-center gap-stack-sm pt-stack-sm border-t border-outline-variant mt-auto">
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">info</span>
+                        Preparing for shipment
+                    </p>
+<div class="flex gap-stack-sm w-full md:w-auto">
+<button class="flex-1 md:flex-none border border-outline-variant text-on-surface font-label-sm text-label-sm py-2 px-4 rounded-lg hover:bg-surface-container-high transition-colors">Details</button>
+<button class="flex-1 md:flex-none border border-outline-variant text-on-surface font-label-sm text-label-sm py-2 px-4 rounded-lg hover:bg-surface-container-high transition-colors">Contact Seller</button>
+</div>
+</div>
+</div>
+<!-- Order Card 3: Completed -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md flex flex-col gap-stack-md hover:shadow-md transition-shadow">
+<div class="flex justify-between items-center border-b border-outline-variant pb-stack-sm">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-on-surface-variant">inventory_2</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Order #AF-98100-A</span>
+</div>
+<span class="bg-surface-container-high text-on-surface font-label-sm text-label-sm px-2 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Completed
+                    </span>
+</div>
+<div class="flex gap-stack-md">
+<div class="w-24 h-24 bg-surface-container-highest rounded-lg overflow-hidden flex-shrink-0">
+<div class="w-full h-full bg-gradient-to-br from-surface-container-highest to-surface-dim flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-3xl">image</span>
+</div>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface line-clamp-1">Ergonomic Office Chair</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Model: Mesh Pro | Qty: 1</p>
+</div>
+<div class="flex justify-between items-end mt-2">
+<span class="font-price-lg text-price-lg text-on-surface">$320.00</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Delivered: Oct 15, 2024</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col md:flex-row justify-between items-center gap-stack-sm pt-stack-sm border-t border-outline-variant mt-auto">
+<div class="flex items-center gap-1 text-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">star_border</span>
+</div>
+<div class="flex gap-stack-sm w-full md:w-auto">
+<button class="flex-1 md:flex-none border border-outline-variant text-on-surface font-label-sm text-label-sm py-2 px-4 rounded-lg hover:bg-surface-container-high transition-colors">Write Review</button>
+<button class="flex-1 md:flex-none bg-surface-container-highest text-on-surface font-label-sm text-label-sm py-2 px-4 rounded-lg hover:bg-surface-dim transition-colors font-bold">Buy Again</button>
+</div>
+</div>
+</div>
+<!-- Order Card 4: Multi-item Completed -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md flex flex-col gap-stack-md hover:shadow-md transition-shadow">
+<div class="flex justify-between items-center border-b border-outline-variant pb-stack-sm">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-on-surface-variant">inventory_2</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Order #AF-98005-B</span>
+</div>
+<span class="bg-surface-container-high text-on-surface font-label-sm text-label-sm px-2 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Completed
+                    </span>
+</div>
+<div class="flex gap-stack-md">
+<!-- Multi-item visual cue -->
+<div class="w-24 h-24 grid grid-cols-2 grid-rows-2 gap-1 rounded-lg overflow-hidden flex-shrink-0">
+<div class="bg-surface-container-highest flex items-center justify-center"><span class="material-symbols-outlined text-xs text-on-surface-variant">image</span></div>
+<div class="bg-surface-container-highest flex items-center justify-center"><span class="material-symbols-outlined text-xs text-on-surface-variant">image</span></div>
+<div class="bg-surface-container-highest flex items-center justify-center"><span class="material-symbols-outlined text-xs text-on-surface-variant">image</span></div>
+<div class="bg-surface-container-highest flex items-center justify-center"><span class="font-label-sm text-label-sm text-on-surface-variant">+2</span></div>
+</div>
+<div class="flex-grow flex flex-col justify-between">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface line-clamp-1">Multiple Items (5)</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Includes: Artisan Ceramic Mugs, ...</p>
+</div>
+<div class="flex justify-between items-end mt-2">
+<span class="font-price-lg text-price-lg text-on-surface">$145.50</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Delivered: Oct 10, 2024</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col md:flex-row justify-between items-center gap-stack-sm pt-stack-sm border-t border-outline-variant mt-auto">
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">verified</span>
+                        Delivered to Front Porch
+                    </p>
+<div class="flex gap-stack-sm w-full md:w-auto">
+<button class="flex-1 md:flex-none border border-outline-variant text-on-surface font-label-sm text-label-sm py-2 px-4 rounded-lg hover:bg-surface-container-high transition-colors">Details</button>
+<button class="flex-1 md:flex-none bg-surface-container-highest text-on-surface font-label-sm text-label-sm py-2 px-4 rounded-lg hover:bg-surface-dim transition-colors font-bold">Buy Again</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Pagination (Simple) -->
+<div class="flex justify-center items-center gap-stack-sm mt-stack-md">
+<button class="p-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container-high disabled:opacity-50"><span class="material-symbols-outlined">chevron_left</span></button>
+<span class="font-body-md text-body-md text-on-surface">Page 1 of 4</span>
+<button class="p-2 border border-outline-variant rounded-lg text-on-surface hover:bg-surface-container-high"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</main>
+</body></html>

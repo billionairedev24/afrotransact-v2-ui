@@ -36,7 +36,7 @@ export function StoreCard({
             className="object-cover"
           />
         ) : (
-          <Store className="h-7 w-7 text-primary" />
+          <Store className="h-7 w-7 text-foreground" />
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -44,8 +44,8 @@ export function StoreCard({
         <p className="text-xs text-muted-foreground">{type}</p>
       </div>
       <div className="text-right shrink-0">
-        <p className="flex items-center gap-1 text-sm font-semibold text-primary">
-          <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+        <p className="flex items-center gap-1 text-sm font-semibold text-foreground">
+          <Star className="h-3.5 w-3.5 fill-primary text-foreground" />
           {rating}
         </p>
         <p className="text-xs text-muted-foreground">{distance}</p>

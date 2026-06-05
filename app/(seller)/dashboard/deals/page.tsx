@@ -254,14 +254,14 @@ export default function SellerDealsPage() {
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-black hover:bg-primary/90 transition-colors sm:w-auto"
+          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors sm:w-auto"
         >
           <Plus className="h-4 w-4" /> Create Deal
         </button>
       </div>
 
       <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <Tag className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+        <Tag className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
         <div>
           <p className="text-sm text-gray-900 font-medium">How deals work</p>
           <p className="text-xs text-gray-500 mt-1 leading-relaxed">
@@ -311,7 +311,7 @@ export default function SellerDealsPage() {
                     {d.originalPriceCents && <span className="text-xs text-gray-400 line-through">{formatCents(d.originalPriceCents)}</span>}
                   </span>
                 ) : d.discountPercent ? (
-                  <span className="font-semibold text-primary">{d.discountPercent}% OFF</span>
+                  <span className="font-semibold text-foreground">{d.discountPercent}% OFF</span>
                 ) : (
                   "—"
                 )
@@ -323,7 +323,7 @@ export default function SellerDealsPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-900 break-words">{d.title}</p>
-                          {d.badgeText && <span className="mt-0.5 inline-block text-[10px] font-semibold text-primary">{d.badgeText}</span>}
+                          {d.badgeText && <span className="mt-0.5 inline-block text-[10px] font-semibold text-foreground">{d.badgeText}</span>}
                         </div>
                         <RowActionMenu
                           onEdit={() => openEdit(d)}
@@ -362,7 +362,7 @@ export default function SellerDealsPage() {
                     <div className="hidden grid-cols-[minmax(0,1fr)_100px_120px_100px_100px_90px_44px] items-center gap-2 px-5 py-3 transition-colors hover:bg-gray-50 sm:grid">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-gray-900">{d.title}</p>
-                        {d.badgeText && <span className="text-[10px] font-semibold text-primary">{d.badgeText}</span>}
+                        {d.badgeText && <span className="text-[10px] font-semibold text-foreground">{d.badgeText}</span>}
                       </div>
                       <div>{typeBadge}</div>
                       <span className="truncate text-xs text-gray-500">
@@ -408,7 +408,7 @@ export default function SellerDealsPage() {
                     <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
                       form.dealType === "store-wide" ? "bg-primary/10" : "bg-gray-100"
                     }`}>
-                      <Store className={`h-4 w-4 ${form.dealType === "store-wide" ? "text-primary" : "text-gray-400"}`} />
+                      <Store className={`h-4 w-4 ${form.dealType === "store-wide" ? "text-foreground" : "text-gray-400"}`} />
                     </div>
                     <div>
                       <p className={`text-sm font-semibold ${form.dealType === "store-wide" ? "text-gray-900" : "text-gray-700"}`}>Store-wide</p>
@@ -427,7 +427,7 @@ export default function SellerDealsPage() {
                     <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
                       form.dealType === "product" ? "bg-primary/10" : "bg-gray-100"
                     }`}>
-                      <Package className={`h-4 w-4 ${form.dealType === "product" ? "text-primary" : "text-gray-400"}`} />
+                      <Package className={`h-4 w-4 ${form.dealType === "product" ? "text-foreground" : "text-gray-400"}`} />
                     </div>
                     <div>
                       <p className={`text-sm font-semibold ${form.dealType === "product" ? "text-gray-900" : "text-gray-700"}`}>Product</p>
@@ -524,7 +524,7 @@ export default function SellerDealsPage() {
         </SheetBody>
         <SheetFooter>
           <button onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={!canSave} className="rounded-xl bg-primary px-5 py-2 text-sm font-bold text-black hover:bg-primary/90 transition-colors disabled:opacity-50">
+          <button onClick={handleSave} disabled={!canSave} className="rounded-xl bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? "Update" : "Create"}
           </button>
         </SheetFooter>

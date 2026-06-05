@@ -200,7 +200,7 @@ export default function DashboardOverview() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 gap-3">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <Loader2 className="h-6 w-6 animate-spin text-foreground" />
         <span className="text-sm text-gray-500">Loading dashboard...</span>
       </div>
     )
@@ -220,7 +220,7 @@ export default function DashboardOverview() {
           <div className="mt-6 flex justify-center">
             <Link
               href="/sell"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors"
             >
               <Package className="h-4 w-4" />
               Start Selling
@@ -383,7 +383,7 @@ export default function DashboardOverview() {
             <h2 className="text-sm font-semibold text-gray-900">Recent Orders</h2>
             <Link
               href="/dashboard/orders"
-              className="flex items-center gap-1 text-xs text-primary hover:underline"
+              className="flex items-center gap-1 text-xs text-foreground hover:underline"
             >
               View all <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -443,7 +443,7 @@ export default function DashboardOverview() {
               className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-gray-50"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                <Plus className="h-4 w-4 text-primary" />
+                <Plus className="h-4 w-4 text-foreground" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">Add Product</p>
@@ -456,7 +456,7 @@ export default function DashboardOverview() {
               className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-gray-50"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                <ShoppingCart className="h-4 w-4 text-primary" />
+                <ShoppingCart className="h-4 w-4 text-foreground" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">View All Orders</p>
@@ -469,7 +469,7 @@ export default function DashboardOverview() {
               className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-gray-50"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                <Settings className="h-4 w-4 text-primary" />
+                <Settings className="h-4 w-4 text-foreground" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">Store Settings</p>
@@ -482,7 +482,7 @@ export default function DashboardOverview() {
               className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-gray-50"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                <CreditCard className="h-4 w-4 text-primary" />
+                <CreditCard className="h-4 w-4 text-foreground" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">Subscription</p>

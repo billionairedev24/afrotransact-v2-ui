@@ -58,7 +58,7 @@ const PLANS = [
     maxStores: 3,
     commissionRate: "8%",
     badge: "Most Popular",
-    badgeColor: "bg-primary text-header",
+    badgeColor: "bg-brand-gold text-brand-gold-foreground",
     accentClass: "border-primary/50 ring-1 ring-primary/30",
     headerClass: "bg-primary/10",
     features: [
@@ -205,7 +205,7 @@ function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean
           planSlug={plan.slug}
           className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] ${
             plan.badge === "Most Popular"
-              ? "bg-primary text-header hover:bg-primary/90 shadow-lg shadow-primary/20"
+              ? "bg-brand-gold text-brand-gold-foreground hover:bg-brand-gold/90 shadow-lg shadow-primary/20"
               : "border border-gray-300 bg-gray-50 text-gray-900 hover:bg-gray-100"
           }`}
         >
@@ -237,13 +237,13 @@ export default function PricingPage() {
           }}
         />
         <div className="relative max-w-3xl mx-auto">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary uppercase tracking-wider mb-6">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-foreground uppercase tracking-wider mb-6">
             <Store className="h-3 w-3" />
             Simple, transparent pricing
           </span>
           <h1 className="text-4xl sm:text-5xl font-black text-gray-900 leading-tight">
             Grow your business.<br />
-            <span className="text-primary">Pay only when you&apos;re ready.</span>
+            <span className="text-foreground">Pay only when you&apos;re ready.</span>
           </h1>
           <p className="mt-4 text-lg text-gray-500 max-w-xl mx-auto">
             First month always free. Second month free if you list 9+ products.
@@ -253,7 +253,7 @@ export default function PricingPage() {
           {/* Trial highlight */}
           <div className="mt-8 inline-flex flex-col sm:flex-row gap-3 items-center justify-center">
             {[
-              { icon: <Sparkles className="h-4 w-4 text-primary" />, text: "Month 1: Always free" },
+              { icon: <Sparkles className="h-4 w-4 text-foreground" />, text: "Month 1: Always free" },
               { icon: <Zap className="h-4 w-4 text-emerald-400" />,  text: "Month 2: Free with 9+ products" },
               { icon: <ShieldCheck className="h-4 w-4 text-sky-400" />, text: "Month 3+: Pay your chosen plan" },
             ].map(({ icon, text }) => (
@@ -316,7 +316,7 @@ export default function PricingPage() {
               <tbody>
                 {[
                   { name: "Starter", rate: 10, color: "text-gray-600" },
-                  { name: "Growth",  rate: 8,  color: "text-primary"  },
+                  { name: "Growth",  rate: 8,  color: "text-foreground"  },
                   { name: "Pro",     rate: 6,  color: "text-violet-400" },
                 ].map((row) => {
                   const keep100 = (100 * (1 - row.rate / 100) - 2.9 - 0.30).toFixed(2)
@@ -343,7 +343,7 @@ export default function PricingPage() {
       <section className="px-4 sm:px-6 py-16">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-2xl font-bold text-gray-900 text-center mb-8 flex items-center justify-center gap-2">
-            <HelpCircle className="h-6 w-6 text-primary" />
+            <HelpCircle className="h-6 w-6 text-foreground" />
             Frequently asked questions
           </h2>
           <div className="space-y-2">

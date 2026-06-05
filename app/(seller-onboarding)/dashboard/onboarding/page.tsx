@@ -95,10 +95,10 @@ const ENTITY_TYPES = [
   { value: "nonprofit", label: "Nonprofit" },
 ]
 
+// "Services" and "Both" removed during closed beta — AfroTransact is
+// product-only. Re-add when services category goes live.
 const BUSINESS_TYPES = [
   { value: "goods", label: "Goods" },
-  { value: "services", label: "Services" },
-  { value: "both", label: "Both" },
 ]
 
 const INDUSTRY_CATEGORIES = [
@@ -752,7 +752,7 @@ export default function SellerOnboardingPage() {
   if (status === "loading" || loading) {
     return (
       <div className={`flex items-center justify-center py-20 gap-3 ${BG}`}>
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <Loader2 className="h-6 w-6 animate-spin text-foreground" />
         <span className="text-sm text-gray-500">Loading onboarding…</span>
       </div>
     )
@@ -771,7 +771,7 @@ export default function SellerOnboardingPage() {
           </p>
           <button
             onClick={() => signIn("keycloak", { callbackUrl: "/dashboard/onboarding" })}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors"
           >
             Sign In <ArrowRight className="h-4 w-4" />
           </button>
@@ -796,7 +796,7 @@ export default function SellerOnboardingPage() {
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => router.push("/dashboard")}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors"
             >
               Go to Dashboard <ArrowRight className="h-4 w-4" />
             </button>
@@ -947,7 +947,7 @@ export default function SellerOnboardingPage() {
             <button
               onClick={handleNext}
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
@@ -1009,7 +1009,7 @@ function StepIndicator({
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${
                 active
-                  ? "border-primary bg-primary text-primary-foreground"
+                  ? "border-primary bg-brand-gold text-brand-gold-foreground"
                   : done
                     ? "border-green-500 bg-green-500/10 text-green-500"
                     : "border-gray-300 bg-gray-50 text-gray-500"
@@ -1019,7 +1019,7 @@ function StepIndicator({
             </div>
             <span
               className={`text-xs font-medium hidden sm:block ${
-                active ? "text-primary" : done ? "text-green-500" : "text-gray-500"
+                active ? "text-foreground" : done ? "text-green-500" : "text-gray-500"
               }`}
             >
               {s.label}
@@ -1035,7 +1035,7 @@ function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: s
   return (
     <div className="flex items-center gap-3 mb-6">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-        <Icon className="h-5 w-5 text-primary" />
+        <Icon className="h-5 w-5 text-foreground" />
       </div>
       <h2 className="text-xl font-bold text-gray-900">{title}</h2>
     </div>
@@ -1355,7 +1355,7 @@ function EntityDetailsStep({
             </div>
             <button
               onClick={addPrincipal}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-gold/10 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-brand-gold/20 transition-colors"
             >
               <UserPlus className="h-3.5 w-3.5" /> Add Person
             </button>
@@ -1368,7 +1368,7 @@ function EntityDetailsStep({
               <FieldError error={errors.principals} />
               <button
                 onClick={addPrincipal}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-gold/10 px-4 py-2 text-sm font-medium text-foreground hover:bg-brand-gold/20 transition-colors"
               >
                 <UserPlus className="h-4 w-4" /> Add First Person
               </button>
@@ -1582,7 +1582,7 @@ function StoreStep({
                 className="mt-1 flex flex-col items-center justify-center w-full h-24 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary/40 bg-gray-50 transition-colors cursor-pointer"
               >
                 {logoUploading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <Loader2 className="h-5 w-5 animate-spin text-foreground" />
                 ) : (
                   <>
                     <ImageIcon className="h-6 w-6 text-gray-500 mb-1" />
@@ -1611,7 +1611,7 @@ function StoreStep({
                 className="mt-1 flex flex-col items-center justify-center w-full h-24 rounded-xl border-2 border-dashed border-gray-200 hover:border-primary/40 bg-gray-50 transition-colors cursor-pointer"
               >
                 {bannerUploading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <Loader2 className="h-5 w-5 animate-spin text-foreground" />
                 ) : (
                   <>
                     <ImageIcon className="h-6 w-6 text-gray-500 mb-1" />
@@ -1731,7 +1731,7 @@ function DocumentsStep({
                     <div className="flex items-center gap-2 mt-1.5">
                       <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
                       <span className="text-xs text-green-400 truncate">{slot.uploaded.fileName}</span>
-                      <a href={slot.uploaded.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline ml-1">View</a>
+                      <a href={slot.uploaded.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-foreground hover:underline ml-1">View</a>
                     </div>
                   )}
                 </div>
@@ -1744,7 +1744,7 @@ function DocumentsStep({
                       <X className="h-3 w-3" /> Remove
                     </button>
                   ) : (
-                    <label className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors cursor-pointer">
+                    <label className="inline-flex items-center gap-1.5 rounded-lg bg-brand-gold/10 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-brand-gold/20 transition-colors cursor-pointer">
                       {uploadingSlot === slot.type ? (
                         <><Loader2 className="h-3 w-3 animate-spin" /> Uploading…</>
                       ) : (
@@ -1838,7 +1838,7 @@ function SubscriptionStep({
                 style={{ background: isSelected ? "rgba(var(--primary-rgb, 124,58,237),0.05)" : undefined }}
               >
                 {isPopular && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-primary px-3 py-0.5 text-[10px] font-bold text-primary-foreground uppercase tracking-wider">
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-brand-gold px-3 py-0.5 text-[10px] font-bold text-brand-gold-foreground uppercase tracking-wider">
                     <Sparkles className="h-3 w-3" /> Popular
                   </div>
                 )}
@@ -1853,22 +1853,22 @@ function SubscriptionStep({
                 <p className="text-[10px] text-green-400 mb-4">Free for your first month</p>
                 <ul className="space-y-2 mb-5">
                   <li className="flex items-center gap-2 text-xs text-gray-500">
-                    <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <Check className="h-3.5 w-3.5 text-foreground shrink-0" />
                     Up to {plan.maxProducts.toLocaleString()} products
                   </li>
                   <li className="flex items-center gap-2 text-xs text-gray-500">
-                    <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <Check className="h-3.5 w-3.5 text-foreground shrink-0" />
                     {plan.maxStores} store{plan.maxStores > 1 ? "s" : ""}
                   </li>
                   {plan.commissionRateOverride !== null && (
                     <li className="flex items-center gap-2 text-xs text-gray-500">
-                      <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <Check className="h-3.5 w-3.5 text-foreground shrink-0" />
                       {plan.commissionRateOverride}% commission rate
                     </li>
                   )}
                   {plan.features.map((f, i) => (
                     <li key={i} className="flex items-center gap-2 text-xs text-gray-500">
-                      <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <Check className="h-3.5 w-3.5 text-foreground shrink-0" />
                       {f}
                     </li>
                   ))}
@@ -1876,7 +1876,7 @@ function SubscriptionStep({
                 <div
                   className={`w-full rounded-xl py-2 text-center text-sm font-bold transition-colors ${
                     isSelected
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-brand-gold text-brand-gold-foreground"
                       : "bg-gray-50 text-gray-500"
                   }`}
                 >
@@ -1920,7 +1920,7 @@ function PaymentSetupStep({
         className={`rounded-xl border p-6 mb-6 ${connectDone ? "border-green-500/30" : BORDER}`}
       >
         <div className="flex items-center gap-3 mb-4">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${connectDone ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-primary"}`}>
+          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${connectDone ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-foreground"}`}>
             {connectDone ? <Check className="h-4 w-4" /> : "1"}
           </div>
           <h3 className="text-base font-semibold text-gray-900">Stripe Connect — Receive Payouts</h3>
@@ -1974,7 +1974,7 @@ function PaymentSetupStep({
         className={`rounded-xl border p-6 ${hasPaymentMethod ? "border-green-500/30" : BORDER}`}
       >
         <div className="flex items-center gap-3 mb-4">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${hasPaymentMethod ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-primary"}`}>
+          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${hasPaymentMethod ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-foreground"}`}>
             {hasPaymentMethod ? <Check className="h-4 w-4" /> : "2"}
           </div>
           <h3 className="text-base font-semibold text-gray-900">Payment Method — Subscription Billing</h3>

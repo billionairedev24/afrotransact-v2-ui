@@ -63,7 +63,7 @@ export function AiChatPanel() {
     >
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-card shrink-0">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-black select-none">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-gold text-brand-gold-foreground text-sm font-black select-none">
           A
         </div>
         <div className="flex-1 min-w-0">
@@ -72,7 +72,7 @@ export function AiChatPanel() {
             {isListening ? (
               <span className="text-red-500 font-medium animate-pulse">Listening…</span>
             ) : isStreaming ? (
-              <span className="text-primary font-medium">Thinking…</span>
+              <span className="text-foreground font-medium">Thinking…</span>
             ) : (
               "AI Shopping Assistant"
             )}
@@ -123,7 +123,7 @@ export function AiChatPanel() {
                 <button
                   key={q}
                   onClick={() => sendMessage(q)}
-                  className="text-left text-xs px-3 py-2 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-colors text-foreground leading-snug"
+                  className="text-left text-xs px-3 py-2 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-brand-gold/5 transition-colors text-foreground leading-snug"
                 >
                   {q}
                 </button>
@@ -172,7 +172,7 @@ export function AiChatPanel() {
           <button
             type="submit"
             disabled={(!input.trim() && !isListening) || isStreaming}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-gold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <Send className="h-4 w-4" />
           </button>

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AfroTransact | Community-Owned Marketplace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#535f70",
+                        "on-primary-container": "#6d5100",
+                        "surface-tint": "#785900",
+                        "primary-fixed-dim": "#fabd00",
+                        "outline-variant": "#d4c5ab",
+                        "on-tertiary-fixed": "#101c2b",
+                        "on-tertiary": "#ffffff",
+                        "surface-container": "#eeeeee",
+                        "secondary-fixed": "#dde3ee",
+                        "on-primary-fixed": "#261a00",
+                        "primary-container": "#ffc107",
+                        "tertiary-container": "#bfccdf",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#3c4858",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface": "#f9f9f9",
+                        "inverse-primary": "#fabd00",
+                        "surface-container-highest": "#e2e2e2",
+                        "inverse-surface": "#2f3131",
+                        "on-surface": "#1a1c1c",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#e8e8e8",
+                        "surface-bright": "#f9f9f9",
+                        "on-secondary-fixed": "#161c24",
+                        "on-background": "#1a1c1c",
+                        "tertiary-fixed-dim": "#bbc7db",
+                        "outline": "#827660",
+                        "tertiary-fixed": "#d7e3f7",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#4f4632",
+                        "on-secondary-container": "#5d636d",
+                        "error-container": "#ffdad6",
+                        "primary": "#785900",
+                        "on-primary-fixed-variant": "#5b4300",
+                        "secondary": "#595f68",
+                        "surface-dim": "#dadada",
+                        "primary-fixed": "#ffdf9e",
+                        "background": "#f9f9f9",
+                        "surface-variant": "#e2e2e2",
+                        "on-secondary-fixed-variant": "#414750",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed-dim": "#c1c7d2",
+                        "secondary-container": "#dae0eb",
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#4a5667",
+                        "surface-container-low": "#f3f3f3",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-max": "1440px",
+                        "stack-sm": "0.5rem",
+                        "section-gap": "2.5rem",
+                        "stack-md": "1rem",
+                        "margin-mobile": "1rem",
+                        "gutter": "1.25rem"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "price-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                        "price-lg": ["24px", {"lineHeight": "24px", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        @keyframes hero-fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes progress-bar-animate {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+        .animate-hero { animation: hero-fade-in 0.8s ease-out forwards; }
+        .animate-progress { animation: progress-bar-animate 5s linear forwards; }
+        
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #F3F3F3;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- Top Navigation -->
+<header class="fixed top-0 w-full z-50 bg-inverse-surface h-auto min-h-[64px] flex items-center shadow-md">
+<div class="max-w-container-max mx-auto w-full px-gutter flex flex-col md:flex-row items-center gap-4 py-2">
+<!-- Brand -->
+<div class="flex items-center flex-shrink-0">
+<span class="font-headline-md text-headline-md font-bold text-primary-container mr-8">AfroTransact</span>
+</div>
+<!-- Search Bar -->
+<div class="flex-grow flex items-center bg-surface-container-lowest rounded overflow-hidden max-w-2xl w-full">
+<button class="px-4 py-2 text-on-surface-variant flex items-center gap-1 border-r border-outline-variant bg-surface-container-low">
+<span class="text-label-sm font-label-sm">All</span>
+<span class="material-symbols-outlined text-sm">arrow_drop_down</span>
+</button>
+<input class="flex-grow border-none focus:ring-0 text-body-md font-body-md px-4 h-10" placeholder="Search AfroTransact..." type="text"/>
+<button class="bg-primary-container hover:bg-primary-fixed-dim transition-colors h-10 w-12 flex items-center justify-center text-on-primary-fixed">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</button>
+</div>
+<!-- Nav Links -->
+<nav class="hidden md:flex items-center gap-6 flex-shrink-0">
+<a class="text-surface-bright font-bold border-b-2 border-primary-container hover:text-primary-fixed-dim transition-colors text-body-md font-body-md" href="#">Deals</a>
+<a class="text-surface-bright hover:text-primary-fixed-dim transition-colors text-body-md font-body-md" href="#">New Arrivals</a>
+<a class="text-surface-bright hover:text-primary-fixed-dim transition-colors text-body-md font-body-md" href="#">Sellers</a>
+<a class="text-surface-bright hover:text-primary-fixed-dim transition-colors text-body-md font-body-md" href="#">Help</a>
+</nav>
+<!-- Actions -->
+<div class="flex items-center gap-4 flex-shrink-0 ml-auto">
+<a class="flex flex-col items-center justify-center text-surface-bright hover:text-primary-fixed-dim transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="text-label-sm font-label-sm">Account</span>
+</a>
+<a class="flex flex-col items-center justify-center text-surface-bright hover:text-primary-fixed-dim transition-colors relative" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span class="absolute -top-1 -right-1 bg-primary-container text-on-primary-fixed text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">3</span>
+<span class="text-label-sm font-label-sm">Cart</span>
+</a>
+</div>
+</div>
+</header>
+<main class="mt-[100px] md:mt-[64px] space-y-section-gap pb-section-gap">
+<!-- Amazon Standard Hero Section -->
+<section class="w-full relative min-h-[400px] md:h-[600px] bg-surface-container-lowest z-10 overflow-hidden flex flex-col md:block">
+<!-- Carousel Slides Container -->
+<div class="relative w-full h-64 md:absolute md:inset-0 md:h-full z-0 flex transition-transform duration-500">
+<!-- Slide 1 -->
+<div class="w-full flex-shrink-0 relative h-full">
+<img alt="Hero Background 1" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfvHTg3rJnklBn4tk5GvpVicMmaiJnDqiSeRRnCw3yUom8LNxE49pcEfw1cjvTFNzwWBVyngR4WuB0EC089s_HfL05h9fTkcOTiNQFZRWi6CTIzWv027tVy3-lyBx7gf7NysoB5p2V0VnijacEva0pBvhnyzy73SSW8A-Bbug1ainro9sjhl4O2Bjq7q9-9FRvrtuu_necLT6OePbU2wnNXJny-gC6OikRiprvxSFs68v-6Esspk9uuLDB7cj3iYCtc48BQTjysho"/>
+</div>
+<!-- Slides 2 and 3 would be here in a real carousel, but we'll just show 1 for layout -->
+</div>
+<!-- Navigation Controls (Desktop) -->
+<button class="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded bg-white border border-outline-variant hover:bg-surface-container-low text-on-surface items-center justify-center shadow-md transition-all">
+<span class="material-symbols-outlined text-3xl">chevron_left</span>
+</button>
+<button class="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded bg-white border border-outline-variant hover:bg-surface-container-low text-on-surface items-center justify-center shadow-md transition-all">
+<span class="material-symbols-outlined text-3xl">chevron_right</span>
+</button>
+<!-- Content Overlay -->
+<div class="relative md:absolute md:inset-0 w-full h-full max-w-container-max mx-auto px-gutter md:flex md:items-center z-10">
+<!-- Content Card -->
+<div class="bg-white p-8 md:p-10 w-full md:max-w-md lg:max-w-lg shadow-lg border border-outline-variant rounded-sm animate-hero -mt-8 md:mt-0 relative z-20 mx-auto md:ml-12 lg:ml-24">
+<h1 class="font-headline-lg text-3xl md:text-4xl mb-4 leading-tight text-on-surface">
+<span class="text-primary">Every Flavor</span> of Home, Delivered to You.
+      </h1>
+<p class="font-body-lg text-base md:text-lg mb-8 text-on-surface-variant">Authentic cultural ingredients, handcrafted artisan goods, and global flavors sourced directly from community sellers.</p>
+<div class="flex flex-col sm:flex-row gap-4">
+<button class="bg-[#F5C518] text-on-surface px-8 py-3 font-bold rounded-full shadow hover:bg-[#d4aa15] transition-all text-base text-center">Shop Food &amp; Grocery</button>
+<button class="bg-surface-container-low border border-outline text-on-surface px-8 py-3 font-bold rounded-full hover:bg-surface-container-highest transition-all text-base text-center">Explore Marketplace</button>
+</div>
+</div>
+</div>
+<!-- Mobile Nav & Progress (Optional, keeping for mobile if requested, but adjusting style) -->
+<div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20 md:hidden">
+<div class="w-2 h-2 rounded-full bg-primary animate-progress"></div>
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+</div>
+</section>
+<!-- Categories Bento Grid -->
+<section class="max-w-container-max mx-auto px-gutter relative z-20 mt-8">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-stack-md">
+<!-- Food & Grocery -->
+<div class="bg-white p-6 border border-outline-variant flex flex-col hover:shadow-md transition-shadow">
+<h3 class="font-headline-md text-headline-md mb-4">Food &amp; Grocery</h3>
+<div class="grid grid-cols-2 gap-2 mb-4">
+<div class="aspect-square bg-surface-container-low rounded overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Fresh vegetables" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmW8t29yxiaKQiRLKUbP2SsTYL3-Wt16yEf7DuPMu830IKp72F_PrbukQ66yLXznMumau40dnnApqQGD0PrO7ANkW0GKtDiufIEFIymJY4jIbaO7lNu_fk-dbox2otN-CGlYaIyhPIvzx3lcHZJ8_44PRxo2rnhzKvcmyW72I8acrhyXW7QVFxVDY-jibzUVVZeYqNFKtNkeKlRDxD3euV53xOZoXvlIYzUNyVmtbknaoAFofaWcZa5HMo1gegX9SZzCzl32AOVjk"/>
+</div>
+<div class="aspect-square bg-surface-container-low rounded overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Spices" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAT13VKF-16rwC7TKrthJuBRrCT4oXhm2FHaUS3CwcsiO54m3IYVOm5fs3Lj4-Ay9IhECwzN0ua7vS5KCJFYdNHPthgthmV-ISxB29CIbSl2L_n3e1OgBE7NU88AUn75LD91KNgYfr7_xmKdWVNN-8QFWtHo--EsAKNFwmBbfbb6n_T8za0WMBaUCBCOnvlpiJgEfJlysxr4zmGmf4W1xPdhGtQlFyU2x_VRlaBn4rXY9Myh0qzY7LwOZT1qdq7SYQTOTQ4ujZuolM"/>
+</div>
+<div class="aspect-square bg-surface-container-low rounded overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Traditional bread" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0DfnCaJB-Wox6gB_tv_YDyRrOPYG458qkefTsw_AO1Od_28_ugP2CAixaHuio2YrxN7IbWguW94eIdfeYvVQ465NcJOJ1TujqKOj6jSshLAw5QyLGesLeWAislxIdxUNq4bg08IAC2WuU2c_LcJGUDU4x_WnT4egIHVP5V3POLC2ZjLcCgjPc2UFTL5Znjgyl_vdKZ0EiljSAZZhaBhYKjgKK7BTApxBTZ-EzLJv1Ypw7iZ8_KxcRfHJVKfqriaLSDexJNypSgSo"/>
+</div>
+<div class="aspect-square bg-surface-container-low rounded overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Premium drinks" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCbAUkC8QXcENCz48ZdDWV9vaspnXBfmSOjzIEkFmDKX8feXRhkrl6diUJCVMubkIJOOQh0qrf1YI1RQ1LJFLGF6WR0H2v8gIttSXspkvxqLyleyVKstJXA3DOFYObmeNeYM3ngqrsfUFZATAXfzsH_493SzKtHupn55g5rV4eWVCL0zT3Hjp6A88XJgoRCULhEMrd7qADUTwZSqIUM0uZJX6XYW2C9D70Fk7MUUjb4J-fB7tOAn8dCXKmpthQb3cceB4RC4iyr2E"/>
+</div>
+</div>
+<a class="text-primary font-bold mt-auto flex items-center gap-1 hover:underline" href="#">
+                    See more <span class="material-symbols-outlined text-sm">chevron_right</span>
+</a>
+</div>
+<!-- Electronics -->
+<div class="bg-white p-6 border border-outline-variant flex flex-col hover:shadow-md transition-shadow">
+<h3 class="font-headline-md text-headline-md mb-4">Electronics</h3>
+<div class="aspect-[4/5] bg-surface-container-low mb-4 rounded overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Headphones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyvG0NXUzLs8ddDxnByXcM0NX6q6Vn4kwMFL34_nVefs2WSuY0tv-ERbtA9Yv1dW06FFAxcHfMrUKyI98U2F-vmjIgIfbyo9PpQYsjOL-nXgmAX02wyPSVhP29HcjQzJy2eloL5dKgF80rEuRH0lL7YIyftZAW7IBRZeqvJrLiw1HEbFIGovjXke2MYNgEH13Q5afX2tIDFbN5rWCVaUW43or32iluMsjoL2M3URsd8oW3f2kxU4EOka3DPvC6iJE79KCMkgAqOVs"/>
+</div>
+<a class="text-primary font-bold mt-auto flex items-center gap-1 hover:underline" href="#">
+                    Shop all gadgets <span class="material-symbols-outlined text-sm">chevron_right</span>
+</a>
+</div>
+<!-- Fashion -->
+<div class="bg-white p-6 border border-outline-variant flex flex-col hover:shadow-md transition-shadow">
+<h3 class="font-headline-md text-headline-md mb-4">Fashion</h3>
+<div class="grid grid-cols-2 gap-2 mb-4">
+<div class="aspect-square bg-surface-container-low rounded overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Fabrics" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvzEHAbFdJq76N6HjVPJ1r2vQM2gr7ogXN0re7ohTQZtTOgHLU5kTrzRaZdCs_mikNi_uCfLwfhkILxreAEwDajGLH90ZsgHE1YIA1LBXwTn3e_z_A_a5d80EQ2rw00kihzSdbJTzTZ2eRMmSepDaQukmCoxkugm0XD6ujiEKnqE-FR-c-ixk0hmQROApkxgHFIimxjp62wf-S7AuQbtSLqyiA08KnQVUxe3EOoOYoKy9xsyzEihWAMJ99SKXxHbTPhv8mzEZND5A"/>
+</div>
+<div class="aspect-square bg-surface-container-low rounded overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Watch" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9emYaXW0seZSlEsjM76zltnkLus6xScNq1kwmGn3UOU8k9KsCm9sL-b7-amuOCOiY5xceXpDSi79ivzVbONzpG5eAkwjQnWrXoj3HqwaVATt2PuKJoBHlDIyGk5YtmciZUuT2dvNegLaz7n8AfYByi6mIUN_Oo-lgZjOg_TKd4evOySHcFGDYlTqN80YPDx3CYgRgZ_WvOeHqXzazpO5P7_1g9UO5fuT35VsiM5uJb31hESQ_38Tdf6rpB6Wc4nwq0duHIh-DnbM"/>
+</div>
+</div>
+<p class="text-body-md text-on-surface-variant mb-4">Discover curated cultural attire and modern essentials.</p>
+<a class="text-primary font-bold mt-auto flex items-center gap-1 hover:underline" href="#">
+                    Explore styles <span class="material-symbols-outlined text-sm">chevron_right</span>
+</a>
+</div>
+<!-- Home & Garden -->
+<div class="bg-white p-6 border border-outline-variant flex flex-col hover:shadow-md transition-shadow">
+<h3 class="font-headline-md text-headline-md mb-4">Home &amp; Garden</h3>
+<div class="aspect-square bg-surface-container-low mb-4 rounded overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Home interior" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0xGOD-7xNFtd8hsXfllaTnno2z2gGo7fEJNPiygGXJL9r8i9McIR3_ayUmpL8NT787gnnjVEcRXuZX9f0NAK2aJsJpKig0XIpbl28d0bu57bFjom42xFBH7g3I0axQgI_vFTOZS-h6TE8mivz07XGQGYaHgrOt60cr7W6PFygUZPGeR--3luga5XxZNOz4T0BoY9FbxclRVMcwg2_u_ajprqZhWFEPGrobw_Rn9J7w9OwxUKBcD78GPU9LXWtXrLLATrOVM2wcxc"/>
+</div>
+<a class="text-primary font-bold mt-auto flex items-center gap-1 hover:underline" href="#">
+                    View collection <span class="material-symbols-outlined text-sm">chevron_right</span>
+</a>
+</div>
+</div>
+</section>
+<!-- Today's Deals Carousel -->
+<section class="max-w-container-max mx-auto px-gutter">
+<div class="bg-white border border-outline-variant p-stack-md">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-4">
+<h2 class="font-headline-lg text-headline-lg">Today's Deals</h2>
+<span class="text-error font-bold text-label-sm px-2 py-0.5 bg-error-container rounded">Ending soon</span>
+</div>
+<a class="text-primary font-bold hover:underline" href="#">See all deals</a>
+</div>
+<div class="flex gap-stack-md overflow-x-auto pb-4 hide-scrollbar">
+<!-- Product Card 1 -->
+<div class="min-w-[240px] flex flex-col gap-2 group cursor-pointer">
+<div class="aspect-square bg-surface-container-low relative overflow-hidden rounded">
+<img class="w-full h-full object-cover transition-transform group-hover:scale-105" data-alt="Food" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9RBClmMctLw5d7RYXMemhd_PVv8c3Xx9rkMDYqRIESd3EH2zczRZDJ6_PU3hpkcTBVsLoZDD8lPZw7e8pwk8E32kH-lNiBbF1N_UUqwhNlSo7EUNCGuuEfCL36n-yw1qE9T4vgoNuQlWjdHAKaQKmUaieQQVNGWb96D179Go4WC3XVhGofIelAZuhWF0GZ3t0LVX6CMFDrZPqFt7o_oTS-XCksZ-iDnzGSvD5BbSmherNQ1L6c4fCjJLLXBybokWkkMFBzPHTsd4"/>
+<span class="absolute top-2 left-2 bg-error text-white text-[10px] font-bold px-2 py-1 uppercase rounded-sm">20% Off</span>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-body-md text-body-md line-clamp-2">Authentic West African Seasoning Bundle - 4 Pack</h4>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-surface-dim text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm text-on-surface-variant">(1.2k)</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-price-lg text-price-lg">$24.99</span>
+<span class="text-label-sm text-on-surface-variant line-through">$31.00</span>
+</div>
+<p class="text-label-sm text-on-surface-variant">Get it by Tomorrow</p>
+<button class="mt-2 w-full bg-primary-container text-on-primary-fixed border border-primary py-1.5 rounded-full text-label-sm font-bold hover:bg-primary-fixed-dim transition-colors">Add to Cart</button>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="min-w-[240px] flex flex-col gap-2 group cursor-pointer">
+<div class="aspect-square bg-surface-container-low relative overflow-hidden rounded">
+<img class="w-full h-full object-cover transition-transform group-hover:scale-105" data-alt="Sneakers" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArByFJhjQR03Y3dZcenCL_E-MMjMXtUlyFbU-JyRPHTnhfDy-XjaDRlrc3iy3lBiBuRlWToddi0-1ZfPJIHi0g6SU0QrdgXccdzj27tEFZ0z0Lw09MSOERZTuO9wjqoPE1QeAGAC2nhEb2D9ZggIYicZssEg-b_PEALzXPiGuczzKTGbm3uBvrF6tZcs1MCKXP5CTX13QR_Q74wJvmk5mG3I7AeAYIPpceJVxgtNC7wilIbJxlvzsu5PW8m8YmP3zausmEckI6Dn0"/>
+<span class="absolute top-2 left-2 bg-error text-white text-[10px] font-bold px-2 py-1 uppercase rounded-sm">Flash Sale</span>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-body-md text-body-md line-clamp-2">Premium Cotton Unisex Basic Tee - Midnight Black</h4>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm text-on-surface-variant">(458)</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-price-lg text-price-lg">$19.00</span>
+</div>
+<p class="text-label-sm text-on-surface-variant">Prime Delivery</p>
+<button class="mt-2 w-full bg-primary-container text-on-primary-fixed border border-primary py-1.5 rounded-full text-label-sm font-bold hover:bg-primary-fixed-dim transition-colors">Add to Cart</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Trust & Mission Section -->
+<section class="bg-white border-y border-outline-variant py-12">
+<div class="max-w-container-max mx-auto px-gutter grid grid-cols-1 md:grid-cols-3 gap-12">
+<div class="flex gap-4 items-start">
+<div class="bg-primary-container/20 p-3 rounded-full flex-shrink-0">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'wght' 600;">diversity_3</span>
+</div>
+<div>
+<h4 class="font-headline-md text-headline-md mb-2">Community-Owned</h4>
+<p class="text-body-md text-on-surface-variant">Driven by a collective of local entrepreneurs, ensuring fair profits and local reinvestment.</p>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="bg-primary-container/20 p-3 rounded-full flex-shrink-0">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'wght' 600;">verified</span>
+</div>
+<div>
+<h4 class="font-headline-md text-headline-md mb-2">Verified &amp; Trusted</h4>
+<p class="text-body-md text-on-surface-variant">Every seller undergoes a strict quality and authenticity check to guarantee genuine goods.</p>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="bg-primary-container/20 p-3 rounded-full flex-shrink-0">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'wght' 600;">local_shipping</span>
+</div>
+<div>
+<h4 class="font-headline-md text-headline-md mb-2">Local Fast Delivery</h4>
+<p class="text-body-md text-on-surface-variant">Enjoy same-day delivery on grocery and essential items within participating city centers.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- New Arrivals Carousel -->
+<section class="max-w-container-max mx-auto px-gutter">
+<div class="bg-white border border-outline-variant p-stack-md">
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-headline-lg text-headline-lg">New Arrivals</h2>
+<a class="text-primary font-bold hover:underline" href="#">Explore all new items</a>
+</div>
+<div class="flex gap-stack-md overflow-x-auto pb-4 hide-scrollbar">
+<!-- Product Card -->
+<div class="min-w-[240px] flex flex-col gap-2 group cursor-pointer">
+<div class="aspect-square bg-surface-container-low relative overflow-hidden rounded">
+<img class="w-full h-full object-cover transition-transform group-hover:scale-105" data-alt="Perfume" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2RC5k2SvK5-DkrpDpSTF7-rfXUfflYGHAtU4nuvMvyJQsbsjhK0IySmwQxqXegKbnTtoRhp2atquD9_OBCn6a5-MilwbgUMOLbG30rLs4BDo1o3dkkdzIq9BOng0Q_Ilkv-KY3xfFb7rhaJ9aTtfAboUjMhW_d9TdlqAU_3T0vz-aTfcKEdDqhUwjTFu3enqp7EtxqR1Lt2O0HZBHBBUKWl_xK2ecGJZ8dBoZYaC1ooLq6RXIAcOQCF1gBr4nJGdSROoNo4TE9DI"/>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-body-md text-body-md line-clamp-2">L'Oasis Eau de Parfum - 100ml</h4>
+<div class="flex items-baseline gap-2">
+<span class="font-price-lg text-price-lg">$89.00</span>
+</div>
+<button class="mt-2 w-full bg-primary-container text-on-primary-fixed border border-primary py-1.5 rounded-full text-label-sm font-bold hover:bg-primary-fixed-dim transition-colors">Add to Cart</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full bg-inverse-surface text-surface-variant font-body-md pt-16 pb-8 px-gutter">
+<div class="max-w-container-max mx-auto grid grid-cols-1 md:grid-cols-5 gap-12">
+<!-- Logo & Description & Contact -->
+<div class="col-span-1 md:col-span-1 space-y-6">
+<div class="space-y-4">
+<span class="font-headline-md text-headline-md text-primary-container block">AfroTransact</span>
+<p class="text-surface-bright/70 text-sm leading-relaxed">
+                    Connecting immigrant communities with authentic food, cultural products, and trusted local sellers across Texas.
+                </p>
+</div>
+<div class="space-y-2">
+<a class="flex items-center gap-2 text-sm hover:text-primary-container transition-colors" href="mailto:hello@afrotransact.com">
+<span class="material-symbols-outlined text-sm">mail</span>
+                    hello@afrotransact.com
+                </a>
+<p class="flex items-center gap-2 text-sm">
+<span class="material-symbols-outlined text-sm">call</span>
+                    (512) 555-0100
+                </p>
+</div>
+<div class="flex gap-4 pt-2">
+<a class="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center hover:bg-primary-container hover:text-on-primary-fixed transition-all" href="#">
+<span class="material-symbols-outlined text-lg">share</span>
+</a>
+<a class="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center hover:bg-primary-container hover:text-on-primary-fixed transition-all" href="#">
+<span class="material-symbols-outlined text-lg">photo_camera</span>
+</a>
+<a class="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center hover:bg-primary-container hover:text-on-primary-fixed transition-all" href="#">
+<span class="material-symbols-outlined text-lg">movie</span>
+</a>
+</div>
+</div>
+<!-- Links Columns -->
+<div class="grid grid-cols-2 md:grid-cols-4 col-span-1 md:col-span-4 gap-8">
+<div>
+<h5 class="text-surface-bright font-bold mb-4 uppercase tracking-wider text-xs">Shop</h5>
+<ul class="space-y-2 text-sm">
+<li><a class="hover:text-primary-container transition-colors" href="#">Browse All Products</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Find Stores</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Categories</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Today's Deals</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">New Arrivals</a></li>
+</ul>
+</div>
+<div>
+<h5 class="text-surface-bright font-bold mb-4 uppercase tracking-wider text-xs">For Sellers</h5>
+<ul class="space-y-2 text-sm">
+<li><a class="hover:text-primary-container transition-colors" href="#">Seller Dashboard</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Pricing &amp; Plans</a></li>
+<li><span class="text-surface-bright/40">Seller Resources <span class="text-[10px] italic">(Soon)</span></span></li>
+<li><span class="text-surface-bright/40">Success Stories <span class="text-[10px] italic">(Soon)</span></span></li>
+</ul>
+</div>
+<div>
+<h5 class="text-surface-bright font-bold mb-4 uppercase tracking-wider text-xs">Support</h5>
+<ul class="space-y-2 text-sm">
+<li><a class="hover:text-primary-container transition-colors" href="#">Help Center</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Track Your Order</a></li>
+<li><span class="text-surface-bright/40">Return Policy <span class="text-[10px] italic">(Soon)</span></span></li>
+<li><span class="text-surface-bright/40">Contact Us <span class="text-[10px] italic">(Soon)</span></span></li>
+<li><span class="text-surface-bright/40">Report an Issue <span class="text-[10px] italic">(Soon)</span></span></li>
+</ul>
+</div>
+<div>
+<h5 class="text-surface-bright font-bold mb-4 uppercase tracking-wider text-xs">Company</h5>
+<ul class="space-y-2 text-sm">
+<li><a class="hover:text-primary-container transition-colors" href="#">About AfroTransact</a></li>
+<li><a class="hover:text-primary-container transition-colors" href="#">Our Mission</a></li>
+<li><span class="text-surface-bright/40">Press <span class="text-[10px] italic">(Soon)</span></span></li>
+<li><span class="text-surface-bright/40">Careers <span class="text-[10px] italic">(Soon)</span></span></li>
+<li><span class="text-surface-bright/40">Blog <span class="text-[10px] italic">(Soon)</span></span></li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Legal & Bottom Bar -->
+<div class="max-w-container-max mx-auto mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 text-xs">
+<a class="hover:text-primary-container transition-colors" href="#">Terms of Service</a>
+<a class="hover:text-primary-container transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-primary-container transition-colors" href="#">Seller Agreement</a>
+<a class="hover:text-primary-container transition-colors" href="#">Cookie Policy</a>
+</div>
+<div class="flex flex-col md:flex-row items-center gap-6">
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-xl opacity-50">payments</span>
+<span class="material-symbols-outlined text-xl opacity-50">credit_card</span>
+</div>
+<p class="text-xs opacity-50">© 2024 AfroTransact. Community-Owned Marketplace.</p>
+</div>
+</div>
+</footer>
+<script>
+    // Search bar interaction
+    const searchInput = document.querySelector('input[type="text"]');
+    searchInput.addEventListener('focus', () => {
+        searchInput.parentElement.classList.add('ring-2', 'ring-primary-container');
+    });
+    searchInput.addEventListener('blur', () => {
+        searchInput.parentElement.classList.remove('ring-2', 'ring-primary-container');
+    });
+</script>
+</body></html>

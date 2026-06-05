@@ -49,7 +49,7 @@ export function UserMenu() {
         </button>
         <StartSellingLink
           variant="bare"
-          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/25 transition-colors hover:bg-accent"
+          className="rounded-lg bg-brand-gold px-3 py-1.5 text-sm font-semibold text-brand-gold-foreground shadow-sm shadow-primary/25 transition-colors hover:bg-accent"
         >
           Start Selling
         </StartSellingLink>
@@ -75,7 +75,7 @@ export function UserMenu() {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-gold text-xs font-bold text-brand-gold-foreground">
           {initials}
         </div>
         <span className="hidden text-sm font-medium text-foreground sm:inline">

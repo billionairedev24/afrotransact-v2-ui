@@ -178,14 +178,14 @@ export default function AddressesPage() {
 
       <button
         onClick={() => { setEditingId(null); setForm(EMPTY); setShowForm(true) }}
-        className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 px-4 py-3 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors w-full justify-center mb-6"
+        className="flex items-center gap-2 rounded-xl bg-brand-gold/10 border border-primary/20 px-4 py-3 text-sm font-semibold text-foreground hover:bg-brand-gold/20 transition-colors w-full justify-center mb-6"
       >
         <Plus className="h-4 w-4" /> Add New Address
       </button>
 
       {loading ? (
         <div className="flex items-center justify-center py-16 gap-3">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <Loader2 className="h-5 w-5 animate-spin text-foreground" />
           <span className="text-sm text-gray-500">Loading…</span>
         </div>
       ) : addresses.length === 0 ? (
@@ -199,12 +199,12 @@ export default function AddressesPage() {
             <div key={a.id} className="rounded-2xl border border-gray-200 bg-white p-5">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <MapPin className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-gray-900">{a.label || "Address"}</span>
                       {a.isDefault && (
-                        <span className="flex items-center gap-1 text-xs text-primary font-medium">
+                        <span className="flex items-center gap-1 text-xs text-foreground font-medium">
                           <Star className="h-3 w-3 fill-current" /> Default
                         </span>
                       )}
