@@ -48,10 +48,12 @@ export function SalesTrendChart({ data }: { data: SalesPoint[] }) {
           contentStyle={TOOLTIP_STYLE}
           labelStyle={{ color: "#9ca3af" }}
           itemStyle={{ color: PRIMARY }}
-          formatter={(value: string | number | undefined) => [
-            `$${(value as number)?.toLocaleString?.() ?? "0"}`,
-            "Sales",
-          ]}
+          formatter={(value) => {
+            // Recharts' ValueType is `string | number | (string | number)[]`.
+            // Sales is always a scalar number — coerce defensively.
+            const n = Array.isArray(value) ? Number(value[0]) : Number(value)
+            return [`$${Number.isFinite(n) ? n.toLocaleString() : "0"}`, "Sales"] as [string, string]
+          }}
         />
         <Area
           type="monotone"
@@ -85,10 +87,10 @@ export function OrderStatusPieChart({ data }: { data: OrderStatusSlice[] }) {
         <Tooltip
           contentStyle={TOOLTIP_STYLE}
           labelStyle={{ color: "#9ca3af" }}
-          formatter={(value: string | number | undefined, name: unknown) => [
-            value ?? "0",
-            (name as string) ?? "",
-          ]}
+          formatter={(value, name) => {
+            const v = Array.isArray(value) ? value[0] : value
+            return [v ?? "0", String(name ?? "")] as [string | number, string]
+          }}
         />
       </PieChart>
     </ResponsiveContainer>

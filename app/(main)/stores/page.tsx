@@ -37,11 +37,11 @@ export default function StoresPage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-3xl font-black text-gray-900 flex items-center gap-2">
-            <Store className="h-7 w-7 text-primary" />
+            <Store className="h-7 w-7 text-foreground" />
             All Stores
           </h1>
           <p className="text-gray-500 mt-1 flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5 text-primary" />
+            <MapPin className="h-3.5 w-3.5 text-foreground" />
             Browse stores on the platform
           </p>
         </div>
@@ -52,7 +52,7 @@ export default function StoresPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-foreground" />
         </div>
       ) : stores.length === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center">
@@ -94,14 +94,14 @@ export default function StoresPage() {
                       className="object-cover"
                     />
                   ) : (
-                    <Store className="h-6 w-6 text-primary" />
+                    <Store className="h-6 w-6 text-foreground" />
                   )}
                 </div>
               </div>
 
               <div className="pt-8 px-4 pb-4 space-y-2">
                 <div>
-                  <h2 className="font-bold text-foreground group-hover:text-primary transition-colors">{store.name}</h2>
+                  <h2 className="font-bold text-foreground group-hover:text-foreground transition-colors">{store.name}</h2>
                   {store.description && (
                     <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{store.description}</p>
                   )}
@@ -109,7 +109,7 @@ export default function StoresPage() {
                 <div className="flex items-center gap-3 text-xs">
                   {store.rating > 0 && (
                     <span className="flex items-center gap-1 font-medium text-foreground">
-                      <Star className="h-3 w-3 fill-primary text-primary" />
+                      <Star className="h-3 w-3 fill-primary text-foreground" />
                       {store.rating.toFixed(1)}
                       {store.reviewCount > 0 && (
                         <span className="text-muted-foreground font-normal">({store.reviewCount})</span>
@@ -130,7 +130,7 @@ export default function StoresPage() {
 
       <div className="mt-10 text-center">
         <p className="text-gray-500 text-sm">More stores are joining every week.</p>
-        <Link href="/sell" className="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold text-primary hover:text-primary/80">
+        <Link href="/sell" className="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold text-foreground hover:text-foreground">
           Want to list your store? <ChevronRight className="h-4 w-4" />
         </Link>
       </div>

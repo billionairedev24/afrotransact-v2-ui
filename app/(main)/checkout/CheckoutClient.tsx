@@ -3,9 +3,12 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useSession } from "next-auth/react"
 import {
   CheckCircle,
+  CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CreditCard,
   MapPin,
@@ -21,7 +24,13 @@ import {
   Building2,
   Clock,
   Truck,
+  Edit2,
+  ShieldCheck,
+  X,
+  ArrowLeft,
+  Truck as TruckIcon,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 // Stripe (~80KB of @stripe/react-stripe-js + @stripe/stripe-js) only loads when
 // the shopper actually reaches the payment step. Earlier steps (address, review)
 // get a lighter initial bundle.
@@ -272,31 +281,36 @@ function AddressStep({
     )
   }
 
-  /* ── New address form ───────────────────────────────────────────── */
-  if (showNew) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
+  /* ── New address modal (mockup lines 496-540) ─────────────────────
+     If there are no saved addresses, the modal opens immediately as the
+     first-time flow. If there are saved addresses, it opens on demand
+     from the "+ Add New Address" button below the grid. */
+  const newAddressModal = showNew && (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && savedAddresses.length > 0) setShowNew(false)
+      }}
+    >
+      <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+          <h3 className="text-lg font-bold text-foreground">Add New Address</h3>
           {savedAddresses.length > 0 && (
             <button
               type="button"
               onClick={() => setShowNew(false)}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              className="text-gray-400 hover:text-foreground transition-colors"
+              aria-label="Close"
             >
-              ← Back
+              <X className="h-5 w-5" />
             </button>
           )}
-          <h2 className="text-lg font-bold text-gray-900">
-            {savedAddresses.length > 0 ? "Add a new address" : "Delivery address"}
-          </h2>
         </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4">
+        <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             {field("Full name", "fullName", "Jane Doe")}
             {field("Phone", "phone", "+1 (555) 000-0000", "tel")}
           </div>
-
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
             <AddressAutocomplete
@@ -316,19 +330,15 @@ function AddressStep({
               placeholder="Start typing your address…"
             />
           </div>
-
           {field("Apt, suite, unit (optional)", "line2", "Apt 4B")}
-
           <div className="grid grid-cols-2 gap-3">
             {field("City", "city")}
             {field("State", "state", "TX")}
           </div>
-
           {field("ZIP code", "zip", "ZIP", "numeric")}
-
           <label className="flex items-center gap-2.5 cursor-pointer group pt-1">
-            <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${makeDefault ? "bg-primary border-primary" : "border-gray-300 group-hover:border-primary/50"}`}>
-              {makeDefault && <Check className="h-3 w-3 text-[#0f0f10]" strokeWidth={3} />}
+            <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${makeDefault ? "bg-brand-gold border-brand-gold" : "border-gray-300 group-hover:border-brand-gold/50"}`}>
+              {makeDefault && <Check className="h-3 w-3 text-brand-gold-foreground" strokeWidth={3} />}
             </div>
             <input
               type="checkbox"
@@ -339,95 +349,118 @@ function AddressStep({
             <span className="text-sm text-gray-600">Set as my default address</span>
           </label>
         </div>
-
-        <button
-          disabled={!form.fullName || !form.line1 || !form.city || !form.zip || saving}
-          onClick={handleSaveNew}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {saving ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
-          ) : (
-            <>Use this address <ChevronRight className="h-4 w-4" /></>
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 sticky bottom-0">
+          {savedAddresses.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowNew(false)}
+              className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
           )}
-        </button>
+          <button
+            type="button"
+            disabled={!form.fullName || !form.line1 || !form.city || !form.zip || saving}
+            onClick={handleSaveNew}
+            className="px-6 py-2.5 rounded-lg bg-brand-gold text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save Address"}
+          </button>
+        </div>
       </div>
-    )
-  }
+    </div>
+  )
 
-  /* ── Saved addresses list ───────────────────────────────────────── */
+  /* ── Saved addresses list (mockup lines 250-308) ───────────────── */
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-bold text-gray-900">Choose a delivery address</h2>
+    <div className="space-y-6">
+      {newAddressModal}
 
-      <div className="space-y-2.5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {savedAddresses.map((addr) => {
           const isSelected = selectedId === addr.id
-          const icon = addr.label?.toLowerCase().includes("work") || addr.label?.toLowerCase().includes("office")
-            ? Building2
-            : Home
-          const Icon = icon
           return (
-            <button
+            <label
               key={addr.id}
-              type="button"
-              onClick={() => setSelectedId(addr.id)}
-              className={`w-full rounded-2xl border-2 p-4 text-left transition-all ${
-                isSelected
-                  ? "border-primary bg-primary/5 shadow-sm"
-                  : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
-              }`}
+              className="relative cursor-pointer group"
             >
-              <div className="flex items-start gap-3">
-                <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                  isSelected ? "bg-primary/20" : "bg-gray-100"
-                }`}>
-                  <Icon className={`h-4 w-4 ${isSelected ? "text-primary" : "text-gray-500"}`} />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-sm font-semibold text-gray-900 capitalize">
-                      {addr.label || "Home"}
-                    </span>
-                    {addr.isDefault && (
-                      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-wide">
-                        Default
-                      </span>
-                    )}
+              <input
+                type="radio"
+                name="address"
+                checked={isSelected}
+                onChange={() => setSelectedId(addr.id)}
+                className="sr-only"
+              />
+              <div className={cn(
+                "relative h-full rounded-lg border-2 p-4 transition-all",
+                isSelected
+                  ? "border-brand-gold bg-white"
+                  : "border-gray-200 bg-white group-hover:border-gray-300",
+              )}>
+                <div className="absolute top-4 right-4">
+                  <div className={cn(
+                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                    isSelected ? "border-brand-gold" : "border-gray-300",
+                  )}>
+                    {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />}
                   </div>
-                  <p className="text-sm text-gray-600 leading-snug">
-                    {addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {addr.city}, {addr.state} {addr.postalCode}
-                  </p>
                 </div>
-
-                <div className={`mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${
-                  isSelected ? "border-primary bg-primary" : "border-gray-300"
-                }`}>
-                  {isSelected && <div className="h-2 w-2 rounded-full bg-[#0f0f10]" />}
+                <div className="pr-8">
+                  <p className="text-sm font-bold text-foreground">
+                    {form.fullName || sessionName || "Saved address"}
+                  </p>
+                  <p className="text-sm text-gray-600 leading-relaxed mt-1">
+                    {addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}
+                    <br />
+                    {addr.city}, {addr.state} {addr.postalCode}
+                    <br />
+                    {addr.countryCode || "United States"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      // Pre-fill the new-address form with this entry then open modal.
+                      setForm((prev) => ({
+                        ...prev,
+                        line1: addr.line1,
+                        line2: addr.line2 || "",
+                        city: addr.city,
+                        state: addr.state || "",
+                        zip: addr.postalCode || "",
+                      }))
+                      setAddressQuery(addr.line1)
+                      setShowNew(true)
+                    }}
+                    className="mt-3 text-xs font-bold uppercase tracking-wider text-brand-gold-foreground/80 hover:text-brand-gold-foreground transition-colors"
+                  >
+                    Edit
+                  </button>
                 </div>
               </div>
-            </button>
+            </label>
           )
         })}
+      </div>
 
-        {/* Add new address card */}
+      {/* Footer row: + Add new address (left) · USE THIS ADDRESS (right) */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <button
           type="button"
           onClick={() => setShowNew(true)}
-          className="w-full rounded-2xl border-2 border-dashed border-gray-200 p-4 text-left hover:border-primary/40 hover:bg-primary/5 transition-all group"
+          className="flex items-center gap-2 text-sm font-bold text-brand-gold-foreground/80 hover:text-brand-gold-foreground transition-colors"
         >
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 group-hover:bg-primary/10 transition-colors">
-              <Plus className="h-4 w-4 text-gray-400 group-hover:text-primary transition-colors" />
-            </div>
-            <span className="text-sm font-medium text-gray-500 group-hover:text-primary transition-colors">
-              Add a new address
-            </span>
-          </div>
+          <Plus className="h-4 w-4" />
+          Add a new address
+        </button>
+        <button
+          type="button"
+          disabled={!selectedId}
+          onClick={handleUseSaved}
+          className="px-6 py-2.5 rounded-full bg-brand-gold text-xs font-bold uppercase tracking-wider text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
+        >
+          Use this address
         </button>
       </div>
 
@@ -438,7 +471,7 @@ function AddressStep({
             <button
               type="button"
               onClick={() => setShipToOther(true)}
-              className="text-sm text-gray-500 hover:text-primary transition-colors"
+              className="text-sm text-gray-500 hover:text-foreground transition-colors"
             >
               Ship to someone else?
             </button>
@@ -537,13 +570,63 @@ function AddressStep({
         </div>
       )}
 
-      <button
-        disabled={!selectedId}
-        onClick={handleUseSaved}
-        className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        Deliver to this address <ChevronRight className="h-4 w-4" />
-      </button>
+    </div>
+  )
+}
+
+/**
+ * Delivery picker — live carrier shipping is currently disabled, so this
+ * always presents a single per-weight standard option. When carrier rating
+ * is re-enabled we'll surface multiple tiles here. Backend computes the
+ * actual shipping cost server-side and returns it in `displayShipping`
+ * (see CheckoutClient's Order Summary). No client-side calculation.
+ */
+function DeliveryOptions({
+  shippingCents,
+  onConfirm,
+  placing,
+}: {
+  shippingCents: number
+  onConfirm: () => void
+  /** True while the parent is placing/syncing the order. */
+  placing: boolean
+}) {
+  // Single tile while carrier-rated shipping is disabled. Selecting it (or
+  // re-clicking it) advances to Payment via the same handler the Order
+  // Summary CTA uses — no extra button needed.
+  return (
+    <div className="flex flex-col gap-3">
+      <label className="relative cursor-pointer block">
+        <input
+          type="radio"
+          name="delivery"
+          checked
+          onChange={onConfirm}
+          disabled={placing}
+          className="sr-only"
+        />
+        <div
+          onClick={onConfirm}
+          className="flex items-center justify-between p-4 border-2 border-brand-gold rounded-lg bg-white"
+        >
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-5 h-5 shrink-0 rounded-full border-2 border-brand-gold flex items-center justify-center">
+              <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Standard delivery</p>
+              <p className="text-xs text-gray-500 mt-0.5">Delivery in 3-5 business days</p>
+            </div>
+          </div>
+          <span className="text-sm font-semibold whitespace-nowrap ml-3">
+            {shippingCents === 0 ? (
+              <span className="text-brand-gold">Free</span>
+            ) : (
+              <span className="text-foreground">${(shippingCents / 100).toFixed(2)}</span>
+            )}
+          </span>
+        </div>
+      </label>
     </div>
   )
 }
@@ -591,7 +674,7 @@ function ReviewStep({
 
       <div className="rounded-2xl border border-gray-200 bg-white p-4">
         <div className="flex items-center gap-2 mb-2">
-          <MapPin className="h-4 w-4 text-primary" />
+          <MapPin className="h-4 w-4 text-foreground" />
           <span className="text-sm font-semibold text-gray-900">Delivering to</span>
         </div>
         <p className="text-sm font-semibold text-gray-900">{address.fullName}</p>
@@ -613,7 +696,7 @@ function ReviewStep({
       {couponsEnabled && (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <Tag className="h-4 w-4 text-primary" />
+            <Tag className="h-4 w-4 text-foreground" />
             <span className="text-sm font-semibold text-gray-900">Promo Code</span>
           </div>
           {couponResult ? (
@@ -650,7 +733,7 @@ function ReviewStep({
       {availableDeals.length > 0 && (
         <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-primary" />
+            <Zap className="h-4 w-4 text-foreground" />
             <span className="text-sm font-semibold text-gray-900">Available Deals</span>
           </div>
           <div className="space-y-2">
@@ -661,7 +744,7 @@ function ReviewStep({
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{deal.title}</p>
                     <p className="text-xs text-gray-500">{deal.description || "Limited time offer"}</p>
-                    <p className="text-xs font-bold text-primary mt-0.5">
+                    <p className="text-xs font-bold text-foreground mt-0.5">
                       {deal.discountPercent ? `${deal.discountPercent}% OFF` : deal.dealPriceCents ? `Special Price: ${formatCents(deal.dealPriceCents)}` : "Special Deal"}
                     </p>
                   </div>
@@ -670,7 +753,7 @@ function ReviewStep({
                   ) : (
                     <button 
                       onClick={() => onApplyDeal(deal)}
-                      className="rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
+                      className="rounded-lg bg-brand-gold/10 px-3 py-1.5 text-xs font-bold text-foreground hover:bg-brand-gold/20 transition-colors"
                     >
                       Apply
                     </button>
@@ -722,7 +805,7 @@ function ReviewStep({
                     <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
                       isSelected ? "bg-primary/20" : "bg-gray-100"
                     }`}>
-                      <TierIcon className={`h-5 w-5 ${isSelected ? "text-primary" : "text-gray-500"}`} />
+                      <TierIcon className={`h-5 w-5 ${isSelected ? "text-foreground" : "text-gray-500"}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900">{opt.serviceName}</p>
@@ -738,7 +821,7 @@ function ReviewStep({
                     <div className={`shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                       isSelected ? "border-primary bg-primary" : "border-gray-300"
                     }`}>
-                      {isSelected && <div className="h-2 w-2 rounded-full bg-[#0f0f10]" />}
+                      {isSelected && <div className="h-2 w-2 rounded-full bg-brand-gold-foreground" />}
                     </div>
                   </label>
                 )
@@ -778,7 +861,7 @@ function ReviewStep({
           </div>
         )}
         {appliedDeal && (
-          <div className="flex justify-between text-sm text-primary">
+          <div className="flex justify-between text-sm text-foreground">
             <span>Deal: {appliedDeal.title}</span>
             <span className="font-medium">
               -{formatCents(
@@ -819,7 +902,7 @@ function ReviewStep({
               (quoteData.groups?.length ?? 0) > 0 &&
               !selectedQuoteId)
           }
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-70"
+          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-gold py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-70"
         >
           {placing ? (
             <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Placing order…</span>
@@ -845,7 +928,7 @@ function SuccessStep({ orderNumber }: { orderNumber: string }) {
         <p className="text-gray-500 text-sm mt-1">You&apos;ll receive a confirmation email shortly.</p>
       </div>
       <div className="flex gap-3 mt-2">
-        <button onClick={() => router.push("/orders")} className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors">
+        <button onClick={() => router.push("/orders")} className="rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors">
           View Orders
         </button>
         <button onClick={() => router.push("/")} className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
@@ -866,6 +949,11 @@ export default function CheckoutClient({
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [step, setStep] = useState<Step | "success">("address")
+  // Per-mockup: wizard-style — only the active section is expanded by
+  // default. Buyer can still click any header to expand/collapse manually.
+  // Auto-sync is handled by a useEffect below that listens to `step`.
+  const [expanded, setExpanded] = useState({ address: true, delivery: false, payment: false })
+  const [promoOpen, setPromoOpen] = useState(false)
   const [address, setAddress] = useState<Record<string, string>>({})
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState<string | null>(null)
@@ -950,6 +1038,40 @@ export default function CheckoutClient({
   const stripeAvailable = stripeFeatureEnabled && stripeMethodEnabled
 
   useEffect(() => { setMounted(true) }, [])
+
+  // Auto-advance which section is expanded as the user moves through the flow,
+  // so a returning buyer always lands on the relevant section. Manual toggling
+  // (via the section header) still works on top of this.
+  useEffect(() => {
+    if (step === "review") {
+      setExpanded((s) => ({ ...s, address: false, delivery: true }))
+    } else if (step === "payment") {
+      setExpanded((s) => ({ ...s, address: false, delivery: false, payment: true }))
+    } else if (step === "address") {
+      setExpanded((s) => ({ ...s, address: true }))
+    }
+  }, [step])
+
+  // Auto-confirm delivery as soon as the user lands on the review step. Live
+  // carrier rating is disabled so there's only one option and it's already
+  // selected — making the buyer click it is friction. This kicks off the
+  // backend checkout sync (which mints the Stripe payment intent), so the
+  // Payment section becomes interactable without any extra click.
+  // The ref guards against double-firing.
+  const autoSyncedRef = useRef(false)
+  useEffect(() => {
+    if (step !== "review") {
+      // Reset the guard if the user goes back to address so a re-edit
+      // re-syncs once they return to review.
+      if (step === "address") autoSyncedRef.current = false
+      return
+    }
+    if (autoSyncedRef.current) return
+    if (gatesReady && !marketplacePurchasingAllowed) return
+    autoSyncedRef.current = true
+    void syncCartAndCheckout()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, gatesReady, marketplacePurchasingAllowed])
 
   useEffect(() => {
     if (!mounted) return
@@ -1228,7 +1350,7 @@ export default function CheckoutClient({
         <p className="text-gray-500 text-sm mt-2">Your cart items will be preserved.</p>
         <button
           onClick={() => router.push("/auth/login?callbackUrl=/checkout")}
-          className="mt-6 inline-block rounded-xl bg-primary px-6 py-3 text-sm font-bold text-[#0f0f10]"
+          className="mt-6 inline-block rounded-xl bg-primary px-6 py-3 text-sm font-bold text-brand-gold-foreground"
         >
           Sign In
         </button>
@@ -1237,13 +1359,112 @@ export default function CheckoutClient({
   }
 
   const displayTotal = checkoutResult?.totalCents ?? total
+  const displaySubtotal = checkoutResult?.subtotalCents ?? subtotal
+  const displayTax = checkoutResult?.taxCents ?? tax
+  const displayShipping = checkoutResult?.shippingCostCents ?? shipping
+  const totalDiscount = discount + dealDiscount
+
+  // currentIdx still drives section completion state (silences unused-var lint via this reference)
+  void currentIdx
+
+  const addressComplete = step === "review" || step === "payment" || step === "success"
+  const reviewComplete = step === "payment" || step === "success"
+  const paymentComplete = step === "success"
+  const toggle = (k: keyof typeof expanded) => setExpanded((s) => ({ ...s, [k]: !s[k] }))
+
+  // Top-of-summary "Place your order" CTA. It is context-aware:
+  //   - on the address step it does nothing (button is disabled there)
+  //   - on the review step it advances to payment via the existing handler
+  //   - on the payment step Stripe's own confirm flow runs (we don't fire
+  //     it from here to keep the iframe-driven flow untouched); the user
+  //     uses the inline Pay button rendered by PaymentStep.
+  const placeOrderHandler = () => {
+    if (step === "review") syncCartAndCheckout()
+  }
+
+  if (step === "success") {
+    return (
+      <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-10">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <SuccessStep orderNumber={checkoutResult?.orderNumber ?? ""} />
+        </div>
+      </main>
+    )
+  }
+
+  const SectionHeader = ({
+    n,
+    title,
+    open,
+    active,
+    onToggle,
+  }: {
+    n: number
+    title: string
+    open: boolean
+    /** True when this is the section the buyer is currently in. */
+    active: boolean
+    onToggle: () => void
+  }) => (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className={cn(
+        "flex w-full items-center justify-between gap-3 px-6 py-5 text-left transition-colors",
+        // Bottom border only when expanded — acts as the section separator.
+        open && "border-b border-gray-200",
+      )}
+    >
+      <h2 className="flex items-center gap-3 text-lg font-bold">
+        <span
+          className={cn(
+            "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors",
+            active
+              ? "bg-brand-gold text-brand-gold-foreground"
+              : "border-2 border-brand-gold/40 text-brand-gold/70 bg-white",
+          )}
+        >
+          {n}
+        </span>
+        <span className={cn(active ? "text-foreground" : "text-foreground/50")}>{title}</span>
+      </h2>
+      <ChevronDown
+        className={cn(
+          "h-5 w-5 text-foreground/40 transition-transform",
+          open ? "rotate-180" : "rotate-0",
+        )}
+      />
+    </button>
+  )
 
   return (
-    <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-10">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Sticky brand header — mockup image: back arrow + "Checkout" left,
+          lock icon + "SECURE CHECKOUT" gold right. */}
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+        <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="Back"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h1 className="text-xl font-bold text-foreground">Checkout</h1>
+          </div>
+          <div className="flex items-center gap-2 text-brand-gold-foreground/70">
+            <Lock className="h-4 w-4" />
+            <span className="text-xs font-bold uppercase tracking-wider">Secure checkout</span>
+          </div>
+        </div>
+      </header>
 
-      {gatesReady && !marketplacePurchasingAllowed && step !== "success" && (
-        <div className="mb-4 flex gap-3 rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+    <main className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-10 py-8 md:py-10">
+      {gatesReady && !marketplacePurchasingAllowed && (
+        <div className="mb-6 flex gap-3 rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" aria-hidden />
           <p>
             Purchasing is paused for updates in your selected region (operators may have turned the marketplace off).
@@ -1252,16 +1473,16 @@ export default function CheckoutClient({
         </div>
       )}
 
-      {availableRegions.length > 1 && step !== "success" && (
-        <div className="flex items-center gap-2 mb-6">
-          <MapPin className="h-4 w-4 text-gray-500 shrink-0" />
+      {availableRegions.length > 1 && (
+        <div className="mb-6 flex items-center gap-2">
+          <MapPin className="h-4 w-4 shrink-0 text-gray-500" />
           <select
             value={region?.id ?? ""}
             onChange={(e) => {
               const r = availableRegions.find((r) => r.id === e.target.value)
               if (r) setRegion(r)
             }}
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-brand-gold/60 transition-colors"
           >
             {availableRegions.map((r) => (
               <option key={r.id} value={r.id}>{r.name}</option>
@@ -1270,83 +1491,294 @@ export default function CheckoutClient({
         </div>
       )}
 
-      {step !== "success" && (
-        <div className="flex items-center mb-8">
-          {STEPS.map((s, i) => {
-            const done   = currentIdx > i
-            const active = s.id === step
-            const Icon   = s.icon
-            return (
-              <div key={s.id} className="flex items-center flex-1 last:flex-none">
-                <div className="flex flex-col items-center gap-1">
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${done ? "bg-green-500" : active ? "bg-primary" : "bg-gray-100"}`}>
-                    {done ? <CheckCircle className="h-5 w-5 text-white" /> : <Icon className={`h-4 w-4 ${active ? "text-[#0f0f10]" : "text-gray-500"}`} />}
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+        {/* Left column: section cards */}
+        <div className="flex-1 w-full flex flex-col gap-6">
+          {/* Step 1: Shipping Address */}
+          <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <SectionHeader
+              n={1}
+              title="Shipping address"
+              active={step === "address"}
+              open={expanded.address}
+              onToggle={() => toggle("address")}
+            />
+            {expanded.address && (
+            <div className="p-6">
+              {step === "address" ? (
+                <AddressStep
+                  token={authToken}
+                  sessionName={session?.data?.user?.name ?? ""}
+                  initialContext={initialContext}
+                  onNext={(addr) => { setAddress(addr); setStep("review") }}
+                />
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{address.fullName}</p>
+                      <p className="text-sm text-gray-600 leading-snug mt-0.5">
+                        {address.line1}{address.line2 ? `, ${address.line2}` : ""}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {address.city}, {address.state} {address.zip}
+                      </p>
+                      {address.phone && (
+                        <p className="text-xs text-gray-500 mt-1">{address.phone}</p>
+                      )}
+                    </div>
                   </div>
-                  <span className={`text-[11px] font-medium ${active ? "text-gray-900" : done ? "text-green-400" : "text-gray-500"}`}>{s.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setStep("address"); idempotencyKeyRef.current = null }}
+                    disabled={placing}
+                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" /> Edit
+                  </button>
                 </div>
-                {i < STEPS.length - 1 && (
-                  <div className={`flex-1 h-px mx-2 mb-5 transition-colors ${currentIdx > i ? "bg-green-500" : "bg-gray-100"}`} />
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )}
+            </div>
+            )}
+          </section>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-6">
-        {step === "address" && (
-          <AddressStep
-            token={authToken}
-            sessionName={session?.data?.user?.name ?? ""}
-            initialContext={initialContext}
-            onNext={(addr) => { setAddress(addr); setStep("review") }}
-          />
-        )}
-        {step === "review" && (
-          <ReviewStep
-            address={address}
-            onNext={syncCartAndCheckout}
-            onBack={() => setStep("address")}
-            items={cartItems}
-            subtotal={checkoutResult?.subtotalCents ?? subtotal}
-            tax={checkoutResult?.taxCents ?? tax}
-            shipping={checkoutResult?.shippingCostCents ?? shipping}
-            total={displayTotal}
-            placing={placing}
-            error={placeError}
-            couponCode={couponCode}
-            couponResult={couponResult}
-            couponLoading={couponLoading}
-            couponError={couponError}
-            onApplyCoupon={handleApplyCoupon}
-            onRemoveCoupon={handleRemoveCoupon}
-            onCouponCodeChange={setCouponCode}
-            discount={discount}
-            couponsEnabled={couponsEnabled}
-            availableDeals={availableDeals}
-            appliedDeal={appliedDeal}
-            onApplyDeal={(deal) => setAppliedDeal(deal)}
-            onRemoveDeal={() => setAppliedDeal(null)}
-            shippingByStore={shippingByStore}
-            quoteData={shippingQuotes}
-            selectedQuoteId={selectedQuoteId}
-            onSelectQuote={setSelectedQuoteId}
-            freeShippingApplies={freeShippingApplies}
-            checkoutBlocked={gatesReady && !marketplacePurchasingAllowed}
-          />
-        )}
-        {step === "payment" && (
-          <PaymentStep
-            onBack={() => setStep("review")}
-            onComplete={handlePaymentComplete}
-            total={displayTotal}
-            clientSecret={checkoutResult?.paymentClientSecret ?? null}
-            stripeAvailable={stripeAvailable}
-            paymentMethods={paymentMethods}
-          />
-        )}
-        {step === "success" && <SuccessStep orderNumber={checkoutResult?.orderNumber ?? ""} />}
+          {/* Step 2: Delivery Method & Review */}
+          <section
+            className={cn(
+              "overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-opacity",
+              step === "address" && "opacity-60",
+            )}
+          >
+            <SectionHeader
+              n={2}
+              title="Delivery options"
+              active={step === "review"}
+              open={expanded.delivery}
+              onToggle={() => toggle("delivery")}
+            />
+            {expanded.delivery && (
+            <div className="p-6">
+              {step === "address" ? (
+                <p className="text-sm text-gray-500">
+                  Select a shipping address above to see delivery options.
+                </p>
+              ) : step === "review" ? (
+                <DeliveryOptions
+                  shippingCents={displayShipping}
+                  onConfirm={syncCartAndCheckout}
+                  placing={placing}
+                />
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100">
+                      <Truck className="h-4 w-4 text-gray-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {freeShippingApplies ? "Standard Shipping" : "Selected shipping method"}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        {displayShipping === 0 ? (
+                          <span className="text-brand-gold font-medium">Free</span>
+                        ) : (
+                          formatCents(displayShipping)
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setStep("review"); idempotencyKeyRef.current = null }}
+                    disabled={placing}
+                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" /> Edit
+                  </button>
+                </div>
+              )}
+            </div>
+            )}
+          </section>
+
+          {/* Step 3: Payment */}
+          <section
+            className={cn(
+              "overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-opacity",
+              step !== "payment" && !paymentComplete && "opacity-60",
+            )}
+          >
+            <SectionHeader
+              n={3}
+              title="Payment method"
+              active={step === "payment"}
+              open={expanded.payment}
+              onToggle={() => toggle("payment")}
+            />
+            {expanded.payment && (
+            <div className="p-6">
+              {step === "payment" ? (
+                <PaymentStep
+                  onBack={() => setStep("review")}
+                  onComplete={handlePaymentComplete}
+                  total={displayTotal}
+                  clientSecret={checkoutResult?.paymentClientSecret ?? null}
+                  stripeAvailable={stripeAvailable}
+                  paymentMethods={paymentMethods}
+                />
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Confirm your delivery method to enter payment details.
+                </p>
+              )}
+            </div>
+            )}
+          </section>
+        </div>
+
+        {/* Right column: Order Summary — image-faithful */}
+        <aside className="w-full lg:w-[380px] xl:w-[400px] shrink-0 lg:sticky lg:top-24 space-y-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-5">
+            {/* Place order CTA at the top */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={placeOrderHandler}
+                disabled={
+                  Boolean(gatesReady && !marketplacePurchasingAllowed) ||
+                  placing ||
+                  step === "address" ||
+                  (step === "payment" && !stripeAvailable)
+                }
+                className="w-full rounded-full bg-brand-gold py-3.5 text-base font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {placing ? (
+                  <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Placing…</span>
+                ) : (
+                  "Place your order"
+                )}
+              </button>
+              <p className="text-center text-[11px] text-gray-500">
+                By placing your order, you agree to our{" "}
+                <Link href="/terms" className="underline hover:text-foreground">terms</Link>.
+              </p>
+            </div>
+
+            <div className="border-t border-gray-200" />
+
+            <h2 className="text-lg font-bold text-foreground">Order Summary</h2>
+
+            <div className="space-y-2.5 text-sm">
+              <div className="flex justify-between">
+                <span className="text-foreground">Items ({cartItems.reduce((n, i) => n + i.quantity, 0)}):</span>
+                <span className="text-foreground">{formatCents(displaySubtotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-foreground">Shipping &amp; handling:</span>
+                <span className="text-foreground">{formatCents(displayShipping)}</span>
+              </div>
+              {totalDiscount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount:</span>
+                  <span>-{formatCents(totalDiscount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1">
+                <span className="text-foreground">Total before tax:</span>
+                <span className="text-foreground">{formatCents(displaySubtotal + displayShipping - totalDiscount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-foreground">Estimated tax to be collected:</span>
+                <span className="text-foreground">{formatCents(displayTax)}</span>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200" />
+
+            <div className="flex items-end justify-between">
+              <p className="text-lg font-bold text-red-700">Order total:</p>
+              <p className="text-2xl font-bold text-red-700">{formatCents(displayTotal)}</p>
+            </div>
+
+            <div className="border-t border-gray-200" />
+
+            {/* Gift card / promo code — collapsible link expands into the
+                existing coupon UI. Wired to existing handlers. */}
+            {couponsEnabled && (
+              couponResult?.valid ? (
+                <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm">
+                  <span className="font-mono font-semibold text-green-700">{couponResult.code}</span>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="text-xs font-medium text-gray-500 hover:text-foreground transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setPromoOpen((o) => !o)}
+                    className="flex w-full items-center justify-between gap-2 text-xs font-bold uppercase tracking-wider text-red-700 hover:text-red-800 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Tag className="h-4 w-4" /> Add a gift card or promotion code
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        promoOpen ? "rotate-180" : "rotate-0",
+                      )}
+                    />
+                  </button>
+                  {promoOpen && (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                          placeholder="Enter code"
+                          className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={couponLoading || !couponCode.trim()}
+                          className="px-4 py-2 rounded-lg bg-foreground text-white text-sm font-semibold hover:bg-foreground/85 transition-colors disabled:opacity-50"
+                        >
+                          {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                        </button>
+                      </div>
+                      {couponError && <p className="text-xs text-red-600">{couponError}</p>}
+                    </div>
+                  )}
+                </div>
+              )
+            )}
+          </div>
+
+          {/* Trust microcopy — outside the card per image */}
+          <div className="space-y-2 px-2">
+            <div className="flex items-start gap-2 text-xs text-foreground/70">
+              <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>
+                <span className="font-semibold text-foreground">Secure transaction.</span>{" "}
+                Your information is encrypted and protected.
+              </p>
+            </div>
+            {/* Free returns hidden — per-seller return policy not yet wired.
+                Backlog #39 tracks surfacing this once seller policy is in
+                the DealData/Product payload. */}
+          </div>
+        </aside>
       </div>
     </main>
+    </div>
   )
 }

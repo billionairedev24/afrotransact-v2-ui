@@ -22,7 +22,7 @@ const BLANK: EditableHeroSlide = {
   enabled: true,
   order: 0,
   badgeText: "",
-  badgeColor: "border-primary/30 bg-primary/10 text-primary",
+  badgeColor: "border-primary/30 bg-primary/10 text-foreground",
   headline: "",
   subtext: "",
   primaryCtaLabel: "",
@@ -336,7 +336,7 @@ function SlideModal({
           <button
             onClick={handleSave}
             disabled={!form.id.trim() || !form.headline.trim() || !form.primaryCtaLabel.trim() || !form.primaryCtaHref.trim()}
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-header hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-gold py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Save className="h-4 w-4" />
             {isEdit ? "Save Changes" : "Create Slide"}
@@ -428,7 +428,7 @@ export default function AdminHeroCarouselPage() {
             ? {
                 icon: idx % 3 === 0 ? <Eye className="h-3 w-3" /> : idx % 3 === 1 ? <EyeOff className="h-3 w-3" /> : undefined,
                 text: s.badgeText,
-                color: s.badgeColor || "border-primary/30 bg-primary/10 text-primary",
+                color: s.badgeColor || "border-primary/30 bg-primary/10 text-foreground",
               }
             : undefined,
           headline: s.headline.split(/\r?\n|\\n/g).map((line, i, arr) => (
@@ -534,7 +534,7 @@ export default function AdminHeroCarouselPage() {
         </div>
         <button
           onClick={() => setModal({ order: ordered.length })}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-header hover:bg-primary/90 transition-colors shrink-0"
+          className="flex items-center gap-1.5 rounded-lg bg-brand-gold px-4 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors shrink-0"
         >
           <Plus className="h-4 w-4" />
           New Slide

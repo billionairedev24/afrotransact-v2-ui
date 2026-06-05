@@ -13,7 +13,7 @@ const buttonVariants = cva(
       variant: {
         // Primary CTA — uses theme primary colour
         default:
-          "bg-primary text-primary-foreground shadow-sm shadow-primary/20 hover:brightness-110 hover:-translate-y-px",
+          "bg-brand-gold text-brand-gold-foreground shadow-sm shadow-primary/20 hover:brightness-110 hover:-translate-y-px",
         // Destructive / danger actions
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
@@ -34,7 +34,7 @@ const buttonVariants = cva(
           "hover:bg-muted hover:text-foreground",
         // Underlined link style
         link:
-          "text-primary underline-offset-4 hover:underline",
+          "text-foreground underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-5 py-2",

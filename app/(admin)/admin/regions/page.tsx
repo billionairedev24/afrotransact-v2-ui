@@ -183,7 +183,7 @@ function RegionForm({
           id="region-active"
           checked={form.active}
           onChange={(e) => onChange({ ...form, active: e.target.checked })}
-          className="rounded border-border bg-background text-primary focus:ring-primary"
+          className="rounded border-border bg-background text-foreground focus:ring-primary"
         />
         <label htmlFor="region-active" className="text-sm text-foreground">Active</label>
       </div>
@@ -386,7 +386,7 @@ export default function RegionsPage() {
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors shrink-0"
+          className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors shrink-0"
         >
           <Plus className="h-4 w-4" />
           Add Region
@@ -395,7 +395,7 @@ export default function RegionsPage() {
 
       {loading && (
         <div className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-card py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <Loader2 className="h-6 w-6 animate-spin text-foreground" />
           <span className="text-muted-foreground">Loading regions...</span>
         </div>
       )}
@@ -423,7 +423,7 @@ export default function RegionsPage() {
                 ? <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                 : <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
               }
-              <Globe className="h-4 w-4 text-primary" />
+              <Globe className="h-4 w-4 text-foreground" />
               <span className="text-base font-semibold text-foreground">
                 {COUNTRY_NAMES[countryGroup.country] || countryGroup.country}
               </span>
@@ -490,7 +490,7 @@ export default function RegionsPage() {
                               <tr key={region.id} className="hover:bg-muted/40 transition-colors">
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-2.5 min-w-0">
-                                    <MapPin className="h-4 w-4 text-primary shrink-0" />
+                                    <MapPin className="h-4 w-4 text-foreground shrink-0" />
                                     <div className="min-w-0">
                                       <p className="text-foreground font-medium truncate">
                                         {region.city || region.name || <span className="text-muted-foreground italic">Unnamed Region</span>}
@@ -506,7 +506,7 @@ export default function RegionsPage() {
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   {savingId === region.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto" />
+                                    <Loader2 className="h-4 w-4 animate-spin text-foreground mx-auto" />
                                   ) : (
                                     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${region.active ? "bg-green-500/20 text-green-700 dark:text-green-400" : "bg-muted text-muted-foreground"}`}>
                                       {region.active ? "Active" : "Off"}
@@ -548,7 +548,7 @@ export default function RegionsPage() {
           <button
             onClick={handleSave}
             disabled={saving || !form.code.trim() || !form.name.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors disabled:opacity-50"
           >
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {editingRegion ? "Update" : "Create"}

@@ -14,7 +14,7 @@ export default function PaymentMethodsPage() {
         <h1 className="text-xl font-bold text-gray-900 mt-5">Sign in to manage payment methods</h1>
         <Link
           href="/auth/login"
-          className="inline-block mt-6 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors"
+          className="inline-block mt-6 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
         >
           Sign In
         </Link>

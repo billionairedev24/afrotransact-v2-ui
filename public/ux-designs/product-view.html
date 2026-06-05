@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AfroTransact - Product Detail Page</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-primary": "#fabd00",
+                        "tertiary-container": "#bfccdf",
+                        "tertiary": "#535f70",
+                        "tertiary-fixed-dim": "#bbc7db",
+                        "on-surface-variant": "#4f4632",
+                        "surface-tint": "#785900",
+                        "surface-container": "#eeeeee",
+                        "on-primary-container": "#6d5100",
+                        "primary-fixed": "#ffdf9e",
+                        "primary-fixed-dim": "#fabd00",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "error-container": "#ffdad6",
+                        "surface-dim": "#dadada",
+                        "on-secondary-fixed": "#161c24",
+                        "surface-bright": "#f9f9f9",
+                        "primary-container": "#ffc107",
+                        "on-tertiary-fixed": "#101c2b",
+                        "inverse-on-surface": "#f1f1f1",
+                        "secondary-container": "#dae0eb",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#e8e8e8",
+                        "secondary-fixed": "#dde3ee",
+                        "surface-container-low": "#f3f3f3",
+                        "surface": "#f9f9f9",
+                        "primary": "#785900",
+                        "on-primary-fixed": "#261a00",
+                        "secondary-fixed-dim": "#c1c7d2",
+                        "on-error-container": "#93000a",
+                        "background": "#f9f9f9",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary": "#595f68",
+                        "on-secondary-container": "#5d636d",
+                        "outline": "#827660",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#d7e3f7",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary-fixed-variant": "#3c4858",
+                        "outline-variant": "#d4c5ab",
+                        "on-tertiary-container": "#4a5667",
+                        "on-secondary-fixed-variant": "#414750",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#2f3131",
+                        "on-primary-fixed-variant": "#5b4300",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#1a1c1c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-sm": "0.5rem",
+                        "stack-md": "1rem",
+                        "container-max": "1440px",
+                        "section-gap": "2.5rem",
+                        "gutter": "1.25rem",
+                        "margin-mobile": "1rem"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "price-lg": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "price-lg": ["24px", { "lineHeight": "24px", "fontWeight": "700" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased selection:bg-primary-container selection:text-on-primary-container">
+<div class="max-w-container-max mx-auto px-gutter py-stack-md pt-20 pb-section-gap">
+<!-- Breadcrumbs -->
+<nav aria-label="Breadcrumb" class="flex items-center gap-2 mb-stack-md text-on-surface-variant font-label-sm text-label-sm">
+<a class="hover:text-primary transition-colors" href="#">Home</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Home &amp; Kitchen</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Cookware</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span aria-current="page" class="text-on-background">Artisan Hand-Hammered Copper Pot</span>
+</nav>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+<!-- Left: Image Gallery (4 columns on lg) -->
+<div class="lg:col-span-4 flex gap-4 sticky top-stack-md">
+<!-- Thumbnails -->
+<div class="flex flex-col gap-2 w-16 shrink-0">
+<button class="w-16 h-16 rounded border border-primary overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1">
+<img alt="Thumbnail 1" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCveQh2VB621o5arVRdbVQEbWfwyfxlQyhkph3PIeDRaQpWXQdsV5-lfAbWjKe0MQ6yc28JxHP8mvPXqA1_fyCuvP1flEh2LWoNCtgjrKH7fNIghb9IYf91BkuVKz2nXSjw3miQBtkfQFweI_uxPz1uKtpPAWrO6GjvkvW9w-J6doyhTmeqTsrksSjczs13FXs_AkGhEus0nvDmwEDXY9BZWnGFNWgz0bFhr9MHdBPpvzISutDsUD2DlKpXaLerPoBDFHOHJNXolxw"/>
+</button>
+<button class="w-16 h-16 rounded border border-outline-variant hover:border-primary overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1">
+<img alt="Thumbnail 2" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpReFFbOESVQ9L2LM_wS_K-HdQnTRhmPFMdlG2gFdzPcVQ25MSPrS33rQThkxM-uY0MSeOB-4NjTDJFBvik4_MKYQ7Li5nToXzSUxxJNgV3fBf0y1odoz5Fw_G6TWH2VcZ5inE5Vw3IeUvX7pBsV_UcDKM6VRHMh1uEcty0DgqftJO1qOx8HtmVVD1-Q8TvpqW282cfb4XaqNXVxrPzL_nBt7p_6oCpCHIxqcZTws1olzCaTzjDorTNfFpYtA8T5Co1jhyAprhVwI"/>
+</button>
+<button class="w-16 h-16 rounded border border-outline-variant hover:border-primary overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1">
+<img alt="Thumbnail 3" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcE_313OTFIwtVlqpB8kaHy6o1j7IgmKXTZ9IYS6523L7SfHx4PbOPhqTWaLevZ_HqSSDALcJ3EC346B6YZfkgDYrGfjT8wQdWEa8KoVZ4WrK_mWgay3RRK658fL9SL1KJf9c5ayMTDzfB_gb3wpa4Em8noNUp8FpXRdktpg10zMSvt1gq-GHTJ2rl8PqNE1BtYVSFGvg9G-uMRU2yN02NY_zeuGfgix35y6v8oCWie_L2XGo3XXEYlaJXCMTFm9CvFFKWqLPeceY"/>
+</button>
+</div>
+<!-- Main Image -->
+<div class="flex-1 bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden aspect-square flex items-center justify-center cursor-crosshair">
+<img alt="Artisan Hand-Hammered Copper Pot" class="w-full h-full object-contain p-4 hover:scale-150 transition-transform duration-300 origin-center" data-alt="A highly detailed close-up shot of an artisan hand-hammered copper cooking pot resting on a dark rustic wooden table. The lighting is warm and directional, highlighting the intricate texture of the hammered metal and the polished brass handles. The background is a softly blurred modern kitchen setting in light tones, creating a high-end commercial e-commerce aesthetic. The overall mood is premium, traditional yet modern, and inviting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxnpNSPEb1ETyM5UtmbiRkQyLZInPHPFMRd34Jtauqmqvjf6dfv9FV0dxXckzDONjjxo9cwNBa7043kETsbiE5n6o0HjSqNLK7T9wkJ6G-4BiGEkxaB-Et9OuCi9BjYhhNreMGGRL4g6sHE2qo26lRwIWjebX2C_TRXZQOxsVrHwJxISEfPFc-XUkyP6lsKu6GCASA1Zn3ckVP_5-TRbp9KBfQHkXCnRAVPWIlM8128Yagb4WaK7dBmZPeQf3sISoM702W3jQh3KU"/>
+</div>
+</div>
+<!-- Center: Product Details (5 columns on lg) -->
+<div class="lg:col-span-5 flex flex-col gap-stack-md">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-background mb-1">Artisan Hand-Hammered Copper Pot with Brass Handles, 4.5 Quart</h1>
+<a class="text-secondary hover:text-primary font-body-md text-body-md underline mb-2 inline-block" href="#">Visit the AfroTransact Artisan Store</a>
+<div class="flex items-center gap-2 mb-4">
+<div aria-label="Rating: 4.8 out of 5 stars" class="flex text-primary-fixed-dim">
+<span class="material-symbols-outlined fill text-[20px]">star</span>
+<span class="material-symbols-outlined fill text-[20px]">star</span>
+<span class="material-symbols-outlined fill text-[20px]">star</span>
+<span class="material-symbols-outlined fill text-[20px]">star</span>
+<span class="material-symbols-outlined text-[20px] relative">stack_star</span>
+</div>
+<a class="text-primary hover:underline font-body-md text-body-md" href="#reviews">1,248 ratings</a>
+<span class="text-outline-variant">|</span>
+<a class="text-primary hover:underline font-body-md text-body-md" href="#">64 answered questions</a>
+</div>
+</div>
+<hr class="border-outline-variant"/>
+<div>
+<div class="flex items-baseline gap-2 mb-1">
+<span class="font-label-sm text-label-sm text-error">-15%</span>
+<span class="font-price-lg text-price-lg text-on-background">$32.00</span>
+</div>
+<div class="font-body-md text-body-md text-on-surface-variant mb-2">
+                        List Price: <span class="line-through">$37.65</span>
+</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant bg-surface-container inline-block px-2 py-1 rounded">
+                        Available at a lower price from other sellers that may not offer free Prime shipping.
+                    </div>
+</div>
+<hr class="border-outline-variant"/>
+<!-- Variations / Selectors -->
+<div class="flex flex-col gap-stack-sm">
+<p class="font-label-sm text-label-sm text-on-background">Size: <span class="font-bold">4.5 Quart</span></p>
+<div class="flex gap-2 flex-wrap">
+<button class="px-4 py-2 border border-primary bg-surface-container-lowest rounded font-body-md text-body-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">4.5 Quart</button>
+<button class="px-4 py-2 border border-outline-variant hover:border-primary bg-surface-container-lowest rounded font-body-md text-body-md text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">6 Quart ($45.00)</button>
+<button class="px-4 py-2 border border-outline-variant hover:border-primary bg-surface-container-lowest rounded font-body-md text-body-md text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">8 Quart ($55.00)</button>
+</div>
+</div>
+<div class="flex flex-col gap-stack-sm mt-2">
+<p class="font-label-sm text-label-sm text-on-background">Color: <span class="font-bold">Classic Copper</span></p>
+<div class="flex gap-2">
+<button class="w-10 h-10 rounded-full border-2 border-primary p-0.5 focus:outline-none">
+<span class="block w-full h-full rounded-full bg-[#b87333]"></span>
+</button>
+<button class="w-10 h-10 rounded-full border border-outline-variant p-0.5 hover:border-primary focus:outline-none">
+<span class="block w-full h-full rounded-full bg-[#71797E]"></span>
+</button>
+</div>
+</div>
+<hr class="border-outline-variant mt-2"/>
+<!-- About this item -->
+<div>
+<h2 class="font-headline-md text-headline-md text-on-background mb-stack-sm">About this item</h2>
+<ul class="list-disc pl-5 font-body-md text-body-md text-on-background space-y-2">
+<li><strong>Superior Heat Conductivity:</strong> Hand-hammered solid copper ensures rapid and even heat distribution, perfect for delicate sauces and precise temperature control.</li>
+<li><strong>Artisan Crafted:</strong> Each pot is individually crafted by skilled artisans, resulting in a unique hammered finish that looks beautiful in any kitchen.</li>
+<li><strong>Durable Tin Lining:</strong> The interior is lined with traditional non-reactive tin to prevent metallic tastes and ensure food safety.</li>
+<li><strong>Ergonomic Brass Handles:</strong> Heavy-duty riveted brass handles provide a secure, comfortable grip while adding a touch of vintage elegance.</li>
+<li><strong>Care Instructions:</strong> Hand wash only. Polish copper exterior regularly to maintain its brilliant shine. Do not use metal utensils on the tin lining.</li>
+</ul>
+</div>
+</div>
+<!-- Right: Buy Box (3 columns on lg) -->
+<div class="lg:col-span-3">
+<div class="border border-outline-variant rounded-xl p-stack-md bg-surface-container-lowest sticky top-stack-md shadow-sm">
+<div class="font-price-lg text-price-lg text-on-background mb-2">$32.00</div>
+<div class="font-body-md text-body-md text-on-surface-variant mb-4">
+                        FREE delivery <span class="font-bold text-on-background">Thursday, Oct 26</span>. Order within <span class="text-secondary">15 hrs 30 mins</span>
+</div>
+<div class="flex items-center gap-2 mb-4 text-primary">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+<a class="font-body-md text-body-md hover:underline" href="#">Deliver to New York 10001</a>
+</div>
+<div class="font-headline-md text-headline-md text-tertiary mb-4">In Stock</div>
+<div class="mb-4">
+<label class="sr-only" for="quantity">Quantity</label>
+<select class="w-full border-outline-variant rounded bg-surface-container-low text-on-background font-body-md text-body-md py-2 px-3 focus:ring-primary focus:border-primary" id="quantity">
+<option value="1">Quantity: 1</option>
+<option value="2">Quantity: 2</option>
+<option value="3">Quantity: 3</option>
+<option value="4">Quantity: 4</option>
+</select>
+</div>
+<div class="flex flex-col gap-2 mb-4">
+<button class="w-full bg-primary-container hover:bg-inverse-primary text-on-primary-container font-headline-md text-headline-md py-3 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm">
+                            Add to Cart
+                        </button>
+<button class="w-full bg-primary-fixed-dim hover:bg-primary-container text-on-primary-fixed font-headline-md text-headline-md py-3 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm border border-primary-fixed-dim">
+<span class="material-symbols-outlined text-[20px]">bolt</span>
+                            Buy Now
+                        </button>
+</div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant mb-2">
+<span class="material-symbols-outlined text-[16px]">lock</span>
+<span>Secure transaction</span>
+</div>
+<div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 font-label-sm text-label-sm text-on-surface-variant mt-4">
+<span class="text-on-surface-variant">Ships from</span>
+<span class="text-on-background">AfroTransact</span>
+<span class="text-on-surface-variant">Sold by</span>
+<span class="text-on-background">Artisan Goods Co.</span>
+<span class="text-on-surface-variant">Returns</span>
+<span class="text-primary hover:underline cursor-pointer">Eligible for Return, Refund or Replacement within 30 days of receipt</span>
+</div>
+<hr class="border-outline-variant my-4"/>
+<button class="w-full border border-outline-variant hover:bg-surface-container py-2 rounded font-body-md text-body-md text-on-background transition-colors">
+                        Add to List
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

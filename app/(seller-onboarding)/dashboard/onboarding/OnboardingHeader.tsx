@@ -19,7 +19,7 @@ export function OnboardingHeader({ userName }: { userName: string }) {
         <Link href="/" className="flex items-center gap-2.5">
           <Image src="/logo.png" alt="AfroTransact" width={28} height={28} className="rounded-lg" />
           <span className="text-sm font-bold text-gray-900">
-            <span className="text-primary">Afro</span>Transact
+            <span className="text-foreground">Afro</span>Transact
           </span>
           <span className="hidden sm:inline-flex items-center gap-1 ml-2 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-500">
             <Store className="h-3 w-3" /> Seller Setup

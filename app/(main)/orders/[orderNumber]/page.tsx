@@ -1,9 +1,30 @@
 "use client"
 
+/**
+ * Order Detail — buyer view.
+ *
+ * Design ported from public/ux-designs/order-details.html with adaptations:
+ *   • Brand tokens (Inter font, brand-gold for primary, gray scales for chrome).
+ *   • Tracking stepper drives off our real order/sub-order fulfillment_status
+ *     (no fake "Arriving today by 8 PM" — we show an honest line based on
+ *     actual status + trackingNumber if present).
+ *   • "Contact Seller" CTA is hidden until messaging ships (backlog #41).
+ *   • Per-item "Write Review" opens the inline review form (existing pattern)
+ *     and submits via createReview. "Buy Again" adds the item to cart.
+ *   • For multi-store orders we render one tracking card per sub-order so
+ *     each shipment is independently visible.
+ *
+ * APIs (unchanged):
+ *   • getOrderByNumber, checkReviewEligibility, createReview
+ *   • useCartStore.addItem for Buy Again
+ */
+
 import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { signIn, useSession } from "next-auth/react"
+import { toast } from "sonner"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   getOrderByNumber,
@@ -14,84 +35,191 @@ import {
   type OrderItemDto,
 } from "@/lib/api"
 import {
-  ArrowLeft, Package, Store, Truck, CheckCircle, Clock, Loader2, XCircle,
-  CreditCard, MapPin, Star, MessageSquare, BadgeCheck,
+  ArrowLeft, Package, Truck, CheckCircle, Clock, Loader2, XCircle,
+  CreditCard, MapPin, Star, BadgeCheck, Home, ShoppingBag, Store,
 } from "lucide-react"
-import { toast } from "sonner"
+import { cn } from "@/lib/utils"
+import { useCartStore } from "@/stores/cart-store"
 import { logError } from "@/lib/errors"
+
+/* ─────────────────────── Helpers ─────────────────────── */
+
+/**
+ * Backend stores the shipping address as a JSON snapshot taken at checkout
+ * (OrderService.resolveShippingAddress):
+ *   {fullName, line1, line2?, city, state, zip, phone?}
+ * Older orders may store the raw string. We try JSON first, fall back to a
+ * single-line render so legacy data still displays.
+ */
+type ShippingSnapshot = {
+  fullName?: string
+  line1?: string
+  line2?: string
+  city?: string
+  state?: string
+  zip?: string
+  phone?: string
+  country?: string
+}
+function parseShippingAddress(raw: string | null | undefined): ShippingSnapshot | null {
+  if (!raw) return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  if (trimmed.startsWith("{")) {
+    try {
+      const obj = JSON.parse(trimmed) as ShippingSnapshot
+      if (obj && (obj.line1 || obj.city)) return obj
+    } catch { /* fall through to plain string */ }
+  }
+  return { line1: trimmed }
+}
+
+/**
+ * Stripe sends `payment_method = "card"` plus a `last4`. Surface that as
+ * "Card ending in 4242" rather than the raw token; fall back to the raw
+ * value (e.g. "stripe", "mobile_money") for non-card providers.
+ */
+function paymentLabel(method: string | null | undefined, last4: string | null | undefined) {
+  if (!method) return null
+  const pretty = method === "card" ? "Card" : method.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  return last4 ? `${pretty} ending in ${last4}` : pretty
+}
 
 function formatCents(cents: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100)
 }
-
-function formatDate(iso: string) {
+function formatDate(iso: string, withTime = false) {
   const d = new Date(iso.endsWith("Z") ? iso : iso + "Z")
-  return d.toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" })
+  return d.toLocaleString("en-US", {
+    year: "numeric", month: "long", day: "numeric",
+    ...(withTime ? { hour: "numeric", minute: "2-digit" } : {}),
+  })
+}
+function formatShort(iso: string) {
+  const d = new Date(iso.endsWith("Z") ? iso : iso + "Z")
+  return d.toLocaleString("en-US", { month: "short", day: "numeric" })
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
-  pending:    { label: "Pending",    color: "text-yellow-400", bg: "bg-yellow-500/15", icon: Clock },
-  paid:       { label: "Paid",       color: "text-blue-400",   bg: "bg-blue-500/15",   icon: CreditCard },
-  processing: { label: "Processing", color: "text-blue-400",   bg: "bg-blue-500/15",   icon: Package },
-  shipped:    { label: "Shipped",    color: "text-purple-400", bg: "bg-purple-500/15", icon: Truck },
-  delivered:  { label: "Delivered",  color: "text-green-400",  bg: "bg-green-500/15",  icon: CheckCircle },
-  cancelled:  { label: "Cancelled",  color: "text-red-400",    bg: "bg-red-500/15",    icon: XCircle },
+/* ─────────────────────── Fulfillment stepper ─────────────────────── */
+
+type StepKey = "placed" | "shipped" | "out_for_delivery" | "delivered"
+const STEP_ORDER: StepKey[] = ["placed", "shipped", "out_for_delivery", "delivered"]
+const STEP_LABEL: Record<StepKey, string> = {
+  placed: "Order Placed",
+  shipped: "Shipped",
+  out_for_delivery: "Out for Delivery",
+  delivered: "Delivered",
+}
+const STEP_ICON: Record<StepKey, typeof Package> = {
+  placed: CheckCircle,
+  shipped: Truck,
+  out_for_delivery: Package,
+  delivered: Home,
 }
 
-const FULFILLMENT_STEPS = ["pending", "processing", "shipped", "delivered"]
+function statusToStepIndex(status: string): number {
+  const s = status.toLowerCase()
+  if (s === "delivered" || s === "completed") return 3
+  if (s === "out_for_delivery") return 2
+  if (s === "shipped" || s === "dispatched") return 1
+  if (s === "cancelled" || s === "refunded") return -1
+  return 0
+}
 
-function FulfillmentTracker({ status }: { status: string }) {
-  const idx = FULFILLMENT_STEPS.indexOf(status)
+function statusHeadline(status: string, trackingNumber: string | null | undefined) {
+  const s = status.toLowerCase()
+  if (s === "delivered" || s === "completed") return "Delivered"
+  if (s === "out_for_delivery") return "Out for delivery today"
+  if (s === "shipped" || s === "dispatched") return trackingNumber ? "On the way" : "Shipped"
+  if (s === "cancelled") return "Cancelled"
+  if (s === "refunded") return "Refunded"
+  if (s === "payment_failed") return "Payment failed — please retry"
+  // Pending / awaiting_payment statuses commonly occur in local dev where
+  // the Stripe webhook isn't wired up — surfacing "Awaiting payment
+  // confirmation" then is misleading because checkout did succeed; only the
+  // status flip via the webhook is missing. Fall through to the same label
+  // the order-placed step uses on the stepper.
+  if (s === "awaiting_payment" || s === "pending") return "Order placed"
+  return "Preparing your order"
+}
+
+function FulfillmentStepper({
+  status,
+  placedAt,
+}: {
+  status: string
+  placedAt: string
+}) {
+  const activeIdx = statusToStepIndex(status)
+  const isCancelled = activeIdx === -1
   return (
-    <div className="flex items-center gap-0">
-      {FULFILLMENT_STEPS.map((step, i) => {
-        const done = i <= idx
-        const active = i === idx
-        return (
-          <div key={step} className="flex items-center flex-1 last:flex-none">
-            <div className="flex flex-col items-center gap-1">
-              <div
-                className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                  done ? "bg-primary" : "bg-gray-200"
-                } ${active ? "ring-2 ring-primary/40" : ""}`}
-              />
-              <span className={`text-[10px] capitalize ${done ? "text-primary" : "text-gray-500"}`}>
-                {step}
+    <div className="relative w-full">
+      {/* connecting line */}
+      <div className="absolute top-5 left-5 right-5 h-1 bg-gray-200 z-0 -translate-y-1/2" />
+      {!isCancelled && activeIdx > 0 && (
+        <div
+          className="absolute top-5 left-5 h-1 bg-brand-gold z-0 -translate-y-1/2"
+          style={{ width: `calc(${(activeIdx / (STEP_ORDER.length - 1)) * 100}% - 1.25rem)` }}
+        />
+      )}
+      <div className="relative z-10 flex justify-between w-full">
+        {STEP_ORDER.map((step, i) => {
+          const Icon = STEP_ICON[step]
+          const done = !isCancelled && i <= activeIdx
+          const active = !isCancelled && i === activeIdx
+          const dateText = i === 0
+            ? formatShort(placedAt)
+            : done ? "Completed" : "Pending"
+          return (
+            <div key={step} className="flex flex-col items-center flex-1 min-w-0">
+              <div className={cn(
+                "h-10 w-10 rounded-full flex items-center justify-center transition-colors",
+                done
+                  ? "bg-brand-gold text-brand-gold-foreground"
+                  : "bg-gray-100 text-gray-400 border border-gray-200",
+                active && "ring-4 ring-brand-gold/25",
+              )}>
+                <Icon className="h-5 w-5" strokeWidth={2} />
+              </div>
+              <span className={cn(
+                "mt-3 text-xs text-center px-1 leading-tight",
+                done ? "text-foreground font-semibold" : "text-gray-500",
+              )}>
+                {STEP_LABEL[step]}
               </span>
+              <span className="mt-1 text-[10px] text-gray-500 text-center">{dateText}</span>
             </div>
-            {i < FULFILLMENT_STEPS.length - 1 && (
-              <div className={`flex-1 h-px mb-3 mx-1 transition-colors ${i < idx ? "bg-primary" : "bg-gray-100"}`} />
-            )}
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
+      {isCancelled && (
+        <p className="mt-4 text-sm text-red-600 text-center">
+          This order was {status.toLowerCase()}.
+        </p>
+      )}
     </div>
   )
 }
 
+/* ─────────────────────── Inline review form ─────────────────────── */
+
 function InteractiveStars({
-  rating,
-  size = 20,
-  onSelect,
-}: {
-  rating: number
-  size?: number
-  onSelect: (r: number) => void
-}) {
+  rating, size = 22, onSelect,
+}: { rating: number; size?: number; onSelect: (r: number) => void }) {
   const [hover, setHover] = useState(0)
   return (
-    <span className="inline-flex gap-1">
+    <span className="inline-flex gap-1" onMouseLeave={() => setHover(0)}>
       {[1, 2, 3, 4, 5].map((i) => {
         const filled = i <= (hover || rating)
         return (
           <Star
             key={i}
             size={size}
-            className={`cursor-pointer transition-all duration-150 ${
-              filled ? "text-yellow-400 fill-yellow-400 scale-110" : "text-gray-600 hover:text-yellow-400/50"
-            }`}
+            className={cn(
+              "cursor-pointer transition-colors",
+              filled ? "fill-brand-gold text-brand-gold" : "fill-gray-200 text-gray-200",
+            )}
             onMouseEnter={() => setHover(i)}
-            onMouseLeave={() => setHover(0)}
             onClick={() => onSelect(i)}
           />
         )
@@ -101,29 +229,24 @@ function InteractiveStars({
 }
 
 function InlineReviewForm({
-  productId,
-  productTitle,
-  onReviewed,
+  productId, productTitle, onReviewed, onCancel,
 }: {
   productId: string
   productTitle: string
   onReviewed: () => void
+  onCancel: () => void
 }) {
   const [rating, setRating] = useState(0)
   const [title, setTitle] = useState("")
   const [body, setBody] = useState("")
   const [submitting, setSubmitting] = useState(false)
-  const [expanded, setExpanded] = useState(false)
 
   async function handleSubmit() {
-    if (rating === 0) {
-      toast.error("Please select a star rating")
-      return
-    }
+    if (rating === 0) { toast.error("Please select a star rating"); return }
     setSubmitting(true)
     try {
       const token = await getAccessToken()
-      if (!token) return
+      if (!token) { toast.error("Session expired — please sign in again"); return }
       await createReview(token, {
         product_id: productId,
         rating,
@@ -137,6 +260,8 @@ function InlineReviewForm({
       if (msg.includes("409") || msg.includes("already")) {
         toast.error("You've already reviewed this product")
         onReviewed()
+      } else if (msg.includes("403") || msg.includes("purchased")) {
+        toast.error("You can only review products you've purchased")
       } else {
         toast.error("Could not submit review")
       }
@@ -145,82 +270,72 @@ function InlineReviewForm({
     }
   }
 
-  if (!expanded) {
-    return (
-      <div className="mt-3 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
-        <p className="text-xs text-yellow-700/80 mb-2">How was this product?</p>
-        <InteractiveStars
-          rating={rating}
-          size={24}
-          onSelect={(r) => {
-            setRating(r)
-            setExpanded(true)
-          }}
-        />
-      </div>
-    )
-  }
-
   return (
-    <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+    <div className="mt-3 rounded-xl border border-brand-gold/30 bg-brand-gold/5 p-4 space-y-3">
       <div>
-        <p className="text-xs text-primary/80 mb-1.5">
-          Rating <span className="font-medium text-gray-900">{productTitle}</span>
+        <p className="text-xs text-gray-600 mb-1.5">
+          Rate <span className="font-semibold text-foreground">{productTitle}</span>
         </p>
-        <InteractiveStars rating={rating} size={24} onSelect={setRating} />
+        <InteractiveStars rating={rating} onSelect={setRating} />
       </div>
       <input
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         maxLength={120}
-        placeholder="Add a headline (optional)"
-        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/40"
+        placeholder="Headline (optional)"
+        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
       />
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
         rows={3}
         maxLength={2000}
-        placeholder="Tell others what you think… (optional)"
-        className="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/40"
+        placeholder="What did you like or dislike? (optional)"
+        className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
       />
       <div className="flex items-center gap-2 justify-end">
         <button
-          onClick={() => { setExpanded(false); setRating(0) }}
-          className="rounded-lg px-3 py-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors"
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-foreground transition-colors"
         >
           Cancel
         </button>
         <button
+          type="button"
           onClick={handleSubmit}
           disabled={submitting || rating === 0}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-gold px-4 py-1.5 text-xs font-bold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-50 transition-colors"
         >
           {submitting && <Loader2 className="h-3 w-3 animate-spin" />}
-          Submit Review
+          Submit review
         </button>
       </div>
     </div>
   )
 }
 
-function OrderItemRow({
-  item,
-  showReview,
-  onReviewed,
+/* ─────────────────────── Items section ─────────────────────── */
+
+function OrderItem({
+  item, sub, isDelivered,
 }: {
   item: OrderItemDto
-  showReview: boolean
-  onReviewed?: (productId: string) => void
+  sub: SubOrderDto
+  isDelivered: boolean
 }) {
+  const router = useRouter()
+  const addItem = useCartStore((s) => s.addItem)
+  const [adding, setAdding] = useState(false)
+  const [showForm, setShowForm] = useState(false)
   const [eligibility, setEligibility] = useState<{
     eligible: boolean; purchased: boolean; already_reviewed: boolean
   } | null>(null)
   const [reviewed, setReviewed] = useState(false)
 
   useEffect(() => {
-    if (!showReview || !item.productId) return
+    if (!isDelivered || !item.productId) return
     let cancelled = false
     ;(async () => {
       try {
@@ -228,131 +343,178 @@ function OrderItemRow({
         if (!token || cancelled) return
         const res = await checkReviewEligibility(token, item.productId!)
         if (!cancelled) setEligibility(res)
-      } catch { /* ignore */ }
+      } catch { /* swallow */ }
     })()
     return () => { cancelled = true }
-  }, [showReview, item.productId])
+  }, [isDelivered, item.productId])
 
-  const canReview = showReview && eligibility?.eligible === true && !reviewed
+  const canReview = isDelivered && eligibility?.eligible === true && !reviewed
   const alreadyReviewed = eligibility?.already_reviewed === true || reviewed
 
+  function handleBuyAgain() {
+    if (!item.productId || adding) return
+    setAdding(true)
+    try {
+      addItem({
+        productId: item.productId,
+        variantId: item.variantId,
+        storeId: sub.storeId,
+        storeName: sub.storeId,
+        title: item.productTitle || "Product",
+        variantName: item.variantName || "Default",
+        price: item.unitPriceCents,
+        quantity: item.quantity,
+        imageUrl: item.imageUrl ?? undefined,
+        slug: item.slug ?? item.productId,
+        weightKg: null, lengthIn: null, widthIn: null, heightIn: null,
+      })
+      toast.success(`Added "${item.productTitle ?? "item"}" to your cart`)
+      router.push("/cart")
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const eachLabel = item.quantity > 1
+    ? <span className="text-sm font-normal text-gray-500"> ({formatCents(item.unitPriceCents)} ea)</span>
+    : null
+
   return (
-    <div className="px-5 py-4">
-      <div className="flex items-center gap-4">
-        <div className="h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-gray-50 border border-gray-200 flex items-center justify-center">
-          {item.imageUrl ? (
-            <Image src={item.imageUrl} alt={item.productTitle || "Product"} width={64} height={64} className="h-full w-full object-cover" />
-          ) : (
-            <Package className="h-6 w-6 text-gray-600" />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <Link href={`/product/${item.slug || item.productId}`} className="text-sm font-medium text-gray-900 hover:text-primary transition-colors line-clamp-1">
+    <div className="flex flex-col sm:flex-row gap-4 border-b border-gray-100 pb-6 last:border-0 last:pb-0">
+      <div className="w-full sm:w-28 h-28 bg-gray-100 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200">
+        {item.imageUrl ? (
+          <Image
+            src={item.imageUrl}
+            alt={item.productTitle || "Product"}
+            width={112}
+            height={112}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center">
+            <Package className="h-7 w-7 text-gray-400" />
+          </div>
+        )}
+      </div>
+      <div className="flex-1 flex flex-col justify-between min-w-0">
+        <div className="min-w-0">
+          <Link
+            href={`/product/${item.slug || item.productId}`}
+            className="text-sm font-bold text-foreground hover:text-brand-gold-hover transition-colors line-clamp-2"
+          >
             {item.productTitle || "Product"}
           </Link>
-          {item.variantName && item.variantName.toLowerCase() !== 'default' && <p className="text-xs text-gray-500 mt-0.5">{item.variantName}</p>}
-          <p className="text-xs text-gray-500 mt-1">
-            Qty: {item.quantity} &middot; {formatCents(item.unitPriceCents)} each
-          </p>
-        </div>
-        <div className="text-right shrink-0 ml-4">
-          <p className="text-sm font-semibold text-gray-900">
+          {item.variantName && item.variantName.toLowerCase() !== "default" && (
+            <p className="text-xs text-gray-500 mt-1">{item.variantName}</p>
+          )}
+          <p className="text-xs text-gray-500 mt-1">Qty: {item.quantity}</p>
+          <p className="text-lg font-bold text-foreground mt-1.5">
             {formatCents(item.totalPriceCents)}
+            {eachLabel}
           </p>
           {alreadyReviewed && (
-            <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-emerald-400">
-              <BadgeCheck className="h-3 w-3" /> Reviewed
+            <span className="inline-flex items-center gap-1 mt-2 text-xs text-green-600 font-medium">
+              <BadgeCheck className="h-3.5 w-3.5" /> Reviewed
             </span>
           )}
         </div>
-      </div>
 
-      {canReview && item.productId && (
-        <InlineReviewForm
-          productId={item.productId}
-          productTitle={item.productTitle || "this product"}
-          onReviewed={() => {
-            setReviewed(true)
-            onReviewed?.(item.productId!)
-          }}
-        />
-      )}
+        <div className="flex flex-wrap gap-2 mt-3">
+          {item.productId && (
+            <button
+              type="button"
+              onClick={handleBuyAgain}
+              disabled={adding}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-200 text-foreground bg-white hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-60"
+            >
+              {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingBag className="h-3 w-3" />}
+              Buy Again
+            </button>
+          )}
+          {canReview && !showForm && (
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-gold-foreground hover:bg-brand-gold/10 rounded-lg transition-colors"
+            >
+              <Star className="h-3 w-3" />
+              Write Review
+            </button>
+          )}
+        </div>
+
+        {canReview && showForm && item.productId && (
+          <InlineReviewForm
+            productId={item.productId}
+            productTitle={item.productTitle || "this product"}
+            onReviewed={() => { setReviewed(true); setShowForm(false) }}
+            onCancel={() => setShowForm(false)}
+          />
+        )}
+      </div>
     </div>
   )
 }
 
-function SubOrderCard({ sub, isDelivered }: { sub: SubOrderDto; isDelivered: boolean }) {
-  const [_reviewedProducts, setReviewedProducts] = useState<Set<string>>(new Set())
-  const subDiscount = sub.discountCents ?? 0
+/* ─────────────────────── Sub-order section ─────────────────────── */
+
+function SubOrderBlock({
+  sub, placedAt, single,
+}: {
+  sub: SubOrderDto
+  placedAt: string
+  single: boolean
+}) {
+  const isDelivered = sub.fulfillmentStatus === "delivered" || sub.fulfillmentStatus === "completed"
+  const headline = statusHeadline(sub.fulfillmentStatus, sub.trackingNumber)
 
   return (
-    <section className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
-      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-          <Store className="h-4 w-4 text-primary" />
-          Store
-        </div>
-        <span className={`text-xs font-semibold capitalize ${
-          sub.fulfillmentStatus === "delivered" ? "text-green-400"
-          : sub.fulfillmentStatus === "shipped" ? "text-purple-400"
-          : "text-yellow-400"
-        }`}>
-          {sub.fulfillmentStatus}
-        </span>
-      </div>
-
-      <div className="px-5 py-3">
-        <FulfillmentTracker status={sub.fulfillmentStatus} />
-      </div>
-
-      {sub.trackingNumber && (
-          <div className="flex items-center justify-between px-5 py-2.5 mx-4 mb-3 rounded-xl bg-gray-50 border border-gray-200">
+    <div className="space-y-6">
+      <section className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-start justify-between gap-3 mb-2">
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-gray-500">Tracking</p>
-            <p className="text-sm text-gray-900 font-mono font-medium">{sub.trackingNumber}</p>
+            <h2 className="text-lg font-bold text-foreground">
+              {single ? "Delivery Status" : "Shipment"}
+            </h2>
+            {!single && (
+              <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                <Store className="h-3 w-3" /> Store {sub.storeId.slice(0, 8)}
+              </p>
+            )}
           </div>
         </div>
-      )}
-
-      {isDelivered && (
-        <div className="mx-4 mb-3 rounded-xl bg-gradient-to-r from-yellow-500/10 via-orange-500/5 to-transparent border border-yellow-500/15 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-500/15">
-              <MessageSquare className="h-4 w-4 text-yellow-400" />
-            </div>
+        <p className="text-lg font-bold text-foreground mb-6">{headline}</p>
+        <FulfillmentStepper status={sub.fulfillmentStatus} placedAt={placedAt} />
+        {sub.trackingNumber && (
+          <div className="mt-6 flex items-center justify-between rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-gray-900">How was everything?</p>
-              <p className="text-xs text-gray-500">Share your experience — it helps other shoppers</p>
+              <p className="text-[10px] uppercase tracking-wider text-gray-500">Tracking number</p>
+              <p className="text-sm font-mono font-semibold text-foreground mt-0.5">
+                {sub.trackingNumber}
+              </p>
             </div>
+            {sub.shippingCarrier && (
+              <span className="text-xs text-gray-500">{sub.shippingCarrier}</span>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </section>
 
-      <div className="divide-y divide-gray-100">
-        {sub.items.map((item) => (
-          <OrderItemRow
-            key={item.id}
-            item={item}
-            showReview={isDelivered}
-            onReviewed={(pid) => setReviewedProducts((prev) => new Set(prev).add(pid))}
-          />
-        ))}
-      </div>
-
-      <div className="border-t border-gray-200 px-5 py-3 flex justify-between text-sm bg-gray-50">
-        <div className="text-gray-500">Subtotal</div>
-        <div className="text-right">
-          <span className="text-gray-900 font-medium">{formatCents(sub.subtotalCents)}</span>
-          {subDiscount > 0 && (
-            <p className="text-[11px] text-green-600">
-              −{formatCents(subDiscount)} {sub.couponCode ? `(${sub.couponCode})` : "coupon"}
-            </p>
-          )}
+      <section className="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 className="text-lg font-bold text-foreground mb-6">
+          Items {single ? "in Order" : "in this Shipment"}
+        </h2>
+        <div className="flex flex-col gap-6">
+          {sub.items.map((item) => (
+            <OrderItem key={item.id} item={item} sub={sub} isDelivered={isDelivered} />
+          ))}
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   )
 }
+
+/* ─────────────────────── Page ─────────────────────── */
 
 export default function OrderDetailPage({ params }: { params: Promise<{ orderNumber: string }> }) {
   const { orderNumber } = use(params)
@@ -368,7 +530,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
       return
     }
     let cancelled = false
-    async function load() {
+    ;(async () => {
       try {
         const token = await getAccessToken()
         if (!token || cancelled) return
@@ -380,27 +542,26 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
       } finally {
         if (!cancelled) setLoading(false)
       }
-    }
-    load()
+    })()
     return () => { cancelled = true }
   }, [sessionStatus, orderNumber])
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-[800px] px-4 sm:px-6 py-20 flex flex-col items-center gap-3">
-        <Loader2 className="h-7 w-7 animate-spin text-primary" />
-        <span className="text-sm text-gray-500">Loading order...</span>
+      <main className="mx-auto max-w-[1280px] px-4 sm:px-6 py-20 flex flex-col items-center gap-3">
+        <Loader2 className="h-7 w-7 animate-spin text-foreground" />
+        <span className="text-sm text-gray-500">Loading order…</span>
       </main>
     )
   }
 
   if (error || !order) {
     return (
-      <main className="mx-auto max-w-[800px] px-4 sm:px-6 py-12">
-        <div className="rounded-2xl border border-red-500/20 bg-white p-8 text-center">
-          <XCircle className="mx-auto h-10 w-10 text-red-600" />
-          <p className="mt-3 text-sm text-red-500">{error || "Order not found"}</p>
-          <Link href="/orders" className="inline-block mt-4 rounded-lg bg-gray-100 px-4 py-2 text-xs font-medium text-gray-900 hover:bg-gray-200 transition-colors">
+      <main className="mx-auto max-w-[1280px] px-4 sm:px-6 py-12">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
+          <XCircle className="mx-auto h-10 w-10 text-red-500" />
+          <p className="mt-3 text-sm text-red-700">{error || "Order not found"}</p>
+          <Link href="/orders" className="inline-block mt-4 rounded-lg bg-white border border-red-200 px-4 py-2 text-xs font-medium text-foreground hover:bg-red-50 transition-colors">
             Back to orders
           </Link>
         </div>
@@ -408,97 +569,147 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
     )
   }
 
-  const cfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending
-  const StatusIcon = cfg.icon
+  const placedAt = order.placedAt || order.createdAt
+  const single = order.subOrders.length === 1
+  const overallStatus = order.status
   const allItems = order.subOrders.flatMap((so) => so.items)
   const totalItems = allItems.reduce((sum, i) => sum + i.quantity, 0)
-  const _hasDeliveredSubOrder = order.subOrders.some(
-    (so) => so.fulfillmentStatus === "delivered" || so.fulfillmentStatus === "completed"
-  )
   const orderDiscount = order.discountCents ?? 0
+  const isShipped = ["shipped", "dispatched", "out_for_delivery"].includes(overallStatus.toLowerCase())
+  const trackingHref = `/orders/${order.orderNumber}#tracking`
 
   return (
-    <main className="mx-auto max-w-[800px] px-4 sm:px-6 py-8">
-      <Link href="/orders" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-6">
-        <ArrowLeft className="h-4 w-4" /> Back to Orders
-      </Link>
+    <div className="min-h-screen bg-gray-50">
+      {/* Compact top bar — mockup lines 108-118. Pure back/title; no share
+          button since the order is private. */}
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+        <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+          <Link
+            href="/orders"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Orders
+          </Link>
+          <h1 className="text-base font-bold text-foreground">Order Details</h1>
+          <span className="w-20" />
+        </div>
+      </header>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 mb-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <main className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 py-8">
+        {/* Order header */}
+        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <p className="text-xs text-gray-500 font-mono uppercase tracking-wider">Order #{order.orderNumber}</p>
-            <p className="text-gray-900 font-bold text-2xl mt-1">{formatCents(order.totalCents, order.currency)}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Placed on {formatDate(order.placedAt || order.createdAt)}
+            <p className="text-sm text-gray-500 mb-1">
+              Order <span className="font-mono text-foreground font-semibold">#{order.orderNumber}</span>
             </p>
+            <p className="text-xs text-gray-500">Placed on {formatDate(placedAt)}</p>
           </div>
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${cfg.bg} ${cfg.color}`}>
-            <StatusIcon className="h-3.5 w-3.5" />
-            {cfg.label}
-          </span>
-        </div>
-
-        <div className="mt-5 pt-4 border-t border-gray-200">
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Subtotal ({totalItems} item{totalItems !== 1 ? "s" : ""})</span>
-              <span className="text-gray-900">{formatCents(order.subtotalCents, order.currency)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Shipping</span>
-              <span className="text-gray-900">{formatCents(order.shippingCostCents, order.currency)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Tax</span>
-              <span className="text-gray-900">{formatCents(order.taxCents, order.currency)}</span>
-            </div>
-            {orderDiscount > 0 && (
-              <div className="flex justify-between">
-                <span className="text-green-600">
-                  Discount{order.couponCode ? ` (${order.couponCode})` : ""}
-                </span>
-                <span className="text-green-600">−{formatCents(orderDiscount, order.currency)}</span>
-              </div>
+          <div className="flex gap-2">
+            {isShipped && (
+              <a
+                href={trackingHref}
+                className="px-4 py-2 bg-brand-gold text-brand-gold-foreground text-xs font-bold rounded-lg hover:bg-brand-gold-hover transition-colors"
+              >
+                Track Package
+              </a>
             )}
-            <div className="flex justify-between pt-2 border-t border-gray-200">
-              <span className="text-gray-900 font-semibold">Total</span>
-              <span className="text-gray-900 font-bold">{formatCents(order.totalCents, order.currency)}</span>
-            </div>
           </div>
         </div>
 
-        {order.paymentMethod && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              <CreditCard className="h-3.5 w-3.5" />
-              <span className="uppercase tracking-wider">Payment Method</span>
-            </div>
-            <p className="text-sm text-gray-600">
-              {order.paymentMethod}{order.last4 ? ` ending in ${order.last4}` : ""}
-            </p>
+        {/* Two-column layout */}
+        <div id="tracking" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left: tracking + items per shipment */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            {order.subOrders.map((sub) => (
+              <SubOrderBlock key={sub.id} sub={sub} placedAt={placedAt} single={single} />
+            ))}
           </div>
-        )}
 
-        {order.shippingAddress && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              <MapPin className="h-3.5 w-3.5" />
-              <span className="uppercase tracking-wider">Shipping Address</span>
-            </div>
-            <p className="text-sm text-gray-600">{order.shippingAddress}</p>
-          </div>
-        )}
-      </div>
+          {/* Right: order summary + shipping + payment */}
+          <aside className="lg:col-span-4 flex flex-col gap-6 lg:sticky lg:top-20">
+            <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-foreground mb-4">Order Summary</h2>
+              <div className="space-y-3 mb-4 pb-4 border-b border-gray-200 text-sm">
+                <div className="flex justify-between text-foreground">
+                  <span>Item{totalItems === 1 ? "" : "s"} subtotal ({totalItems}):</span>
+                  <span>{formatCents(order.subtotalCents, order.currency)}</span>
+                </div>
+                <div className="flex justify-between text-foreground">
+                  <span>Shipping &amp; handling:</span>
+                  <span>{formatCents(order.shippingCostCents, order.currency)}</span>
+                </div>
+                {orderDiscount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>{order.couponCode ? `Coupon (${order.couponCode})` : "Discount"}:</span>
+                    <span>−{formatCents(orderDiscount, order.currency)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-foreground">
+                  <span>Estimated tax:</span>
+                  <span>{formatCents(order.taxCents, order.currency)}</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-base font-bold text-foreground">Grand total:</span>
+                <span className="text-2xl font-bold text-foreground">
+                  {formatCents(order.totalCents, order.currency)}
+                </span>
+              </div>
+            </section>
 
-      <div className="space-y-4">
-        {order.subOrders.map((sub) => (
-          <SubOrderCard
-            key={sub.id}
-            sub={sub}
-            isDelivered={sub.fulfillmentStatus === "delivered" || sub.fulfillmentStatus === "completed"}
-          />
-        ))}
-      </div>
-    </main>
+            {(() => {
+              const ship = parseShippingAddress(order.shippingAddress)
+              const pay = paymentLabel(order.paymentMethod, order.last4)
+              if (!ship && !pay) return null
+              return (
+                <section className="bg-white rounded-xl border border-gray-200 p-6">
+                  <>
+                    {ship && (
+                      <div className={pay ? "mb-5" : ""}>
+                        <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-3">
+                          <MapPin className="h-4 w-4 text-gray-500" />
+                          Shipping address
+                        </h3>
+                        <div className="pl-6 text-sm text-gray-600 leading-relaxed">
+                          {ship.fullName && (
+                            <p className="text-foreground font-semibold">{ship.fullName}</p>
+                          )}
+                          {ship.line1 && (
+                            <p>{ship.line1}{ship.line2 ? `, ${ship.line2}` : ""}</p>
+                          )}
+                          {(ship.city || ship.state || ship.zip) && (
+                            <p>
+                              {[ship.city, ship.state].filter(Boolean).join(", ")}{ship.zip ? ` ${ship.zip}` : ""}
+                            </p>
+                          )}
+                          {ship.country && <p>{ship.country}</p>}
+                          {ship.phone && (
+                            <p className="text-xs text-gray-500 mt-2">{ship.phone}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {pay && (
+                      <div className={ship ? "pt-5 border-t border-gray-200" : ""}>
+                        <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-3">
+                          <CreditCard className="h-4 w-4 text-gray-500" />
+                          Payment method
+                        </h3>
+                        <div className="pl-6 text-sm text-gray-600 flex items-center gap-3">
+                          <div className="h-6 w-10 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+                            <CreditCard className="h-3 w-3 text-gray-500" />
+                          </div>
+                          <p>{pay}</p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                </section>
+              )
+            })()}
+          </aside>
+        </div>
+      </main>
+    </div>
   )
 }

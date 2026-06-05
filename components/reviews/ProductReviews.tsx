@@ -48,7 +48,7 @@ function Stars({
             key={i}
             size={size}
             className={`transition-colors ${
-              filled ? "text-yellow-400 fill-yellow-400" : "text-gray-600"
+              filled ? "text-brand-gold fill-brand-gold" : "text-gray-200 fill-gray-200"
             } ${interactive ? "cursor-pointer" : ""}`}
             onMouseEnter={interactive ? () => setHover(i) : undefined}
             onMouseLeave={interactive ? () => setHover(0) : undefined}
@@ -85,7 +85,7 @@ export default function ProductReviews({ productId }: Props) {
   const [eligibility, setEligibility] = useState<{ eligible: boolean; purchased: boolean; already_reviewed: boolean } | null>(null)
   const [eligibilityChecked, setEligibilityChecked] = useState(false)
 
-  const pageSize = 10
+  const pageSize = 20
 
   const fetchReviews = useCallback(
     async (p: number) => {
@@ -147,9 +147,9 @@ export default function ProductReviews({ productId }: Props) {
       {authStatus === "authenticated" && eligibilityChecked && canReview && !showForm && (
         <button
           onClick={() => setShowForm(true)}
-          className="w-full rounded-xl border border-primary/20 bg-primary/5 px-5 py-3.5 flex items-center gap-3 hover:bg-primary/10 transition-colors text-left"
+          className="w-full rounded-xl border border-primary/20 bg-brand-gold/5 px-5 py-3.5 flex items-center gap-3 hover:bg-brand-gold/10 transition-colors text-left"
         >
-          <Star size={18} className="text-primary shrink-0" />
+          <Star size={18} className="text-foreground shrink-0" />
           <span className="text-sm font-medium text-gray-900">Write a review for this product</span>
         </button>
       )}
@@ -187,31 +187,78 @@ export default function ProductReviews({ productId }: Props) {
             </div>
           )}
 
-          {/* ── pagination ── */}
+          {/* ── pagination — windowed for thousands of reviews ── */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3 pt-2">
+            <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-900 transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-30"
+                aria-label="Previous page"
+                className="h-9 w-9 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft size={16} /> Prev
+                <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-sm text-gray-500">
-                Page {page} of {totalPages}
-              </span>
+              {(() => {
+                // 5-page sliding window; always show first + last for
+                // long lists so the user has a "jump" target.
+                const win = 5
+                let start = Math.max(1, page - Math.floor(win / 2))
+                const end = Math.min(totalPages, start + win - 1)
+                if (end - start + 1 < win) start = Math.max(1, end - win + 1)
+                const pages: number[] = []
+                for (let i = start; i <= end; i++) pages.push(i)
+                return (
+                  <>
+                    {start > 1 && (
+                      <>
+                        <PageBtn n={1} active={false} onClick={() => setPage(1)} />
+                        {start > 2 && <span className="px-1 text-xs text-gray-400">…</span>}
+                      </>
+                    )}
+                    {pages.map((n) => (
+                      <PageBtn key={n} n={n} active={n === page} onClick={() => setPage(n)} />
+                    ))}
+                    {end < totalPages && (
+                      <>
+                        {end < totalPages - 1 && <span className="px-1 text-xs text-gray-400">…</span>}
+                        <PageBtn n={totalPages} active={false} onClick={() => setPage(totalPages)} />
+                      </>
+                    )}
+                  </>
+                )
+              })()}
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-900 transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-30"
+                aria-label="Next page"
+                className="h-9 w-9 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                Next <ChevronRight size={16} />
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           )}
         </>
       ) : null}
     </section>
+  )
+}
+
+function PageBtn({
+  n, active, onClick,
+}: { n: number; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        "h-9 min-w-9 px-2 rounded-lg text-sm font-semibold transition-colors " +
+        (active
+          ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
+          : "border border-gray-200 bg-white text-foreground hover:border-brand-gold hover:bg-gray-50")
+      }
+    >
+      {n}
+    </button>
   )
 }
 
@@ -248,7 +295,7 @@ function ReviewSummary({ data }: { data: ProductReviewsResponse }) {
               </span>
               <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-gray-100">
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-yellow-400 transition-all"
+                  className="absolute inset-y-0 left-0 rounded-full bg-brand-gold transition-all"
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -389,7 +436,7 @@ function ReviewForm({
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-2.5 text-sm font-medium text-brand-gold-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {submitting && <Loader2 size={16} className="animate-spin" />}
           Submit Review

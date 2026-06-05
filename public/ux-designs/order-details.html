@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Order Details - AfroTransact</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-highest": "#e2e2e2",
+                        "primary": "#785900",
+                        "surface": "#f9f9f9",
+                        "primary-fixed": "#ffdf9e",
+                        "on-tertiary-fixed": "#101c2b",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#2f3131",
+                        "primary-fixed-dim": "#fabd00",
+                        "inverse-on-surface": "#f1f1f1",
+                        "on-primary": "#ffffff",
+                        "surface-container-high": "#e8e8e8",
+                        "on-secondary-container": "#5d636d",
+                        "surface-bright": "#f9f9f9",
+                        "outline": "#827660",
+                        "tertiary-container": "#bfccdf",
+                        "on-secondary-fixed-variant": "#414750",
+                        "surface-tint": "#785900",
+                        "background": "#f9f9f9",
+                        "surface-variant": "#e2e2e2",
+                        "surface-container-low": "#f3f3f3",
+                        "secondary": "#595f68",
+                        "outline-variant": "#d4c5ab",
+                        "primary-container": "#ffc107",
+                        "tertiary-fixed": "#d7e3f7",
+                        "on-surface-variant": "#4f4632",
+                        "on-surface": "#1a1c1c",
+                        "on-primary-fixed-variant": "#5b4300",
+                        "tertiary-fixed-dim": "#bbc7db",
+                        "on-primary-fixed": "#261a00",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#c1c7d2",
+                        "on-primary-container": "#6d5100",
+                        "on-background": "#1a1c1c",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#dae0eb",
+                        "inverse-primary": "#fabd00",
+                        "surface-container": "#eeeeee",
+                        "on-tertiary-container": "#4a5667",
+                        "on-secondary-fixed": "#161c24",
+                        "on-secondary": "#ffffff",
+                        "surface-dim": "#dadada",
+                        "secondary-fixed": "#dde3ee",
+                        "tertiary": "#535f70",
+                        "on-tertiary-fixed-variant": "#3c4858",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "1.25rem",
+                        "section-gap": "2.5rem",
+                        "stack-sm": "0.5rem",
+                        "margin-mobile": "1rem",
+                        "stack-md": "1rem",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "price-lg": ["Inter"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "price-lg": ["24px", { "lineHeight": "24px", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline-lg, .font-headline-md, .font-headline-lg-mobile { font-family: 'Hanken Grotesk', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen antialiased">
+<!-- TopAppBar Semantic Shell Override Context: Hide Bottom Nav, Use Top Nav for Actions only as per user request to hide global nav. Only rendering TopAppBar. -->
+<header class="w-full sticky top-0 z-50 border-b border-outline-variant bg-surface flat no shadows">
+<div class="flex justify-between items-center px-margin-mobile h-14 w-full">
+<button class="text-primary hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span aria-hidden="true" class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md text-on-surface">Order Details</h1>
+<button class="text-on-surface-variant hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center justify-center">
+<span aria-hidden="true" class="material-symbols-outlined">share</span>
+</button>
+</div>
+</header>
+<main class="max-w-container-max mx-auto px-4 md:px-gutter py-8">
+<!-- Order Header -->
+<div class="mb-section-gap flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-1">Order #AT-9824A</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Placed on Oct 24, 2023</p>
+</div>
+<div class="flex gap-3">
+<button class="font-label-sm text-label-sm px-4 py-2 border border-outline text-on-surface hover:bg-surface-container-low transition-colors rounded-DEFAULT bg-surface-container-lowest">Contact Seller</button>
+<button class="font-label-sm text-label-sm px-4 py-2 bg-primary-container text-on-primary-container hover:bg-primary-fixed-dim transition-colors rounded-DEFAULT">Track Package</button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+<!-- Left Column: Tracking & Items -->
+<div class="lg:col-span-8 flex flex-col gap-section-gap">
+<!-- Tracking Stepper Card -->
+<section class="bg-surface-container-lowest rounded-lg border border-outline-variant p-6">
+<h2 class="font-headline-md text-headline-md mb-6 text-on-surface">Delivery Status</h2>
+<p class="font-body-lg text-body-lg font-bold text-on-surface mb-8">Arriving Today by 8 PM</p>
+<div class="relative w-full">
+<!-- Connecting Line Background -->
+<div class="absolute top-5 left-8 right-8 h-1 bg-surface-variant z-0 transform -translate-y-1/2"></div>
+<!-- Connecting Line Progress -->
+<div class="absolute top-5 left-8 w-[66%] h-1 bg-primary-container z-0 transform -translate-y-1/2"></div>
+<div class="relative z-10 flex justify-between w-full">
+<!-- Step 1: Placed -->
+<div class="flex flex-col items-center flex-1">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center mb-3">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface text-center">Order<br/>Placed</span>
+<span class="font-body-md text-body-md text-on-surface-variant text-center mt-1 text-xs">Oct 24</span>
+</div>
+<!-- Step 2: Shipped -->
+<div class="flex flex-col items-center flex-1">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center mb-3">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface text-center">Shipped</span>
+<span class="font-body-md text-body-md text-on-surface-variant text-center mt-1 text-xs">Oct 25</span>
+</div>
+<!-- Step 3: Out for Delivery (Active) -->
+<div class="flex flex-col items-center flex-1">
+<div class="w-10 h-10 rounded-full bg-primary-container ring-4 ring-primary-fixed-dim/30 flex items-center justify-center mb-3">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">airport_shuttle</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface font-bold text-center">Out for<br/>Delivery</span>
+<span class="font-body-md text-body-md text-on-surface-variant text-center mt-1 text-xs">Today, 8:15 AM</span>
+</div>
+<!-- Step 4: Delivered (Pending) -->
+<div class="flex flex-col items-center flex-1">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center mb-3 border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant">home</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant text-center">Delivered</span>
+<span class="font-body-md text-body-md text-on-surface-variant text-center mt-1 text-xs">Pending</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Items in Order -->
+<section class="bg-surface-container-lowest rounded-lg border border-outline-variant p-6">
+<h2 class="font-headline-md text-headline-md mb-6 text-on-surface">Items in Order</h2>
+<div class="flex flex-col gap-6">
+<!-- Item 1 -->
+<div class="flex flex-col sm:flex-row gap-4 border-b border-surface-variant pb-6 last:border-0 last:pb-0">
+<div class="w-full sm:w-32 h-32 bg-surface-container flex-shrink-0 rounded-DEFAULT overflow-hidden">
+<img alt="Product Image" class="w-full h-full object-cover" data-alt="A sleek, modern pair of black wireless over-ear headphones resting on a minimalist white surface. The lighting is crisp and even, highlighting the matte finish of the earcups and the metallic accents on the headband. The background is a stark, clean white, emphasizing a high-tech, premium aesthetic typical of modern e-commerce product photography. The overall vibe is sophisticated and pristine." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeX5_0FXMx0EVJ11t7peg54rZyekhhA4G9URfkJt1nottXankcQnFsykQ2nsJLAgQGf8AZPsVWn7DiHtDkRzBH5nKiSEnmi_gtOyv4z0U-MAsUcsNpUV65gFkQJLA8IKw556BNTeaqFmf_gdosZEAbU3tF1uoattymAN9--SJYCbkYukXQxDx8qXzLPRzff4r37sWz1MHrOO6W-C4Ma75ilBz_Wr2ap2oXe9Mt3zM03hrtoVhtnJdvzt3wfINFYx9Z5aZgvPtsr_Q"/>
+</div>
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<h3 class="font-body-lg text-body-lg font-bold text-on-surface mb-1">Aura Studio Pro Wireless Noise Cancelling Headphones</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-2">Color: Midnight Black</p>
+<p class="font-price-lg text-price-lg text-on-surface">$199.00</p>
+</div>
+<div class="flex gap-3 mt-4 sm:mt-0">
+<button class="font-label-sm text-label-sm px-3 py-1.5 border border-outline text-on-surface hover:bg-surface-container-low transition-colors rounded-DEFAULT">Buy Again</button>
+<button class="font-label-sm text-label-sm px-3 py-1.5 text-primary hover:bg-surface-container transition-colors rounded-DEFAULT">Write Review</button>
+</div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex flex-col sm:flex-row gap-4 border-b border-surface-variant pb-6 last:border-0 last:pb-0">
+<div class="w-full sm:w-32 h-32 bg-surface-container flex-shrink-0 rounded-DEFAULT overflow-hidden">
+<img alt="Product Image" class="w-full h-full object-cover" data-alt="A tightly coiled, durable black braided USB-C fast charging cable. The cable is shown resting on a bright, minimalist white table. The metallic connectors gleam slightly under soft, diffused studio lighting. The composition is focused entirely on the product, set against a pristine, shadowless background to emphasize quality and modern utility in a clean e-commerce style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0imUp0IfqLxC51IHG-VQEhhKMvx33HI9-3wliA2I7J06u6Or2ZuOoZP1ldwRbLYKJUfy_D3PyRZi-XV5MUilIaoGfV-0FtVTZy1I_P1Z8uBQuhrZeG32lPAyMqordvXTui084f3bDJrAIQBUGZndU5fvQSQQiQWl00inkImjiIoLGp18f_xukOB9fgjcpm7wUOoL2Ro8BXDnD8p8wW5odvj3Ut6MJ1sFxQIQnMOOMDQtK2ijp8jX-FwLqolXYNqouy6SBtrvpD84"/>
+</div>
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<h3 class="font-body-lg text-body-lg font-bold text-on-surface mb-1">Braided USB-C Fast Charging Cable (2m)</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-2">Qty: 2</p>
+<p class="font-price-lg text-price-lg text-on-surface">$24.00 <span class="font-body-md text-body-md text-on-surface-variant font-normal">($12.00 ea)</span></p>
+</div>
+<div class="flex gap-3 mt-4 sm:mt-0">
+<button class="font-label-sm text-label-sm px-3 py-1.5 border border-outline text-on-surface hover:bg-surface-container-low transition-colors rounded-DEFAULT">Buy Again</button>
+<button class="font-label-sm text-label-sm px-3 py-1.5 text-primary hover:bg-surface-container transition-colors rounded-DEFAULT">Write Review</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Summary & Shipping -->
+<div class="lg:col-span-4 flex flex-col gap-section-gap">
+<!-- Order Summary -->
+<section class="bg-surface-container-lowest rounded-lg border border-outline-variant p-6 shadow-sm">
+<h2 class="font-headline-md text-headline-md mb-6 text-on-surface">Order Summary</h2>
+<div class="space-y-4 mb-6 border-b border-surface-variant pb-6">
+<div class="flex justify-between font-body-md text-body-md text-on-surface">
+<span>Item(s) Subtotal:</span>
+<span>$223.00</span>
+</div>
+<div class="flex justify-between font-body-md text-body-md text-on-surface">
+<span>Shipping &amp; Handling:</span>
+<span>$5.99</span>
+</div>
+<div class="flex justify-between font-body-md text-body-md text-on-surface">
+<span>Free Shipping Promo:</span>
+<span class="text-primary">-$5.99</span>
+</div>
+<div class="flex justify-between font-body-md text-body-md text-on-surface">
+<span>Estimated Tax:</span>
+<span>$18.40</span>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-headline-md text-headline-md text-on-surface">Grand Total:</span>
+<span class="font-price-lg text-price-lg text-on-surface">$241.40</span>
+</div>
+</section>
+<!-- Shipping & Payment Details -->
+<section class="bg-surface-container-lowest rounded-lg border border-outline-variant p-6">
+<div class="mb-6">
+<h3 class="font-body-lg text-body-lg font-bold text-on-surface flex items-center gap-2 mb-3">
+<span aria-hidden="true" class="material-symbols-outlined text-on-surface-variant">location_on</span>
+                            Shipping Address
+                        </h3>
+<div class="pl-8 font-body-md text-body-md text-on-surface-variant">
+<p class="font-bold text-on-surface">Jane Doe</p>
+<p>123 Commerce Blvd, Suite 400</p>
+<p>Metropolis, NY 10001</p>
+<p>United States</p>
+</div>
+</div>
+<div class="border-t border-surface-variant pt-6">
+<h3 class="font-body-lg text-body-lg font-bold text-on-surface flex items-center gap-2 mb-3">
+<span aria-hidden="true" class="material-symbols-outlined text-on-surface-variant">credit_card</span>
+                            Payment Method
+                        </h3>
+<div class="pl-8 font-body-md text-body-md text-on-surface-variant flex items-center gap-3">
+<div class="w-10 h-6 bg-surface-variant rounded flex items-center justify-center border border-outline-variant">
+<span class="font-label-sm text-[10px] font-bold">VISA</span>
+</div>
+<p>Visa ending in 4242</p>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</body></html>

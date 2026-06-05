@@ -417,7 +417,7 @@ function AdminOrderDetailSheet({
                           onClick={() => handleUpdateStatus(sub.id, s.value)}
                           className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40
                             ${s.value === sub.fulfillmentStatus
-                              ? "border-primary/40 bg-primary/10 text-primary"
+                              ? "border-primary/40 bg-primary/10 text-foreground"
                               : s.variant === "danger"
                                 ? "border-red-200 text-red-600 hover:bg-red-50"
                                 : "border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}

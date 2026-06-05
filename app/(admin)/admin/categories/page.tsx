@@ -216,7 +216,7 @@ export default function AdminCategoriesPage() {
               )}
             </button>
 
-            <FolderTree className="h-4 w-4 text-primary shrink-0" />
+            <FolderTree className="h-4 w-4 text-foreground shrink-0" />
 
             <div className="flex-1 min-w-0">
               <span className="text-sm font-medium text-gray-900">{cat.name}</span>
@@ -254,7 +254,7 @@ export default function AdminCategoriesPage() {
         </div>
         <button
           onClick={() => openCreate()}
-          className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
         >
           <Plus className="h-4 w-4" /> New Category
         </button>
@@ -266,7 +266,7 @@ export default function AdminCategoriesPage() {
       >
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <Loader2 className="h-5 w-5 animate-spin text-foreground" />
             <span className="text-sm text-gray-500">Loading categories…</span>
           </div>
         ) : categories.length === 0 ? (
@@ -344,7 +344,7 @@ export default function AdminCategoriesPage() {
           <button
             onClick={handleSave}
             disabled={saving || !form.name.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-[#0f0f10] hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {editingId ? "Update" : "Create"}

@@ -213,7 +213,7 @@ export default function AdminSellersPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setInviteOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:brightness-110 transition-all"
+            className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground shadow-sm hover:brightness-110 transition-all"
           >
             <UserPlus className="h-3.5 w-3.5" />
             Invite Seller
@@ -303,7 +303,7 @@ export default function AdminSellersPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                              <Store className="h-4 w-4 text-primary" />
+                              <Store className="h-4 w-4 text-foreground" />
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-gray-900 truncate">{s.businessName}</p>
@@ -697,7 +697,7 @@ function DetailPanel({
                               <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${doc.status === "approved" ? "bg-green-50 text-green-700" : doc.status === "rejected" ? "bg-red-50 text-red-700" : "bg-yellow-50 text-yellow-700"}`}>
                                 {doc.status || "pending"}
                               </span>
-                              <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg p-1.5 text-primary hover:text-gray-900 hover:bg-gray-50 transition-colors" title="Open document">
+                              <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg p-1.5 text-foreground hover:text-gray-900 hover:bg-gray-50 transition-colors" title="Open document">
                                 <ExternalLink className="h-4 w-4" />
                               </a>
                             </div>
@@ -719,7 +719,7 @@ function DetailPanel({
                                 href={doc.fileUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                                className="mt-2 inline-flex items-center gap-2 rounded-lg bg-brand-gold/10 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-brand-gold/20 transition-colors"
                               >
                                 <ExternalLink className="h-3 w-3" /> View Document
                               </a>

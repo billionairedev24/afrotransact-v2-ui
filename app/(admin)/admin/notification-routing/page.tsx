@@ -231,7 +231,7 @@ export default function NotificationRoutingPage() {
             setShowAdd(true)
             if (!addEventType && eventTypes.length) setAddEventType(eventTypes[0].key)
           }}
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors whitespace-nowrap"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-gold/90 transition-colors whitespace-nowrap"
         >
           <Plus className="h-4 w-4" />
           Add Recipient
@@ -249,7 +249,7 @@ export default function NotificationRoutingPage() {
         <div className="p-5">
           {loading ? (
             <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <Loader2 className="h-5 w-5 animate-spin text-foreground" />
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -323,7 +323,7 @@ export default function NotificationRoutingPage() {
             <button
               onClick={handleAdd}
               disabled={adding || !addEmail || !addEventType}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50 transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-gold/90 disabled:opacity-50 transition-colors whitespace-nowrap"
             >
               {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Add Recipient

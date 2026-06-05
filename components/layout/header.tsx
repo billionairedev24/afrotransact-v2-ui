@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Search,
   ChevronDown,
+  CircleUser,
   Leaf,
   Flame,
   Beef,
@@ -27,6 +28,7 @@ import {
   Loader2,
   Menu,
   ChevronRight,
+  Heart,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
@@ -111,6 +113,12 @@ export function Header() {
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
 
+  // "All" category dropdown next to the search input — mockup lines 135-138.
+  // Empty slug means "All categories". Persists across submits via local state.
+  const [searchCategorySlug, setSearchCategorySlug] = useState<string>("")
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
+  const categoryDropdownRef = useRef<HTMLDivElement>(null)
+
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
   const { cartReady } = useCartHydration()
   const signOut = useSignOut()
@@ -134,10 +142,16 @@ export function Header() {
   }, [])
 
   const navLinks = [
-    ...categories.slice(0, 6).map(cat => {
-      const style = getCategoryIcon(cat.slug)
-      return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent, disabled: isServicesCategory(cat.slug) }
-    }),
+    // Services category is intentionally filtered out — AfroTransact is
+    // product-only during closed beta. (Server also enforces this via
+    // V13__remove_services_category.sql.)
+    ...categories
+      .filter(cat => !isServicesCategory(cat.slug))
+      .slice(0, 6)
+      .map(cat => {
+        const style = getCategoryIcon(cat.slug)
+        return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent, disabled: false }
+      }),
     { name: "Deals", href: "/deals", icon: Tag, accent: "#F5C518", disabled: false },
   ]
 
@@ -148,6 +162,9 @@ export function Header() {
       }
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setShowSuggestions(false)
+      }
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
+        setCategoryDropdownOpen(false)
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -200,25 +217,37 @@ export function Header() {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`)
-      setShowSuggestions(false)
-      setMobileSearchOpen(false)
-    }
+    const q = query.trim()
+    // Allow submitting with only a category selected (no text) — sends user to
+    // the category-scoped search results, matching Amazon's "All" dropdown UX.
+    if (!q && !searchCategorySlug) return
+    const params = new URLSearchParams()
+    if (q) params.set("q", q)
+    if (searchCategorySlug) params.set("category", searchCategorySlug)
+    router.push(`/search?${params.toString()}`)
+    setShowSuggestions(false)
+    setMobileSearchOpen(false)
+    setCategoryDropdownOpen(false)
   }
+
+  const selectedCategoryLabel =
+    categories.find((c) => c.slug === searchCategorySlug)?.name ?? "All"
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+      <header className="sticky top-0 z-40 bg-brand-dark shadow-md">
 
-        {/* ── Row 1: Logo · Location · Search · Account · Cart ── */}
-        <div className="border-b border-gray-100">
+        {/* Single bar matching public/ux-designs/code.html lines 127-164. We
+            intentionally do NOT render a second category strip — the mockup
+            uses one row only. Category navigation happens via the bento grid
+            on the landing page and the mobile menu. */}
+        <div>
           <div className="px-4 sm:px-6 lg:px-8">
-            <div className="flex h-[58px] items-center gap-2 sm:gap-3">
+            <div className="flex h-[64px] items-center gap-3 sm:gap-4">
 
               <button
                 type="button"
-                className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-gray-800 hover:bg-gray-100 shrink-0 -ml-1"
+                className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-white hover:bg-white/10 shrink-0 -ml-1"
                 aria-label="Open menu"
                 aria-expanded={mobileMenuOpen}
                 onClick={() => {
@@ -232,15 +261,68 @@ export function Header() {
               {/* Logo */}
               <Link href="/" className="flex items-center gap-1.5 shrink-0 mr-1" aria-label="AfroTransact home">
                 <Image src="/logo.png" alt="" width={28} height={28} className="rounded-md" />
-                <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-gray-900 leading-none">AfroTransact</span>
+                <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-brand-gold leading-none">AfroTransact</span>
               </Link>
 
               {/* Search — desktop only */}
               <div className="hidden md:flex flex-1 relative" ref={searchRef}>
                 <form
                   onSubmit={(e) => { handleSearch(e); setShowSuggestions(false) }}
-                  className="flex flex-1 items-stretch h-[40px] rounded-lg overflow-hidden ring-2 ring-transparent focus-within:ring-primary/60 border border-gray-300 transition-all"
+                  className="flex flex-1 items-stretch h-[40px] rounded-lg ring-2 ring-transparent focus-within:ring-brand-gold border border-transparent bg-white transition-all"
                 >
+                  {/* "All" category dropdown — mockup lines 135-138, wired to getCategories() */}
+                  <div className="relative" ref={categoryDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryDropdownOpen((p) => !p)}
+                      aria-haspopup="listbox"
+                      aria-expanded={categoryDropdownOpen}
+                      className="h-full px-3 flex items-center gap-1 text-[12px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border-r border-gray-300 transition-colors whitespace-nowrap max-w-[140px] rounded-l-lg"
+                    >
+                      <span className="truncate">{selectedCategoryLabel}</span>
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+                    </button>
+                    {categoryDropdownOpen && (
+                      <div className="absolute left-0 top-full mt-1 w-56 max-h-[60vh] overflow-y-auto rounded-lg border border-gray-200 shadow-xl bg-white z-[60] py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchCategorySlug("")
+                            setCategoryDropdownOpen(false)
+                            inputRef.current?.focus()
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors",
+                            searchCategorySlug === "" ? "font-semibold text-foreground" : "text-gray-700",
+                          )}
+                        >
+                          All categories
+                        </button>
+                        <div className="border-t border-gray-100 my-1" />
+                        {categories
+                          .filter((c) => !isServicesCategory(c.slug))
+                          .map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setSearchCategorySlug(c.slug)
+                                setCategoryDropdownOpen(false)
+                                inputRef.current?.focus()
+                              }}
+                              className={cn(
+                                "w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors",
+                                searchCategorySlug === c.slug
+                                  ? "font-semibold text-foreground"
+                                  : "text-gray-700",
+                              )}
+                            >
+                              {c.name}
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
                   <input
                     ref={inputRef}
                     type="text"
@@ -253,10 +335,10 @@ export function Header() {
                   />
                   <button
                     type="submit"
-                    className="flex items-center justify-center w-11 bg-primary hover:bg-primary/90 transition-colors shrink-0"
+                    className="flex items-center justify-center w-12 bg-brand-gold hover:bg-brand-gold-hover transition-colors shrink-0 rounded-r-lg"
                     aria-label="Search"
                   >
-                    <Search className="h-4 w-4 text-black" strokeWidth={2.5} />
+                    <Search className="h-4 w-4 text-brand-gold-foreground" strokeWidth={2.5} />
                   </button>
                 </form>
 
@@ -292,13 +374,13 @@ export function Header() {
                           <p className="text-sm text-gray-900 truncate">{item.text}</p>
                           <p className="text-xs text-gray-500 truncate">
                             {item.category && <span>{item.category}</span>}
-                            {item.price > 0 && <span className="ml-2 text-primary font-medium">${item.price.toFixed(2)}</span>}
+                            {item.price > 0 && <span className="ml-2 text-foreground font-medium">${item.price.toFixed(2)}</span>}
                           </p>
                         </div>
                       </button>
                     ))}
                     <button
-                      className="w-full px-4 py-2 text-xs text-primary font-medium text-center hover:bg-gray-50 transition-colors border-t border-gray-100"
+                      className="w-full px-4 py-2 text-xs text-foreground font-medium text-center hover:bg-gray-50 transition-colors border-t border-gray-100"
                       onClick={() => {
                         setShowSuggestions(false)
                         router.push(`/search?q=${encodeURIComponent(query)}`)
@@ -314,7 +396,7 @@ export function Header() {
 
               {/* Mobile search icon */}
               <button
-                className="md:hidden flex items-center justify-center w-9 h-9 rounded text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors shrink-0"
+                className="md:hidden flex items-center justify-center w-9 h-9 rounded text-white hover:text-brand-gold hover:bg-white/10 transition-colors shrink-0"
                 onClick={() => {
                   setMobileMenuOpen(false)
                   setMobileSearchOpen(true)
@@ -324,129 +406,185 @@ export function Header() {
                 <Search className="h-5 w-5" />
               </button>
 
-              {/* ── Auth area — desktop only ── */}
-              {isAuthenticated ? (
-                <div className="relative hidden md:block" ref={userMenuRef}>
-                  <button
-                    onClick={() => setUserMenuOpen((p) => !p)}
-                    className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors shrink-0"
-                    aria-label="User menu"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-black">
-                      {getInitials(userName)}
-                    </div>
-                    <ChevronDown className="h-3 w-3 text-gray-400" />
-                  </button>
+              {/* ── Inline nav links — desktop only, mockup lines 145-150 ── */}
+              <nav className="hidden lg:flex items-center gap-6 shrink-0">
+                <Link
+                  href="/deals"
+                  className="text-white font-bold text-[14px] border-b-2 border-brand-gold pb-0.5 hover:text-brand-gold transition-colors"
+                >
+                  Deals
+                </Link>
+                <Link
+                  href="/search?sort=newest"
+                  className="text-white text-[14px] hover:text-brand-gold transition-colors"
+                >
+                  New Arrivals
+                </Link>
+                <Link
+                  href="/stores"
+                  className="text-white text-[14px] hover:text-brand-gold transition-colors"
+                >
+                  Sellers
+                </Link>
+                <Link
+                  href="/help"
+                  className="text-white text-[14px] hover:text-brand-gold transition-colors"
+                >
+                  Help
+                </Link>
+              </nav>
 
-                  {/* Desktop dropdown */}
-                  {userMenuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-gray-200 shadow-xl bg-white z-[60] py-2 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{userName ?? "User"}</p>
-                        <p className="text-xs text-gray-500 truncate">{userEmail}</p>
-                      </div>
+              {/* ── Account — single button → dropdown whose content depends on auth state ── */}
+              <div className="relative hidden md:block" ref={userMenuRef}>
+                <button
+                  onClick={() => setUserMenuOpen((p) => !p)}
+                  className="flex flex-col items-center justify-center text-white hover:text-brand-gold-hover transition-colors shrink-0"
+                  aria-label="Account menu"
+                  aria-expanded={userMenuOpen}
+                >
+                  <CircleUser className="h-6 w-6" strokeWidth={1.75} />
+                  <span className="text-[12px] font-semibold tracking-[0.02em] leading-none mt-0.5">Account</span>
+                </button>
 
-                      <div className="py-1">
-                        <Link href="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                          <User className="h-4 w-4 text-gray-400" />
-                          My Account
-                        </Link>
-                        <Link href="/orders" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                          <Package className="h-4 w-4 text-gray-400" />
-                          Orders
-                        </Link>
-                        {(isSeller || isAdmin) && (
-                          <Link href="/dashboard" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                            <LayoutDashboard className="h-4 w-4 text-gray-400" />
-                            Seller Dashboard
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-gray-200 shadow-xl bg-white z-[60] py-2 overflow-hidden">
+                    {isAuthenticated ? (
+                      <>
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{userName ?? "User"}</p>
+                          <p className="text-xs text-gray-500 truncate">{userEmail}</p>
+                        </div>
+
+                        <div className="py-1">
+                          <Link href="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                            <User className="h-4 w-4 text-gray-400" />
+                            My Account
                           </Link>
-                        )}
-                        {isAdmin && (
-                          <Link href="/admin" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-yellow-700 hover:text-yellow-800 hover:bg-yellow-50 transition-colors">
-                            <ShieldCheck className="h-4 w-4" />
-                            Admin Panel
+                          <Link href="/orders" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                            <Package className="h-4 w-4 text-gray-400" />
+                            Orders
                           </Link>
-                        )}
-                        <Link href="/account/settings" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                          <Settings className="h-4 w-4 text-gray-400" />
-                          Settings
-                        </Link>
-                      </div>
+                          <Link href="/account/wishlist" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                            <Heart className="h-4 w-4 text-gray-400" />
+                            Wishlist
+                          </Link>
+                          {(isSeller || isAdmin) && (
+                            <Link href="/dashboard" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                              <LayoutDashboard className="h-4 w-4 text-gray-400" />
+                              Seller Dashboard
+                            </Link>
+                          )}
+                          {isAdmin && (
+                            <Link href="/admin" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-yellow-700 hover:text-yellow-800 hover:bg-yellow-50 transition-colors">
+                              <ShieldCheck className="h-4 w-4" />
+                              Admin Panel
+                            </Link>
+                          )}
+                          <Link href="/account/settings" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                            <Settings className="h-4 w-4 text-gray-400" />
+                            Settings
+                          </Link>
+                        </div>
 
-                      <div className="border-t border-gray-100 py-1">
-                        <button
-                          onClick={() => { setUserMenuOpen(false); signOut() }}
-                          className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
-                        >
-                          <LogOut className="h-4 w-4" />
-                          Sign Out
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="hidden md:flex flex-col items-start px-2 py-1 shrink-0">
-                  <span className="text-[10px] text-gray-500">{getGreeting()}</span>
-                  <span className="text-[13px] leading-tight">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const callbackUrl =
-                          typeof window !== "undefined"
-                            ? window.location.pathname + window.location.search
-                            : "/"
-                        void signIn("keycloak", { callbackUrl })
-                      }}
-                      className="font-semibold text-primary hover:text-primary/80 transition-colors"
-                    >
-                      Sign in
-                    </button>
-                    <span className="text-gray-400 mx-1">or</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const callbackUrl =
-                          typeof window !== "undefined"
-                            ? window.location.pathname + window.location.search
-                            : "/"
-                        void signIn("keycloak-register", { callbackUrl })
-                      }}
-                      className="font-semibold text-gray-900 hover:text-primary transition-colors"
-                    >
-                      Register
-                    </button>
-                  </span>
-                </div>
-              )}
+                        <div className="border-t border-gray-100 py-1">
+                          <button
+                            onClick={() => { setUserMenuOpen(false); signOut() }}
+                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+                          >
+                            <LogOut className="h-4 w-4" />
+                            Sign Out
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <p className="text-sm font-semibold text-gray-900">Welcome</p>
+                          <p className="text-xs text-gray-500">Sign in to your account, or create one.</p>
+                        </div>
+                        <div className="px-4 py-3 space-y-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUserMenuOpen(false)
+                              const callbackUrl =
+                                typeof window !== "undefined"
+                                  ? window.location.pathname + window.location.search
+                                  : "/"
+                              void signIn("keycloak", { callbackUrl })
+                            }}
+                            className="w-full bg-brand-gold hover:bg-brand-gold-hover text-brand-gold-foreground font-bold text-sm py-2 rounded-full transition-colors"
+                          >
+                            Sign in
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUserMenuOpen(false)
+                              const callbackUrl =
+                                typeof window !== "undefined"
+                                  ? window.location.pathname + window.location.search
+                                  : "/"
+                              void signIn("keycloak-register", { callbackUrl })
+                            }}
+                            className="w-full bg-white border border-gray-300 hover:border-gray-400 text-gray-900 font-semibold text-sm py-2 rounded-full transition-colors"
+                          >
+                            Create account
+                          </button>
+                        </div>
+                        <div className="border-t border-gray-100 py-1">
+                          <Link
+                            href="/orders"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                          >
+                            <Package className="h-4 w-4 text-gray-400" />
+                            Track an order
+                          </Link>
+                          <Link
+                            href="/help"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                          >
+                            <Settings className="h-4 w-4 text-gray-400" />
+                            Help Center
+                          </Link>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
 
-              {/* Cart */}
+              {/* Cart — mockup lines 157-161 — text-only hover, badge on icon */}
               <Link
                 href="/cart"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-50 transition-colors shrink-0"
+                className="flex flex-col items-center justify-center text-white hover:text-brand-gold-hover transition-colors shrink-0"
+                aria-label="Cart"
               >
                 <div className="relative">
-                  <ShoppingCart className="h-6 w-6 text-gray-700" strokeWidth={1.75} />
+                  <ShoppingCart className="h-6 w-6" strokeWidth={1.75} />
                   {!cartReady ? (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-gray-200">
-                      <Loader2 className="h-3 w-3 animate-spin text-gray-600" aria-hidden />
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/20">
+                      <Loader2 className="h-2.5 w-2.5 animate-spin text-white" aria-hidden />
                       <span className="sr-only">Loading cart</span>
                     </span>
                   ) : cartCount > 0 ? (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-black px-0.5">
+                    <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-brand-gold-foreground px-0.5">
                       {cartCount}
                     </span>
                   ) : null}
                 </div>
-                <span className="hidden sm:block text-[13px] font-semibold text-gray-700">Cart</span>
+                <span className="text-[12px] font-semibold tracking-[0.02em] leading-none mt-0.5">Cart</span>
               </Link>
             </div>
           </div>
         </div>
 
-        {/* ── Row 2: Slim category strip — desktop only ── */}
-        <nav className="hidden md:block bg-gray-50 border-b border-gray-200">
+        {/* ── Row 2 removed per mockup — keeping props/refs/nav data intact for restore ── */}
+        {false && (
+        <nav className="hidden md:block bg-[#3a3c3c] border-b border-black/30">
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex items-center h-[34px] gap-0">
               {navLinks.map((link, i) => {
@@ -460,11 +598,11 @@ export function Header() {
                     <span
                       key={link.name}
                       title="Coming Soon"
-                      className={`group items-center gap-1.5 px-3 h-full text-[13px] text-gray-400 whitespace-nowrap cursor-default select-none ${hideClass}`}
+                      className={`group items-center gap-1.5 px-3 h-full text-[13px] text-white/40 whitespace-nowrap cursor-default select-none ${hideClass}`}
                     >
                       <Icon className="h-3.5 w-3.5 opacity-40 shrink-0" style={{ color: link.accent }} />
                       {link.name}
-                      <span className="ml-1 text-[9px] font-semibold bg-gray-200 text-gray-500 rounded px-1 py-0.5 leading-none">Soon</span>
+                      <span className="ml-1 text-[9px] font-semibold bg-white/10 text-white/50 rounded px-1 py-0.5 leading-none">Soon</span>
                     </span>
                   )
                 }
@@ -472,7 +610,7 @@ export function Header() {
                   <Link
                     key={link.name}
                     href={link.href}
-                    className={`group items-center gap-1.5 px-3 h-full text-[13px] text-gray-600 whitespace-nowrap hover:text-gray-900 hover:bg-gray-100 transition-colors ${hideClass}`}
+                    className={`group items-center gap-1.5 px-3 h-full text-[13px] text-white/85 whitespace-nowrap hover:text-brand-gold hover:bg-white/5 transition-colors ${hideClass}`}
                   >
                     <Icon className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 shrink-0" style={{ color: link.accent }} />
                     {link.name}
@@ -480,11 +618,11 @@ export function Header() {
                 )
               })}
 
-              <span className="w-px h-4 bg-gray-300 mx-1 shrink-0" />
+              <span className="w-px h-4 bg-white/15 mx-1 shrink-0" />
 
               <Link
                 href="/stores"
-                className="flex items-center gap-1.5 px-3 h-full text-[13px] text-yellow-700 font-medium whitespace-nowrap hover:text-yellow-800 hover:bg-yellow-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 h-full text-[13px] text-brand-gold font-medium whitespace-nowrap hover:text-brand-gold-hover hover:bg-white/5 transition-colors"
               >
                 <Store className="h-3.5 w-3.5" />
                 Browse Stores
@@ -496,6 +634,12 @@ export function Header() {
             </div>
           </div>
         </nav>
+        )}
+
+        {/* Mockup nav links — Deals / New Arrivals / Sellers / Help — rendered
+            inline on desktop in Row 1 above is preferred, but to keep the diff
+            surgical we render this slim accent strip ONLY when there are
+            category links worth showing; the mobile menu still has all of them. */}
       </header>
 
       {/* ── Mobile slide-out menu (Amazon-inspired sheet; omits Search/Cart/Home — already in navbar) ── */}
@@ -542,7 +686,7 @@ export function Header() {
                                   : "/"
                               void signIn("keycloak", { callbackUrl })
                             }}
-                            className="font-semibold text-primary underline decoration-primary/50 underline-offset-2 transition-colors hover:text-primary/90"
+                            className="font-semibold text-foreground underline decoration-primary/50 underline-offset-2 transition-colors hover:text-foreground"
                           >
                             Sign in
                           </button>
@@ -629,6 +773,9 @@ export function Header() {
                   </MobileMenuRow>
                   <MobileMenuRow href="/orders" onClick={closeMobileMenu}>
                     Your orders
+                  </MobileMenuRow>
+                  <MobileMenuRow href="/account/wishlist" onClick={closeMobileMenu}>
+                    Wishlist
                   </MobileMenuRow>
                   {(isSeller || isAdmin) && (
                     <MobileMenuRow href="/dashboard" onClick={closeMobileMenu}>
@@ -722,13 +869,13 @@ export function Header() {
                       <p className="text-sm font-medium text-gray-900 truncate">{item.text}</p>
                       <p className="text-xs text-gray-500 truncate">
                         {item.category && <span>{item.category}</span>}
-                        {item.price > 0 && <span className="ml-2 text-primary font-semibold">${item.price.toFixed(2)}</span>}
+                        {item.price > 0 && <span className="ml-2 text-foreground font-semibold">${item.price.toFixed(2)}</span>}
                       </p>
                     </div>
                   </button>
                 ))}
                 <button
-                  className="w-full px-4 py-3 text-sm text-primary font-medium text-center hover:bg-gray-50 transition-colors"
+                  className="w-full px-4 py-3 text-sm text-foreground font-medium text-center hover:bg-gray-50 transition-colors"
                   onClick={() => {
                     setShowSuggestions(false)
                     setMobileSearchOpen(false)

@@ -13,10 +13,20 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
 
-    /* Brand primary: Afrotransact Gold #F5C518 (HSL 48 92% 53%) — matches the
-       logo's Africa silhouette. Pair with black foreground. */
+    /* Brand primary: Afrotransact Gold #F5C518 (HSL 47 92% 53%) — used for
+       buttons, badges, focus rings, brand accents. Do NOT use `text-primary`
+       for body text/links/headings — it is unreadable. Body text should use
+       `text-foreground`. */
     --primary: 47 92% 53%;
     --primary-foreground: 0 0% 4%;
+
+    /* ── Brand tokens (mockup design system) ──
+       Theme-able via these variables. Switch theme later by editing here. */
+    --brand-gold: 45 100% 51%;            /* #ffc107 — primary-container */
+    --brand-gold-hover: 45 100% 49%;      /* #fabd00 — primary-fixed-dim */
+    --brand-gold-foreground: 41 100% 7%;  /* #261a00 — on-primary-fixed */
+    --brand-dark: 180 1% 19%;             /* #2f3131 — inverse-surface */
+    --brand-dark-foreground: 0 0% 98%;    /* near-white text on dark surfaces */
 
     --secondary: 142 71% 35%;
     --secondary-foreground: 0 0% 100%;

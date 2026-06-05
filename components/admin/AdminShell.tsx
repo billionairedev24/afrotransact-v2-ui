@@ -7,7 +7,6 @@ import { useSession } from "next-auth/react"
 import {
   LayoutDashboard,
   MapPin,
-  Megaphone,
   ToggleLeft,
   Users,
   Menu,
@@ -60,7 +59,6 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/settings",         label: "Settings",         icon: Settings      },
   { href: "/admin/coupons",       label: "Coupons",       icon: Ticket           },
   { href: "/admin/deals",         label: "Deals",         icon: Sparkles         },
-  { href: "/admin/ads",           label: "Ad Slots",      icon: Megaphone        },
   { href: "/admin/hero-carousel", label: "Hero Carousel", icon: Sparkles         },
   { href: "/admin/email-templates", label: "Email Templates", icon: Mail          },
   { href: "/admin/notification-routing", label: "Alert Routing", icon: Bell     },
@@ -92,16 +90,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         onClick={onClick}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+          "flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-colors",
           active
-            ? "bg-sidebar-accent text-foreground font-semibold shadow-[inset_3px_0_0_hsl(var(--primary))]"
-            : "text-muted-foreground font-medium hover:bg-muted hover:text-foreground"
+            ? "bg-brand-gold text-brand-gold-foreground font-bold"
+            : "text-white/70 font-medium hover:bg-white/5 hover:text-brand-gold",
         )}
       >
-        <Icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
+        <Icon className="h-5 w-5 shrink-0" />
         <span className="flex-1">{item.label}</span>
         {item.badge != null && item.badge > 0 && (
-          <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+          <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white">
             {item.badge}
           </span>
         )}
@@ -110,33 +108,35 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   const sidebar = (onClose?: () => void) => (
-    <div className="flex flex-col h-full">
-      <div className="flex h-14 items-center justify-between border-b border-border px-4">
+    <div className="flex flex-col h-full p-4">
+      <div className="flex items-center justify-between mb-6 px-2">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-primary" />
-          <span className="font-bold text-foreground text-sm">Admin</span>
+          <span className="text-xl font-bold text-brand-gold">AfroTransact</span>
+          <span className="rounded-sm bg-brand-gold px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-gold-foreground">
+            Admin
+          </span>
         </div>
         {onClose && (
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={onClose} className="text-white/60 hover:text-white transition-colors">
             <X className="h-5 w-5" />
           </button>
         )}
       </div>
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+      <nav className="flex-1 flex flex-col gap-1 overflow-y-auto">
         {navItems.map((item) => navLink(item, onClose))}
       </nav>
-      <div className="border-t border-border p-4 space-y-2">
+      <div className="mt-auto pt-6 border-t border-white/10 flex flex-col gap-2">
         <Link
           href="/"
           onClick={onClose}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 px-2 text-sm text-white/60 hover:text-brand-gold transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
           Back to Marketplace
         </Link>
         <button
           onClick={() => { signOut() }}
-          className="flex w-full items-center gap-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
+          className="flex w-full items-center gap-2 px-2 py-2 text-sm font-semibold text-white/60 hover:text-red-400 transition-colors"
         >
           <LogOut className="h-4 w-4" />
           Sign Out
@@ -146,26 +146,24 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <div className="min-h-screen min-w-0 bg-background">
+    <div className="min-h-screen min-w-0 bg-gray-50">
       {/* Mobile header */}
-      <header
-        className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border px-4 lg:hidden bg-card"
-      >
-        <button onClick={() => setSidebarOpen(true)} className="text-muted-foreground hover:text-foreground transition-colors">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-gray-200 px-4 lg:hidden bg-white">
+        <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-foreground transition-colors">
           <Menu className="h-5 w-5" />
         </button>
-        <span className="font-bold text-foreground text-sm flex items-center gap-1.5">
-          <ShieldCheck className="h-4 w-4 text-primary" />
-          Admin Panel
+        <span className="font-bold text-foreground text-sm flex items-center gap-2">
+          AfroTransact
+          <span className="rounded bg-brand-gold px-2 py-0.5 text-[10px] font-bold tracking-wide text-brand-gold-foreground">
+            Admin
+          </span>
         </span>
         <div className="w-5" />
       </header>
 
       <div className="flex min-w-0">
-        {/* Desktop sidebar */}
-        <aside
-          className="hidden lg:flex lg:w-56 lg:flex-col lg:fixed lg:inset-y-0 border-r border-border bg-card"
-        >
+        {/* Desktop sidebar — wider (72) + white surface to match seller dashboard chrome */}
+        <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 bg-brand-dark">
           {sidebar()}
         </aside>
 
@@ -173,20 +171,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         {sidebarOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
             <div
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
               onClick={() => setSidebarOpen(false)}
             />
-            <aside
-              className="absolute inset-y-0 left-0 w-64 flex flex-col border-r border-border shadow-xl bg-card"
-            >
+            <aside className="absolute inset-y-0 left-0 w-72 flex flex-col shadow-xl bg-brand-dark">
               {sidebar(() => setSidebarOpen(false))}
             </aside>
           </div>
         )}
 
         {/* Content */}
-        <main className="min-w-0 flex-1 lg:pl-56">
-          <div className="mx-auto min-w-0 max-w-[1100px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+        <main className="min-w-0 flex-1 lg:pl-72">
+          <div className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>
     </div>

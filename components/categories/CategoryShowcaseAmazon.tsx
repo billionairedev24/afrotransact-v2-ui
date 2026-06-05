@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { Loader2, Package } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { searchProducts, type CategoryRef, type SearchResult } from "@/lib/api"
 
 const TINT_LIME = "bg-[#e8f5c8]"
@@ -232,7 +232,7 @@ function CategoryMegaCard({
                     cell.tint === "peach" ? TINT_PEACH : TINT_LIME
                   }`}
                 >
-                  {cell.image ? (
+                  {cell.image && (
                     // eslint-disable-next-line @next/next/no-img-element -- search/CDN URLs
                     <img
                       src={cell.image}
@@ -241,9 +241,9 @@ function CategoryMegaCard({
                       decoding="async"
                       className="h-full w-full object-contain object-center group-hover:scale-[1.02] transition-transform duration-200"
                     />
-                  ) : (
-                    <Package className="h-10 w-10 text-gray-400/70" strokeWidth={1.25} />
                   )}
+                  {/* No fallback icon — empty tile renders the tint background only.
+                      Whole-card hide happens upstream when every cell is image-less. */}
                 </div>
               </Link>
               <Link
@@ -393,6 +393,12 @@ export function CategoryShowcaseAmazon({
         const stillLoading =
           loadingIds === undefined || loadingIds.size > 0
         const cells = stillLoading ? null : buildCells(parent, tiles.length ? tiles : [null, null, null, null])
+        // Hide the entire card if EVERY tile is image-less. Prevents day-1
+        // prod (empty catalog) from showing a wall of gray-Package placeholders.
+        // Loading state still renders so the skeleton shimmer is visible.
+        if (!stillLoading && cells && cells.every((c) => !c.image)) {
+          return null
+        }
         return (
           <CategoryMegaCard
             key={parent.id}
@@ -409,7 +415,7 @@ export function CategoryShowcaseAmazon({
 export function CategoryShowcaseLoading() {
   return (
     <div className="flex justify-center py-16">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <Loader2 className="h-8 w-8 animate-spin text-foreground" />
     </div>
   )
 }

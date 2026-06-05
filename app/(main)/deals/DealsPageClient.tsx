@@ -1,120 +1,118 @@
 "use client"
 
-import { useState, useEffect } from "react"
+/**
+ * Deals page — faithful port of public/ux-designs/deals.html.
+ *
+ * Wires to:
+ *   • GET /api/v1/deals          (UnifiedDealsResponse.marketplaceDeals)  via getActiveDeals()
+ *
+ * Filters are client-side only (the deals endpoint does not yet accept
+ * facets); filtering is shallow so the UI matches the mockup without
+ * blocking on backend work. Each deal becomes a BrandProductCard so the
+ * card style is identical to /search (All Products) and any future listing
+ * page — one card definition, one place to restyle.
+ */
+
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import {
-  ChevronRight,
-  Flame,
-  Clock,
-  Tag,
-  Sparkles,
-  ArrowRight,
-  Loader2,
-  ShoppingBag,
-  Percent,
-  Store,
-  TrendingUp,
-  Star,
-  Zap,
-  Gift,
-  BadgePercent,
-} from "lucide-react"
-import { getActiveDeals, type DealData } from "@/lib/api"
-import { StartSellingLink } from "@/components/selling/StartSellingLink"
+import { ChevronRight, Grid3X3, LayoutList, Loader2, Star, Tag } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { getActiveDeals, getCategories, type DealData, type CategoryRef } from "@/lib/api"
+import { BrandProductCard, type BrandProductCardItem } from "@/components/products/BrandProductCard"
+import { Pagination } from "@/components/products/Pagination"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+const PAGE_SIZE = 24
+const DISCOUNT_TIERS = [10, 25, 50, 70] as const
 
-interface PlatformDeal {
-  id: string
-  title: string
-  description: string | null
-  content: string | null
-  badgeText: string | null
-  bannerImageUrl: string | null
-  primaryColor: string
-  secondaryColor: string
-  textColor: string
-  ctaText: string | null
-  ctaLink: string | null
-  targetAudience: string
-  enabled: boolean
-  active: boolean
-  startAt: string | null
-  endAt: string | null
-  sortOrder: number
-  createdAt: string
-}
-
-function TimeRemaining({ endAt }: { endAt: string }) {
-  const end = new Date(endAt)
-  const now = new Date()
-  const diffMs = end.getTime() - now.getTime()
-  if (diffMs <= 0) return null
-  const diffH = Math.floor(diffMs / 3600000)
-  if (diffH < 24)
-    return (
-      <span className="inline-flex items-center gap-1 text-orange-500 font-semibold">
-        <Clock className="h-3 w-3" />
-        {diffH}h left
-      </span>
-    )
-  const diffD = Math.floor(diffH / 24)
-  return (
-    <span className="inline-flex items-center gap-1 text-muted-foreground text-xs">
-      <Clock className="h-3 w-3" />
-      Ends {end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-    </span>
-  )
-}
-
-function CountdownPill({ endAt }: { endAt: string }) {
-  const end = new Date(endAt)
-  const now = new Date()
-  const diffMs = end.getTime() - now.getTime()
-  if (diffMs <= 0) return null
-  const diffH = Math.floor(diffMs / 3600000)
-  if (diffH < 48) {
-    return (
-      <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-orange-500 text-white text-[10px] font-bold px-2.5 py-1 shadow-lg">
-        <Zap className="h-2.5 w-2.5" />
-        {diffH}h left
-      </span>
-    )
+function dealToCardItem(deal: DealData): BrandProductCardItem | null {
+  if (!deal.productId) return null
+  const price = deal.dealPriceCents != null ? deal.dealPriceCents / 100 : null
+  const original =
+    deal.originalPriceCents != null ? deal.originalPriceCents / 100 : null
+  if (price == null) return null
+  return {
+    productId: deal.productId,
+    storeId: deal.storeId,
+    storeName: deal.storeName,
+    title: deal.productTitle || deal.title,
+    slug: deal.productSlug,
+    imageUrl: deal.productImageUrl,
+    price,
+    originalPrice: original,
+    discountPercent: deal.discountPercent ?? null,
+    inStock: true,
+    endsAt: deal.endAt,
   }
-  const diffD = Math.floor(diffH / 24)
-  return (
-    <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/60 text-white text-[10px] font-medium px-2.5 py-1 backdrop-blur-sm">
-      <Clock className="h-2.5 w-2.5" />
-      {diffD}d left
-    </span>
-  )
 }
 
 export default function DealsPageClient() {
-  const [platformDeals, setPlatformDeals] = useState<PlatformDeal[]>([])
-  const [sellerDeals, setSellerDeals] = useState<DealData[]>([])
+  const [deals, setDeals] = useState<DealData[]>([])
+  const [categories, setCategories] = useState<CategoryRef[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Client-side filter state — backend has no deal-faceting endpoint yet.
+  const [selectedCategorySlugs, setSelectedCategorySlugs] = useState<Set<string>>(new Set())
+  const [discountMin, setDiscountMin] = useState<number | null>(null)
+  const [ratingMin, setRatingMin] = useState<number | null>(null)
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [page, setPage] = useState(1)
+
   useEffect(() => {
+    let cancelled = false
     async function load() {
-      const [pRes, sRes] = await Promise.allSettled([
-        fetch(`${API_BASE}/api/v1/platform-deals`).then((r) => (r.ok ? r.json() : [])),
-        getActiveDeals(),
-      ])
-      if (pRes.status === "fulfilled") setPlatformDeals(pRes.value)
-      if (sRes.status === "fulfilled") setSellerDeals(sRes.value)
+      const [dRes, cRes] = await Promise.allSettled([getActiveDeals(), getCategories()])
+      if (cancelled) return
+      if (dRes.status === "fulfilled") setDeals(dRes.value)
+      if (cRes.status === "fulfilled") {
+        setCategories(cRes.value.filter((c) => !c.parentId && c.slug !== "services"))
+      }
       setLoading(false)
     }
     load()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  const isEmpty = !loading && platformDeals.length === 0 && sellerDeals.length === 0
+  const filtered = useMemo(() => {
+    return deals.filter((d) => {
+      if (discountMin != null && (d.discountPercent ?? 0) < discountMin) return false
+      // Rating filter requires a join to product data that DealData doesn't
+      // currently carry; honoured as a no-op until backend exposes it. Kept
+      // here so the UI control behaves as expected when data arrives.
+      if (ratingMin != null) {
+        // no-op; left intentionally — see comment above.
+      }
+      if (selectedCategorySlugs.size > 0) {
+        // DealData has no category — fall back to "match all" to avoid hiding
+        // every deal. When backend adds product.categories[] to DealData, swap
+        // this for an Array.some() check.
+        return true
+      }
+      return true
+    })
+  }, [deals, discountMin, ratingMin, selectedCategorySlugs])
+
+  const total = filtered.length
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const startIdx = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const endIdx = Math.min(page * PAGE_SIZE, total)
+
+  function toggleCategory(slug: string) {
+    setSelectedCategorySlugs((prev) => {
+      const next = new Set(prev)
+      if (next.has(slug)) next.delete(slug)
+      else next.add(slug)
+      return next
+    })
+    setPage(1)
+  }
 
   return (
-    <main className="mx-auto max-w-[1440px] px-4 sm:px-6 py-10">
+    <main className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 py-10">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 mb-6 text-sm text-gray-500">
         <Link href="/" className="hover:text-foreground transition-colors">
           Home
         </Link>
@@ -122,325 +120,194 @@ export default function DealsPageClient() {
         <span className="text-foreground font-medium">Deals</span>
       </div>
 
-      {/* Hero header */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 p-8 sm:p-12 mb-10 text-white">
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 50%), " +
-              "radial-gradient(circle at 80% 70%, rgba(255,200,0,0.3) 0%, transparent 50%)",
-          }}
-        />
-        <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-xs font-bold uppercase tracking-wider mb-4">
-              <Flame className="h-3.5 w-3.5 text-yellow-300" />
-              Limited Time
+      <div className="flex gap-6 items-start">
+        {/* Sidebar — mockup lines 163-242 */}
+        <aside className="hidden lg:block w-64 shrink-0 sticky top-24 space-y-8">
+          <section>
+            <h3 className="text-xl font-bold text-foreground mb-3">Department</h3>
+            <div className="flex flex-col gap-2 text-sm">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={selectedCategorySlugs.size === 0}
+                  onChange={() => { setSelectedCategorySlugs(new Set()); setPage(1) }}
+                  className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                />
+                <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
+                  All Deals
+                </span>
+              </label>
+              {categories.map((c) => (
+                <label key={c.id} className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={selectedCategorySlugs.has(c.slug)}
+                    onChange={() => toggleCategory(c.slug)}
+                    className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  />
+                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
+                    {c.name}
+                  </span>
+                </label>
+              ))}
             </div>
-            <h1 className="text-3xl sm:text-5xl font-black leading-tight mb-2">
-              Today&apos;s Best Deals
-            </h1>
-            <p className="text-white/80 text-sm sm:text-base max-w-md">
-              Handpicked offers from the AfroTransact marketplace — save big on authentic products from our community.
-            </p>
-          </div>
-          <Link
-            href="/search?sort=discount"
-            className="shrink-0 inline-flex items-center gap-2 rounded-2xl bg-white text-orange-600 font-bold px-6 py-3 text-sm hover:bg-orange-50 transition-colors shadow-lg"
-          >
-            All discounts
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </div>
+          </section>
 
-        {/* Trust chips */}
-        <div className="relative mt-6 flex flex-wrap gap-3">
-          {[
-            { icon: <Star className="h-3.5 w-3.5 text-yellow-300" />, text: "Verified sellers" },
-            { icon: <BadgePercent className="h-3.5 w-3.5 text-green-300" />, text: "Up to 70% off" },
-            { icon: <Gift className="h-3.5 w-3.5 text-pink-300" />, text: "Authentic products" },
-          ].map(({ icon, text }) => (
-            <span
-              key={text}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-sm px-3 py-1 text-xs font-medium"
-            >
-              {icon}
-              {text}
-            </span>
-          ))}
+          <section>
+            <h3 className="text-xl font-bold text-foreground mb-3">Discount</h3>
+            <div className="flex flex-col gap-2 text-sm">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="radio"
+                  name="discount"
+                  checked={discountMin == null}
+                  onChange={() => { setDiscountMin(null); setPage(1) }}
+                  className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                />
+                <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
+                  Any
+                </span>
+              </label>
+              {DISCOUNT_TIERS.map((tier) => (
+                <label key={tier} className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="discount"
+                    checked={discountMin === tier}
+                    onChange={() => { setDiscountMin(tier); setPage(1) }}
+                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  />
+                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
+                    {tier}% Off or more
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-xl font-bold text-foreground mb-3">Customer Rating</h3>
+            <div className="flex flex-col gap-2 text-sm">
+              {[4, 3].map((stars) => (
+                <label key={stars} className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="rating"
+                    checked={ratingMin === stars}
+                    onChange={() => { setRatingMin(stars); setPage(1) }}
+                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  />
+                  <span className="flex items-center">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={cn(
+                          "h-4 w-4",
+                          i < stars ? "fill-brand-gold text-brand-gold" : "fill-gray-200 text-gray-200",
+                        )}
+                      />
+                    ))}
+                  </span>
+                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
+                    &amp; Up
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
+        </aside>
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0">
+          {/* Header & view toggle — mockup lines 246-260 */}
+          <div className="flex justify-between items-end mb-6 pb-4 border-b border-gray-200">
+            <div>
+              <h1 className="text-3xl font-bold text-brand-gold">Today&apos;s Deals</h1>
+              <p className="text-sm text-gray-500 mt-1">
+                {loading
+                  ? "Finding the best deals…"
+                  : total === 0
+                    ? "No deals match your filters"
+                    : `Showing ${startIdx}-${endIdx} of ${total} ${total === 1 ? "deal" : "deals"}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 mr-1 hidden sm:inline">
+                View:
+              </span>
+              <div className="flex items-center rounded-lg bg-gray-100 p-1">
+                <button
+                  aria-label="Grid view"
+                  onClick={() => setViewMode("grid")}
+                  className={cn(
+                    "rounded p-1.5 transition-colors",
+                    viewMode === "grid"
+                      ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
+                      : "text-gray-500 hover:text-foreground",
+                  )}
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </button>
+                <button
+                  aria-label="List view"
+                  onClick={() => setViewMode("list")}
+                  className={cn(
+                    "rounded p-1.5 transition-colors",
+                    viewMode === "list"
+                      ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
+                      : "text-gray-500 hover:text-foreground",
+                  )}
+                >
+                  <LayoutList className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* States */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-3 text-gray-500">
+              <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+              <p className="text-sm">Loading deals…</p>
+            </div>
+          ) : total === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="rounded-2xl bg-gray-50 p-6 mb-5">
+                <Tag className="h-10 w-10 text-gray-300" />
+              </div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">No deals right now</h2>
+              <p className="max-w-md text-gray-500 text-sm">
+                Check back daily — new deals drop every morning.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div
+                className={cn(
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                    : "flex flex-col gap-4",
+                )}
+              >
+                {pageItems.map((deal) => {
+                  const card = dealToCardItem(deal)
+                  if (!card) return null
+                  return <BrandProductCard key={deal.id} item={card} />
+                })}
+              </div>
+
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onPageChange={(p) => {
+                  setPage(p)
+                  if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
+                }}
+              />
+            </>
+          )}
         </div>
       </div>
-
-      {/* Loading */}
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm">Finding the best deals for you…</p>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {isEmpty && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="relative mb-8">
-            <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-orange-100 to-red-50 border-2 border-orange-100">
-              <Tag className="h-12 w-12 text-orange-400" />
-            </div>
-            <span className="absolute -top-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white text-lg font-black shadow-lg">
-              0
-            </span>
-          </div>
-          <h2 className="text-2xl font-black text-foreground mb-2">No deals right now</h2>
-          <p className="text-muted-foreground text-sm max-w-xs mb-2 leading-relaxed">
-            Our sellers are cooking up something special. The best deals are coming your way soon!
-          </p>
-          <p className="text-muted-foreground/60 text-xs mb-8">Check back daily — new deals drop every morning.</p>
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Link
-              href="/search?sort=rating"
-              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors shadow-md"
-            >
-              <ShoppingBag className="h-4 w-4" />
-              Browse Products
-            </Link>
-            <Link
-              href="/search?sort=newest"
-              className="inline-flex items-center gap-2 rounded-2xl border border-border px-6 py-3 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
-            >
-              <Sparkles className="h-4 w-4" />
-              New Arrivals
-            </Link>
-          </div>
-
-          {/* Illustration */}
-          <div className="mt-12 grid grid-cols-3 gap-4 w-full max-w-sm opacity-30 pointer-events-none select-none">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-2xl border border-dashed border-border aspect-[3/4] flex items-center justify-center bg-muted/30">
-                <Tag className="h-6 w-6 text-muted-foreground" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Platform / Featured Deals */}
-      {platformDeals.length > 0 && (
-        <section className="mb-12">
-          <div className="flex items-center gap-2 mb-5">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold text-foreground">Featured Promotions</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-            {platformDeals.map((deal) => (
-              <div
-                key={deal.id}
-                className="group relative rounded-3xl overflow-hidden border border-border hover:shadow-2xl hover:shadow-black/10 transition-all duration-300"
-                style={{
-                  background: deal.bannerImageUrl
-                    ? `url(${deal.bannerImageUrl}) center/cover no-repeat`
-                    : `linear-gradient(135deg, ${deal.secondaryColor || "#f3f4f6"}, ${deal.primaryColor || "#e5e7eb"}40)`,
-                }}
-              >
-                <div
-                  className="relative p-7 sm:p-9 min-h-[220px] flex flex-col justify-between"
-                  style={{ background: deal.bannerImageUrl ? "rgba(0,0,0,0.5)" : undefined }}
-                >
-                  <div>
-                    {deal.badgeText && (
-                      <span
-                        className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold mb-4 uppercase tracking-wide"
-                        style={{ backgroundColor: deal.primaryColor, color: deal.secondaryColor }}
-                      >
-                        <Zap className="h-3 w-3" />
-                        {deal.badgeText}
-                      </span>
-                    )}
-                    <h3
-                      className="text-2xl sm:text-3xl font-black leading-tight mb-2"
-                      style={{ color: deal.textColor }}
-                    >
-                      {deal.title}
-                    </h3>
-                    {deal.description && (
-                      <p
-                        className="text-sm leading-relaxed opacity-80 max-w-md"
-                        style={{ color: deal.textColor }}
-                      >
-                        {deal.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between mt-6 gap-3">
-                    {deal.endAt && (
-                      <span
-                        className="flex items-center gap-1.5 text-xs opacity-70"
-                        style={{ color: deal.textColor }}
-                      >
-                        <Clock className="h-3.5 w-3.5" />
-                        Ends{" "}
-                        {new Date(deal.endAt).toLocaleDateString("en-US", {
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </span>
-                    )}
-                    {deal.ctaLink && (
-                      <Link
-                        href={deal.ctaLink}
-                        className="flex items-center gap-2 text-sm font-bold rounded-2xl px-5 py-2.5 transition-all hover:scale-105 active:scale-100 shrink-0 shadow-lg"
-                        style={{
-                          backgroundColor: deal.primaryColor,
-                          color: deal.secondaryColor,
-                        }}
-                      >
-                        {deal.ctaText || "Shop Now"}
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Seller / Product Deals */}
-      {sellerDeals.length > 0 && (
-        <section className="mb-12">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <Percent className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-bold text-foreground">Deals of the Day</h2>
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
-                {sellerDeals.length}
-              </span>
-            </div>
-            <Link
-              href="/search?sort=discount"
-              className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
-            >
-              View all <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-            {sellerDeals.map((deal) => (
-              <Link
-                key={deal.id}
-                href={deal.productSlug ? `/product/${deal.productSlug}` : "/search?sort=discount"}
-                className="group flex flex-col rounded-2xl border border-border bg-card hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all duration-200 overflow-hidden"
-              >
-                {/* Product image */}
-                <div className="relative h-44 w-full bg-muted overflow-hidden">
-                  {deal.productImageUrl ? (
-                    <Image
-                      src={deal.productImageUrl}
-                      alt={deal.productTitle || deal.title}
-                      fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      className="object-contain p-3 group-hover:scale-[1.04] transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
-                      <Tag className="h-12 w-12 text-primary/30" />
-                    </div>
-                  )}
-                  {deal.discountPercent && (
-                    <span className="absolute top-2.5 left-2.5 rounded-xl bg-red-500 text-white text-xs font-black px-2.5 py-1 shadow-md">
-                      -{deal.discountPercent}%
-                    </span>
-                  )}
-                  {deal.endAt && <CountdownPill endAt={deal.endAt} />}
-                </div>
-
-                <div className="flex flex-col flex-1 p-3.5 gap-1.5">
-                  {deal.badgeText && (
-                    <span className="inline-block w-fit rounded-full bg-primary/10 text-primary text-[10px] font-bold px-2.5 py-0.5 uppercase tracking-wide">
-                      {deal.badgeText}
-                    </span>
-                  )}
-                  <h3 className="font-bold text-foreground text-sm leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                    {deal.productTitle || deal.title}
-                  </h3>
-                  {deal.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      {deal.description}
-                    </p>
-                  )}
-
-                  <div className="mt-auto pt-2 space-y-2">
-                    <div className="flex items-center gap-2">
-                      {deal.dealPriceCents && (
-                        <span className="text-base font-black text-primary">
-                          ${(deal.dealPriceCents / 100).toFixed(2)}
-                        </span>
-                      )}
-                      {deal.originalPriceCents &&
-                        deal.dealPriceCents &&
-                        deal.originalPriceCents !== deal.dealPriceCents && (
-                          <span className="text-xs text-muted-foreground line-through">
-                            ${(deal.originalPriceCents / 100).toFixed(2)}
-                          </span>
-                        )}
-                    </div>
-
-                    {deal.storeName && (
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                        <Store className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{deal.storeName}</span>
-                      </p>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      {deal.endAt && (
-                        <div className="text-[10px]">
-                          <TimeRemaining endAt={deal.endAt} />
-                        </div>
-                      )}
-                      <span className="ml-auto text-xs font-semibold text-muted-foreground group-hover:text-primary flex items-center gap-0.5 transition-colors">
-                        Shop <ChevronRight className="h-3.5 w-3.5" />
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Sell on AfroTransact — bottom banner (buyer-appropriate, tasteful) */}
-      {!loading && (
-        <section className="mt-4 rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-gray-700">
-          <div className="px-8 sm:px-12 py-10 flex flex-col sm:flex-row items-center justify-between gap-8">
-            <div className="flex items-start gap-5">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/20 border border-primary/30">
-                <TrendingUp className="h-7 w-7 text-primary" />
-              </div>
-              <div>
-                <span className="inline-block rounded-full bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 mb-2">
-                  For Sellers
-                </span>
-                <h3 className="font-black text-white text-lg sm:text-xl leading-snug">
-                  Sell your products, run your own deals
-                </h3>
-                <p className="text-gray-400 text-sm mt-1.5 leading-relaxed max-w-sm">
-                  Join hundreds of vendors on AfroTransact. Create exclusive offers and reach thousands of customers in your community.
-                </p>
-              </div>
-            </div>
-            <StartSellingLink
-              variant="bare"
-              className="shrink-0 inline-flex items-center gap-2 rounded-2xl bg-primary px-7 py-3.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
-            >
-              Open Your Store
-              <ArrowRight className="h-4 w-4" />
-            </StartSellingLink>
-          </div>
-        </section>
-      )}
     </main>
   )
 }

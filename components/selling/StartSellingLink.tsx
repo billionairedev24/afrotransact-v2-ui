@@ -10,10 +10,10 @@ type Variant = "header" | "footer" | "button" | "inline" | "bare"
 const variantClass: Record<Variant, string> = {
   header:
     "flex items-center gap-1 px-3 h-full text-[13px] text-emerald-600 font-medium whitespace-nowrap hover:text-emerald-700 hover:bg-emerald-50 transition-colors",
-  footer: "text-[13px] text-muted-foreground hover:text-primary transition-colors",
+  footer: "text-[13px] text-muted-foreground hover:text-foreground transition-colors",
   button:
-    "inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all shadow-lg shadow-primary/20",
-  inline: "inline-flex items-center gap-2 rounded-xl bg-primary px-8 text-[15px] font-bold text-header hover:bg-primary/90 transition-all",
+    "inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gold px-8 text-[15px] font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-all shadow-lg shadow-primary/20",
+  inline: "inline-flex items-center gap-2 rounded-xl bg-brand-gold px-8 text-[15px] font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-all",
   bare: "",
 }
 
@@ -32,6 +32,13 @@ export function StartSellingLink({
   onNavigate?: () => void
 }) {
   const { data: session, status } = useSession()
+
+  // During closed beta, seller signup is INVITE-ONLY (admin-initiated).
+  // No self-service "Start Selling" path exists, so the CTA is hidden for
+  // everyone — guests, customers, sellers, admins alike. The button reappears
+  // once self-service is enabled (set NEXT_PUBLIC_SELLER_SIGNUP_ENABLED=true).
+  const selfServiceEnabled = process.env.NEXT_PUBLIC_SELLER_SIGNUP_ENABLED === "true"
+  if (!selfServiceEnabled) return null
 
   const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
   const isAdmin = roles.includes("admin")

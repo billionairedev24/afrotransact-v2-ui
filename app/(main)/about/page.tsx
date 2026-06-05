@@ -6,12 +6,12 @@ export default function AboutPage() {
     <main className="mx-auto max-w-4xl px-4 sm:px-6 py-12">
       {/* Hero */}
       <section className="text-center py-10">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary uppercase tracking-wider mb-6">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-foreground uppercase tracking-wider mb-6">
           Our Story
         </span>
         <h1 className="text-4xl sm:text-5xl font-black text-gray-900 leading-tight">
           A marketplace built<br />
-          <span className="text-primary">for immigrants, by immigrants</span>
+          <span className="text-foreground">for immigrants, by immigrants</span>
         </h1>
         <p className="mt-5 text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
           When you move to a new country, you carry your culture with you — in your food, your clothes,
@@ -35,7 +35,7 @@ export default function AboutPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
           {[
-            { icon: <Users className="h-6 w-6" />, color: "text-primary", bg: "bg-primary/10 border-primary/20",   title: "Community-first",    desc: "Every decision we make starts with what's best for buyers and sellers in our community." },
+            { icon: <Users className="h-6 w-6" />, color: "text-foreground", bg: "bg-primary/10 border-primary/20",   title: "Community-first",    desc: "Every decision we make starts with what's best for buyers and sellers in our community." },
             { icon: <Shield className="h-6 w-6" />, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", title: "Transparent & fair", desc: "Clear fees, honest policies, no surprises. We succeed when our sellers succeed." },
             { icon: <Heart className="h-6 w-6" />, color: "text-red-600", bg: "bg-red-500/10 border-red-500/20",   title: "Built with love",    desc: "We are ourselves immigrants and children of immigrants. This platform is personal." },
           ].map((v) => (
@@ -51,7 +51,7 @@ export default function AboutPage() {
       {/* Where we operate */}
       <section className="py-12 space-y-5">
         <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <MapPin className="h-6 w-6 text-primary" /> Where we operate
+          <MapPin className="h-6 w-6 text-foreground" /> Where we operate
         </h2>
         <p className="text-gray-600 leading-relaxed">
           We serve buyers and sellers in the areas configured on our platform. Available delivery methods,
@@ -62,11 +62,11 @@ export default function AboutPage() {
       {/* CTA */}
       <section className="py-12 border-t border-border">
         <div className="flex flex-wrap gap-4">
-          <Link href="/search" className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-header hover:bg-primary/90 transition-all">
+          <Link href="/search" className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-gold px-6 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-all">
             Start Shopping <ChevronRight className="h-4 w-4" />
           </Link>
           <Link href="/sell" className="inline-flex h-11 items-center gap-2 rounded-xl border border-gray-300 bg-gray-50 px-6 text-sm font-semibold text-gray-900 hover:bg-gray-100 transition-all">
-            <Store className="h-4 w-4 text-primary" /> Become a Seller
+            <Store className="h-4 w-4 text-foreground" /> Become a Seller
           </Link>
         </div>
       </section>

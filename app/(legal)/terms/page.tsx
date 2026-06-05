@@ -9,7 +9,7 @@ const CONTACT_EMAIL = "legal@afrotransact.com"
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="space-y-3 scroll-mt-20">
-      <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2">{title}</h2>
+      <h2 className="text-xl font-bold text-gray-900 border-b border-primary/30 pb-2">{title}</h2>
       <div className="text-sm text-gray-600 leading-relaxed space-y-3">{children}</div>
     </section>
   )
@@ -41,21 +41,21 @@ export default function TermsPage() {
       {/* Header */}
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-4">
-          <Scale className="h-6 w-6 text-primary" />
-          <span className="text-sm text-gray-500">Legal</span>
+          <Scale className="h-6 w-6 text-foreground" />
+          <span className="text-sm text-foreground font-medium">Legal</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-gray-900">Terms of Service</h1>
         <p className="text-gray-500 mt-3 text-sm">
           Effective Date: <span className="font-medium text-gray-900">{EFFECTIVE_DATE}</span>
           {" · "}
-          <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+          <Link href="/privacy" className="text-foreground hover:underline">Privacy Policy</Link>
           {" · "}
-          <Link href="/seller-agreement" className="text-primary hover:underline">Seller Agreement</Link>
+          <Link href="/seller-agreement" className="text-foreground hover:underline">Seller Agreement</Link>
         </p>
         <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-gray-700 leading-relaxed">
           Please read these Terms of Service (&quot;Terms&quot;) carefully before using AfroTransact. By accessing
           or using our platform, you agree to be bound by these Terms and our{" "}
-          <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+          <Link href="/privacy" className="text-foreground hover:underline">Privacy Policy</Link>.
           If you do not agree, do not use our services.
         </div>
       </div>
@@ -64,7 +64,7 @@ export default function TermsPage() {
         {/* Table of Contents — desktop sticky sidebar */}
         <aside className="hidden lg:block w-56 shrink-0">
           <div className="sticky top-24 space-y-1">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <p className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
               <FileText className="h-3.5 w-3.5" />
               Contents
             </p>
@@ -72,7 +72,7 @@ export default function TermsPage() {
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className="block text-xs text-gray-500 hover:text-primary transition-colors py-0.5"
+                className="block text-xs text-gray-500 hover:text-foreground transition-colors py-0.5"
               >
                 {item.label}
               </a>
@@ -155,7 +155,7 @@ export default function TermsPage() {
               <strong className="text-gray-900">Stripe</strong> as its payment processor. By making a
               purchase, you agree to Stripe&apos;s{" "}
               <a href="https://stripe.com/legal/ssa" target="_blank" rel="noopener noreferrer"
-                className="text-primary hover:underline">
+                className="text-foreground hover:underline">
                 Terms of Service
               </a>.
             </p>
@@ -206,7 +206,7 @@ export default function TermsPage() {
             </ul>
             <p>
               To initiate a return or dispute, contact our support team at{" "}
-              <a href="mailto:support@afrotransact.com" className="text-primary hover:underline">
+              <a href="mailto:support@afrotransact.com" className="text-foreground hover:underline">
                 support@afrotransact.com
               </a>{" "}
               within 48 hours of delivery.
@@ -253,7 +253,7 @@ export default function TermsPage() {
           <Section id="privacy" title="10. Privacy">
             <p>
               Our collection and use of personal information is governed by our{" "}
-              <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>,
+              <Link href="/privacy" className="text-foreground hover:underline">Privacy Policy</Link>,
               which is incorporated by reference into these Terms. By using the Platform, you consent
               to our data practices as described therein.
             </p>
@@ -322,7 +322,7 @@ export default function TermsPage() {
             <p>
               <strong className="text-gray-900">Informal Resolution:</strong> Before initiating any
               formal dispute proceeding, you agree to first contact us at{" "}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-foreground hover:underline">
                 {CONTACT_EMAIL}
               </a>{" "}
               and attempt to resolve the dispute informally within 30 days.
@@ -373,18 +373,18 @@ export default function TermsPage() {
 
           <Section id="contact" title="17. Contact Information">
             <p>If you have questions about these Terms, please contact us:</p>
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-1">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-1">
               <p className="font-semibold text-gray-900">{COMPANY}</p>
               <p>Texas, United States</p>
               <p>
                 Email:{" "}
-                <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-foreground hover:underline">
                   {CONTACT_EMAIL}
                 </a>
               </p>
               <p>
                 Support:{" "}
-                <a href="mailto:support@afrotransact.com" className="text-primary hover:underline">
+                <a href="mailto:support@afrotransact.com" className="text-foreground hover:underline">
                   support@afrotransact.com
                 </a>
               </p>

@@ -229,7 +229,7 @@ function PlanModal({
             type="checkbox"
             checked={form.active}
             onChange={(e) => update("active", e.target.checked)}
-            className="rounded border-gray-300 text-primary focus:ring-primary/30"
+            className="rounded border-gray-300 text-foreground focus:ring-primary/30"
           />
           <span className="text-sm text-gray-700">Active</span>
         </label>
@@ -309,7 +309,7 @@ function PlanModal({
             type="button"
             onClick={() => onSave(form)}
             disabled={saving}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-header transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-gold py-2.5 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:opacity-50"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -469,7 +469,7 @@ export default function AdminSubscriptionPage() {
             type="button"
             onClick={() => setCreateModalOpen(true)}
             disabled={status !== "authenticated" || loading}
-            className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-header transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand-gold px-4 py-2 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             New Plan
@@ -478,7 +478,7 @@ export default function AdminSubscriptionPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-foreground" />
           </div>
         ) : sortedPlans.length === 0 ? (
           <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
@@ -497,14 +497,14 @@ export default function AdminSubscriptionPage() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900">
-            <Settings className="h-4 w-4 text-primary" />
+            <Settings className="h-4 w-4 text-foreground" />
             Billing Configuration
           </h2>
         </div>
         <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <Loader2 className="h-6 w-6 animate-spin text-foreground" />
             </div>
           ) : Object.keys(billingConfig).length === 0 ? (
             <p className="py-4 text-sm text-gray-500">No billing configuration available.</p>
@@ -544,7 +544,7 @@ export default function AdminSubscriptionPage() {
                     type="button"
                     onClick={handleSaveConfig}
                     disabled={savingConfig || status !== "authenticated"}
-                    className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-header transition-colors hover:bg-primary/90 disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-lg bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover disabled:opacity-50"
                   >
                     {savingConfig ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

@@ -36,7 +36,7 @@ function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
           size={size}
           className={
             i < Math.round(rating)
-              ? "fill-primary text-primary"
+              ? "fill-primary text-foreground"
               : "fill-transparent text-muted-foreground/40"
           }
         />
@@ -195,7 +195,7 @@ export default function SellerReviewsPage() {
             {distributionEntries.map((d) => (
               <div key={d.star} className="flex items-center gap-2 text-xs">
                 <span className="w-3 text-right text-muted-foreground">{d.star}</span>
-                <Star size={10} className="fill-primary text-primary shrink-0" />
+                <Star size={10} className="fill-primary text-foreground shrink-0" />
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-primary transition-all"
@@ -294,7 +294,7 @@ export default function SellerReviewsPage() {
                             type="button"
                             onClick={() => submitReply(r.id)}
                             disabled={replyMutation.isPending || !replyDraft.trim()}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50"
                           >
                             {replyMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Reply size={14} />}
                             Post reply

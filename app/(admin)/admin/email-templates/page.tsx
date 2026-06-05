@@ -590,7 +590,7 @@ export default function EmailTemplatesPage() {
             type="checkbox"
             checked={newUseLayout}
             onChange={e => setNewUseLayout(e.target.checked)}
-            className="rounded border-gray-300 text-primary focus:ring-primary"
+            className="rounded border-gray-300 text-foreground focus:ring-primary"
           />
           Wrap with shared email layout (header, footer, branding)
         </label>
@@ -601,7 +601,7 @@ export default function EmailTemplatesPage() {
             onClick={() => { setNewEditorMode("notes"); setActiveTab("editor") }}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "editor" && newEditorMode === "notes"
-                ? "border-primary text-primary"
+                ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
             title="Describe the copy in plain English. Developers edit the HTML to match."
@@ -612,7 +612,7 @@ export default function EmailTemplatesPage() {
             onClick={() => { setNewEditorMode("html"); setActiveTab("editor") }}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "editor" && newEditorMode === "html"
-                ? "border-primary text-primary"
+                ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -621,7 +621,7 @@ export default function EmailTemplatesPage() {
           <button
             onClick={() => setActiveTab("preview")}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "preview" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+              activeTab === "preview" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <Eye className="h-4 w-4" /> Live Preview
@@ -683,12 +683,12 @@ export default function EmailTemplatesPage() {
             <div className="rounded-lg border border-gray-200 bg-white p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
-                  <Tag className="h-4 w-4 text-primary" />
+                  <Tag className="h-4 w-4 text-foreground" />
                   Template Variables
                 </h3>
                 <button
                   onClick={addVariable}
-                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/90 font-medium"
+                  className="flex items-center gap-1 text-xs text-foreground hover:text-foreground font-medium"
                 >
                   <Plus className="h-3 w-3" /> Add
                 </button>
@@ -728,7 +728,7 @@ export default function EmailTemplatesPage() {
                           type="checkbox"
                           checked={v.required}
                           onChange={e => updateVariable(idx, "required", e.target.checked)}
-                          className="rounded border-gray-300 text-primary focus:ring-primary"
+                          className="rounded border-gray-300 text-foreground focus:ring-primary"
                         />
                         Required
                       </label>
@@ -739,7 +739,7 @@ export default function EmailTemplatesPage() {
                           navigator.clipboard.writeText(`{{.${v.name}}}`)
                           toast.success(`Copied {{.${v.name}}}`)
                         }}
-                        className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/90"
+                        className="flex items-center gap-1 text-[10px] text-foreground hover:text-foreground"
                       >
                         <Copy className="h-2.5 w-2.5" />
                         {"{{."}{v.name}{"}}"}
@@ -755,10 +755,10 @@ export default function EmailTemplatesPage() {
                 <Info className="h-3 w-3" /> Template Functions
               </h4>
               <div className="space-y-1.5 overflow-x-auto text-xs text-gray-500 break-words">
-                <p><code className="break-all text-primary">{"{{formatMoney .AmountCents .Currency}}"}</code><br/>Formats cents to $45.99</p>
-                <p><code className="break-all text-primary">{"{{ctaButton .URL \"Label\"}}"}</code><br/>Branded CTA button</p>
-                <p><code className="break-all text-primary">{"{{if .Var}}…{{end}}"}</code><br/>Conditional block</p>
-                <p><code className="break-all text-primary">{"{{range .Items}}…{{end}}"}</code><br/>Loop over arrays</p>
+                <p><code className="break-all text-foreground">{"{{formatMoney .AmountCents .Currency}}"}</code><br/>Formats cents to $45.99</p>
+                <p><code className="break-all text-foreground">{"{{ctaButton .URL \"Label\"}}"}</code><br/>Branded CTA button</p>
+                <p><code className="break-all text-foreground">{"{{if .Var}}…{{end}}"}</code><br/>Conditional block</p>
+                <p><code className="break-all text-foreground">{"{{range .Items}}…{{end}}"}</code><br/>Loop over arrays</p>
               </div>
             </div>
           </div>
@@ -894,20 +894,20 @@ export default function EmailTemplatesPage() {
             title="Describe the copy you want. Developers will edit the HTML to match."
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "editor" && editorMode === "notes"
-                ? "border-primary text-primary"
+                ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <NotebookPen className="h-4 w-4" /> Copy notes
             {editNotes.trim().length > 0 && (
-              <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">●</span>
+              <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-foreground">●</span>
             )}
           </button>
           <button
             onClick={() => { setEditorMode("html"); setActiveTab("editor") }}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "editor" && editorMode === "html"
-                ? "border-primary text-primary"
+                ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -917,7 +917,7 @@ export default function EmailTemplatesPage() {
             onClick={() => setActiveTab("preview")}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "preview"
-                ? "border-primary text-primary"
+                ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -984,7 +984,7 @@ export default function EmailTemplatesPage() {
           <div className="min-w-0 xl:col-span-1">
             <div className="sticky top-6 rounded-lg border border-gray-200 bg-white p-4">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 mb-3">
-                <Tag className="h-4 w-4 text-primary" />
+                <Tag className="h-4 w-4 text-foreground" />
                 Available Variables
               </h3>
               <div className="space-y-2">
@@ -997,9 +997,9 @@ export default function EmailTemplatesPage() {
                       navigator.clipboard.writeText(`{{.${v.name}}}`)
                       toast.success(`Copied {{.${v.name}}} to clipboard`)
                     }}
-                    className="block w-full min-w-0 text-left rounded-md border border-gray-100 bg-gray-50 px-3 py-2 hover:bg-primary/5 hover:border-primary/20 transition-colors group"
+                    className="block w-full min-w-0 text-left rounded-md border border-gray-100 bg-gray-50 px-3 py-2 hover:bg-brand-gold/5 hover:border-primary/20 transition-colors group"
                   >
-                    <code className="break-all text-xs font-mono text-primary group-hover:text-primary">
+                    <code className="break-all text-xs font-mono text-foreground group-hover:text-foreground">
                       {"{{."}{v.name}{"}}"}
                     </code>
                     <p className="mt-0.5 break-words text-xs text-gray-500">{v.description}</p>
@@ -1015,10 +1015,10 @@ export default function EmailTemplatesPage() {
                   <Info className="h-3 w-3" /> Template Functions
                 </h4>
                 <div className="space-y-1.5 overflow-x-auto text-xs text-gray-500 break-words">
-                  <p><code className="break-all text-primary">{"{{formatMoney .AmountCents .Currency}}"}</code><br/>Formats cents to $45.99</p>
-                  <p><code className="break-all text-primary">{"{{ctaButton .URL \"Label\"}}"}</code><br/>Branded CTA button</p>
-                  <p><code className="break-all text-primary">{"{{if .Var}}…{{end}}"}</code><br/>Conditional block</p>
-                  <p><code className="break-all text-primary">{"{{range .Items}}…{{end}}"}</code><br/>Loop over arrays</p>
+                  <p><code className="break-all text-foreground">{"{{formatMoney .AmountCents .Currency}}"}</code><br/>Formats cents to $45.99</p>
+                  <p><code className="break-all text-foreground">{"{{ctaButton .URL \"Label\"}}"}</code><br/>Branded CTA button</p>
+                  <p><code className="break-all text-foreground">{"{{if .Var}}…{{end}}"}</code><br/>Conditional block</p>
+                  <p><code className="break-all text-foreground">{"{{range .Items}}…{{end}}"}</code><br/>Loop over arrays</p>
                 </div>
               </div>
 
@@ -1044,7 +1044,7 @@ export default function EmailTemplatesPage() {
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
-            <Mail className="h-6 w-6 shrink-0 text-primary" />
+            <Mail className="h-6 w-6 shrink-0 text-foreground" />
             <span className="min-w-0">Email Templates</span>
           </h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -1066,7 +1066,7 @@ export default function EmailTemplatesPage() {
           className={cn(
             "rounded-full px-3 py-1 text-xs font-medium transition-colors",
             filterCategory === ""
-              ? "bg-primary text-primary-foreground shadow-sm"
+              ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
               : "bg-muted text-muted-foreground hover:bg-muted/85",
           )}
         >
@@ -1081,7 +1081,7 @@ export default function EmailTemplatesPage() {
               className={cn(
                 "rounded-full px-3 py-1 text-xs font-medium transition-colors",
                 filterCategory === cat
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
                   : "bg-muted text-muted-foreground hover:bg-muted/85",
               )}
             >
@@ -1103,8 +1103,8 @@ export default function EmailTemplatesPage() {
             disabled={loadingDetail}
             className="group flex min-w-0 w-full max-w-full items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-primary/40 hover:shadow-sm"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 transition-colors group-hover:bg-primary/10">
-              <Mail className="h-5 w-5 text-gray-400 transition-colors group-hover:text-primary" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 transition-colors group-hover:bg-brand-gold/10">
+              <Mail className="h-5 w-5 text-gray-400 transition-colors group-hover:text-foreground" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -1113,7 +1113,7 @@ export default function EmailTemplatesPage() {
                   {CATEGORY_LABELS[tpl.category] ?? tpl.category}
                 </span>
                 {!tpl.is_default && (
-                  <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">Customized</span>
+                  <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-foreground">Customized</span>
                 )}
               </div>
               <p className="mt-0.5 truncate text-sm text-gray-500">{tpl.description}</p>
@@ -1121,7 +1121,7 @@ export default function EmailTemplatesPage() {
             <div className="flex-shrink-0 text-xs text-gray-400">
               v{tpl.version}
             </div>
-            <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-primary flex-shrink-0 transition-colors" />
+            <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-foreground flex-shrink-0 transition-colors" />
           </button>
         ))}
       </div>

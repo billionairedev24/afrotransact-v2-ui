@@ -70,7 +70,7 @@ function IdleWarningModal({
           <button
             type="button"
             onClick={onStayLoggedIn}
-            className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-primary/90"
+            className="flex-1 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90"
           >
             Keep me signed in
           </button>
@@ -112,7 +112,15 @@ export function IdleTimeoutProvider({ children }: { children: React.ReactNode })
     clearAllTimers()
     setShowWarning(false)
     clearClientCartOnly()
-    void signOut({ callbackUrl: "/auth/login?reason=inactive" })
+    // Force a hard redirect to the inactive-reason login page. next-auth's
+    // signOut({ callbackUrl }) sometimes returns to the current route
+    // (federated logout swallows the callbackUrl), so we run signOut without
+    // redirecting and then navigate ourselves — guarantees the buyer ends
+    // up on the "signed out due to inactivity" screen no matter what page
+    // they were on (cart, checkout, browse, etc.).
+    void signOut({ redirect: false }).finally(() => {
+      window.location.href = "/auth/login?reason=inactive"
+    })
   }, [clearAllTimers])
 
   const startCountdown = useCallback(() => {

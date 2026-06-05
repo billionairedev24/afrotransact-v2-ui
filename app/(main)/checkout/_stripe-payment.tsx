@@ -76,6 +76,13 @@ function StripePaymentForm({
   const elements = useElements()
   const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
+  // Save-card UI is hidden until backend wiring lands (POST-LAUNCH-BACKLOG #40).
+  // `setup_future_usage` is a no-op without a Stripe Customer on the
+  // PaymentIntent, so showing the checkbox would lie to buyers. Once the
+  // Order/Payment services attach a Customer and a webhook persists the
+  // PaymentMethod, flip SAVE_CARD_ENABLED to true and re-surface the UI.
+  const SAVE_CARD_ENABLED = false
+  const [saveCard, setSaveCard] = useState(false)
 
   const handlePay = useCallback(async () => {
     if (!stripe || !elements) return
@@ -102,6 +109,7 @@ function StripePaymentForm({
       clientSecret,
       confirmParams: {
         return_url: `${window.location.origin}/checkout/complete`,
+        ...(saveCard ? { setup_future_usage: "off_session" } : {}),
       },
       redirect: "if_required",
     })
@@ -117,8 +125,6 @@ function StripePaymentForm({
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-bold text-gray-900">Payment</h2>
-
       {stripeAvailable ? (
         <>
           <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
@@ -132,9 +138,9 @@ function StripePaymentForm({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Lock className="h-3.5 w-3.5 text-primary" />
+              <Lock className="h-3.5 w-3.5 text-foreground" />
               <span className="text-xs text-gray-500 font-medium">
                 Secured by Stripe
               </span>
@@ -145,6 +151,20 @@ function StripePaymentForm({
                 wallets: { applePay: "auto", googlePay: "auto" },
               }}
             />
+
+            {SAVE_CARD_ENABLED && (
+              <label className="mt-4 flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={saveCard}
+                  onChange={(e) => setSaveCard(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                />
+                <span className="text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
+                  Save this card for future transactions
+                </span>
+              </label>
+            )}
           </div>
         </>
       ) : (
@@ -207,11 +227,11 @@ function StripePaymentForm({
         <button
           onClick={handlePay}
           disabled={processing || !stripe || !stripeAvailable}
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-[#0f0f10] hover:bg-primary/90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-gold py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {processing ? (
             <span className="flex items-center gap-2">
-              <span className="h-4 w-4 border-2 border-[#0f0f10]/30 border-t-[#0f0f10] rounded-full animate-spin" />
+              <span className="h-4 w-4 border-2 border-brand-gold-foreground/30 border-t-brand-gold-foreground rounded-full animate-spin" />
               Processing…
             </span>
           ) : (

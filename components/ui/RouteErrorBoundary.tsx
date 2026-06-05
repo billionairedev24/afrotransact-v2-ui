@@ -41,7 +41,7 @@ export function RouteErrorBoundary({
       <div className="mt-6 flex items-center gap-3">
         <button
           onClick={() => reset()}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-[#0f0f10] transition-colors hover:bg-primary/90"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-[#0f0f10] transition-colors hover:bg-brand-gold/90"
         >
           <RotateCw className="h-4 w-4" />
           Try again

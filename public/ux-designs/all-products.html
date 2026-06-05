@@ -1,0 +1,392 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>AfroTransact - All Products</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Tailwind Config -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#785900",
+                        "on-primary-fixed": "#261a00",
+                        "primary": "#785900",
+                        "on-tertiary-container": "#4a5667",
+                        "on-secondary-fixed-variant": "#414750",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed-dim": "#c1c7d2",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "inverse-primary": "#fabd00",
+                        "surface-container-low": "#f3f3f3",
+                        "primary-container": "#ffc107",
+                        "surface-container": "#eeeeee",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f9f9f9",
+                        "secondary": "#595f68",
+                        "on-primary-container": "#6d5100",
+                        "background": "#f9f9f9",
+                        "tertiary-fixed": "#d7e3f7",
+                        "outline": "#827660",
+                        "on-background": "#1a1c1c",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#fabd00",
+                        "primary-fixed": "#ffdf9e",
+                        "secondary-fixed": "#dde3ee",
+                        "surface-variant": "#e2e2e2",
+                        "surface-container-high": "#e8e8e8",
+                        "on-secondary-fixed": "#161c24",
+                        "secondary-container": "#dae0eb",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#4f4632",
+                        "on-tertiary-fixed": "#101c2b",
+                        "inverse-surface": "#2f3131",
+                        "tertiary-fixed-dim": "#bbc7db",
+                        "surface": "#f9f9f9",
+                        "on-tertiary-fixed-variant": "#3c4858",
+                        "on-secondary-container": "#5d636d",
+                        "inverse-on-surface": "#f1f1f1",
+                        "tertiary-container": "#bfccdf",
+                        "surface-dim": "#dadada",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#1a1c1c",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-primary-fixed-variant": "#5b4300",
+                        "outline-variant": "#d4c5ab",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#535f70"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-max": "1440px",
+                        "stack-md": "1rem",
+                        "section-gap": "2.5rem",
+                        "margin-mobile": "1rem",
+                        "gutter": "1.25rem",
+                        "stack-sm": "0.5rem"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "price-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "price-lg": ["24px", { "lineHeight": "24px", "fontWeight": "700" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen">
+<main class="max-w-container-max mx-auto px-gutter py-section-gap">
+    <!-- Header -->
+    <header class="mb-stack-md flex items-end justify-between border-b border-outline-variant pb-stack-sm">
+        <div>
+            <h1 class="font-headline-lg text-headline-lg text-primary" style="color: rgb(255, 193, 7);">All Products</h1>
+            <p class="font-body-md text-body-md text-on-surface-variant mt-1">1,245 items found</p>
+        </div>
+        <!-- Toolbar -->
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <label class="font-label-sm text-label-sm text-on-surface-variant" for="sort">Sort by:</label>
+                <select class="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-1.5 font-body-md text-body-md text-on-surface focus:ring-primary focus:border-primary" id="sort">
+                    <option>Featured</option>
+                    <option>Price: Low to High</option>
+                    <option>Price: High to Low</option>
+                    <option>Newest Arrivals</option>
+                    <option>Customer Rating</option>
+                </select>
+            </div>
+            <div class="flex bg-surface-container-low rounded-lg p-1">
+                <button aria-label="Grid view" class="p-1 rounded bg-surface-container-lowest shadow-sm text-primary" style="background-color: rgb(255, 193, 7); color: rgb(38, 26, 0);">
+                    <span class="material-symbols-outlined" data-icon="grid_view" data-weight="fill">grid_view</span>
+                </button>
+                <button aria-label="List view" class="p-1 rounded text-on-surface-variant hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined" data-icon="view_list">view_list</span>
+                </button>
+            </div>
+        </div>
+    </header>
+    <div class="flex gap-gutter items-start">
+        <!-- Sidebar -->
+        <aside class="w-64 flex-shrink-0 flex flex-col gap-section-gap sticky top-section-gap">
+            <!-- Category Filter -->
+            <section>
+                <h2 class="font-headline-md text-headline-md text-on-surface mb-stack-md">Categories</h2>
+                <div class="flex flex-col gap-2">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input checked="" class="rounded text-primary focus:ring-primary border-outline-variant w-4 h-4" type="checkbox" style="color: rgb(255, 193, 7); --tw-ring-color: #ffc107; border-color: rgb(255, 193, 7);">
+                        <span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">Textiles &amp; Fabrics (342)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input class="rounded text-primary focus:ring-primary border-outline-variant w-4 h-4" type="checkbox" style="color: rgb(255, 193, 7); --tw-ring-color: #ffc107; border-color: rgb(255, 193, 7);">
+                        <span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">Art &amp; Decor (185)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input class="rounded text-primary focus:ring-primary border-outline-variant w-4 h-4" type="checkbox" style="color: rgb(255, 193, 7); --tw-ring-color: #ffc107; border-color: rgb(255, 193, 7);">
+                        <span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">Jewelry &amp; Accessories (210)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input class="rounded text-primary focus:ring-primary border-outline-variant w-4 h-4" type="checkbox" style="color: rgb(255, 193, 7); --tw-ring-color: #ffc107; border-color: rgb(255, 193, 7);">
+                        <span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">Health &amp; Beauty (98)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input class="rounded text-primary focus:ring-primary border-outline-variant w-4 h-4" type="checkbox" style="color: rgb(255, 193, 7); --tw-ring-color: #ffc107; border-color: rgb(255, 193, 7);">
+                        <span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">Groceries &amp; Spices (410)</span>
+                    </label>
+                </div>
+            </section>
+            <!-- Price Filter -->
+            <section>
+                <h2 class="font-headline-md text-headline-md text-on-surface mb-stack-md">Price Range</h2>
+                <div class="flex flex-col gap-stack-sm">
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant font-body-md text-body-md">$</span>
+                            <input class="w-full pl-6 pr-2 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest font-body-md text-body-md text-on-surface focus:ring-primary focus:border-primary" placeholder="Min" type="number" value="10">
+                        </div>
+                        <span class="text-on-surface-variant">-</span>
+                        <div class="relative flex-1">
+                            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant font-body-md text-body-md">$</span>
+                            <input class="w-full pl-6 pr-2 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest font-body-md text-body-md text-on-surface focus:ring-primary focus:border-primary" placeholder="Max" type="number" value="150">
+                        </div>
+                    </div>
+                    <button class="w-full py-1.5 mt-2 rounded-lg bg-surface-container-high text-on-surface font-label-sm text-label-sm hover:bg-surface-variant transition-colors border border-outline-variant">Apply</button>
+                </div>
+            </section>
+            <!-- Rating Filter -->
+            <section>
+                <h2 class="font-headline-md text-headline-md text-on-surface mb-stack-md">Customer Rating</h2>
+                <div class="flex flex-col gap-2">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input class="text-primary focus:ring-primary border-outline-variant w-4 h-4" name="rating" type="radio" style="color: rgb(255, 193, 7); --tw-ring-color: #ffc107; border-color: rgb(255, 193, 7);">
+                        <div class="flex items-center text-primary-container">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                        </div>
+                        <span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">&amp; Up</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input checked="" class="text-primary focus:ring-primary border-outline-variant w-4 h-4" name="rating" type="radio" style="color: rgb(255, 193, 7); --tw-ring-color: #ffc107; border-color: rgb(255, 193, 7);">
+                        <div class="flex items-center text-primary-container">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="star">star</span>
+                        </div>
+                        <span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">&amp; Up</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input class="text-primary focus:ring-primary border-outline-variant w-4 h-4" name="rating" type="radio" style="color: rgb(255, 193, 7); --tw-ring-color: #ffc107; border-color: rgb(255, 193, 7);">
+                        <div class="flex items-center text-primary-container">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill">star</span>
+                            <span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="star">star</span>
+                            <span class="material-symbols-outlined text-outline-variant text-[18px]" data-icon="star">star</span>
+                        </div>
+                        <span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">&amp; Up</span>
+                    </label>
+                </div>
+            </section>
+        </aside>
+        <!-- Product Grid -->
+        <div class="flex-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-stack-md">
+                <!-- Product Card 1 -->
+                <div class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
+                    <div class="relative aspect-square overflow-hidden bg-surface-container-low">
+                        <img alt="Premium African Print Fabric" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A vibrant, close-up shot of premium African print fabric neatly folded in a well-lit studio. The light-mode aesthetic highlights the rich, saturated yellows and deep earth tones of the textile against a crisp white background. The mood is authentic, high-quality, and culturally rich, emphasizing texture and pattern." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCataa_iCyfiFs9KbQm5MwrsJolDI3QF4IgvHtzm2mw0u9Ktftkw6M-6cRInbKEjNhPcV6D-arbtHwYqRTVAifmmfMJBaM2cavpvqazlvaoVK4UyhkRRMgSRVyZuyPUO_lPxhKabwYE0J23_yH2bYU22lcxqTswqwIlLOIb-U26vnDsEZD5yb9UtGnVRnjQzek9APs5zz6J2WIX3RAVv4A-ustcGbGIMM8Qm_yWE5SaU6od8aUadKsbtzl_kqJxR24ArqKYCRXsPXo">
+                    </div>
+                    <div class="p-4 flex flex-col flex-1 gap-2">
+                        <h3 class="font-body-md text-body-md text-on-surface line-clamp-2 leading-tight">Premium Kente Cloth Fabric Bundle - 6 Yards Authentic Print</h3>
+                        <div class="flex items-center gap-1 mt-auto">
+                            <div class="flex text-primary-container">
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star_half" data-weight="fill">star_half</span>
+                            </div>
+                            <span class="font-label-sm text-label-sm text-on-surface-variant">(128)</span>
+                        </div>
+                        <div class="font-price-lg text-price-lg text-on-surface mt-1">$45.99</div>
+                        <button class="w-full mt-2 py-2 rounded-lg bg-primary-container text-on-primary-container font-label-sm text-label-sm hover:bg-[#e6ae06] transition-colors flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="shopping_cart">shopping_cart</span> Add to Cart
+                        </button>
+                    </div>
+                </div>
+                <!-- Product Card 2 -->
+                <div class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
+                    <div class="relative aspect-square overflow-hidden bg-surface-container-low">
+                        <img alt="Hand-carved Wooden Mask" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A beautifully crafted, hand-carved wooden decorative mask displayed on a clean, light-grey surface. Studio lighting casts soft shadows, emphasizing the smooth finish and intricate details of the wood grain. The overall corporate/modern aesthetic ensures the object looks premium and carefully curated for a high-end marketplace." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQuqwG9eHdOz8QgiN4Bd6t4mYTZtmtoY068wiEUu_oANfIrAiaoQA5rr-8TuZZEgpn8NFqXYoB0qtNMZ7lQtUasGvhhLEOJGT1xyb5LXP8aRh9Yd_IV3aZZBoLvpPNiepPTC_MIbzvjHTIUuzIbVPHkP9HV1nvCEnMK2WUfOM0QhTM3G7q8M64mxlxDZDBwoH0DSqCEQehqxsS6NlXQw1cWV-mriLiN_njxuCtjoPotzJLfOX8YRkdEdGR0iiPAKbW6JcsTsnSjJ8">
+                    </div>
+                    <div class="p-4 flex flex-col flex-1 gap-2">
+                        <h3 class="font-body-md text-body-md text-on-surface line-clamp-2 leading-tight">Hand-Carved Mahogany Wall Mask Decor - Artisan Made</h3>
+                        <div class="flex items-center gap-1 mt-auto">
+                            <div class="flex text-primary-container">
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                            </div>
+                            <span class="font-label-sm text-label-sm text-on-surface-variant">(85)</span>
+                        </div>
+                        <div class="font-price-lg text-price-lg text-on-surface mt-1">$89.00</div>
+                        <button class="w-full mt-2 py-2 rounded-lg bg-primary-container text-on-primary-container font-label-sm text-label-sm hover:bg-[#e6ae06] transition-colors flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="shopping_cart">shopping_cart</span> Add to Cart
+                        </button>
+                    </div>
+                </div>
+                <!-- Product Card 3 -->
+                <div class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
+                    <div class="relative aspect-square overflow-hidden bg-surface-container-low">
+                        <img alt="Shea Butter Jar" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A jar of raw, unrefined shea butter sitting on a pristine white marble countertop. Natural, soft daylight illuminates the product, creating a fresh, clean, and trustworthy visual. The light mode setting and subtle styling align perfectly with a modern, high-utility ecommerce platform focusing on health and beauty goods." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-OHUK2pywDwedrZwnR0aWZ3A_cZidPwfEypKvksB3NQLT3NqWjROCSEZXoOlfGAEVNQFPzRy7epeI4E5LR481YIpK4ivZkNuhbjGA37oed-n9_I-2g4hE_OZIKfG4-oDVwM1gkK6ORb0KWSEI2yNU0stDD3QwMGhN3DkHAMShGYwyEofkpcpNXeF5rtZo7EZIUC5151jwUUtaA_b4j8nQklkmKXrt_38rzFI-9oCY-uWIt4nbPQdGBe97tEAzTsR2YhO74e2xyaU">
+                    </div>
+                    <div class="p-4 flex flex-col flex-1 gap-2">
+                        <h3 class="font-body-md text-body-md text-on-surface line-clamp-2 leading-tight">Raw Unrefined Shea Butter - 100% Natural Organic 16oz</h3>
+                        <div class="flex items-center gap-1 mt-auto">
+                            <div class="flex text-primary-container">
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star_half" data-weight="fill">star_half</span>
+                            </div>
+                            <span class="font-label-sm text-label-sm text-on-surface-variant">(412)</span>
+                        </div>
+                        <div class="font-price-lg text-price-lg text-on-surface mt-1">$14.50</div>
+                        <button class="w-full mt-2 py-2 rounded-lg bg-primary-container text-on-primary-container font-label-sm text-label-sm hover:bg-[#e6ae06] transition-colors flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="shopping_cart">shopping_cart</span> Add to Cart
+                        </button>
+                    </div>
+                </div>
+                <!-- Product Card 4 -->
+                <div class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
+                    <div class="relative aspect-square overflow-hidden bg-surface-container-low">
+                        <img alt="Beaded Necklace" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="An elegant, handcrafted Maasai beaded necklace displayed on a minimal, light-colored bust stand. The lighting is bright and even, highlighting the intricate beadwork and vibrant colors against a stark white studio background. The image feels professional, crisp, and suitable for a trusted online marketplace." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-HQmU3Yf-tsGuz23nT0F5P6vpRVlnzmG-SmxeZC7ZPiNo3yYTc2wBd7UYJp4ngzxWSts4HpTeBUESu-isoVZ1Od1mSR68j4avCfdISCVGRWy7hIQjkdrWPSd-zH6agNRBY4PMefxMk74ZDmG0akM2XVC_Q8FVvGeGNSdFDsp03t3WEWZoorPUYL-wh73kQqWO2WzRo-o2E5aSBkBHEsMV3sW5XnWbgMcO_4nnnIxTFyhpdacTCVhMOQqHj0esPYmw2z7nucRpYic">
+                    </div>
+                    <div class="p-4 flex flex-col flex-1 gap-2">
+                        <h3 class="font-body-md text-body-md text-on-surface line-clamp-2 leading-tight">Traditional Maasai Beaded Necklace - Multi-color Statement Piece</h3>
+                        <div class="flex items-center gap-1 mt-auto">
+                            <div class="flex text-primary-container">
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-outline-variant text-[16px]" data-icon="star">star</span>
+                            </div>
+                            <span class="font-label-sm text-label-sm text-on-surface-variant">(56)</span>
+                        </div>
+                        <div class="font-price-lg text-price-lg text-on-surface mt-1">$32.00</div>
+                        <button class="w-full mt-2 py-2 rounded-lg bg-primary-container text-on-primary-container font-label-sm text-label-sm hover:bg-[#e6ae06] transition-colors flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="shopping_cart">shopping_cart</span> Add to Cart
+                        </button>
+                    </div>
+                </div>
+                <!-- Product Card 5 -->
+                <div class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
+                    <div class="relative aspect-square overflow-hidden bg-surface-container-low">
+                        <img alt="Jollof Rice Spice Mix" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A cleanly packaged pouch of authentic Jollof rice spice mix sitting next to a small wooden spoon filled with the vibrant red-orange powder. The background is a clean, bright kitchen counter setting. The aesthetic is appetizing, modern, and high-quality, typical of premium grocery listings." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtm4jYFj99DYfdXTuFNZ-8s5CX6Y_1F0slqiBzmswFiC5w48ZYVSGoaVlLQ7TU1BfxoOqu8UB6_hw0bveGJ4xor_QIiWESorLHQbTpsLguRlzMsX_-Bi2UQ7MdNOJA7mVVlojiTDWnrf-tzvOmRlssMJvAbw8YLTfu3JRTmUPPfJ3iAw4b8i2OUBk39ImtC8fBkuddr1gPSpSdrSyFuTsVUIMMVoHcv1iLPgQVSTOiBYM3Bh-H7ZpXufuIlRwT_4tJ-7M8FbObMyE">
+                    </div>
+                    <div class="p-4 flex flex-col flex-1 gap-2">
+                        <h3 class="font-body-md text-body-md text-on-surface line-clamp-2 leading-tight">Authentic Jollof Rice Spice Seasoning Mix - 250g</h3>
+                        <div class="flex items-center gap-1 mt-auto">
+                            <div class="flex text-primary-container">
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                            </div>
+                            <span class="font-label-sm text-label-sm text-on-surface-variant">(890)</span>
+                        </div>
+                        <div class="font-price-lg text-price-lg text-on-surface mt-1">$8.99</div>
+                        <button class="w-full mt-2 py-2 rounded-lg bg-primary-container text-on-primary-container font-label-sm text-label-sm hover:bg-[#e6ae06] transition-colors flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="shopping_cart">shopping_cart</span> Add to Cart
+                        </button>
+                    </div>
+                </div>
+                <!-- Product Card 6 -->
+                <div class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
+                    <div class="relative aspect-square overflow-hidden bg-surface-container-low">
+                        <img alt="Dashiki Shirt" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A modern, high-quality photograph of a vibrant patterned Dashiki shirt cleanly laid out on a bright, minimalist white surface. The lighting is crisp and even, highlighting the garment's detailed embroidery and colorful fabric. The overall look is professional, trustworthy, and suited for a premium ecommerce fashion section." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjbOyXhCsLIY6nEc-MLrAGPweTp0tBsVrb7x9YU5gxxxFGoKb_En5GicWJg6vYZcgf4UpwsgZ_dDKsdRBOfCbpIk3pAgxzGHTvLADhbKlUAXmLAIG89VOrM70Yv3OIErUYFA-Kwm404xsRbwd5bSWs6EkeHOyY6b4qwqyy7kBgUjpTQcwzCiueAkelSzYcr9QdPurBGTBEAUEjAntwQjreonYp9vRgFPxM9X5w2mC6z-tjRSKU3ShrREmNa462Gf45y-Oqf0RyTfQ">
+                    </div>
+                    <div class="p-4 flex flex-col flex-1 gap-2">
+                        <h3 class="font-body-md text-body-md text-on-surface line-clamp-2 leading-tight">Men's Classic Dashiki Print Shirt - 100% Cotton</h3>
+                        <div class="flex items-center gap-1 mt-auto">
+                            <div class="flex text-primary-container">
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-[16px]" data-icon="star" data-weight="fill">star</span>
+                                <span class="material-symbols-outlined text-outline-variant text-[16px]" data-icon="star">star</span>
+                            </div>
+                            <span class="font-label-sm text-label-sm text-on-surface-variant">(234)</span>
+                        </div>
+                        <div class="font-price-lg text-price-lg text-on-surface mt-1">$28.50</div>
+                        <button class="w-full mt-2 py-2 rounded-lg bg-primary-container text-on-primary-container font-label-sm text-label-sm hover:bg-[#e6ae06] transition-colors flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]" data-icon="shopping_cart">shopping_cart</span> Add to Cart
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Pagination -->
+            <div class="mt-section-gap flex justify-center items-center gap-2">
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant text-on-surface-variant hover:bg-surface-variant transition-colors" disabled="">
+                    <span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+                </button>
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary-container text-on-primary-container font-label-sm text-label-sm shadow-sm">1</button>
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant text-on-surface hover:bg-surface-variant hover:border-primary-container hover:text-on-primary-container transition-colors font-label-sm text-label-sm">2</button>
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant text-on-surface hover:bg-surface-variant hover:border-primary-container hover:text-on-primary-container transition-colors font-label-sm text-label-sm">3</button>
+                <span class="text-on-surface-variant px-1">...</span>
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant text-on-surface hover:bg-surface-variant hover:border-primary-container hover:text-on-primary-container transition-colors font-label-sm text-label-sm">24</button>
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant text-on-surface hover:bg-surface-variant transition-colors">
+                    <span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+
+
+</body></html>

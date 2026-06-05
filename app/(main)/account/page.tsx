@@ -151,7 +151,7 @@ export default async function AccountPage() {
                   {getMemberSince()}
                 </span>
                 {isSeller && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-foreground">
                     <ShoppingBag className="h-3 w-3" />
                     Seller Account
                   </span>
@@ -200,14 +200,14 @@ export default async function AccountPage() {
 
                 {/* Text */}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                  <p className="text-sm font-semibold text-foreground group-hover:text-foreground transition-colors truncate">
                     {item.label}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{item.desc}</p>
                 </div>
 
                 {/* Chevron */}
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-all group-hover:text-primary group-hover:translate-x-0.5" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-all group-hover:text-foreground group-hover:translate-x-0.5" />
               </Link>
             )
           })}

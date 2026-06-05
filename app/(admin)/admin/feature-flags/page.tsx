@@ -253,9 +253,9 @@ export default function FeatureFlagsPage() {
                   aria-label="Toggle admin analytics"
                 >
                   {analyticsSaving === "admin" ? (
-                    <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                    <Loader2 className="h-7 w-7 animate-spin text-foreground" />
                   ) : analyticsSettings.adminAnalyticsEnabled ? (
-                    <ToggleRight className="h-7 w-7 text-primary" />
+                    <ToggleRight className="h-7 w-7 text-foreground" />
                   ) : (
                     <ToggleLeft className="h-7 w-7" />
                   )}
@@ -285,9 +285,9 @@ export default function FeatureFlagsPage() {
                   aria-label="Toggle seller analytics"
                 >
                   {analyticsSaving === "seller" ? (
-                    <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                    <Loader2 className="h-7 w-7 animate-spin text-foreground" />
                   ) : analyticsSettings.sellerAnalyticsEnabled ? (
-                    <ToggleRight className="h-7 w-7 text-primary" />
+                    <ToggleRight className="h-7 w-7 text-foreground" />
                   ) : (
                     <ToggleLeft className="h-7 w-7" />
                   )}
@@ -363,9 +363,9 @@ export default function FeatureFlagsPage() {
                         aria-label={`Toggle ${flag.key}`}
                       >
                         {saving === flag.id ? (
-                          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                          <Loader2 className="h-7 w-7 animate-spin text-foreground" />
                         ) : flag.enabled ? (
-                          <ToggleRight className="h-7 w-7 text-primary" />
+                          <ToggleRight className="h-7 w-7 text-foreground" />
                         ) : (
                           <ToggleLeft className="h-7 w-7" />
                         )}

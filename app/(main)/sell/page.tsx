@@ -10,7 +10,7 @@ const STEPS = [
 ]
 
 const FEATURES = [
-  { icon: <TrendingUp className="h-5 w-5 text-primary" />, title: "Reach thousands of buyers", desc: "AfroTransact is the go-to marketplace for immigrant-owned businesses expanding their reach nationwide." },
+  { icon: <TrendingUp className="h-5 w-5 text-foreground" />, title: "Reach thousands of buyers", desc: "AfroTransact is the go-to marketplace for immigrant-owned businesses expanding their reach nationwide." },
   { icon: <ShieldCheck className="h-5 w-5 text-emerald-400" />, title: "Secure, fast payouts", desc: "Stripe Connect deposits your earnings directly to your bank — no delays." },
   { icon: <Sparkles className="h-5 w-5 text-yellow-400" />, title: "First month always free", desc: "Start selling with zero commitment. No subscription fee until your trial ends." },
   { icon: <Users className="h-5 w-5 text-sky-400" />, title: "Community-first platform", desc: "Built for immigrant entrepreneurs. Our support team understands your business." },
@@ -25,12 +25,12 @@ export default function SellPage() {
       <section className="relative overflow-hidden py-20 px-4 sm:px-6 text-center bg-gradient-to-br from-[#0d1f0d] via-background to-background">
         <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(212,168,83,0.1) 0%, transparent 60%)" }} />
         <div className="relative max-w-3xl mx-auto">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary uppercase tracking-wider mb-6">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-foreground uppercase tracking-wider mb-6">
             <Store className="h-3 w-3" /> For Sellers
           </span>
           <h1 className="text-4xl sm:text-5xl font-black text-gray-900 leading-tight">
             Sell to your community.<br />
-            <span className="text-primary">Earn on your terms.</span>
+            <span className="text-foreground">Earn on your terms.</span>
           </h1>
           <p className="mt-4 text-lg text-gray-500 max-w-xl mx-auto">
             Join 200+ immigrant entrepreneurs already selling food, fashion, and cultural goods on AfroTransact.
@@ -72,7 +72,7 @@ export default function SellPage() {
           <div className="space-y-4">
             {STEPS.map((step) => (
               <div key={step.n} className="flex gap-5 rounded-2xl border border-border bg-card p-5">
-                <span className="text-3xl font-black text-primary/30 leading-none shrink-0">{step.n}</span>
+                <span className="text-3xl font-black text-foreground/30 leading-none shrink-0">{step.n}</span>
                 <div>
                   <h3 className="font-bold text-gray-900">{step.title}</h3>
                   <p className="text-sm text-gray-500 mt-1">{step.desc}</p>

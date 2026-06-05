@@ -8,7 +8,7 @@ const CONTACT_EMAIL = "privacy@afrotransact.com"
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="space-y-3 scroll-mt-20">
-      <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2">{title}</h2>
+      <h2 className="text-xl font-bold text-gray-900 border-b border-primary/30 pb-2">{title}</h2>
       <div className="text-sm text-gray-600 leading-relaxed space-y-3">{children}</div>
     </section>
   )
@@ -36,16 +36,16 @@ export default function PrivacyPage() {
     <main className="mx-auto max-w-4xl px-4 sm:px-6 py-12">
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="h-6 w-6 text-primary" />
-          <span className="text-sm text-gray-500">Legal</span>
+          <Shield className="h-6 w-6 text-foreground" />
+          <span className="text-sm text-foreground font-medium">Legal</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-gray-900">Privacy Policy</h1>
         <p className="text-gray-500 mt-3 text-sm">
           Effective Date: <span className="font-medium text-gray-900">{EFFECTIVE_DATE}</span>
           {" · "}
-          <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>
+          <Link href="/terms" className="text-foreground hover:underline">Terms of Service</Link>
           {" · "}
-          <Link href="/seller-agreement" className="text-primary hover:underline">Seller Agreement</Link>
+          <Link href="/seller-agreement" className="text-foreground hover:underline">Seller Agreement</Link>
         </p>
         <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-gray-700 leading-relaxed">
           Your privacy matters to us. This Privacy Policy explains how {COMPANY} (&quot;AfroTransact&quot;,
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
       <div className="flex gap-10 lg:gap-16">
         <aside className="hidden lg:block w-56 shrink-0">
           <div className="sticky top-24 space-y-1">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <p className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
               <Lock className="h-3.5 w-3.5" />
               Contents
             </p>
@@ -65,7 +65,7 @@ export default function PrivacyPage() {
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className="block text-xs text-gray-500 hover:text-primary transition-colors py-0.5"
+                className="block text-xs text-gray-500 hover:text-foreground transition-colors py-0.5"
                 dangerouslySetInnerHTML={{ __html: item.label }}
               />
             ))}
@@ -208,7 +208,7 @@ export default function PrivacyPage() {
             <p>
               You may request deletion of your account and personal data at any time (subject to our
               legal retention obligations) by contacting{" "}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-foreground hover:underline">
                 {CONTACT_EMAIL}
               </a>.
             </p>
@@ -226,7 +226,7 @@ export default function PrivacyPage() {
             </ul>
             <p>
               To exercise these rights, contact us at{" "}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-foreground hover:underline">
                 {CONTACT_EMAIL}
               </a>. We will respond within 30 days.
             </p>
@@ -257,7 +257,7 @@ export default function PrivacyPage() {
               personal information from children. If we become aware that a child under 18 has provided
               us personal information, we will delete it promptly. If you believe a child has provided us
               information, contact{" "}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-foreground hover:underline">
                 {CONTACT_EMAIL}
               </a>.
             </p>
@@ -291,7 +291,7 @@ export default function PrivacyPage() {
             <p>
               <strong className="text-gray-900">We do not sell personal information</strong> as defined
               under the CCPA. To submit a verifiable consumer request, contact us at{" "}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-foreground hover:underline">
                 {CONTACT_EMAIL}
               </a>.
             </p>
@@ -307,12 +307,12 @@ export default function PrivacyPage() {
 
           <Section id="contact" title="14. Contact Us">
             <p>For privacy-related questions, requests, or concerns:</p>
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-1">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-1">
               <p className="font-semibold text-gray-900">{COMPANY} — Privacy Team</p>
               <p>Texas, United States</p>
               <p>
                 Email:{" "}
-                <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-foreground hover:underline">
                   {CONTACT_EMAIL}
                 </a>
               </p>

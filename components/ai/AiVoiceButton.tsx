@@ -63,7 +63,7 @@ export function AiVoiceButton({
       className={`relative flex items-center justify-center rounded-full transition-all duration-200 shrink-0 ${
         isListening
           ? "bg-red-500 text-white shadow-lg shadow-red-500/40 scale-105"
-          : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"
+          : "bg-muted text-muted-foreground hover:bg-brand-gold/10 hover:text-foreground"
       } ${btnSize} ${className}`}
     >
       {isListening ? (

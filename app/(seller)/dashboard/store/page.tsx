@@ -358,7 +358,7 @@ export default function StoreSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-3 py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <Loader2 className="h-6 w-6 animate-spin text-foreground" />
         <span className="text-sm text-muted-foreground">Loading store...</span>
       </div>
     )
@@ -432,7 +432,7 @@ export default function StoreSettingsPage() {
         <section className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-              <Store className="h-4 w-4 text-primary" />
+              <Store className="h-4 w-4 text-foreground" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">
@@ -650,7 +650,7 @@ export default function StoreSettingsPage() {
         {carrierShippingEnabled && <section className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-              <MapPin className="h-4 w-4 text-primary" />
+              <MapPin className="h-4 w-4 text-foreground" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">Shipping Preferences</h2>
@@ -680,7 +680,7 @@ export default function StoreSettingsPage() {
                       }
                       className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                         checked
-                          ? "border-primary/40 bg-primary/10 text-primary"
+                          ? "border-primary/40 bg-primary/10 text-foreground"
                           : "border-border text-muted-foreground hover:bg-muted"
                       }`}
                     >
@@ -697,7 +697,7 @@ export default function StoreSettingsPage() {
                   type="checkbox"
                   checked={form.shipFromSameAsBusiness}
                   onChange={(e) => update("shipFromSameAsBusiness", e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary"
+                  className="h-4 w-4 rounded border-border text-foreground"
                 />
                 Ship-from address is same as business address
               </label>
@@ -811,7 +811,7 @@ export default function StoreSettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:opacity-50"
           >
             {saving ? (
               <>

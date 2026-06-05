@@ -5,21 +5,39 @@ import { getToken } from "next-auth/jwt"
 const BETA_COOKIE = "beta_access"
 const ALLOWED_COOKIE_VALUE = "granted"
 
-/** Paths reachable without a redeemed beta cohort cookie (invite + legal + auth bootstrap). */
+/** Paths reachable without a redeemed beta cohort cookie.
+ *
+ * The closed-beta gate exists to keep the **storefront purchase funnel**
+ * (category browse → product → cart → checkout) invitation-only. Marketing
+ * surfaces (homepage, seller pitch, legal, help) and auth bootstrap must
+ * always be reachable so prospects can read about the product, sellers can
+ * find onboarding info, and invitees can sign in.
+ */
 function isPublicBetaPath(pathname: string): boolean {
   const exact = [
+    "/",                  // marketing landing
     "/favicon.ico",
     "/invite",
     "/robots.txt",
+    "/sitemap.xml",
     "/terms",
     "/privacy",
     "/seller-agreement",
+    "/cookies",
+    "/help",
+    "/about",
+    "/sell",              // seller pitch landing
     "/auth/login",
     "/auth/register",
   ]
   if (exact.includes(pathname)) return true
 
-  return ["/invite/", "/auth/"].some((p) => pathname.startsWith(p))
+  // Subtree prefixes that should always render:
+  //   /invite/*   — invite redemption flow
+  //   /auth/*     — sign in / sign up / verify / reset
+  //   /sell/*     — seller pricing + apply pages
+  //   /help/*     — FAQ subpages
+  return ["/invite/", "/auth/", "/sell/", "/help/"].some((p) => pathname.startsWith(p))
 }
 
 function isWellKnownAsset(pathname: string): boolean {
@@ -46,6 +64,13 @@ function bypassBuyerBetaGate(pathname: string): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Closed-beta "buyer gate" — DISABLED by default.
+  //
+  // The closed beta is about SELLER signup (invite-only via admin), not buyer
+  // access. Buyers should browse the storefront and purchase freely without any
+  // cookie / invite redemption. If a future business decision requires gating
+  // the buyer-side too, flip BETA_GATE_ENABLED=true; the redirect machinery
+  // below is preserved but inert by default.
   const betaEnabled = process.env.BETA_GATE_ENABLED === "true"
   const inviteSecretConfigured =
     typeof process.env.BETA_INVITE_SECRET === "string" && process.env.BETA_INVITE_SECRET.length > 0

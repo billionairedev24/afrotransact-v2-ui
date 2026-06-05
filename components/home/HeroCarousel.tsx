@@ -233,7 +233,7 @@ export function HeroCarousel({
                 <Link
                   key={cta.label}
                   href={cta.href}
-                  className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-7 text-[15px] font-bold text-header shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:shadow-primary/30 hover:shadow-xl active:scale-[0.98]"
+                  className="inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gold px-7 text-[15px] font-bold text-brand-gold-foreground shadow-lg shadow-primary/20 hover:bg-brand-gold/90 transition-all hover:shadow-primary/30 hover:shadow-xl active:scale-[0.98]"
                 >
                   {cta.icon}
                   {cta.label}
@@ -256,7 +256,7 @@ export function HeroCarousel({
             <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2">
               {slide.stats.map((stat) => (
                 <div key={stat.label} className="flex items-center gap-1.5 text-sm">
-                  <span className="font-bold text-primary">{stat.value}</span>
+                  <span className="font-bold text-foreground">{stat.value}</span>
                   <span className="text-gray-500">{stat.label}</span>
                 </div>
               ))}
@@ -354,7 +354,7 @@ export function mapConfigToSlide(cfg: HeroSlideConfig, idx: number): HeroSlide {
               label: cfg.secondaryCtaLabel,
               href: cfg.secondaryCtaHref,
               primary: false,
-              icon: <Store className="h-4 w-4 text-primary" />,
+              icon: <Store className="h-4 w-4 text-foreground" />,
             },
           ]
         : []),

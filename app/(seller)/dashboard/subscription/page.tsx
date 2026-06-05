@@ -200,7 +200,7 @@ export default function SubscriptionPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <Loader2 className="h-10 w-10 animate-spin text-foreground mb-4" />
         <p className="text-gray-500">Loading subscription...</p>
       </div>
     )
@@ -214,7 +214,7 @@ export default function SubscriptionPage() {
           <span className="font-medium">{error}</span>
         </div>
         <p className="text-sm text-gray-500 mt-2">Please try again later or contact support.</p>
-        <button onClick={() => { setLoading(true); loadAll() }} className="mt-3 inline-flex items-center gap-2 text-sm text-primary hover:underline">
+        <button onClick={() => { setLoading(true); loadAll() }} className="mt-3 inline-flex items-center gap-2 text-sm text-foreground hover:underline">
           <RefreshCw className="h-3.5 w-3.5" /> Retry
         </button>
       </div>
@@ -246,7 +246,7 @@ export default function SubscriptionPage() {
       {!subscription && (
         <>
           <div className="rounded-2xl border border-primary/30 bg-primary/10 p-8 text-center">
-            <Sparkles className="h-12 w-12 text-primary mx-auto mb-4" />
+            <Sparkles className="h-12 w-12 text-foreground mx-auto mb-4" />
             <h2 className="text-xl font-bold text-gray-900 mb-2">Start Your Free Trial</h2>
             <p className="text-gray-500 text-sm max-w-md mx-auto mb-6">
               Get full seller access with a free trial. No credit card required.
@@ -254,7 +254,7 @@ export default function SubscriptionPage() {
             <button
               onClick={handleStartTrial}
               disabled={trialLoading}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-header hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50"
             >
               {trialLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Starting...</> : "Start Free Trial"}
             </button>
@@ -262,7 +262,7 @@ export default function SubscriptionPage() {
           {plans.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Store className="h-5 w-5 text-primary" /> Available Plans
+                <Store className="h-5 w-5 text-foreground" /> Available Plans
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {plans.map((plan) => (
@@ -323,7 +323,7 @@ export default function SubscriptionPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4 shadow-sm">
               <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" /> Current Plan — {subscription.plan.name}
+                <Package className="h-4 w-4 text-foreground" /> Current Plan — {subscription.plan.name}
               </h2>
               <div className="space-y-2">
                 {(subscription.plan.features ?? []).map((f) => (
@@ -357,7 +357,7 @@ export default function SubscriptionPage() {
 
             <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4 shadow-sm">
               <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" /> Billing Timeline
+                <Calendar className="h-4 w-4 text-foreground" /> Billing Timeline
               </h2>
               <div className="space-y-3 text-sm">
                 {billingTimeline.length > 0 ? (
@@ -385,7 +385,7 @@ export default function SubscriptionPage() {
           {/* Billing history */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                <CreditCard className="h-4 w-4 text-primary" /> Billing History
+                <CreditCard className="h-4 w-4 text-foreground" /> Billing History
             </h2>
             <div className="space-y-2">
               {subscription.trialStartedAt && (
@@ -476,7 +476,7 @@ function PaymentMethodCard({ seller, paymentInfo }: { seller: SellerInfo | null;
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
-        <ShieldCheck className="h-4 w-4 text-primary" /> Payment & Payout Setup
+        <ShieldCheck className="h-4 w-4 text-foreground" /> Payment & Payout Setup
       </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -498,7 +498,7 @@ function PaymentMethodCard({ seller, paymentInfo }: { seller: SellerInfo | null;
           <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Payment Method (Billing)</p>
           {paymentInfo?.hasPaymentMethod ? (
             <div className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-primary" />
+              <CreditCard className="h-4 w-4 text-foreground" />
               <span className="text-sm text-gray-900 font-medium">Card on file</span>
             </div>
           ) : (
@@ -542,7 +542,7 @@ function PlanCard({
       <div className="flex items-start justify-between">
         <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
         {isCurrent && (
-          <span className="rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">Current</span>
+          <span className="rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-foreground">Current</span>
         )}
       </div>
       <div className="text-2xl font-bold text-gray-900">
@@ -573,7 +573,7 @@ function PlanCard({
         <button
           onClick={onSelect}
           disabled={isLoading}
-          className="w-full rounded-lg border border-primary bg-primary px-4 py-2.5 text-sm font-semibold text-header hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full rounded-lg border border-primary bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Select Plan"}
         </button>

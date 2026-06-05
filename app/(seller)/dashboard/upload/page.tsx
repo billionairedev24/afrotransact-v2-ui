@@ -544,7 +544,7 @@ export default function MediaPage() {
   if (status === "loading") {
     return (
       <div className="flex min-h-[320px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
     )
   }
@@ -591,7 +591,7 @@ export default function MediaPage() {
               setUploadOpen(true)
             }}
             disabled={uploading}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-60"
           >
             <Upload className="h-4 w-4" />
             Upload New
@@ -668,7 +668,7 @@ export default function MediaPage() {
 
         {loadingMedia ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <Loader2 className="h-6 w-6 animate-spin text-foreground" />
           </div>
         ) : media.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -697,8 +697,8 @@ export default function MediaPage() {
                         >
                           <span className="inline-flex items-center gap-1">
                             {flexRender(header.column.columnDef.header, header.getContext())}
-                            {header.column.getIsSorted() === "asc" && <span className="text-primary">↑</span>}
-                            {header.column.getIsSorted() === "desc" && <span className="text-primary">↓</span>}
+                            {header.column.getIsSorted() === "asc" && <span className="text-foreground">↑</span>}
+                            {header.column.getIsSorted() === "desc" && <span className="text-foreground">↓</span>}
                           </span>
                         </th>
                       ))}
@@ -832,7 +832,7 @@ export default function MediaPage() {
               <button
                 onClick={handleSaveEdit}
                 disabled={savingEdit}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-60"
               >
                 {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Save
@@ -949,7 +949,7 @@ export default function MediaPage() {
                       type="checkbox"
                       checked={autoRenumberOnReorder}
                       onChange={(e) => setAutoRenumberOnReorder(e.target.checked)}
-                      className="h-3.5 w-3.5 rounded border-blue-300 text-primary focus:ring-primary/40"
+                      className="h-3.5 w-3.5 rounded border-blue-300 text-foreground focus:ring-primary/40"
                     />
                     Auto-renumber names after drag reorder
                   </label>
@@ -1072,7 +1072,7 @@ export default function MediaPage() {
               <button
                 onClick={submitUploadForm}
                 disabled={uploading || uploadRows.length === 0}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-black hover:bg-primary/90 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-60"
               >
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {uploading ? "Uploading..." : `Save ${uploadRows.length} file${uploadRows.length !== 1 ? "s" : ""}`}
@@ -1120,7 +1120,7 @@ export default function MediaPage() {
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
                     copiedId === previewItem.id
-                      ? "border-primary bg-primary/10 text-primary"
+                      ? "border-primary bg-primary/10 text-foreground"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50",
                   )}
                 >
