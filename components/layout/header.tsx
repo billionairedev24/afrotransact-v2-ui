@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useSession, signIn } from "next-auth/react"
 import {
   ShoppingCart,
@@ -29,6 +29,9 @@ import {
   Menu,
   ChevronRight,
   Heart,
+  LayoutGrid,
+  Eye,
+  ArrowRight,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
@@ -68,37 +71,59 @@ function getInitials(name?: string | null): string {
 
 const isServicesCategory = (slug: string) => slug.toLowerCase().includes("service")
 
+// TODO(post-beta): set this to false to re-enable the "For Sellers" section
+// (Seller Dashboard link, "Sell on AfroTransact" CTA) in the mobile sidebar.
+// Currently hardcoded true so seller surfaces are hidden in the closed-beta
+// while seller signups are invite-only.
+const HIDE_SELLER_FOR_BETA = true
+
 function MobileMenuSectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="border-y border-gray-200/80 bg-gray-50 px-4 py-2.5">
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500">{children}</p>
-    </div>
+    <p className="px-5 pb-2 pt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+      {children}
+    </p>
   )
 }
 
 function MobileMenuRow({
   href,
   onClick,
+  icon: Icon,
+  active,
+  badge,
   children,
 }: {
   href: string
   onClick: () => void
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  active?: boolean
+  badge?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
-      className="flex min-h-[3.25rem] items-center justify-between gap-3 border-b border-gray-100 px-4 active:bg-gray-50/80"
+      className={cn(
+        "mx-3 flex items-center gap-4 rounded-lg px-3 py-3 transition-colors",
+        active
+          ? "bg-brand-gold text-brand-gold-foreground"
+          : "text-gray-900 hover:bg-gray-100 active:bg-gray-100",
+      )}
     >
-      <span className="min-w-0 flex-1 text-[15px] font-medium leading-snug text-gray-900">{children}</span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" strokeWidth={2} aria-hidden />
+      <Icon
+        className={cn("h-5 w-5 shrink-0", active ? "text-brand-gold-foreground" : "text-gray-700")}
+        strokeWidth={1.75}
+      />
+      <span className="min-w-0 flex-1 truncate text-[15px] font-medium leading-snug">{children}</span>
+      {badge ? <span className="shrink-0">{badge}</span> : null}
     </Link>
   )
 }
 
 export function Header() {
   const router = useRouter()
+  const pathname = usePathname()
   const { data: session, status } = useSession()
   const [query, setQuery] = useState("")
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -642,7 +667,7 @@ export function Header() {
             category links worth showing; the mobile menu still has all of them. */}
       </header>
 
-      {/* ── Mobile slide-out menu (Amazon-inspired sheet; omits Search/Cart/Home — already in navbar) ── */}
+      {/* ── Mobile slide-out menu — matches /public/ux-designs/mobile-{1,2}.png ── */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-[45] flex">
           <button
@@ -652,156 +677,164 @@ export function Header() {
             onClick={closeMobileMenu}
           />
           <nav
-            className="relative flex h-full w-[min(22rem,calc(100vw-14px))] max-w-[90vw] flex-col overflow-hidden rounded-r-2xl bg-white shadow-2xl animate-in slide-in-from-left duration-200 ease-out"
+            className="relative flex h-full w-[min(22rem,calc(100vw-14px))] max-w-[90vw] flex-col overflow-hidden rounded-r-2xl bg-gray-50 shadow-2xl animate-in slide-in-from-left duration-200 ease-out"
             style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
             aria-label="Main menu"
           >
-            {/* Greeting strip — not a copy of Amazon; same UX pattern */}
-            <div className="shrink-0 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 px-4 pb-5 pt-4 text-white">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 flex-1 items-start gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/10">
-                    <User className="h-5 w-5 text-white/90" strokeWidth={1.75} />
-                  </div>
-                  <div className="min-w-0 pt-0.5">
-                    <p className="text-xs font-medium text-white/60">Hello</p>
-                    {isAuthenticated && firstName ? (
-                      <>
-                        <p className="truncate text-lg font-semibold leading-tight text-white">{firstName}</p>
-                        {userEmail ? (
-                          <p className="mt-0.5 truncate text-xs text-white/55">{userEmail}</p>
-                        ) : null}
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-lg font-semibold leading-tight text-white">there</p>
-                        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/85">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              closeMobileMenu()
-                              const callbackUrl =
-                                typeof window !== "undefined"
-                                  ? window.location.pathname + window.location.search
-                                  : "/"
-                              void signIn("keycloak", { callbackUrl })
-                            }}
-                            className="font-semibold text-foreground underline decoration-primary/50 underline-offset-2 transition-colors hover:text-foreground"
-                          >
-                            Sign in
-                          </button>
-                          <span className="text-white/35">·</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              closeMobileMenu()
-                              const callbackUrl =
-                                typeof window !== "undefined"
-                                  ? window.location.pathname + window.location.search
-                                  : "/"
-                              void signIn("keycloak-register", { callbackUrl })
-                            }}
-                            className="font-medium text-white/80 transition-colors hover:text-white"
-                          >
-                            Create account
-                          </button>
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="-mr-1 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10"
-                  aria-label="Close menu"
-                  onClick={closeMobileMenu}
+            {/* ── Dark greeting strip ── */}
+            <div className="relative shrink-0 bg-brand-dark px-4 pb-5 pt-5 text-white rounded-br-3xl">
+              <button
+                type="button"
+                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10"
+                aria-label="Close menu"
+                onClick={closeMobileMenu}
+              >
+                <X className="h-5 w-5" strokeWidth={2} />
+              </button>
+
+              <div className="flex items-center gap-3">
+                {/* Avatar — gold square w/ user icon (signed out) or initials (signed in) */}
+                <div
+                  className={cn(
+                    "flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2 border-white",
+                    isAuthenticated ? "bg-brand-dark text-brand-gold" : "bg-brand-gold text-brand-gold-foreground",
+                  )}
                 >
-                  <X className="h-5 w-5" strokeWidth={2} />
-                </button>
+                  {isAuthenticated && firstName ? (
+                    <span className="text-xl font-bold uppercase">{firstName.charAt(0)}</span>
+                  ) : (
+                    <User className="h-6 w-6" strokeWidth={2} />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1 pr-10">
+                  {isAuthenticated && firstName ? (
+                    <>
+                      <p className="truncate text-lg font-bold leading-tight">Hello, {firstName}</p>
+                      <Link
+                        href="/account"
+                        onClick={closeMobileMenu}
+                        className="mt-0.5 inline-flex items-center text-sm font-semibold text-brand-gold"
+                      >
+                        Manage Profile &amp; Account
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-bold leading-tight">Welcome to AfroTransact</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          closeMobileMenu()
+                          const callbackUrl =
+                            typeof window !== "undefined"
+                              ? window.location.pathname + window.location.search
+                              : "/"
+                          void signIn("keycloak", { callbackUrl })
+                        }}
+                        className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-brand-gold"
+                      >
+                        Sign in / Register
+                        <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-[max(1.25rem,env(safe-area-inset-bottom,0px))]">
+            {/* ── Scrollable body ── */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
               <MobileMenuSectionTitle>Shop</MobileMenuSectionTitle>
-              <MobileMenuRow href="/categories" onClick={closeMobileMenu}>
-                All categories
+              <MobileMenuRow href="/categories" onClick={closeMobileMenu} icon={LayoutGrid}>
+                All Categories
               </MobileMenuRow>
-              {navLinks.map((link) => {
-                if (link.disabled) {
-                  return (
-                    <div
-                      key={link.name}
-                      className="flex min-h-[3.25rem] items-center justify-between gap-3 border-b border-gray-100 px-4 text-[15px] text-gray-400"
-                    >
-                      <span className="min-w-0 flex-1 truncate">{link.name}</span>
-                      <span className="shrink-0 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-500">
-                        Soon
-                      </span>
-                    </div>
-                  )
+              <MobileMenuRow
+                href="/deals"
+                onClick={closeMobileMenu}
+                icon={Tag}
+                badge={
+                  <span className="rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                    Hot
+                  </span>
                 }
-                return (
-                  <MobileMenuRow key={link.name} href={link.href} onClick={closeMobileMenu}>
-                    {link.name}
-                  </MobileMenuRow>
-                )
-              })}
-              <MobileMenuRow href="/stores" onClick={closeMobileMenu}>
-                Browse stores
-              </MobileMenuRow>
-              <MobileMenuRow href="/search" onClick={closeMobileMenu}>
-                Shop all products
-              </MobileMenuRow>
-
-              <MobileMenuSectionTitle>For sellers</MobileMenuSectionTitle>
-              <StartSellingLink
-                variant="bare"
-                className={cn(
-                  "flex min-h-[3.25rem] w-full items-center justify-between gap-3 border-b border-emerald-100/80 bg-gradient-to-r from-emerald-50/90 to-white px-4 text-[15px] font-semibold text-emerald-900 active:bg-emerald-50",
-                )}
-                onNavigate={closeMobileMenu}
               >
-                <span className="min-w-0 flex-1 text-left">Start selling</span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-emerald-600/70" aria-hidden />
-              </StartSellingLink>
+                Today&apos;s Deals
+              </MobileMenuRow>
 
-              {isAuthenticated ? (
+              <div className="mx-5 my-2 border-t border-gray-200" />
+
+              <MobileMenuSectionTitle>
+                {isAuthenticated ? "My Account" : "Account"}
+              </MobileMenuSectionTitle>
+              <MobileMenuRow
+                href={isAuthenticated ? "/orders" : "/auth/login?callbackUrl=/orders"}
+                onClick={closeMobileMenu}
+                icon={Package}
+              >
+                My Orders
+              </MobileMenuRow>
+              <MobileMenuRow
+                href={isAuthenticated ? "/account/wishlist" : "/auth/login?callbackUrl=/account/wishlist"}
+                onClick={closeMobileMenu}
+                icon={Eye}
+              >
+                Watchlist
+              </MobileMenuRow>
+              <MobileMenuRow
+                href={isAuthenticated ? "/account/settings" : "/auth/login?callbackUrl=/account/settings"}
+                onClick={closeMobileMenu}
+                icon={Settings}
+                active={pathname?.startsWith("/account/settings") ?? false}
+              >
+                Settings
+              </MobileMenuRow>
+
+              {/* ── For Sellers (gated off during beta) ── */}
+              {!HIDE_SELLER_FOR_BETA && (
                 <>
-                  <MobileMenuSectionTitle>Your account</MobileMenuSectionTitle>
-                  <MobileMenuRow href="/account" onClick={closeMobileMenu}>
-                    Account and profile
-                  </MobileMenuRow>
-                  <MobileMenuRow href="/orders" onClick={closeMobileMenu}>
-                    Your orders
-                  </MobileMenuRow>
-                  <MobileMenuRow href="/account/wishlist" onClick={closeMobileMenu}>
-                    Wishlist
-                  </MobileMenuRow>
+                  <div className="mx-5 my-2 border-t border-gray-200" />
+                  <MobileMenuSectionTitle>For Sellers</MobileMenuSectionTitle>
                   {(isSeller || isAdmin) && (
-                    <MobileMenuRow href="/dashboard" onClick={closeMobileMenu}>
-                      Seller dashboard
+                    <MobileMenuRow
+                      href="/dashboard"
+                      onClick={closeMobileMenu}
+                      icon={LayoutGrid}
+                    >
+                      Seller Dashboard
                     </MobileMenuRow>
                   )}
+                  <MobileMenuRow href="/sell" onClick={closeMobileMenu} icon={Store}>
+                    Sell on AfroTransact
+                  </MobileMenuRow>
                   {isAdmin && (
-                    <MobileMenuRow href="/admin" onClick={closeMobileMenu}>
+                    <MobileMenuRow href="/admin" onClick={closeMobileMenu} icon={ShieldCheck}>
                       Admin
                     </MobileMenuRow>
                   )}
-                  <MobileMenuRow href="/account/settings" onClick={closeMobileMenu}>
-                    Settings
-                  </MobileMenuRow>
+                </>
+              )}
+
+              <div className="flex-1" />
+
+              {/* ── Footer ── */}
+              <div className="shrink-0 border-t border-gray-200 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+                {isAuthenticated ? (
                   <button
                     type="button"
                     onClick={() => {
                       closeMobileMenu()
-                      signOut()
+                      void signOut()
                     }}
-                    className="flex min-h-[3.25rem] w-full items-center border-b border-gray-100 px-4 text-left text-[15px] font-medium text-red-600 active:bg-red-50/60"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 text-sm font-bold uppercase tracking-wider text-red-600 transition-colors hover:bg-red-50 active:bg-red-100"
                   >
-                    Sign out
+                    <LogOut className="h-4 w-4" strokeWidth={2.25} />
+                    Sign Out
                   </button>
-                </>
-              ) : null}
+                ) : (
+                  <p className="text-center text-sm font-semibold text-gray-500">AfroTransact</p>
+                )}
+              </div>
             </div>
           </nav>
         </div>

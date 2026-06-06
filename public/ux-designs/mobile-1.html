@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AfroTransact - Mobile Menu</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary": "#ffffff",
+                      "on-error": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "primary-container": "#ffc107",
+                      "secondary-container": "#dae0eb",
+                      "surface-container-high": "#e8e8e8",
+                      "secondary": "#595f68",
+                      "on-surface": "#1a1c1c",
+                      "surface-container-highest": "#e2e2e2",
+                      "surface": "#f9f9f9",
+                      "secondary-fixed": "#dde3ee",
+                      "on-tertiary-fixed": "#101c2b",
+                      "secondary-fixed-dim": "#c1c7d2",
+                      "primary-fixed-dim": "#fabd00",
+                      "on-tertiary-container": "#4a5667",
+                      "tertiary": "#535f70",
+                      "background": "#f9f9f9",
+                      "inverse-surface": "#2f3131",
+                      "tertiary-container": "#bfccdf",
+                      "on-tertiary-fixed-variant": "#3c4858",
+                      "on-secondary-fixed": "#161c24",
+                      "inverse-primary": "#fabd00",
+                      "surface-variant": "#e2e2e2",
+                      "primary-fixed": "#ffdf9e",
+                      "on-surface-variant": "#4f4632",
+                      "surface-container": "#eeeeee",
+                      "on-secondary-container": "#5d636d",
+                      "surface-dim": "#dadada",
+                      "on-tertiary": "#ffffff",
+                      "primary": "#785900",
+                      "surface-bright": "#f9f9f9",
+                      "on-primary-container": "#6d5100",
+                      "on-background": "#1a1c1c",
+                      "error": "#ba1a1a",
+                      "inverse-on-surface": "#f1f1f1",
+                      "tertiary-fixed": "#d7e3f7",
+                      "outline-variant": "#d4c5ab",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary": "#ffffff",
+                      "surface-container-low": "#f3f3f3",
+                      "on-primary-fixed-variant": "#5b4300",
+                      "surface-tint": "#785900",
+                      "tertiary-fixed-dim": "#bbc7db",
+                      "on-primary-fixed": "#261a00",
+                      "on-error-container": "#93000a",
+                      "outline": "#827660",
+                      "on-secondary-fixed-variant": "#414750"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-sm": "0.5rem",
+                      "stack-md": "1rem",
+                      "margin-mobile": "1rem",
+                      "container-max": "1440px",
+                      "section-gap": "2.5rem",
+                      "gutter": "1.25rem"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Hanken Grotesk"
+                      ],
+                      "headline-lg": [
+                              "Hanken Grotesk"
+                      ],
+                      "price-lg": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Hanken Grotesk"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "30px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "price-lg": [
+                              "24px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body-md text-body-md text-on-surface antialiased h-screen w-full relative overflow-hidden flex justify-center md:hidden">
+<!-- Mock Background Content to show overlay effect -->
+<div class="w-full h-full p-4 flex flex-col gap-4 opacity-50 pointer-events-none">
+<div class="h-16 w-full bg-surface-container-high rounded animate-pulse"></div>
+<div class="h-48 w-full bg-surface-container-high rounded animate-pulse"></div>
+<div class="grid grid-cols-2 gap-4">
+<div class="h-32 bg-surface-container-high rounded animate-pulse"></div>
+<div class="h-32 bg-surface-container-high rounded animate-pulse"></div>
+</div>
+</div>
+<!-- Backdrop Overlay -->
+<div class="fixed inset-0 bg-on-surface/40 backdrop-blur-sm z-40 transition-opacity duration-300"></div>
+<!-- NavigationDrawer Component -->
+<aside class="fixed inset-y-0 left-0 z-50 flex flex-col h-full w-[85%] max-w-sm bg-surface shadow-xl rounded-r-2xl transform transition-transform duration-300 ease-in-out">
+<!-- Header -->
+<div class="bg-on-surface px-6 pt-10 pb-6 rounded-tr-2xl relative">
+<button aria-label="Close menu" class="absolute top-4 right-4 text-surface hover:text-primary-container transition-colors p-2">
+<span class="material-symbols-outlined text-[28px]">close</span>
+</button>
+<div class="flex items-center gap-4 mt-2">
+<div class="w-14 h-14 bg-primary-container rounded-full flex items-center justify-center text-on-primary-container shrink-0 border-2 border-surface">
+<span class="material-symbols-outlined text-[32px]">person</span>
+</div>
+<div class="flex flex-col">
+<h2 class="font-headline-md text-headline-md font-bold text-surface">Welcome to AfroTransact</h2>
+<a class="text-primary-fixed-dim hover:text-primary-fixed font-medium mt-1 inline-flex items-center gap-1 group" href="#">
+                        Sign in / Register
+                        <span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-6">
+<!-- Shop Section -->
+<div class="flex flex-col gap-1">
+<h3 class="px-4 py-2 font-label-sm text-label-sm text-secondary uppercase tracking-wider">Shop</h3>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container-high transition-colors active:scale-95 text-on-surface" href="#">
+<span class="material-symbols-outlined text-secondary">grid_view</span>
+<span class="font-body-lg text-body-lg">All Categories</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container-high transition-colors active:scale-95 text-on-surface" href="#">
+<span class="material-symbols-outlined text-primary">local_offer</span>
+<span class="font-body-lg text-body-lg">Today's Deals</span>
+<span class="ml-auto bg-error text-on-error text-xs font-bold px-2 py-0.5 rounded-full">HOT</span>
+</a>
+</div>
+<div class="h-px bg-outline-variant/30 mx-4"></div>
+<!-- Account Section -->
+<div class="flex flex-col gap-1">
+<h3 class="px-4 py-2 font-label-sm text-label-sm text-secondary uppercase tracking-wider">Account</h3>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container-high transition-colors active:scale-95 text-on-surface" href="#">
+<span class="material-symbols-outlined text-secondary">inventory_2</span>
+<span class="font-body-lg text-body-lg">My Orders</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container-high transition-colors active:scale-95 text-on-surface" href="#">
+<span class="material-symbols-outlined text-secondary">visibility</span>
+<span class="font-body-lg text-body-lg">Watchlist</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container-high transition-colors active:scale-95 text-on-surface" href="#">
+<span class="material-symbols-outlined text-secondary">settings</span>
+<span class="font-body-lg text-body-lg">Settings</span>
+</a>
+</div>
+<div class="h-px bg-outline-variant/30 mx-4"></div>
+<!-- Seller Section -->
+<div class="flex flex-col gap-1">
+<h3 class="px-4 py-2 font-label-sm text-label-sm text-secondary uppercase tracking-wider">For Sellers</h3>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors active:scale-95 text-on-surface" href="#">
+<span class="material-symbols-outlined text-primary">storefront</span>
+<span class="font-body-lg text-body-lg font-medium">Sell on AfroTransact</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container-high transition-colors active:scale-95 text-on-surface" href="#">
+<span class="material-symbols-outlined text-secondary">dashboard</span>
+<span class="font-body-lg text-body-lg">Seller Dashboard</span>
+</a>
+</div>
+<div class="h-px bg-outline-variant/30 mx-4"></div>
+<!-- Support -->
+<div class="flex flex-col gap-1 pb-6">
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container-high transition-colors active:scale-95 text-on-surface" href="#">
+<span class="material-symbols-outlined text-secondary">support_agent</span>
+<span class="font-body-lg text-body-lg">Customer Service</span>
+</a>
+</div>
+</div>
+<!-- Sticky Bottom Branding -->
+<div class="p-4 bg-surface-container-low border-t border-outline-variant/30">
+<div class="flex items-center justify-center gap-2 text-secondary">
+<span class="font-headline-md text-headline-md font-bold text-on-surface opacity-50">AfroTransact</span>
+</div>
+</div>
+</aside>
+</body></html>

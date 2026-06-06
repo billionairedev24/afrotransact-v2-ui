@@ -95,7 +95,7 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
             </span>
           </div>
 
-          <nav className="flex-1 flex flex-col gap-1 overflow-y-auto">
+          <nav className="flex-1 flex flex-col gap-1 overflow-y-auto scrollbar-hide">
             {navItems.map((item) => {
               const Icon = item.icon
               const active = item.exact
@@ -181,7 +181,7 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <nav className="flex-1 flex flex-col gap-1 overflow-y-auto">
+              <nav className="flex-1 flex flex-col gap-1 overflow-y-auto scrollbar-hide">
                 {navItems.map((item) => {
                   const Icon = item.icon
                   const active = item.exact
