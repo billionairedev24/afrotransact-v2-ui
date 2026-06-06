@@ -122,7 +122,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </button>
         )}
       </div>
-      <nav className="flex-1 flex flex-col gap-1 overflow-y-auto">
+      <nav className="flex-1 flex flex-col gap-1 overflow-y-auto scrollbar-hide">
         {navItems.map((item) => navLink(item, onClose))}
       </nav>
       <div className="mt-auto pt-6 border-t border-white/10 flex flex-col gap-2">

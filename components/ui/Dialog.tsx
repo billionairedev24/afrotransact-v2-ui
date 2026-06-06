@@ -72,7 +72,7 @@ export function DialogHeader({
 
 export function DialogBody({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("px-6 py-5 max-h-[60vh] overflow-y-auto", className)}>
+    <div className={cn("px-6 py-5 max-h-[60vh] overflow-y-auto scrollbar-hide scroll-smooth", className)}>
       {children}
     </div>
   )
