@@ -254,7 +254,7 @@ export default function SubscriptionPage() {
             <button
               onClick={handleStartTrial}
               disabled={trialLoading}
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
             >
               {trialLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Starting...</> : "Start Free Trial"}
             </button>
@@ -573,7 +573,7 @@ function PlanCard({
         <button
           onClick={onSelect}
           disabled={isLoading}
-          className="w-full rounded-lg border border-primary bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full rounded-lg border border-primary bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Select Plan"}
         </button>

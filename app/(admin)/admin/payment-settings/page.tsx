@@ -434,7 +434,7 @@ export default function PaymentSettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors disabled:opacity-60"
+              className="flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save

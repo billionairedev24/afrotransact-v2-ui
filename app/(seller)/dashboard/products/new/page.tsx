@@ -1806,7 +1806,7 @@ export default function NewProductPage() {
             type="submit"
             disabled={!canSubmit}
             onClick={() => setSubmitAction("pending_review")}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-gold px-6 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-gold px-6 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           >
             {saving && submitAction === "pending_review" ? (
               <>

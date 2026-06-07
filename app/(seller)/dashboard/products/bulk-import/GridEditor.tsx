@@ -257,7 +257,7 @@ function GridImportProgress({ results, total, done }: { results: ImportResult[];
       {done && (
         <div className="flex justify-end">
           <Link href="/dashboard/products"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors">
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors">
             <Package className="h-4 w-4" /> View Products
           </Link>
         </div>
@@ -784,7 +784,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
             : "Fill in at least one row to import"}
         </p>
         <button onClick={handleImport} disabled={filledCount === 0}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           <Sparkles className="h-4 w-4" />
           Import {filledCount || ""} Product{filledCount !== 1 ? "s" : ""}
         </button>

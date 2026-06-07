@@ -231,7 +231,7 @@ export default function AdminDealsPage() {
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 sm:w-auto"
+          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover sm:w-auto"
         >
           <Plus className="h-4 w-4" /> New Deal
         </button>
@@ -357,7 +357,7 @@ export default function AdminDealsPage() {
         </SheetBody>
         <SheetFooter>
           <button onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={saving || !form.title} className="rounded-xl bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50">
+          <button onClick={handleSave} disabled={saving || !form.title} className="rounded-xl bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? "Update" : "Create"}
           </button>
         </SheetFooter>

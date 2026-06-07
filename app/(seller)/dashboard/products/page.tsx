@@ -268,7 +268,7 @@ export default function ProductsPage() {
           </Link>
           <Link
             href="/dashboard/products/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add Product
@@ -723,7 +723,7 @@ function ProductDetailSheet({
               <button
                 onClick={handleSaveBasicInfo}
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-50 transition-colors"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Save Changes
@@ -735,7 +735,7 @@ function ProductDetailSheet({
                 <button
                   onClick={handleSubmitForReview}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-50 transition-colors"
                 >
                   {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   Submit for Review

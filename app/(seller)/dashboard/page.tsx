@@ -220,7 +220,7 @@ export default function DashboardOverview() {
           <div className="mt-6 flex justify-center">
             <Link
               href="/sell"
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
             >
               <Package className="h-4 w-4" />
               Start Selling

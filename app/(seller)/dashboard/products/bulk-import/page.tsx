@@ -246,7 +246,7 @@ function PrepareStep({
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={onDownload}
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
           >
             <Download className="h-4 w-4" />
             Download Excel Template (.xlsx)
@@ -407,7 +407,7 @@ function ReviewStep({
             ? "border-primary bg-primary/5 scale-[1.01]"
             : rows
               ? "border-emerald-300 bg-emerald-50"
-              : "border-gray-200 bg-gray-50 hover:border-primary/50 hover:bg-brand-gold/90/5",
+              : "border-gray-200 bg-gray-50 hover:border-primary/50 hover:bg-brand-gold-hover/5",
         )}
       >
         {parsing ? (
@@ -605,7 +605,7 @@ function ReviewStep({
               <button
                 onClick={() => onValidated(rows)}
                 disabled={importableCount === 0 || errorCount > 0}
-                className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="h-4 w-4" />
                 Import {importableCount} product{importableCount !== 1 ? "s" : ""}
@@ -760,7 +760,7 @@ function ImportStep({
         <div className="flex justify-end">
           <Link
             href="/dashboard/products"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
           >
             <Package className="h-4 w-4" />
             View My Products

@@ -827,7 +827,7 @@ export default function StoreSettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-md bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover disabled:opacity-50"
           >
             {saving ? (
               <>

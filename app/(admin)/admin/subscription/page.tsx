@@ -309,7 +309,7 @@ function PlanModal({
             type="button"
             onClick={() => onSave(form)}
             disabled={saving}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-gold py-2.5 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-gold py-2.5 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover disabled:opacity-50"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />

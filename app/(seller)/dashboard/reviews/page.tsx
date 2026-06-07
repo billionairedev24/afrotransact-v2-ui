@@ -294,7 +294,7 @@ export default function SellerReviewsPage() {
                             type="button"
                             onClick={() => submitReply(r.id)}
                             disabled={replyMutation.isPending || !replyDraft.trim()}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
                           >
                             {replyMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Reply size={14} />}
                             Post reply

@@ -336,7 +336,7 @@ function SlideModal({
           <button
             onClick={handleSave}
             disabled={!form.id.trim() || !form.headline.trim() || !form.primaryCtaLabel.trim() || !form.primaryCtaHref.trim()}
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-gold py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-gold py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Save className="h-4 w-4" />
             {isEdit ? "Save Changes" : "Create Slide"}

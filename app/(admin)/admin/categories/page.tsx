@@ -254,7 +254,7 @@ export default function AdminCategoriesPage() {
         </div>
         <button
           onClick={() => openCreate()}
-          className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
+          className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
         >
           <Plus className="h-4 w-4" /> New Category
         </button>
@@ -344,7 +344,7 @@ export default function AdminCategoriesPage() {
           <button
             onClick={handleSave}
             disabled={saving || !form.name.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold-hover disabled:opacity-50 transition-colors"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {editingId ? "Update" : "Create"}

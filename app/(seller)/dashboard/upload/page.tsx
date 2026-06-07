@@ -832,7 +832,7 @@ export default function MediaPage() {
               <button
                 onClick={handleSaveEdit}
                 disabled={savingEdit}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-60"
               >
                 {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Save
@@ -1072,7 +1072,7 @@ export default function MediaPage() {
               <button
                 onClick={submitUploadForm}
                 disabled={uploading || uploadRows.length === 0}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-60"
               >
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {uploading ? "Uploading..." : `Save ${uploadRows.length} file${uploadRows.length !== 1 ? "s" : ""}`}

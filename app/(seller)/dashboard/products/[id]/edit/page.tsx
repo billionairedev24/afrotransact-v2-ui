@@ -1159,7 +1159,7 @@ export default function EditProductPage() {
 
             {/* Upload zone */}
             {totalImageCount < MAX_IMAGES && (
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-primary/40 hover:bg-brand-gold/90/5">
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-primary/40 hover:bg-brand-gold-hover/5">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
                   <Upload className="h-6 w-6 text-gray-500" />
                 </div>
@@ -1482,7 +1482,7 @@ export default function EditProductPage() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-gold px-6 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-gold px-6 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
               {saving ? (
                 <>

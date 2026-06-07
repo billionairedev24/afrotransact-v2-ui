@@ -336,7 +336,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleSaveAi}
                   disabled={savingAi || !activeProviderChanged}
-                  className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
                 >
                   {savingAi ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Apply
@@ -534,7 +534,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={savingPayment}
-            className="flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors disabled:opacity-60"
+            className="flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors disabled:opacity-60"
           >
             {savingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save Platform Settings

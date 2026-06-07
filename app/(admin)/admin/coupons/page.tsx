@@ -315,7 +315,7 @@ function CouponForm({
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>
-        <button type="submit" disabled={submitting} className="rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-gold/90 disabled:opacity-50 transition-colors">
+        <button type="submit" disabled={submitting} className="rounded-lg bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-50 transition-colors">
           {submitting ? "Saving…" : coupon ? "Update" : "Create"}
         </button>
       </div>
