@@ -231,9 +231,9 @@ export default function NotificationRoutingPage() {
             setShowAdd(true)
             if (!addEventType && eventTypes.length) setAddEventType(eventTypes[0].key)
           }}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-gold/90 transition-colors whitespace-nowrap"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors whitespace-nowrap disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4" strokeWidth={2.25} />
           Add Recipient
         </button>
       </div>
@@ -278,61 +278,79 @@ export default function NotificationRoutingPage() {
 
       {/* Add form */}
       {showAdd && (
-        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">Add Notification Recipient</h3>
-            <button onClick={() => setShowAdd(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+        <div className="rounded-2xl border border-border bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <h3 className="text-base font-semibold text-foreground">Add Notification Recipient</h3>
+            <button
+              onClick={() => setShowAdd(false)}
+              aria-label="Close"
+              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-gray-700">Event Type</label>
-              <select
-                value={addEventType}
-                onChange={e => setAddEventType(e.target.value)}
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/50"
-              >
-                {eventTypes.map(et => (
-                  <option key={et.key} value={et.key}>{et.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-gray-700">Email Address</label>
-              <input
-                type="email"
-                value={addEmail}
-                onChange={e => setAddEmail(e.target.value)}
-                placeholder="team@afrotransact.com"
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary focus:ring-1 focus:ring-primary/50"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-gray-700">Label (optional)</label>
-              <input
-                type="text"
-                value={addLabel}
-                onChange={e => setAddLabel(e.target.value)}
-                placeholder="e.g. Seller Team"
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary focus:ring-1 focus:ring-primary/50"
-              />
+
+          <div className="space-y-5 px-6 py-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label htmlFor="route-event-type" className="text-sm font-medium text-foreground">
+                  Event Type <span className="text-destructive">*</span>
+                </label>
+                <select
+                  id="route-event-type"
+                  value={addEventType}
+                  onChange={e => setAddEventType(e.target.value)}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                >
+                  {eventTypes.map(et => (
+                    <option key={et.key} value={et.key}>{et.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="route-email" className="text-sm font-medium text-foreground">
+                  Email Address <span className="text-destructive">*</span>
+                </label>
+                <input
+                  id="route-email"
+                  type="email"
+                  value={addEmail}
+                  onChange={e => setAddEmail(e.target.value)}
+                  placeholder="team@afrotransact.com"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="route-label" className="text-sm font-medium text-foreground">
+                  Label <span className="text-muted-foreground">(optional)</span>
+                </label>
+                <input
+                  id="route-label"
+                  type="text"
+                  value={addLabel}
+                  onChange={e => setAddLabel(e.target.value)}
+                  placeholder="e.g. Seller Team"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                />
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/30 px-6 py-3">
+            <button
+              onClick={() => setShowAdd(false)}
+              disabled={adding}
+              className="rounded-lg border border-input bg-background px-5 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
             <button
               onClick={handleAdd}
               disabled={adding || !addEmail || !addEventType}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-gold/90 disabled:opacity-50 transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Add Recipient
-            </button>
-            <button
-              onClick={() => setShowAdd(false)}
-              className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              Cancel
+              {adding ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} /> : null}
+              {adding ? "Adding..." : "Add Recipient"}
             </button>
           </div>
         </div>
