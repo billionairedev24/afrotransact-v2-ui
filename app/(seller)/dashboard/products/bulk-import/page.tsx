@@ -185,7 +185,7 @@ function PrepareStep({
   return (
     <div className="space-y-5">
       {/* Media check */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-4">
+      <div className="rounded-2xl border border-input bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Step 1 — Upload Your Images First</h2>
@@ -198,7 +198,7 @@ function PrepareStep({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-xl bg-gray-50 border border-input px-4 py-3">
           {mediaItems.length > 0 ? (
             <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
           ) : (
@@ -218,7 +218,7 @@ function PrepareStep({
           </div>
           <Link
             href="/dashboard/upload"
-            className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-input bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
           >
             {mediaItems.length > 0 ? "Manage" : "Upload images"}
             <ChevronRight className="h-3 w-3" />
@@ -230,7 +230,7 @@ function PrepareStep({
       </div>
 
       {/* Download template */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-4">
+      <div className="rounded-2xl border border-input bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Step 2 — Download & Fill the Template</h2>
@@ -407,7 +407,7 @@ function ReviewStep({
             ? "border-primary bg-primary/5 scale-[1.01]"
             : rows
               ? "border-emerald-300 bg-emerald-50"
-              : "border-gray-200 bg-gray-50 hover:border-primary/50 hover:bg-brand-gold-hover/5",
+              : "border-input bg-gray-50 hover:border-primary/50 hover:bg-brand-gold-hover/5",
         )}
       >
         {parsing ? (
@@ -479,7 +479,7 @@ function ReviewStep({
           </div>
 
           {/* Validation table */}
-          <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+          <div className="rounded-2xl border border-input bg-white overflow-hidden">
             <div className="w-full overflow-x-auto">
               <table className="w-full min-w-[700px] text-left">
                 <thead className="border-b border-gray-100 bg-gray-50">
@@ -559,7 +559,7 @@ function ReviewStep({
                             {row.resolvedImages.map((img, idx) => (
                               <div
                                 key={img.id}
-                                className="relative h-9 w-9 overflow-hidden rounded-md border border-gray-200"
+                                className="relative h-9 w-9 overflow-hidden rounded-md border border-input"
                               >
                                 <Image src={img.url} alt={img.name} fill sizes="36px" className="object-cover" />
                                 {idx === 0 && (
@@ -598,7 +598,7 @@ function ReviewStep({
             <div className="flex items-center gap-2">
               <button
                 onClick={onBack}
-                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl border border-input bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Back
               </button>
@@ -685,7 +685,7 @@ function ImportStep({
   return (
     <div className="space-y-6">
       {/* Progress bar */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-4">
+      <div className="rounded-2xl border border-input bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-900">
             {done ? "Import Complete!" : "Importing products…"}
@@ -730,7 +730,7 @@ function ImportStep({
       </div>
 
       {/* Per-row results */}
-      <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-50">
+      <div className="rounded-2xl border border-input bg-white divide-y divide-gray-50">
         {results.map((r) => (
           <div key={r.rowNumber} className="flex items-center gap-3 px-5 py-3">
             {r.status === "success" ? (
@@ -867,7 +867,7 @@ export default function BulkImportPage() {
       <div className="flex items-center gap-4">
         <Link
           href="/dashboard/products"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-input text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
@@ -887,7 +887,7 @@ export default function BulkImportPage() {
       )}
 
       {/* Mode tabs */}
-      <div className="flex gap-1 rounded-xl border border-gray-200 bg-gray-100 p-1">
+      <div className="flex gap-1 rounded-xl border border-input bg-gray-100 p-1">
         {(["spreadsheet", "grid"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={cn(

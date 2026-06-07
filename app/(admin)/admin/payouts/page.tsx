@@ -53,7 +53,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? { label: status, color: "text-gray-600", bg: "bg-gray-100 border-gray-200" }
+  const cfg = STATUS_CONFIG[status] ?? { label: status, color: "text-gray-600", bg: "bg-gray-100 border-input" }
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.bg} ${cfg.color}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${cfg.color.replace("text-", "bg-")}`} />
@@ -226,7 +226,7 @@ export default function AdminPayoutsPage() {
         ].map((card) => {
           const Icon = card.icon
           return (
-            <div key={card.label} className="min-w-0 rounded-xl border border-gray-200 bg-white p-4">
+            <div key={card.label} className="min-w-0 rounded-xl border border-input bg-white p-4">
               <div className="mb-2 flex items-center gap-2">
                 <Icon className={`h-4 w-4 shrink-0 ${card.color}`} />
                 <span className="truncate text-xs text-gray-500">{card.label}</span>
@@ -243,7 +243,7 @@ export default function AdminPayoutsPage() {
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPageIndex(0) }}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 outline-none focus:border-primary/60"
+            className="rounded-lg border border-input bg-white px-3 py-1.5 text-xs text-gray-600 outline-none focus:border-primary/60"
           >
             <option value="">All statuses</option>
             <option value="pending_settlement">Settling</option>
@@ -306,7 +306,7 @@ export default function AdminPayoutsPage() {
 
                 <div className="min-w-0 space-y-3">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Payment Breakdown</h3>
-                  <div className="space-y-1 rounded-xl border border-gray-200 bg-white p-5">
+                  <div className="space-y-1 rounded-xl border border-input bg-white p-5">
                     <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-gray-600">Product subtotal</span><span className="shrink-0 text-sm font-mono tabular-nums text-gray-900">{formatCents(selected.subtotalCents)}</span></div>
                     {selected.shippingCents > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-gray-600">Shipping</span><span className="shrink-0 text-sm font-mono tabular-nums text-gray-900">{formatCents(selected.shippingCents)}</span></div>}
                     {selected.taxCents > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm text-gray-600">Tax</span><span className="shrink-0 text-sm font-mono tabular-nums text-gray-900">{formatCents(selected.taxCents)}</span></div>}
@@ -321,7 +321,7 @@ export default function AdminPayoutsPage() {
                         <span className="shrink-0 text-sm font-mono tabular-nums text-green-600">−{formatCents(discount)}</span>
                       </div>
                     )}
-                    <div className="my-2 border-t border-gray-200" />
+                    <div className="my-2 border-t border-input" />
                     <div className="flex justify-between gap-3 py-1.5"><span className="text-sm font-semibold text-gray-900">Customer paid</span><span className="shrink-0 text-sm font-mono font-semibold tabular-nums text-gray-900">{formatCents(customerPaid)}</span></div>
                     {platformPaid > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm font-semibold text-blue-700">Platform paid</span><span className="shrink-0 text-sm font-mono font-semibold tabular-nums text-blue-700">{formatCents(platformPaid)}</span></div>}
                     {isSellerCoupon && discount > 0 && <div className="flex justify-between gap-3 py-1.5"><span className="text-sm font-semibold text-orange-700">Seller coupon discount</span><span className="shrink-0 text-sm font-mono font-semibold tabular-nums text-orange-700">{formatCents(discount)}</span></div>}
@@ -357,7 +357,7 @@ export default function AdminPayoutsPage() {
                       { label: "Settled At", value: formatDateTime(selected.settledAt) },
                       { label: "Transferred At", value: formatDateTime(selected.transferredAt) },
                     ].map((item) => (
-                      <div key={item.label} className="rounded-xl border border-gray-200 bg-white p-3.5">
+                      <div key={item.label} className="rounded-xl border border-input bg-white p-3.5">
                         <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-gray-500">{item.label}</p>
                         <div className="flex min-w-0 items-center gap-2">
                           <p className="min-w-0 break-all text-sm font-medium text-gray-900">{item.value}</p>
@@ -376,7 +376,7 @@ export default function AdminPayoutsPage() {
           })()}
         </SheetBody>
         <SheetFooter>
-          <button type="button" onClick={() => setSelected(null)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900">
+          <button type="button" onClick={() => setSelected(null)} className="rounded-xl border border-input px-5 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900">
             Close
           </button>
         </SheetFooter>

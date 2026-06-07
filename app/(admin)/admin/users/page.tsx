@@ -65,7 +65,7 @@ const col = createColumnHelper<AdminUser>()
 
 function StatCard({ label, value, icon: Icon, iconColor }: { label: string; value: number; icon: React.ElementType; iconColor: string }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
+    <div className="rounded-xl border border-input bg-white p-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-500">{label}</p>
@@ -123,7 +123,7 @@ function ActionMenu({ onView }: { onView: () => void }) {
       {open && pos && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[9999] w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl"
+          className="fixed z-[9999] w-44 rounded-xl border border-input bg-white py-1 shadow-xl"
           style={{ top: pos.top, left: pos.left }}
         >
           <button
@@ -214,7 +214,7 @@ export default function UsersPage() {
         return (
           <div className="flex flex-wrap gap-1.5">
             {roles.map((role) => {
-              const badge = ROLE_BADGE[role] ?? { label: role, className: "bg-gray-100 text-gray-600 border border-gray-200" }
+              const badge = ROLE_BADGE[role] ?? { label: role, className: "bg-gray-100 text-gray-600 border border-input" }
               return (
                 <span key={role} className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
                   {badge.label}
@@ -328,7 +328,7 @@ export default function UsersPage() {
                     { label: "Account Status", value: viewUser.enabled ? "Active" : "Disabled" },
                     { label: "Joined", value: formatDate(viewUser.createdTimestamp) },
                   ].map((item) => (
-                    <div key={item.label} className="rounded-xl border border-gray-200 bg-white p-3.5">
+                    <div key={item.label} className="rounded-xl border border-input bg-white p-3.5">
                       <p className="text-[11px] font-medium uppercase tracking-wider text-gray-500 mb-1">{item.label}</p>
                       <div className="flex items-center gap-2">
                         <p className="break-all text-sm font-medium text-gray-900 truncate">{item.value}</p>
@@ -355,7 +355,7 @@ export default function UsersPage() {
               {/* Activity */}
               <div className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Activity</h3>
-                <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3.5">
+                <div className="flex items-center gap-3 rounded-xl border border-input bg-white p-3.5">
                   <Calendar className="h-4 w-4 text-gray-500" />
                   <div>
                     <p className="text-xs text-gray-500">Member since</p>

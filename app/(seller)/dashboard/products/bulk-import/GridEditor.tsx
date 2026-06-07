@@ -137,7 +137,7 @@ function MediaPickerModal({ mediaItems, onSelect, onClose }: {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
             <input autoFocus type="text" placeholder="Search…" value={q} onChange={e => setQ(e.target.value)}
-              className="h-8 w-full rounded-lg border border-gray-200 bg-gray-50 pl-8 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30" />
+              className="h-8 w-full rounded-lg border border-input bg-gray-50 pl-8 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30" />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
@@ -177,7 +177,7 @@ function ImagesCell({ rowId, images, uploading, onUpload, onLibrary, onRemove }:
     <div className="flex items-center gap-1 px-2 py-1 flex-wrap min-h-[2.5rem]">
       {images.map((img, i) => (
         <div key={img.id} className="relative group/img shrink-0">
-          <div className="relative h-8 w-8 overflow-hidden rounded-md border border-gray-200">
+          <div className="relative h-8 w-8 overflow-hidden rounded-md border border-input">
             <Image src={img.url} alt={img.name} fill sizes="32px" className="object-cover" />
           </div>
           {i === 0 && <div className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-primary border border-white" title="Primary" />}
@@ -188,18 +188,18 @@ function ImagesCell({ rowId, images, uploading, onUpload, onLibrary, onRemove }:
         </div>
       ))}
       {uploading && (
-        <div className="h-8 w-8 rounded-md border border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
+        <div className="h-8 w-8 rounded-md border border-input bg-gray-50 flex items-center justify-center shrink-0">
           <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground" />
         </div>
       )}
       {canAdd && !uploading && (
         <div className="flex flex-col gap-0.5 shrink-0">
           <button onClick={onUpload} title="Upload from device"
-            className="flex items-center gap-0.5 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 hover:border-primary hover:text-foreground transition-colors">
+            className="flex items-center gap-0.5 rounded border border-input px-1.5 py-0.5 text-[10px] font-medium text-gray-500 hover:border-primary hover:text-foreground transition-colors">
             <Upload className="h-2.5 w-2.5" /> Upload
           </button>
           <button onClick={onLibrary} title="Pick from Library"
-            className="flex items-center gap-0.5 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors">
+            className="flex items-center gap-0.5 rounded border border-input px-1.5 py-0.5 text-[10px] font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors">
             <ImageIcon className="h-2.5 w-2.5" /> Library
           </button>
         </div>
@@ -216,7 +216,7 @@ function GridImportProgress({ results, total, done }: { results: ImportResult[];
   const fail = results.filter(r => r.status === "error").length
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-4">
+      <div className="rounded-2xl border border-input bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">{done ? "Import Complete!" : "Importing…"}</h3>
           <span className="text-sm text-gray-500">{results.length} / {total}</span>
@@ -237,7 +237,7 @@ function GridImportProgress({ results, total, done }: { results: ImportResult[];
           </div>
         )}
       </div>
-      <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-50 max-h-72 overflow-y-auto">
+      <div className="rounded-2xl border border-input bg-white divide-y divide-gray-50 max-h-72 overflow-y-auto">
         {results.map(r => (
           <div key={`${r.rowNumber}-${r.productName}`} className="flex items-center gap-3 px-5 py-2.5">
             {r.status === "success"
@@ -453,14 +453,14 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
         </div>
       )}
 
-      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+      <div className="rounded-2xl border border-input bg-white overflow-hidden">
         <div className="w-full overflow-x-auto overscroll-x-contain">
           <table className="w-full border-collapse text-sm" style={{ minWidth: 1100 }}>
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide">
-                <th className="border-r border-gray-200 px-2.5 py-2.5 text-gray-400 w-7 text-center">#</th>
+              <tr className="bg-gray-50 border-b border-input text-[11px] font-semibold uppercase tracking-wide">
+                <th className="border-r border-input px-2.5 py-2.5 text-gray-400 w-7 text-center">#</th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.product_name, minWidth: colWidths.product_name }}
                 >
                   <span>Product Name *</span>
@@ -470,7 +470,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                   />
                 </th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.description, minWidth: colWidths.description }}
                 >
                   <span>Description *</span>
@@ -480,7 +480,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                   />
                 </th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.category, minWidth: colWidths.category }}
                 >
                   <span>Category *</span>
@@ -490,7 +490,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                   />
                 </th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.price, minWidth: colWidths.price }}
                 >
                   <span>Price *</span>
@@ -500,7 +500,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                   />
                 </th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.compare_at_price, minWidth: colWidths.compare_at_price }}
                 >
                   <span>Compare $</span>
@@ -510,7 +510,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                   />
                 </th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.stock, minWidth: colWidths.stock }}
                 >
                   <span>Stock *</span>
@@ -520,7 +520,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                   />
                 </th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.weight, minWidth: colWidths.weight }}
                 >
                   <span>Weight *</span>
@@ -530,7 +530,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                   />
                 </th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.brand, minWidth: colWidths.brand }}
                 >
                   <span>Brand</span>
@@ -540,7 +540,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                   />
                 </th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.tags, minWidth: colWidths.tags }}
                 >
                   <span>Tags</span>
@@ -550,7 +550,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                   />
                 </th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.status, minWidth: colWidths.status }}
                 >
                   <span>Status</span>
@@ -560,7 +560,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                   />
                 </th>
                 <th
-                  className="relative border-r border-gray-200 px-2.5 py-2.5 text-gray-500 text-left"
+                  className="relative border-r border-input px-2.5 py-2.5 text-gray-500 text-left"
                   style={{ width: colWidths.images, minWidth: colWidths.images }}
                 >
                   <span>Images (max 3)</span>
@@ -759,16 +759,16 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
         <div className="flex items-center justify-between border-t border-gray-100 px-4 py-2.5 bg-gray-50/50">
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setRows(prev => [...prev, ...makeRows(5)])}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
               <Plus className="h-3.5 w-3.5" /> Add 5 rows
             </button>
             <button onClick={() => setRows(prev => [...prev, ...makeRows(10)])}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
               <Plus className="h-3.5 w-3.5" /> Add 10 rows
             </button>
             {rows.some(r => !r.product_name.trim()) && (
               <button onClick={() => setRows(prev => prev.filter(r => r.product_name.trim()))}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors">
+                className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-white px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors">
                 <Trash2 className="h-3.5 w-3.5" /> Clear empty
               </button>
             )}

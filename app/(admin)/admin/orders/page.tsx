@@ -287,7 +287,7 @@ function AdminOrderDetailSheet({
               </div>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
+            <div className="rounded-xl border border-input bg-white p-4 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Charges &amp; fees (buyer)</p>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between gap-4">
@@ -308,7 +308,7 @@ function AdminOrderDetailSheet({
                   <span className="text-gray-600">Shipping collected</span>
                   <span className="font-mono tabular-nums">{formatCents(order.raw.shippingCostCents ?? 0, order.currency)}</span>
                 </div>
-                <div className="flex justify-between gap-4 border-t border-gray-200 pt-2 font-semibold text-gray-900">
+                <div className="flex justify-between gap-4 border-t border-input pt-2 font-semibold text-gray-900">
                   <span>Order total</span>
                   <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents, order.currency)}</span>
                 </div>
@@ -323,7 +323,7 @@ function AdminOrderDetailSheet({
             )}
 
             {order.raw.subOrders.map((sub) => (
-              <div key={sub.id} className="rounded-xl border border-gray-200 p-4 space-y-4 bg-gray-50">
+              <div key={sub.id} className="rounded-xl border border-input p-4 space-y-4 bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <p className="text-sm font-semibold text-gray-900">{storeNameFor(sub.storeId)}</p>
@@ -354,10 +354,10 @@ function AdminOrderDetailSheet({
                   </div>
                 )}
 
-                <div className="overflow-hidden rounded-lg border border-gray-200">
+                <div className="overflow-hidden rounded-lg border border-input">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-200 bg-gray-50">
+                      <tr className="border-b border-input bg-gray-50">
                         <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Product</th>
                         <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Qty</th>
                         <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Price</th>
@@ -369,7 +369,7 @@ function AdminOrderDetailSheet({
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">
                               {item.imageUrl && (
-                                <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded border border-gray-200">
+                                <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded border border-input">
                                   <Image
                                     src={item.imageUrl}
                                     alt=""
@@ -420,7 +420,7 @@ function AdminOrderDetailSheet({
                               ? "border-primary/40 bg-primary/10 text-foreground"
                               : s.variant === "danger"
                                 ? "border-red-200 text-red-600 hover:bg-red-50"
-                                : "border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
+                                : "border-input text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                         >
                           {updating === sub.id + s.value ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                           {s.label}
@@ -432,7 +432,7 @@ function AdminOrderDetailSheet({
                       value={trackingInput}
                       onChange={(e) => setTrackingInput(e.target.value)}
                       placeholder="Tracking / reference number (optional)"
-                      className="h-8 w-full rounded-lg border border-gray-200 bg-transparent px-3 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
+                      className="h-8 w-full rounded-lg border border-input bg-transparent px-3 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                     />
                     {/* Exception note — required when setting delivery_exception */}
                     {pendingExceptionSubId === sub.id && (
@@ -461,7 +461,7 @@ function AdminOrderDetailSheet({
                           </button>
                           <button
                             onClick={() => { setPendingExceptionSubId(null); setExceptionNoteInput("") }}
-                            className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                            className="inline-flex items-center rounded-lg border border-input px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
                           >
                             Cancel
                           </button>

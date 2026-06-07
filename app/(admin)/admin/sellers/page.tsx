@@ -221,7 +221,7 @@ export default function AdminSellersPage() {
           <button
             onClick={handleTriggerReminders}
             disabled={triggeringReminders}
-            className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl border border-input px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             {triggeringReminders ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
             Send Onboarding Reminders
@@ -232,7 +232,7 @@ export default function AdminSellersPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {statCards.map((c) => (
-          <div key={c.label} className="rounded-xl border border-gray-200 p-5 bg-white">
+          <div key={c.label} className="rounded-xl border border-input p-5 bg-white">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{c.label}</p>
@@ -249,7 +249,7 @@ export default function AdminSellersPage() {
       {/* Donut + Table */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {stats && !statsLoading && (
-          <div className="lg:col-span-1 rounded-xl border border-gray-200 p-5 bg-white">
+          <div className="lg:col-span-1 rounded-xl border border-input p-5 bg-white">
             <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">Onboarding Funnel</h3>
             <DonutChart stats={stats} />
           </div>
@@ -272,7 +272,7 @@ export default function AdminSellersPage() {
           </div>
 
           {/* Table */}
-          <div className="rounded-xl border border-gray-200 bg-white">
+          <div className="rounded-xl border border-input bg-white">
             <div className="overflow-x-auto overflow-y-visible">
               <table className="w-full">
                 <thead>
@@ -508,7 +508,7 @@ function ActionDropdown({
         createPortal(
           <div
             ref={menuRef}
-            className="fixed z-[9999] w-48 rounded-xl border border-gray-200 bg-white py-1 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
+            className="fixed z-[9999] w-48 rounded-xl border border-input bg-white py-1 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
             style={{
               top: coords.openUp ? undefined : coords.top,
               bottom: coords.openUp ? window.innerHeight - coords.top : undefined,
@@ -613,7 +613,7 @@ function DetailPanel({
         className={`fixed inset-0 left-auto z-[201] w-full max-w-lg transform transition-transform duration-300 ease-out bg-white ${open ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-input px-6 py-4">
             <h2 className="text-lg font-semibold text-gray-900">Seller Details</h2>
             <button onClick={onClose} className="rounded-lg p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">
               <XIcon className="h-5 w-5" />
@@ -807,7 +807,7 @@ function DetailPanel({
                         onChange={(e) => setReason(e.target.value)}
                         placeholder="Rejection reason…"
                         rows={3}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-red-500/50 resize-none"
+                        className="w-full rounded-xl border border-input bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-red-500/50 resize-none"
                       />
                       <div className="flex gap-2">
                         <button onClick={() => setMode("none")} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
@@ -834,7 +834,7 @@ function DetailPanel({
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder="What information do you need?"
                         rows={3}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 resize-none"
+                        className="w-full rounded-xl border border-input bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 resize-none"
                       />
                       <div className="flex gap-2">
                         <button onClick={() => setMode("none")} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">

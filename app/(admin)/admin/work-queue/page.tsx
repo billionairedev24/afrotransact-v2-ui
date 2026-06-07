@@ -222,7 +222,7 @@ export default function WorkQueuePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+      <div className="flex gap-1 rounded-lg border border-input bg-gray-50 p-1">
         {([
           { key: "all" as const, label: "All", count: totalCount },
           { key: "products" as const, label: "Products", count: productCount },
@@ -253,7 +253,7 @@ export default function WorkQueuePage() {
           <Loader2 className="h-8 w-8 animate-spin text-foreground" />
         </div>
       ) : totalCount === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-gray-200 bg-white p-12">
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-input bg-white p-12">
           <CheckCircle className="h-12 w-12 text-emerald-500/50" />
           <div className="text-center">
             <p className="text-gray-900 font-medium">All caught up!</p>
@@ -268,10 +268,10 @@ export default function WorkQueuePage() {
             return (
               <div
                 key={`product-${product.id}`}
-                className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-4 cursor-pointer hover:border-gray-300 transition-colors"
+                className="rounded-xl border border-input bg-white p-4 flex items-center gap-4 cursor-pointer hover:border-gray-300 transition-colors"
                 onClick={() => { setGalleryIndex(0); setSelectedProduct(product) }}
               >
-                <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-gray-50 border border-gray-200 flex items-center justify-center">
+                <div className="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-gray-50 border border-input flex items-center justify-center">
                   {product.images?.[0]?.url ? (
                     <Image
                       src={product.images[0].url}
@@ -329,7 +329,7 @@ export default function WorkQueuePage() {
             return (
               <div
                 key={`seller-${seller.id}`}
-                className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-4 cursor-pointer hover:border-gray-300 transition-colors"
+                className="rounded-xl border border-input bg-white p-4 flex items-center gap-4 cursor-pointer hover:border-gray-300 transition-colors"
                 onClick={() => openSellerReview(seller)}
               >
                 <div className="h-14 w-14 shrink-0 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center">
@@ -444,7 +444,7 @@ export default function WorkQueuePage() {
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="Reason for rejection…"
             rows={4}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30 resize-none"
+            className="w-full rounded-lg border border-input bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30 resize-none"
           />
         </DialogBody>
         <DialogFooter>
@@ -474,7 +474,7 @@ function StatCard({
   label: string; value: number; icon: React.ReactNode; color: string; bg: string
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4">
+    <div className="flex items-center gap-4 rounded-xl border border-input bg-white p-4">
       <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg} ${color}`}>
         {icon}
       </div>
@@ -513,7 +513,7 @@ function ProductReviewSheet({
           <>
             {product.images.length > 0 ? (
               <div className="space-y-3">
-                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-input bg-gray-50">
                   <Image
                     src={product.images[galleryIndex]?.url}
                     alt={product.images[galleryIndex]?.altText ?? product.title}
@@ -545,7 +545,7 @@ function ProductReviewSheet({
                         key={img.id}
                         onClick={() => setGalleryIndex(i)}
                         className={`relative shrink-0 h-14 w-14 rounded-lg overflow-hidden border-2 transition-colors ${
-                          i === galleryIndex ? "border-primary" : "border-gray-200 hover:border-gray-300"
+                          i === galleryIndex ? "border-primary" : "border-input hover:border-gray-300"
                         }`}
                       >
                         <Image
@@ -561,7 +561,7 @@ function ProductReviewSheet({
                 )}
               </div>
             ) : (
-              <div className="flex aspect-video items-center justify-center rounded-xl border border-gray-200 bg-gray-50">
+              <div className="flex aspect-video items-center justify-center rounded-xl border border-input bg-gray-50">
                 <ImageOff className="h-10 w-10 text-gray-600" />
               </div>
             )}
@@ -621,7 +621,7 @@ function ProductReviewSheet({
                 <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Categories</h3>
                 <div className="flex flex-wrap gap-2">
                   {product.categories.map((cat) => (
-                    <span key={cat.id} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600">
+                    <span key={cat.id} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 border border-input px-3 py-1.5 text-xs font-medium text-gray-600">
                       <Tag className="h-3 w-3 text-gray-500" /> {cat.name}
                     </span>
                   ))}
@@ -763,25 +763,25 @@ function SellerReviewSheet({
         <div className={sectionCls}>
           <h3 className={cn(labelCls, "mb-3")}>Payment & Stripe</h3>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+            <div className="rounded-lg bg-gray-50 border border-input p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Stripe Connected</p>
               <p className={cn("text-sm font-medium mt-1", seller.stripeAccountId ? "text-emerald-700" : "text-yellow-700")}>
                 {seller.stripeAccountId ? "Yes" : "Not yet"}
               </p>
             </div>
-            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+            <div className="rounded-lg bg-gray-50 border border-input p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Charges Enabled</p>
               <p className={cn("text-sm font-medium mt-1", seller.chargesEnabled ? "text-emerald-700" : "text-gray-500")}>
                 {seller.chargesEnabled ? "Yes" : "No"}
               </p>
             </div>
-            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+            <div className="rounded-lg bg-gray-50 border border-input p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Payouts Enabled</p>
               <p className={cn("text-sm font-medium mt-1", seller.payoutsEnabled ? "text-emerald-700" : "text-gray-500")}>
                 {seller.payoutsEnabled ? "Yes" : "No"}
               </p>
             </div>
-            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+            <div className="rounded-lg bg-gray-50 border border-input p-3">
               <p className="text-[10px] text-gray-500 uppercase font-medium">Commission Rate</p>
               <p className="text-sm font-medium mt-1 text-gray-900">{(seller.commissionRate * 100).toFixed(1)}%</p>
             </div>
@@ -799,7 +799,7 @@ function SellerReviewSheet({
             <h3 className={cn(labelCls, "mb-3")}>Stores</h3>
             <div className="space-y-2">
               {seller.stores.map((store) => (
-                <div key={store.id} className="flex items-center gap-3 rounded-lg bg-gray-50 border border-gray-200 p-3">
+                <div key={store.id} className="flex items-center gap-3 rounded-lg bg-gray-50 border border-input p-3">
                   {store.logoUrl ? (
                     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg">
                       <Image
@@ -836,7 +836,7 @@ function SellerReviewSheet({
                   href={doc.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 rounded-lg bg-gray-50 border border-gray-200 p-3 hover:bg-gray-100 transition-colors group"
+                  className="flex items-center gap-3 rounded-lg bg-gray-50 border border-input p-3 hover:bg-gray-100 transition-colors group"
                 >
                   <FileText className="h-4 w-4 text-gray-500 shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -893,12 +893,12 @@ function SellerReviewSheet({
               onChange={(e) => setAdminNotes(e.target.value)}
               rows={4}
               placeholder="Describe what information you need from the seller..."
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/25"
+              className="w-full rounded-lg border border-input bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/25"
             />
             <div className="flex gap-2 mt-2">
               <button
                 onClick={() => { setShowInfoForm(false); setAdminNotes("") }}
-                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
+                className="rounded-lg border border-input px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
               >
                 Cancel
               </button>

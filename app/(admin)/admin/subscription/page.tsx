@@ -123,7 +123,7 @@ function PlanCard({
     <div
       className={`flex flex-col justify-between gap-4 rounded-xl border bg-white p-4 transition-all sm:flex-row sm:items-center ${
         plan.active
-          ? "border-gray-200 shadow-sm"
+          ? "border-input shadow-sm"
           : "border-gray-100 bg-gray-50/80 opacity-80"
       }`}
     >
@@ -131,7 +131,7 @@ function PlanCard({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-gray-900">{plan.name}</span>
           {!plan.active && (
-            <span className="rounded border border-gray-200 bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
+            <span className="rounded border border-input bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
               Inactive
             </span>
           )}
@@ -152,7 +152,7 @@ function PlanCard({
         <button
           type="button"
           onClick={() => onEdit(plan)}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50"
+          className="flex items-center gap-1.5 rounded-lg border border-input bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50"
         >
           <Edit2 className="h-3 w-3" />
           Edit
@@ -210,13 +210,13 @@ function PlanModal({
           onChange={(e) => update("features", e.target.value)}
           rows={4}
           placeholder="One feature per line"
-          className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20"
+          className="w-full resize-none rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20"
         />
       ) : key === "billingInterval" ? (
         <select
           value={form.billingInterval}
           onChange={(e) => update("billingInterval", e.target.value)}
-          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20"
+          className="w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20"
         >
           <option value="month">Monthly</option>
           <option value="year">Yearly</option>
@@ -245,7 +245,7 @@ function PlanModal({
           }
           placeholder={placeholder}
           disabled={key === "slug" && mode === "edit"}
-          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
         />
       )}
     </div>
@@ -255,7 +255,7 @@ function PlanModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative max-h-[min(90vh,100dvh)] w-full max-w-lg min-h-0 overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-xl space-y-4"
+        className="relative max-h-[min(90vh,100dvh)] w-full max-w-lg min-h-0 overflow-y-auto rounded-2xl border border-input bg-white p-6 shadow-xl space-y-4"
       >
         <div className="flex items-center justify-between gap-3">
           <h3 className="min-w-0 text-lg font-bold text-gray-900">
@@ -301,7 +301,7 @@ function PlanModal({
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="flex-1 rounded-xl border border-input py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -481,7 +481,7 @@ export default function AdminSubscriptionPage() {
             <Loader2 className="h-8 w-8 animate-spin text-foreground" />
           </div>
         ) : sortedPlans.length === 0 ? (
-          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <div className="rounded-2xl border border-input bg-white p-8 text-center shadow-sm">
             <p className="text-sm text-gray-500">No plans yet. Create your first plan to get started.</p>
           </div>
         ) : (
@@ -501,7 +501,7 @@ export default function AdminSubscriptionPage() {
             Billing Configuration
           </h2>
         </div>
-        <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="space-y-4 rounded-2xl border border-input bg-white p-5 shadow-sm">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-foreground" />
@@ -527,7 +527,7 @@ export default function AdminSubscriptionPage() {
                       onChange={(e) =>
                         setBillingConfig((prev) => ({ ...prev, [key]: e.target.value }))
                       }
-                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20"
+                      className="w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20"
                     />
                   </div>
                 ))}

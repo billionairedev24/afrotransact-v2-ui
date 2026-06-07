@@ -30,7 +30,7 @@ import {
 } from "lucide-react"
 
 const INPUT_CLASS =
-  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
+  "w-full rounded-xl border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
 
 function describeSettingsError(section: string, err: unknown): string {
   if (err instanceof ApiError) return `${section} failed (HTTP ${err.status}). ${err.body}`
@@ -88,7 +88,7 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-sm">
+    <div className="rounded-2xl border border-input bg-white overflow-hidden transition-shadow hover:shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -305,7 +305,7 @@ export default function SettingsPage() {
                       className={`relative text-left rounded-xl border-2 p-4 transition-all ${
                         isSelected
                           ? "border-primary bg-primary/5"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          : "border-input bg-white hover:border-gray-300"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -487,7 +487,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-start gap-3 rounded-xl border border-input bg-gray-50 p-4">
                 <Info className="h-4 w-4 shrink-0 text-gray-400 mt-0.5" />
                 <div className="text-xs text-gray-600 leading-relaxed">
                   <p className="font-medium text-gray-800">Platform weight-based shipping is active.</p>

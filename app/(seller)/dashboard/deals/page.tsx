@@ -71,7 +71,7 @@ function RowActionMenu({ onEdit, onToggle, onDelete, enabled }: {
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open && pos && createPortal(
-        <div ref={menuRef} className="fixed z-[9999] w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl" style={{ top: pos.top, left: pos.left }}>
+        <div ref={menuRef} className="fixed z-[9999] w-44 rounded-xl border border-input bg-white py-1 shadow-xl" style={{ top: pos.top, left: pos.left }}>
           <button onClick={() => { onEdit(); setOpen(false) }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"><Pencil className="h-3.5 w-3.5" /> Edit</button>
           <button onClick={() => { onToggle(); setOpen(false) }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">
             {enabled ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />} {enabled ? "Disable" : "Enable"}
@@ -272,8 +272,8 @@ export default function SellerDealsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-        <div className="border-b border-gray-200 px-4 py-4 sm:px-5">
+      <div className="overflow-hidden rounded-2xl border border-input bg-white">
+        <div className="border-b border-input px-4 py-4 sm:px-5">
           <h2 className="text-base font-semibold text-gray-900">Your Deals</h2>
         </div>
 
@@ -303,7 +303,7 @@ export default function SellerDealsPage() {
                 ) : d.enabled ? (
                   <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-700"><span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />Scheduled</span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500"><span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled</span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-input bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500"><span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled</span>
                 )
                 const priceCell = d.dealPriceCents ? (
                   <span className="flex flex-wrap items-center gap-1">
@@ -402,7 +402,7 @@ export default function SellerDealsPage() {
                     className={`flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 text-left transition-all ${
                       form.dealType === "store-wide"
                         ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-input hover:border-gray-300"
                     }`}
                   >
                     <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
@@ -421,7 +421,7 @@ export default function SellerDealsPage() {
                     className={`flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 text-left transition-all ${
                       form.dealType === "product"
                         ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-input hover:border-gray-300"
                     }`}
                   >
                     <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
@@ -523,7 +523,7 @@ export default function SellerDealsPage() {
           </div>
         </SheetBody>
         <SheetFooter>
-          <button onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Cancel</button>
+          <button onClick={() => setShowForm(false)} className="rounded-xl border border-input px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!canSave} className="rounded-xl bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? "Update" : "Create"}
           </button>

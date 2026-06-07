@@ -158,7 +158,7 @@ export default function AdminDealsPage() {
           </span>
         )
         return (
-          <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
+          <span className="inline-flex items-center gap-1 rounded-full border border-input bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
             <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled
           </span>
         )
@@ -310,7 +310,7 @@ export default function AdminDealsPage() {
             {form.title && (
               <div>
                 <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Preview</label>
-                <div className="mt-1 rounded-xl overflow-hidden border border-gray-200" style={{
+                <div className="mt-1 rounded-xl overflow-hidden border border-input" style={{
                   background: form.bannerImageUrl ? `url(${form.bannerImageUrl}) center/cover no-repeat` : `linear-gradient(135deg, ${form.secondaryColor}, ${form.primaryColor}40)`,
                 }}>
                   <div className="p-5 min-h-[120px] flex flex-col justify-between" style={{ background: form.bannerImageUrl ? "rgba(0,0,0,0.45)" : undefined }}>
@@ -356,7 +356,7 @@ export default function AdminDealsPage() {
           </div>
         </SheetBody>
         <SheetFooter>
-          <button onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Cancel</button>
+          <button onClick={() => setShowForm(false)} className="rounded-xl border border-input px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={saving || !form.title} className="rounded-xl bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? "Update" : "Create"}
           </button>
@@ -369,7 +369,7 @@ export default function AdminDealsPage() {
         <SheetBody>
           {preview && (
             <div className="space-y-4">
-              <div className="rounded-xl overflow-hidden border border-gray-200" style={{
+              <div className="rounded-xl overflow-hidden border border-input" style={{
                 background: preview.bannerImageUrl ? `url(${preview.bannerImageUrl}) center/cover no-repeat` : `linear-gradient(135deg, ${preview.secondaryColor}, ${preview.primaryColor}40)`,
               }}>
                 <div className="p-6 min-h-[160px] flex flex-col justify-between" style={{ background: preview.bannerImageUrl ? "rgba(0,0,0,0.45)" : undefined }}>
@@ -386,24 +386,24 @@ export default function AdminDealsPage() {
                 </div>
               </div>
               {preview.content && (
-                <div className="rounded-xl border border-gray-200 p-4">
+                <div className="rounded-xl border border-input p-4">
                   <p className="text-sm text-gray-600 whitespace-pre-wrap">{preview.content}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-xl border border-gray-200 p-3">
+                <div className="rounded-xl border border-input p-3">
                   <p className="text-[11px] text-gray-500 uppercase font-medium">Target</p>
                   <p className="text-gray-900 font-medium">{AUDIENCE_OPTIONS.find(a => a.value === preview.targetAudience)?.label}</p>
                 </div>
-                <div className="rounded-xl border border-gray-200 p-3">
+                <div className="rounded-xl border border-input p-3">
                   <p className="text-[11px] text-gray-500 uppercase font-medium">Status</p>
                   <p className="text-gray-900 font-medium">{preview.active ? "Active" : preview.enabled ? "Scheduled" : "Disabled"}</p>
                 </div>
-                <div className="rounded-xl border border-gray-200 p-3">
+                <div className="rounded-xl border border-input p-3">
                   <p className="text-[11px] text-gray-500 uppercase font-medium">CTA Link</p>
                   <p className="text-gray-900 font-medium truncate">{preview.ctaLink || "—"}</p>
                 </div>
-                <div className="rounded-xl border border-gray-200 p-3">
+                <div className="rounded-xl border border-input p-3">
                   <p className="text-[11px] text-gray-500 uppercase font-medium">Created</p>
                   <p className="text-gray-900 font-medium">{formatDate(preview.createdAt)}</p>
                 </div>
@@ -412,7 +412,7 @@ export default function AdminDealsPage() {
           )}
         </SheetBody>
         <SheetFooter>
-          <button onClick={() => setPreview(null)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Close</button>
+          <button onClick={() => setPreview(null)} className="rounded-xl border border-input px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Close</button>
         </SheetFooter>
       </Sheet>
     </div>

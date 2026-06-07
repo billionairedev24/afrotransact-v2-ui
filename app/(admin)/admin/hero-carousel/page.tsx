@@ -116,7 +116,7 @@ function SlideModal({
         value={String(form[key] ?? "")}
         onChange={(e) => setForm({ ...form, [key]: e.target.value } as EditableHeroSlide)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
+        className="w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
       />
     </div>
   )
@@ -129,7 +129,7 @@ function SlideModal({
         onChange={(e) => setForm({ ...form, [key]: e.target.value } as EditableHeroSlide)}
         placeholder={placeholder}
         rows={3}
-        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors resize-none"
+        className="w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors resize-none"
       />
       <p className="mt-1 text-[11px] text-gray-400">Tip: use line breaks to control layout.</p>
     </div>
@@ -172,7 +172,7 @@ function SlideModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative rounded-2xl border border-gray-200 bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
+      <div className="relative rounded-2xl border border-input bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
         <div className="flex items-center justify-between sticky top-0 pb-2 bg-white">
           <h3 className="text-lg font-bold text-gray-900">{isEdit ? "Edit Slide" : "New Slide"}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-900 transition-colors">
@@ -190,7 +190,7 @@ function SlideModal({
               className={`w-full flex items-center justify-center gap-2 h-[42px] rounded-xl border text-sm font-medium transition-colors ${
                 form.enabled
                   ? "border-emerald-500/30 bg-emerald-50 text-emerald-700"
-                  : "border-gray-200 bg-gray-50 text-gray-500"
+                  : "border-input bg-gray-50 text-gray-500"
               }`}
             >
               {form.enabled ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -209,13 +209,13 @@ function SlideModal({
                 type="color"
                 value={HEX_COLOR.test(String(form.badgeColor ?? "")) ? String(form.badgeColor) : "#d4a853"}
                 onChange={(e) => setForm({ ...form, badgeColor: e.target.value } as EditableHeroSlide)}
-                className="h-[42px] w-14 rounded-lg border border-gray-200 bg-white p-1"
+                className="h-[42px] w-14 rounded-lg border border-input bg-white p-1"
               />
               <input
                 value={String(form.badgeColor ?? "")}
                 onChange={(e) => setForm({ ...form, badgeColor: e.target.value } as EditableHeroSlide)}
                 placeholder="#D4A853"
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
+                className="w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
               />
             </div>
           </div>
@@ -238,15 +238,15 @@ function SlideModal({
           <div className="grid grid-cols-3 gap-3">
             <div>
               <p className="mb-1 text-[11px] text-gray-500">Start</p>
-              <input type="color" value={bgFrom} onChange={(e) => setBgFrom(e.target.value)} className="h-[42px] w-full rounded-xl border border-gray-200 bg-white p-1" />
+              <input type="color" value={bgFrom} onChange={(e) => setBgFrom(e.target.value)} className="h-[42px] w-full rounded-xl border border-input bg-white p-1" />
             </div>
             <div>
               <p className="mb-1 text-[11px] text-gray-500">Middle</p>
-              <input type="color" value={bgVia} onChange={(e) => setBgVia(e.target.value)} className="h-[42px] w-full rounded-xl border border-gray-200 bg-white p-1" />
+              <input type="color" value={bgVia} onChange={(e) => setBgVia(e.target.value)} className="h-[42px] w-full rounded-xl border border-input bg-white p-1" />
             </div>
             <div>
               <p className="mb-1 text-[11px] text-gray-500">End</p>
-              <input type="color" value={bgTo} onChange={(e) => setBgTo(e.target.value)} className="h-[42px] w-full rounded-xl border border-gray-200 bg-white p-1" />
+              <input type="color" value={bgTo} onChange={(e) => setBgTo(e.target.value)} className="h-[42px] w-full rounded-xl border border-input bg-white p-1" />
             </div>
           </div>
           <p className="text-[11px] text-gray-400">Stored as CSS gradient string in DB.</p>
@@ -259,7 +259,7 @@ function SlideModal({
             <select
               value={form.mediaType || "none"}
               onChange={(e) => setForm({ ...form, mediaType: e.target.value as any })}
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
+              className="w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
             >
               <option value="none">None</option>
               <option value="image">Image</option>
@@ -272,7 +272,7 @@ function SlideModal({
               type="file"
               accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
               onChange={(e) => handleMediaUpload(e.target.files)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-gray-700 hover:file:bg-gray-200"
+              className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-gray-700 hover:file:bg-gray-200"
               disabled={isUploading}
             />
             <p className="mt-1 text-[11px] text-gray-400">{isUploading ? "Uploading..." : "Upload sets media URL automatically."}</p>
@@ -290,7 +290,7 @@ function SlideModal({
                 setOverlayHex(hex)
                 setForm({ ...form, mediaOverlay: rgbaFromHex(hex, overlayOpacity) } as EditableHeroSlide)
               }}
-              className="h-[42px] w-14 rounded-lg border border-gray-200 bg-white p-1"
+              className="h-[42px] w-14 rounded-lg border border-input bg-white p-1"
             />
             <input
               value={overlayHex}
@@ -304,7 +304,7 @@ function SlideModal({
                 }
               }}
               placeholder="#FFFFFF"
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
+              className="w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
             />
           </div>
           <div className="mt-2">
@@ -330,7 +330,7 @@ function SlideModal({
         </div>
 
         <div className="flex gap-3 pt-2">
-          <button onClick={onClose} className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+          <button onClick={onClose} className="flex-1 rounded-xl border border-input py-2.5 text-sm text-gray-600 hover:bg-gray-50">
             Cancel
           </button>
           <button
@@ -541,7 +541,7 @@ export default function AdminHeroCarouselPage() {
         </button>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="rounded-2xl border border-input overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-gray-500 text-sm">Loading hero slides…</div>
         ) : previewSlides.length ? (
@@ -555,7 +555,7 @@ export default function AdminHeroCarouselPage() {
 
       <div className="space-y-3">
         {ordered.map((s) => (
-          <div key={s.id} className={`rounded-2xl border ${s.enabled ? "border-gray-200 bg-white" : "border-gray-100 bg-gray-50 opacity-60"}`}>
+          <div key={s.id} className={`rounded-2xl border ${s.enabled ? "border-input bg-white" : "border-gray-100 bg-gray-50 opacity-60"}`}>
             <div className="p-4 flex items-start justify-between gap-4 flex-wrap">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -570,14 +570,14 @@ export default function AdminHeroCarouselPage() {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => handleMove(s.id, "up")}
-                  className="h-9 w-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50"
+                  className="h-9 w-9 rounded-xl border border-input bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50"
                   aria-label="Move up"
                 >
                   <MoveUp className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleMove(s.id, "down")}
-                  className="h-9 w-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50"
+                  className="h-9 w-9 rounded-xl border border-input bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50"
                   aria-label="Move down"
                 >
                   <MoveDown className="h-4 w-4" />
@@ -585,20 +585,20 @@ export default function AdminHeroCarouselPage() {
                 <button
                   onClick={() => handleToggle(s.id)}
                   className={`h-9 rounded-xl border px-3 text-sm font-semibold transition-colors ${
-                    s.enabled ? "border-emerald-500/30 bg-emerald-50 text-emerald-700" : "border-gray-200 bg-gray-50 text-gray-600"
+                    s.enabled ? "border-emerald-500/30 bg-emerald-50 text-emerald-700" : "border-input bg-gray-50 text-gray-600"
                   }`}
                 >
                   {s.enabled ? "Visible" : "Hidden"}
                 </button>
                 <button
                   onClick={() => setModal(s)}
-                  className="h-9 rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  className="h-9 rounded-xl border border-input bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => setConfirmDelete(s.id)}
-                  className="h-9 w-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-red-600 hover:bg-red-50"
+                  className="h-9 w-9 rounded-xl border border-input bg-white flex items-center justify-center text-red-600 hover:bg-red-50"
                   aria-label="Delete"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -610,7 +610,7 @@ export default function AdminHeroCarouselPage() {
               <div className="px-4 pb-4 flex items-center justify-between gap-3">
                 <p className="text-sm text-gray-600">Delete slide <span className="font-mono">{s.id}</span>?</p>
                 <div className="flex gap-2">
-                  <button onClick={() => setConfirmDelete(null)} className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
+                  <button onClick={() => setConfirmDelete(null)} className="rounded-lg border border-input bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">
                     Cancel
                   </button>
                   <button

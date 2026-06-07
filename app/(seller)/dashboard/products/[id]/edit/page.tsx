@@ -127,14 +127,14 @@ function parseOptionsToRows(jsonStr: string | null): VariantOptionRow[] {
   }
 }
 
-const CARD = "rounded-2xl border border-gray-200 bg-white p-6"
+const CARD = "rounded-2xl border border-input bg-white p-6"
 
 function inputCls(error?: string) {
   return cn(
     "h-10 w-full rounded-lg border bg-gray-50 px-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-gray-200 focus:border-primary focus:ring-primary/50",
+      : "border-input focus:border-primary focus:ring-primary/50",
   )
 }
 
@@ -143,7 +143,7 @@ function textareaCls(error?: string) {
     "w-full rounded-lg border bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors resize-none",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-gray-200 focus:border-primary focus:ring-primary/50",
+      : "border-input focus:border-primary focus:ring-primary/50",
   )
 }
 
@@ -823,7 +823,7 @@ export default function EditProductPage() {
       <div className="flex items-center gap-4">
         <Link
           href="/dashboard/products"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-input text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
@@ -1001,7 +1001,7 @@ export default function EditProductPage() {
                       "rounded-lg border px-5 py-2 text-sm font-medium capitalize transition-colors",
                       status === s
                         ? "border-primary bg-primary/10 text-foreground"
-                        : "border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-600",
+                        : "border-input text-gray-500 hover:border-gray-300 hover:text-gray-600",
                     )}
                   >
                     {s}
@@ -1049,7 +1049,7 @@ export default function EditProductPage() {
               <div
                 className={cn(
                   "flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-lg border bg-gray-50 px-2 py-1.5 transition-colors focus-within:ring-1",
-                  "border-gray-200 focus-within:border-primary focus-within:ring-primary/50",
+                  "border-input focus-within:border-primary focus-within:ring-primary/50",
                 )}
               >
                 {tags.map((tag) => (
@@ -1102,7 +1102,7 @@ export default function EditProductPage() {
                       key={img.id}
                       className={cn(
                         "group relative aspect-square overflow-hidden rounded-lg border-2 bg-gray-50",
-                        img.isPrimary ? "border-primary" : "border-gray-200",
+                        img.isPrimary ? "border-primary" : "border-input",
                       )}
                     >
                       <Image src={img.url} alt={img.altText ?? ""} fill sizes="(max-width: 640px) 25vw, 12vw" className="object-cover" />
@@ -1159,7 +1159,7 @@ export default function EditProductPage() {
 
             {/* Upload zone */}
             {totalImageCount < MAX_IMAGES && (
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 transition-colors hover:border-primary/40 hover:bg-brand-gold-hover/5">
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-input py-10 transition-colors hover:border-primary/40 hover:bg-brand-gold-hover/5">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
                   <Upload className="h-6 w-6 text-gray-500" />
                 </div>
@@ -1183,7 +1183,7 @@ export default function EditProductPage() {
                 {newImages.map((img) => (
                   <div
                     key={img.id}
-                    className="group relative aspect-square overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-50"
+                    className="group relative aspect-square overflow-hidden rounded-lg border-2 border-input bg-gray-50"
                   >
                     {img.status === "done" && img.url ? (
                       <Image src={img.url} alt="" fill sizes="(max-width: 640px) 25vw, 12vw" className="object-cover" />
@@ -1231,7 +1231,7 @@ export default function EditProductPage() {
             <button
               type="button"
               onClick={addVariantRow}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
               <Plus className="h-3.5 w-3.5" />
               Add Variant
@@ -1244,7 +1244,7 @@ export default function EditProductPage() {
             {variants.map((variant, idx) => (
               <div
                 key={variant.id}
-                className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+                className="rounded-xl border border-input bg-gray-50 p-4"
               >
                 <div className="mb-3 flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -1328,7 +1328,7 @@ export default function EditProductPage() {
                 </div>
 
                 {/* Options */}
-                <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="mt-3 border-t border-input pt-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">Options</span>
                     <button
@@ -1350,7 +1350,7 @@ export default function EditProductPage() {
                               updateVariantOption(variant.id, opt.id, "key", e.target.value)
                             }
                             placeholder="Key (e.g. Size)"
-                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-input bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                           />
                           <input
                             type="text"
@@ -1359,7 +1359,7 @@ export default function EditProductPage() {
                               updateVariantOption(variant.id, opt.id, "value", e.target.value)
                             }
                             placeholder="Value (e.g. M)"
-                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-input bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                           />
                           <button
                             type="button"
@@ -1375,10 +1375,10 @@ export default function EditProductPage() {
                 </div>
 
                 {/* Variant image */}
-                <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="mt-3 border-t border-input pt-3">
                   <span className="mb-1.5 block text-xs text-gray-500">Variant Image</span>
                   {variant.imagePreview || variant.imageUrl ? (
-                    <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
+                    <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-input">
                       {/* eslint-disable-next-line @next/next/no-img-element -- may be a blob: URL preview */}
                       <img
                         src={variant.imageUrl || variant.imagePreview}
@@ -1399,7 +1399,7 @@ export default function EditProductPage() {
                       </button>
                     </div>
                   ) : (
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-input px-3 py-2 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700">
                       <Upload className="h-3.5 w-3.5" />
                       Upload
                       <input
@@ -1428,7 +1428,7 @@ export default function EditProductPage() {
             <button
               type="button"
               onClick={addAttribute}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
               <Plus className="h-3.5 w-3.5" />
               Add
@@ -1436,7 +1436,7 @@ export default function EditProductPage() {
           </div>
 
           {attributes.length === 0 ? (
-            <p className="mt-5 rounded-lg border border-dashed border-gray-200 py-6 text-center text-sm text-gray-500">
+            <p className="mt-5 rounded-lg border border-dashed border-input py-6 text-center text-sm text-gray-500">
               No attributes yet. Click Add to create one.
             </p>
           ) : (
@@ -1448,14 +1448,14 @@ export default function EditProductPage() {
                     value={attr.key}
                     onChange={(e) => updateAttribute(attr.id, "key", e.target.value)}
                     placeholder="Key"
-                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-input bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                   />
                   <input
                     type="text"
                     value={attr.value}
                     onChange={(e) => updateAttribute(attr.id, "value", e.target.value)}
                     placeholder="Value"
-                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-input bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                   />
                   <button
                     type="button"
@@ -1471,11 +1471,11 @@ export default function EditProductPage() {
         </section>
 
         {/* ─── Submit / Delete bar ─── */}
-        <div className="flex flex-col gap-4 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 border-t border-input pt-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard/products"
-              className="rounded-lg border border-gray-200 px-5 py-2.5 text-center text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              className="rounded-lg border border-input px-5 py-2.5 text-center text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
               Cancel
             </Link>
@@ -1516,7 +1516,7 @@ export default function EditProductPage() {
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => !deleting && setDeleteConfirmOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl">
+          <div className="relative z-10 w-full max-w-md rounded-2xl border border-input bg-white p-6 shadow-2xl">
             <h3 className="text-lg font-semibold text-gray-900">Delete Product</h3>
             <p className="mt-2 text-sm text-gray-500">
               Are you sure you want to delete this product? This action cannot be undone.
@@ -1526,7 +1526,7 @@ export default function EditProductPage() {
                 type="button"
                 onClick={() => setDeleteConfirmOpen(false)}
                 disabled={deleting}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+                className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>

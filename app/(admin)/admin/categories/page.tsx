@@ -262,7 +262,7 @@ export default function AdminCategoriesPage() {
 
       {/* Category tree */}
       <div
-        className="rounded-2xl border border-gray-200 overflow-hidden bg-white"
+        className="rounded-2xl border border-input overflow-hidden bg-white"
       >
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-3">
@@ -293,7 +293,7 @@ export default function AdminCategoriesPage() {
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
               placeholder="e.g. Fresh Produce"
             />
           </div>
@@ -303,7 +303,7 @@ export default function AdminCategoriesPage() {
               type="text"
               value={form.slug}
               onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
               placeholder="auto-generated if empty"
             />
           </div>
@@ -313,7 +313,7 @@ export default function AdminCategoriesPage() {
               <select
                 value={form.parentId}
                 onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
               >
                 <option value="">— Top Level —</option>
                 {flatParents(categories).map((p) => (
@@ -330,7 +330,7 @@ export default function AdminCategoriesPage() {
               type="number"
               value={form.sortOrder}
               onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
             />
           </div>
         </DialogBody>

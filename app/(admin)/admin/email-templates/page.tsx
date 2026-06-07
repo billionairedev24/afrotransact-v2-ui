@@ -505,7 +505,7 @@ export default function EmailTemplatesPage() {
             <button
               type="button"
               onClick={() => { resetCreateForm(); setViewMode("list"); setActiveTab("editor") }}
-              className="shrink-0 rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 transition-colors"
+              className="shrink-0 rounded-lg border border-input p-2 text-gray-500 hover:bg-gray-50 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
@@ -534,7 +534,7 @@ export default function EmailTemplatesPage() {
               value={newSlug}
               onChange={e => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
               placeholder="e.g. welcome_back_reminder"
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
+              className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
             />
             <p className="mt-1 text-xs text-gray-400">Lowercase letters, numbers, underscores. Used in code to reference this template.</p>
           </div>
@@ -545,7 +545,7 @@ export default function EmailTemplatesPage() {
               value={newName}
               onChange={e => setNewName(e.target.value)}
               placeholder="e.g. Welcome Back Reminder"
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
+              className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
             />
           </div>
           <div>
@@ -553,7 +553,7 @@ export default function EmailTemplatesPage() {
             <select
               value={newCategory}
               onChange={e => setNewCategory(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
+              className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
             >
               {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -567,7 +567,7 @@ export default function EmailTemplatesPage() {
               value={newDescription}
               onChange={e => setNewDescription(e.target.value)}
               placeholder="Brief description of when this email is sent"
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
+              className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
             />
           </div>
         </div>
@@ -580,7 +580,7 @@ export default function EmailTemplatesPage() {
             value={newSubject}
             onChange={e => setNewSubject(e.target.value)}
             placeholder="e.g. We miss you, {{.RecipientName}}! — AfroTransact"
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
+            className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
           />
         </div>
 
@@ -596,7 +596,7 @@ export default function EmailTemplatesPage() {
         </label>
 
         {/* Tabs: Copy notes / HTML / Preview */}
-        <div className="flex items-center gap-1 border-b border-gray-200">
+        <div className="flex items-center gap-1 border-b border-input">
           <button
             onClick={() => { setNewEditorMode("notes"); setActiveTab("editor") }}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
@@ -640,7 +640,7 @@ export default function EmailTemplatesPage() {
                   onChange={e => setNewNotes(e.target.value)}
                   spellCheck
                   placeholder="e.g. Opening line: Thanks for signing up, {first name}!  Body: Explain what they can do next. CTA: Go to my account. Tone: warm, 2 short sentences."
-                  className="h-[500px] w-full max-w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors leading-relaxed"
+                  className="h-[500px] w-full max-w-full rounded-lg border border-input bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors leading-relaxed"
                 />
               </div>
             ) : activeTab === "editor" ? (
@@ -648,10 +648,10 @@ export default function EmailTemplatesPage() {
                 value={newHTML}
                 onChange={e => setNewHTML(e.target.value)}
                 spellCheck={false}
-                className="h-[500px] w-full max-w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors"
+                className="h-[500px] w-full max-w-full rounded-lg border border-input bg-gray-50 px-4 py-3 font-mono text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors"
               />
             ) : (
-              <div className="min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
+              <div className="min-w-0 overflow-hidden rounded-lg border border-input bg-white">
                 {newPreviewHTML ? (
                   <iframe
                     srcDoc={newPreviewHTML}
@@ -673,14 +673,14 @@ export default function EmailTemplatesPage() {
                 value={newText}
                 onChange={e => setNewText(e.target.value)}
                 rows={3}
-                className="w-full max-w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors"
+                className="w-full max-w-full rounded-lg border border-input bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors"
               />
             </div>
           </div>
 
           {/* Variables editor */}
           <div className="min-w-0 space-y-4 xl:col-span-1">
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <div className="rounded-lg border border-input bg-white p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
                   <Tag className="h-4 w-4 text-foreground" />
@@ -702,7 +702,7 @@ export default function EmailTemplatesPage() {
                         value={v.name}
                         onChange={e => updateVariable(idx, "name", e.target.value.replace(/\s/g, ""))}
                         placeholder="VariableName"
-                        className="flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs font-mono text-gray-900 outline-none focus:border-primary"
+                        className="flex-1 rounded border border-input bg-white px-2 py-1 text-xs font-mono text-gray-900 outline-none focus:border-primary"
                       />
                       <button onClick={() => removeVariable(idx)} className="text-gray-400 hover:text-red-500 p-0.5">
                         <X className="h-3 w-3" />
@@ -713,7 +713,7 @@ export default function EmailTemplatesPage() {
                       value={v.description}
                       onChange={e => updateVariable(idx, "description", e.target.value)}
                       placeholder="Description"
-                      className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 outline-none focus:border-primary"
+                      className="w-full rounded border border-input bg-white px-2 py-1 text-xs text-gray-700 outline-none focus:border-primary"
                     />
                     <div className="flex items-center gap-2">
                       <input
@@ -721,7 +721,7 @@ export default function EmailTemplatesPage() {
                         value={v.sample_value}
                         onChange={e => updateVariable(idx, "sample_value", e.target.value)}
                         placeholder="Sample value"
-                        className="flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 outline-none focus:border-primary"
+                        className="flex-1 rounded border border-input bg-white px-2 py-1 text-xs text-gray-500 outline-none focus:border-primary"
                       />
                       <label className="flex items-center gap-1 text-[10px] text-gray-500 whitespace-nowrap">
                         <input
@@ -750,7 +750,7 @@ export default function EmailTemplatesPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <div className="rounded-lg border border-input bg-white p-4">
               <h4 className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-2">
                 <Info className="h-3 w-3" /> Template Functions
               </h4>
@@ -777,7 +777,7 @@ export default function EmailTemplatesPage() {
             <button
               type="button"
               onClick={() => { setSelected(null); setViewMode("list"); setActiveTab("editor") }}
-              className="shrink-0 rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 transition-colors"
+              className="shrink-0 rounded-lg border border-input p-2 text-gray-500 hover:bg-gray-50 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
@@ -797,7 +797,7 @@ export default function EmailTemplatesPage() {
                     ? "Re-apply the latest shipped default for this template"
                     : "Discard admin edits and restore the shipped default"
                 }
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
               >
                 {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
                 Reset to default
@@ -815,7 +815,7 @@ export default function EmailTemplatesPage() {
             <button
               type="button"
               onClick={() => setShowSendTest(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
             >
               <Send className="h-4 w-4" /> Send Test
             </button>
@@ -864,7 +864,7 @@ export default function EmailTemplatesPage() {
             type="text"
             value={editSubject}
             onChange={e => setEditSubject(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
+            className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
           />
           <p className="mt-1 text-xs text-gray-400">
             {"Use {{.VariableName}} for dynamic values, e.g. {{.OrderNumber}}"}
@@ -888,7 +888,7 @@ export default function EmailTemplatesPage() {
         )}
 
         {/* Tabs: Copy notes (plain text) / HTML (raw) / Preview */}
-        <div className="flex items-center gap-1 border-b border-gray-200">
+        <div className="flex items-center gap-1 border-b border-input">
           <button
             onClick={() => { setEditorMode("notes"); setActiveTab("editor") }}
             title="Describe the copy you want. Developers will edit the HTML to match."
@@ -939,7 +939,7 @@ export default function EmailTemplatesPage() {
                   placeholder={
                     "e.g.\n- Opening line: Thanks for your order, {first name}!\n- Body: Confirm we received it and explain we'll email when it ships.\n- CTA button label: View your order\n- Tone: friendly, short sentences, no jargon."
                   }
-                  className="h-[600px] w-full max-w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors leading-relaxed"
+                  className="h-[600px] w-full max-w-full rounded-lg border border-input bg-white px-4 py-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors leading-relaxed"
                 />
                 <p className="text-xs text-gray-500">
                   Tip: reference template variables by intent (&quot;customer&apos;s first name&quot;, &quot;order number&quot;) — the developer knows the exact Go-template syntax.
@@ -950,10 +950,10 @@ export default function EmailTemplatesPage() {
                 value={editHTML}
                 onChange={e => setEditHTML(e.target.value)}
                 spellCheck={false}
-                className="h-[600px] w-full max-w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors"
+                className="h-[600px] w-full max-w-full rounded-lg border border-input bg-gray-50 px-4 py-3 font-mono text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors"
               />
             ) : (
-              <div className="min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
+              <div className="min-w-0 overflow-hidden rounded-lg border border-input bg-white">
                 {previewHTML ? (
                   <iframe
                     srcDoc={previewHTML}
@@ -975,14 +975,14 @@ export default function EmailTemplatesPage() {
                 value={editText}
                 onChange={e => setEditText(e.target.value)}
                 rows={4}
-                className="w-full max-w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors"
+                className="w-full max-w-full rounded-lg border border-input bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 resize-y transition-colors"
               />
             </div>
           </div>
 
           {/* Variables panel */}
           <div className="min-w-0 xl:col-span-1">
-            <div className="sticky top-6 rounded-lg border border-gray-200 bg-white p-4">
+            <div className="sticky top-6 rounded-lg border border-input bg-white p-4">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 mb-3">
                 <Tag className="h-4 w-4 text-foreground" />
                 Available Variables
@@ -1101,7 +1101,7 @@ export default function EmailTemplatesPage() {
             type="button"
             onClick={() => selectTemplate(tpl.slug)}
             disabled={loadingDetail}
-            className="group flex min-w-0 w-full max-w-full items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-primary/40 hover:shadow-sm"
+            className="group flex min-w-0 w-full max-w-full items-center gap-4 rounded-xl border border-input bg-white p-4 text-left transition-all hover:border-primary/40 hover:shadow-sm"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 transition-colors group-hover:bg-brand-gold/10">
               <Mail className="h-5 w-5 text-gray-400 transition-colors group-hover:text-foreground" />

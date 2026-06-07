@@ -179,7 +179,7 @@ export default function NotificationRoutingPage() {
           <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
             active
               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : "bg-gray-50 text-gray-500 border-gray-200"
+              : "bg-gray-50 text-gray-500 border-input"
           }`}>
             <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-emerald-500" : "bg-gray-400"}`} />
             {active ? "Active" : "Paused"}
@@ -239,8 +239,8 @@ export default function NotificationRoutingPage() {
       </div>
 
       {/* Available events */}
-      <div className="rounded-2xl border border-gray-200 bg-white">
-        <div className="px-5 py-4 border-b border-gray-200">
+      <div className="rounded-2xl border border-input bg-white">
+        <div className="px-5 py-4 border-b border-input">
           <h2 className="text-sm font-semibold text-gray-900">Available Notification Events</h2>
           <p className="text-xs text-gray-500 mt-0.5">
             Events you can route. Add recipients below to receive alerts.
@@ -357,8 +357,8 @@ export default function NotificationRoutingPage() {
       )}
 
       {/* Recipients table */}
-      <div className="rounded-2xl border border-gray-200 bg-white">
-        <div className="px-5 py-4 border-b border-gray-200">
+      <div className="rounded-2xl border border-input bg-white">
+        <div className="px-5 py-4 border-b border-input">
           <h2 className="text-sm font-semibold text-gray-900">Configured Recipients</h2>
           <p className="text-xs text-gray-500 mt-0.5">
             Manage who receives notifications for each event. Toggle to pause without removing.
