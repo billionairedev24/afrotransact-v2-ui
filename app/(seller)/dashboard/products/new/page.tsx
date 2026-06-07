@@ -1589,7 +1589,7 @@ export default function NewProductPage() {
                       </button>
                     </div>
                   ) : (
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-input px-3 py-2 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-600">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-input px-3 py-2 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-foreground">
                       <Upload className="h-3.5 w-3.5" />
                       Upload
                       <input
@@ -1692,7 +1692,7 @@ export default function NewProductPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Deal Title *</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">Deal Title *</label>
                 <input
                   type="text"
                   value={dealTitle}
@@ -1703,7 +1703,7 @@ export default function NewProductPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Description</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">Description</label>
                 <textarea
                   value={dealDescription}
                   onChange={(e) => setDealDescription(e.target.value)}
@@ -1715,7 +1715,7 @@ export default function NewProductPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Badge Text</label>
+                  <label className="mb-1 block text-xs font-medium text-foreground">Badge Text</label>
                   <input
                     type="text"
                     value={dealBadgeText}
@@ -1725,7 +1725,7 @@ export default function NewProductPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Discount %</label>
+                  <label className="mb-1 block text-xs font-medium text-foreground">Discount %</label>
                   <input
                     type="number"
                     min={0}
@@ -1752,7 +1752,7 @@ export default function NewProductPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Start Date</label>
+                  <label className="mb-1 block text-xs font-medium text-foreground">Start Date</label>
                   <input
                     type="datetime-local"
                     value={dealStartAt}
@@ -1761,7 +1761,7 @@ export default function NewProductPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">End Date</label>
+                  <label className="mb-1 block text-xs font-medium text-foreground">End Date</label>
                   <input
                     type="datetime-local"
                     value={dealEndAt}

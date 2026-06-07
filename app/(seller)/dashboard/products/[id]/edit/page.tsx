@@ -947,7 +947,7 @@ export default function EditProductPage() {
               </p>
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="mb-1 block text-xs text-gray-600">L</label>
+                  <label className="mb-1 block text-xs text-foreground">L</label>
                   <input
                     type="number"
                     step="0.01"
@@ -960,7 +960,7 @@ export default function EditProductPage() {
                   <FieldError msg={err("parcelLengthIn")} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-600">W</label>
+                  <label className="mb-1 block text-xs text-foreground">W</label>
                   <input
                     type="number"
                     step="0.01"
@@ -973,7 +973,7 @@ export default function EditProductPage() {
                   <FieldError msg={err("parcelWidthIn")} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-600">H</label>
+                  <label className="mb-1 block text-xs text-foreground">H</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1399,7 +1399,7 @@ export default function EditProductPage() {
                       </button>
                     </div>
                   ) : (
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-input px-3 py-2 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-input px-3 py-2 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-foreground">
                       <Upload className="h-3.5 w-3.5" />
                       Upload
                       <input

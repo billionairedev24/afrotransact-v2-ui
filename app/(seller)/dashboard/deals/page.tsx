@@ -394,7 +394,7 @@ export default function SellerDealsPage() {
             {/* Deal type toggle */}
             {!editing && (
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Deal Type</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Deal Type</label>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -441,7 +441,7 @@ export default function SellerDealsPage() {
             {/* Store selector (store-wide) */}
             {form.dealType === "store-wide" && (
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Store *</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Store *</label>
                 <select
                   value={form.storeId}
                   onChange={e => setForm({ ...form, storeId: e.target.value })}
@@ -459,7 +459,7 @@ export default function SellerDealsPage() {
             {/* Product selector (product deal) */}
             {form.dealType === "product" && (
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Product *</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Product *</label>
                 <select
                   value={form.productId}
                   onChange={e => setForm({ ...form, productId: e.target.value })}
@@ -478,20 +478,20 @@ export default function SellerDealsPage() {
             )}
 
             <div>
-              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Deal Title *</label>
+              <label className="text-xs font-medium text-foreground uppercase tracking-wide">Deal Title *</label>
               <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder={form.dealType === "store-wide" ? "e.g. Free Shipping Weekend" : "e.g. Spring Sale — 20% Off!"} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Description</label>
+              <label className="text-xs font-medium text-foreground uppercase tracking-wide">Description</label>
               <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary resize-none" rows={2} placeholder="Short description" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Badge Text</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Badge Text</label>
                 <input value={form.badgeText} onChange={e => setForm({ ...form, badgeText: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="e.g. HOT, BOGO" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Discount %</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Discount %</label>
                 <input type="number" min={0} max={100} value={form.discountPercent ?? ""} onChange={e => setForm({ ...form, discountPercent: e.target.value ? parseInt(e.target.value) : undefined })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="e.g. 20" />
               </div>
             </div>
@@ -505,18 +505,18 @@ export default function SellerDealsPage() {
             )}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Or Fixed Deal Price (cents)</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Or Fixed Deal Price (cents)</label>
                 <input type="number" value={form.dealPriceCents ?? ""} onChange={e => setForm({ ...form, dealPriceCents: e.target.value ? parseInt(e.target.value) : undefined })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="e.g. 1999 = $19.99" />
               </div>
               <div />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Start Date</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Start Date</label>
                 <input type="datetime-local" value={form.startAt ? new Date(form.startAt).toISOString().slice(0, 16) : ""} onChange={e => setForm({ ...form, startAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">End Date</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">End Date</label>
                 <input type="datetime-local" value={form.endAt ? new Date(form.endAt).toISOString().slice(0, 16) : ""} onChange={e => setForm({ ...form, endAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" />
               </div>
             </div>

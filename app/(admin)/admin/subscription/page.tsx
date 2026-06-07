@@ -203,7 +203,7 @@ function PlanModal({
     placeholder?: string
   ) => (
     <div>
-      <label className="mb-1 block text-xs font-medium text-gray-700">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-foreground">{label}</label>
       {key === "features" ? (
         <textarea
           value={form.features}
@@ -513,7 +513,7 @@ export default function AdminSubscriptionPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {Object.entries(billingConfig).map(([key, value]) => (
                   <div key={key}>
-                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                    <label className="mb-1 block text-xs font-medium text-foreground">
                       {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                     </label>
                     {CONFIG_DESCRIPTIONS[key] && (

@@ -528,7 +528,7 @@ export default function EmailTemplatesPage() {
         {/* Metadata fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Slug (unique identifier)</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Slug (unique identifier)</label>
             <input
               type="text"
               value={newSlug}
@@ -539,7 +539,7 @@ export default function EmailTemplatesPage() {
             <p className="mt-1 text-xs text-gray-400">Lowercase letters, numbers, underscores. Used in code to reference this template.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Name</label>
             <input
               type="text"
               value={newName}
@@ -549,7 +549,7 @@ export default function EmailTemplatesPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Category</label>
             <select
               value={newCategory}
               onChange={e => setNewCategory(e.target.value)}
@@ -561,7 +561,7 @@ export default function EmailTemplatesPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Description</label>
             <input
               type="text"
               value={newDescription}
@@ -574,7 +574,7 @@ export default function EmailTemplatesPage() {
 
         {/* Subject */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Subject Line</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Subject Line</label>
           <input
             type="text"
             value={newSubject}
@@ -585,7 +585,7 @@ export default function EmailTemplatesPage() {
         </div>
 
         {/* Layout toggle */}
-        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
           <input
             type="checkbox"
             checked={newUseLayout}
@@ -668,7 +668,7 @@ export default function EmailTemplatesPage() {
             )}
 
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Plain Text Fallback (optional)</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Plain Text Fallback (optional)</label>
               <textarea
                 value={newText}
                 onChange={e => setNewText(e.target.value)}
@@ -859,7 +859,7 @@ export default function EmailTemplatesPage() {
 
         {/* Subject line */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Subject Line</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Subject Line</label>
           <input
             type="text"
             value={editSubject}
@@ -970,7 +970,7 @@ export default function EmailTemplatesPage() {
             )}
 
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Plain Text Fallback (optional)</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Plain Text Fallback (optional)</label>
               <textarea
                 value={editText}
                 onChange={e => setEditText(e.target.value)}

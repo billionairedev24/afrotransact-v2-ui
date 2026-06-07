@@ -798,7 +798,7 @@ export default function MediaPage() {
             </div>
             <div className="mt-4 space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Display name</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">Display name</label>
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
@@ -807,7 +807,7 @@ export default function MediaPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Metadata notes (searchable)</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">Metadata notes (searchable)</label>
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
