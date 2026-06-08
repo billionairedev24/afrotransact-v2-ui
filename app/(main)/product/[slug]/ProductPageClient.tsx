@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils"
 import ProductReviews from "@/components/reviews/ProductReviews"
 import { useCartStore } from "@/stores/cart-store"
 import { useWishlistStore } from "@/stores/wishlist-store"
+import { useWishlist } from "@/hooks/use-wishlist"
 import { getProductReviews } from "@/lib/api"
 import {
   getProductBySlug,
@@ -72,11 +73,17 @@ export default function ProductPageClient() {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
-  const wishlistHas = useWishlistStore((s) => s.has)
-  const wishlistToggle = useWishlistStore((s) => s.toggle)
+  // Cross-device wishlist (#43): for authenticated users this round-trips to
+  // the user-profile service; for anonymous users it falls back to the local
+  // zustand store. Keep `useWishlistStore` for the anonymous metadata write
+  // (title/image/price) — the local store carries display data the server
+  // doesn't track.
+  const wishlist = useWishlist()
+  const localWishlistAdd = useWishlistStore((s) => s.add)
+  const localWishlistRemove = useWishlistStore((s) => s.remove)
   const [wishlistHydrated, setWishlistHydrated] = useState(false)
   useEffect(() => { setWishlistHydrated(true) }, [])
-  const wishlisted = wishlistHydrated && product ? wishlistHas(product.id) : false
+  const wishlisted = wishlistHydrated && product ? wishlist.has(product.id) : false
 
   const items = useCartStore((s) => s.items)
   const addItem = useCartStore((s) => s.addItem)
@@ -640,17 +647,28 @@ export default function ProductPageClient() {
 
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 if (!product || !variant) return
-                const added = wishlistToggle({
-                  productId: product.id,
-                  slug: product.slug,
-                  title: product.title,
-                  imageUrl: product.images[0]?.url,
-                  priceCents: displayPriceCents,
-                  storeName: storeName || null,
-                })
-                toast.success(added ? "Saved to wishlist" : "Removed from wishlist")
+                // For anonymous users we additionally keep the rich metadata
+                // (title/image/price/store) in the local zustand store so the
+                // /account/wishlist page can render it without an extra fetch.
+                // Authenticated users get their wishlist hydrated from the
+                // server by productId; the page fetches product details itself.
+                const wasIn = wishlist.has(product.id)
+                if (!wasIn) {
+                  localWishlistAdd({
+                    productId: product.id,
+                    slug: product.slug,
+                    title: product.title,
+                    imageUrl: product.images[0]?.url,
+                    priceCents: displayPriceCents,
+                    storeName: storeName || null,
+                  })
+                } else {
+                  localWishlistRemove(product.id)
+                }
+                const nowIn = await wishlist.toggle(product.id)
+                toast.success(nowIn ? "Saved to wishlist" : "Removed from wishlist")
               }}
               className={cn(
                 "w-full inline-flex items-center justify-center gap-2 rounded-lg border py-2 text-sm font-semibold transition-colors",

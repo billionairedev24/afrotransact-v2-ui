@@ -2798,4 +2798,40 @@ export function revokeSellerInvite(token: string, id: string) {
   )
 }
 
+// ── Wishlist (User-Profile service) ──
+
+interface WishlistPage {
+  content: string[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export interface WishlistMergeResult {
+  requested: number
+  added: number
+  alreadyPresent: number
+}
+
+export function getWishlist(token: string, page = 0, size = 100) {
+  return api<WishlistPage>(`/api/v1/wishlist?page=${page}&size=${size}`, { token })
+}
+
+export function addToWishlist(token: string, productId: string) {
+  return api<void>("/api/v1/wishlist", { method: "POST", body: { productId }, token })
+}
+
+export function removeFromWishlist(token: string, productId: string) {
+  return api<void>(`/api/v1/wishlist/${productId}`, { method: "DELETE", token })
+}
+
+export function mergeWishlist(token: string, productIds: string[]) {
+  return api<WishlistMergeResult>("/api/v1/wishlist/merge", {
+    method: "POST",
+    body: { productIds },
+    token,
+  })
+}
+
 export { API_BASE }
