@@ -4,108 +4,80 @@ import { useState } from "react"
 import Link from "next/link"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
 import {
+  AlertTriangle,
   Check,
   ChevronRight,
   HelpCircle,
+  Loader2,
   ShieldCheck,
   Sparkles,
   Star,
   Store,
-  X,
   Zap,
 } from "lucide-react"
+import { useSubscriptionPlans } from "@/hooks/use-subscription-plans"
+import type { SubscriptionPlan } from "@/lib/api"
 
-/* ─── Plan data (mirrors DB seed — will be fetched from API in production) ─ */
+/* ─────────────────────────────────────────────────────────────
+ * Presentation helpers
+ * ─────────────────────────────────────────────────────────────
+ * Plan content (price, name, features, commission) is server-driven via
+ * getPublicPlans(). Purely visual flourishes (badge, accent colours) are
+ * derived locally from the plan's displayOrder so the marketing page keeps
+ * its tiered look without re-introducing a hardcoded list.
+ */
 
-const PLANS = [
-  {
-    id: "starter",
-    name: "Starter",
-    slug: "starter",
-    description: "Perfect for new sellers getting started on AfroTransact.",
-    priceCents: 2999,
-    priceDisplay: "$29.99",
-    maxProducts: 50,
-    maxStores: 1,
-    commissionRate: "10%",
+type PlanAccent = {
+  badge: string | null
+  badgeColor: string
+  accentClass: string
+  headerClass: string
+  isPrimaryCta: boolean
+}
+
+function getPlanAccent(index: number, total: number): PlanAccent {
+  // Highlight the middle tier when there are >=3 plans, otherwise the last.
+  const highlightIndex = total >= 3 ? 1 : total - 1
+  const topIndex = total - 1
+
+  if (index === highlightIndex) {
+    return {
+      badge: "Most Popular",
+      badgeColor: "bg-brand-gold text-brand-gold-foreground",
+      accentClass: "border-primary/50 ring-1 ring-primary/30",
+      headerClass: "bg-primary/10",
+      isPrimaryCta: true,
+    }
+  }
+  if (index === topIndex && topIndex !== highlightIndex) {
+    return {
+      badge: "Full Power",
+      badgeColor: "bg-violet-500 text-white",
+      accentClass: "border-violet-500/40 ring-1 ring-violet-500/20",
+      headerClass: "bg-violet-500/10",
+      isPrimaryCta: false,
+    }
+  }
+  return {
     badge: null,
     badgeColor: "",
     accentClass: "border-gray-200",
     headerClass: "bg-gray-50",
-    features: [
-      "Up to 50 products",
-      "1 store",
-      "10% platform commission",
-      "Email support",
-      "Basic analytics dashboard",
-      "Delivery tracking",
-    ],
-    notIncluded: [
-      "Multiple stores",
-      "Reduced commission",
-      "Featured store badge",
-      "Priority support",
-    ],
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    slug: "growth",
-    description: "Scale your business with more reach and a lower commission.",
-    priceCents: 7999,
-    priceDisplay: "$79.99",
-    maxProducts: 500,
-    maxStores: 3,
-    commissionRate: "8%",
-    badge: "Most Popular",
-    badgeColor: "bg-brand-gold text-brand-gold-foreground",
-    accentClass: "border-primary/50 ring-1 ring-primary/30",
-    headerClass: "bg-primary/10",
-    features: [
-      "Up to 500 products",
-      "Up to 3 stores",
-      "Reduced 8% commission",
-      "Priority email & chat support",
-      "Advanced analytics & reports",
-      "Featured store badge",
-      "Delivery tracking",
-      "Bulk product import",
-    ],
-    notIncluded: [
-      "Unlimited products",
-      "Dedicated account manager",
-      "Custom store domain",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    slug: "pro",
-    description: "Full power for high-volume sellers and serious businesses.",
-    priceCents: 14999,
-    priceDisplay: "$149.99",
-    maxProducts: -1,
-    maxStores: 10,
-    commissionRate: "6%",
-    badge: "Full Power",
-    badgeColor: "bg-violet-500 text-white",
-    accentClass: "border-violet-500/40 ring-1 ring-violet-500/20",
-    headerClass: "bg-violet-500/10",
-    features: [
-      "Unlimited products",
-      "Up to 10 stores",
-      "Lowest 6% commission",
-      "Dedicated account manager",
-      "Full analytics suite",
-      "Top placement in search results",
-      "Custom store domain",
-      "Bulk product import",
-      "API access",
-      "White-glove onboarding",
-    ],
-    notIncluded: [],
-  },
-]
+    isPrimaryCta: false,
+  }
+}
+
+function commissionLabel(plan: SubscriptionPlan): string {
+  return plan.commissionRateOverride != null
+    ? `${plan.commissionRateOverride}%`
+    : "Standard"
+}
+
+function monthlyPriceDisplay(plan: SubscriptionPlan): string {
+  return plan.priceCentsPerMonth === 0
+    ? "Free"
+    : `$${(plan.priceCentsPerMonth / 100).toFixed(2)}`
+}
 
 const FAQ = [
   {
@@ -126,7 +98,7 @@ const FAQ = [
   },
   {
     q: "What is the platform commission?",
-    a: "AfroTransact charges a percentage of each sale to cover payment processing, platform infrastructure, and marketing. The rate depends on your plan (6–10%). This is separate from Stripe's payment processing fee.",
+    a: "AfroTransact charges a percentage of each sale to cover payment processing, platform infrastructure, and marketing. The rate depends on your plan. This is separate from Stripe's payment processing fee.",
   },
   {
     q: "What happens if my payment fails?",
@@ -138,61 +110,98 @@ const FAQ = [
   },
 ]
 
-function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean }) {
+function PlanCard({
+  plan,
+  accent,
+  isAnnual,
+}: {
+  plan: SubscriptionPlan
+  accent: PlanAccent
+  isAnnual: boolean
+}) {
+  const monthly = plan.priceCentsPerMonth / 100
   const price = isAnnual
-    ? `$${((plan.priceCents * 10) / 100).toFixed(2)}`
-    : plan.priceDisplay
+    ? `$${(monthly * 10).toFixed(2)}`
+    : monthlyPriceDisplay(plan)
 
   return (
     <div
-      className={`relative flex flex-col rounded-2xl border ${plan.accentClass} overflow-hidden transition-all duration-200 hover:scale-[1.01] bg-white`}
+      className={`relative flex flex-col rounded-2xl border ${accent.accentClass} overflow-hidden transition-all duration-200 hover:scale-[1.01] bg-white`}
     >
-      {plan.badge && (
+      {accent.badge && (
         <div className="absolute top-0 right-0">
-          <span className={`inline-flex items-center gap-1 rounded-bl-xl rounded-tr-2xl px-3 py-1 text-[11px] font-bold ${plan.badgeColor}`}>
+          <span
+            className={`inline-flex items-center gap-1 rounded-bl-xl rounded-tr-2xl px-3 py-1 text-[11px] font-bold ${accent.badgeColor}`}
+          >
             <Star className="h-3 w-3" />
-            {plan.badge}
+            {accent.badge}
           </span>
         </div>
       )}
 
-      <div className={`p-6 ${plan.headerClass}`}>
+      <div className={`p-6 ${accent.headerClass}`}>
         <h3 className="text-xl font-black text-gray-900">{plan.name}</h3>
-        <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
+        {plan.description && (
+          <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
+        )}
 
         <div className="mt-5 flex items-end gap-1">
           <span className="text-4xl font-black text-gray-900">{price}</span>
-          <span className="text-gray-500 mb-1">/month</span>
+          <span className="text-gray-500 mb-1">
+            {plan.priceCentsPerMonth === 0 ? "" : "/month"}
+          </span>
         </div>
-        {isAnnual && (
-          <p className="text-xs text-emerald-400 mt-1">2 months free with annual billing</p>
+        {isAnnual && plan.priceCentsPerMonth > 0 && (
+          <p className="text-xs text-emerald-400 mt-1">
+            2 months free with annual billing
+          </p>
         )}
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-center">
+          <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
             <p className="text-xs text-gray-500">Products</p>
             <p className="text-sm font-bold text-gray-900">
               {plan.maxProducts === -1 ? "Unlimited" : `${plan.maxProducts}`}
             </p>
           </div>
-          <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-center">
+          <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
             <p className="text-xs text-gray-500">Commission</p>
-            <p className="text-sm font-bold text-gray-900">{plan.commissionRate}</p>
+            <p className="text-sm font-bold text-gray-900">{commissionLabel(plan)}</p>
           </div>
         </div>
       </div>
 
       <div className="flex-1 p-6 space-y-4">
         <div className="space-y-2">
-          {plan.features.map((f) => (
+          <div className="flex items-start gap-2 text-sm">
+            <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
+            <span className="text-gray-600">
+              {plan.maxProducts === -1
+                ? "Unlimited products"
+                : `Up to ${plan.maxProducts} products`}
+            </span>
+          </div>
+          <div className="flex items-start gap-2 text-sm">
+            <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
+            <span className="text-gray-600">
+              {plan.maxStores === 1
+                ? "1 store"
+                : plan.maxStores === -1
+                ? "Unlimited stores"
+                : `Up to ${plan.maxStores} stores`}
+            </span>
+          </div>
+          {plan.commissionRateOverride != null && (
+            <div className="flex items-start gap-2 text-sm">
+              <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
+              <span className="text-gray-600">
+                {plan.commissionRateOverride}% platform commission
+              </span>
+            </div>
+          )}
+          {(plan.features ?? []).map((f) => (
             <div key={f} className="flex items-start gap-2 text-sm">
               <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-              <span className="text-gray-600">{f}</span>
-            </div>
-          ))}
-          {plan.notIncluded.map((f) => (
-            <div key={f} className="flex items-start gap-2 text-sm">
-              <X className="h-4 w-4 text-gray-300 mt-0.5 shrink-0" />
               <span className="text-gray-600">{f}</span>
             </div>
           ))}
@@ -204,9 +213,9 @@ function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean
           variant="bare"
           planSlug={plan.slug}
           className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] ${
-            plan.badge === "Most Popular"
-              ? "bg-brand-gold text-brand-gold-foreground hover:bg-brand-gold/90 shadow-lg shadow-primary/20"
-              : "border border-gray-300 bg-gray-50 text-gray-900 hover:bg-gray-100"
+            accent.isPrimaryCta
+              ? "bg-brand-gold text-brand-gold-foreground hover:bg-brand-gold-hover shadow-lg shadow-primary/20"
+              : "border border-input bg-gray-50 text-gray-900 hover:bg-gray-100"
           }`}
         >
           Start Free Trial
@@ -220,9 +229,44 @@ function PlanCard({ plan, isAnnual }: { plan: typeof PLANS[0]; isAnnual: boolean
   )
 }
 
+function PlanCardSkeleton() {
+  return (
+    <div className="flex flex-col rounded-2xl border border-gray-200 bg-white overflow-hidden">
+      <div className="p-6 bg-gray-50 animate-pulse space-y-4">
+        <div className="h-6 w-24 bg-gray-200 rounded" />
+        <div className="h-4 w-40 bg-gray-200 rounded" />
+        <div className="h-10 w-32 bg-gray-200 rounded" />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="h-12 bg-gray-200 rounded" />
+          <div className="h-12 bg-gray-200 rounded" />
+        </div>
+      </div>
+      <div className="p-6 space-y-3 animate-pulse">
+        <div className="h-4 w-3/4 bg-gray-200 rounded" />
+        <div className="h-4 w-2/3 bg-gray-200 rounded" />
+        <div className="h-4 w-3/5 bg-gray-200 rounded" />
+        <div className="h-4 w-1/2 bg-gray-200 rounded" />
+      </div>
+      <div className="p-6 pt-0 animate-pulse">
+        <div className="h-11 w-full bg-gray-200 rounded-xl" />
+      </div>
+    </div>
+  )
+}
+
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const { data: rawPlans, isLoading, error } = useSubscriptionPlans()
+
+  const plans = (rawPlans ?? [])
+    .filter((p) => p.active)
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+
+  const commissionRows = plans.map((p) => ({
+    name: p.name,
+    rate: p.commissionRateOverride ?? 10,
+  }))
 
   return (
     <main className="min-h-screen">
@@ -257,7 +301,7 @@ export default function PricingPage() {
               { icon: <Zap className="h-4 w-4 text-emerald-400" />,  text: "Month 2: Free with 9+ products" },
               { icon: <ShieldCheck className="h-4 w-4 text-sky-400" />, text: "Month 3+: Pay your chosen plan" },
             ].map(({ icon, text }) => (
-              <div key={text} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-600">
+              <div key={text} className="flex items-center gap-2 rounded-xl border border-input bg-gray-50 px-4 py-2 text-sm text-gray-600">
                 {icon}
                 {text}
               </div>
@@ -269,7 +313,7 @@ export default function PricingPage() {
             <span className={`text-sm ${!isAnnual ? "text-gray-900 font-semibold" : "text-gray-500"}`}>Monthly</span>
             <button
               onClick={() => setIsAnnual(!isAnnual)}
-              className={`relative h-6 w-11 rounded-full transition-colors ${isAnnual ? "bg-primary" : "bg-white/15"}`}
+              className={`relative h-6 w-11 rounded-full transition-colors ${isAnnual ? "bg-primary" : "bg-gray-200"}`}
             >
               <span
                 className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isAnnual ? "translate-x-5" : "translate-x-0.5"}`}
@@ -287,57 +331,95 @@ export default function PricingPage() {
 
       {/* ── Plans ── */}
       <section className="px-4 sm:px-6 pb-16">
-        <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-5">
-          {PLANS.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} isAnnual={isAnnual} />
-          ))}
+        <div className="mx-auto max-w-6xl">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {[0, 1, 2].map((i) => (
+                <PlanCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error || plans.length === 0 ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center max-w-lg mx-auto">
+              <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-gray-900 mb-1">
+                Plans are temporarily unavailable
+              </p>
+              <p className="text-sm text-gray-600">
+                We couldn&apos;t load our subscription plans right now. Please try
+                again in a moment, or{" "}
+                <Link href="/help" className="underline hover:text-foreground">
+                  contact support
+                </Link>
+                .
+              </p>
+              {isLoading && (
+                <Loader2 className="h-4 w-4 animate-spin text-foreground mx-auto mt-3" />
+              )}
+            </div>
+          ) : (
+            <div
+              className={`grid grid-cols-1 gap-5 ${
+                plans.length >= 3 ? "md:grid-cols-3" : plans.length === 2 ? "md:grid-cols-2" : ""
+              }`}
+            >
+              {plans.map((plan, i) => (
+                <PlanCard
+                  key={plan.id}
+                  plan={plan}
+                  accent={getPlanAccent(i, plans.length)}
+                  isAnnual={isAnnual}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
       {/* ── Commission comparison ── */}
-      <section className="border-y border-border bg-card/40 px-4 sm:px-6 py-12">
-        <div className="mx-auto max-w-4xl">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
-            Commission breakdown
-          </h2>
-          <p className="text-gray-500 text-center text-sm mb-8">
-            Understand exactly how much you keep from each sale.
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left pb-3 font-semibold text-gray-500">Plan</th>
-                  <th className="text-right pb-3 font-semibold text-gray-500">Commission</th>
-                  <th className="text-right pb-3 font-semibold text-gray-500">On a $100 sale, you keep</th>
-                  <th className="text-right pb-3 font-semibold text-gray-500">On $10k/mo GMV, you keep</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { name: "Starter", rate: 10, color: "text-gray-600" },
-                  { name: "Growth",  rate: 8,  color: "text-foreground"  },
-                  { name: "Pro",     rate: 6,  color: "text-violet-400" },
-                ].map((row) => {
-                  const keep100 = (100 * (1 - row.rate / 100) - 2.9 - 0.30).toFixed(2)
-                  const keep10k = ((10000 * (1 - row.rate / 100)) - (10000 / 100) * (2.9 + 0.30)).toFixed(0)
-                  return (
-                    <tr key={row.name} className="border-b border-border/50">
-                      <td className={`py-3 font-semibold ${row.color}`}>{row.name}</td>
-                      <td className="py-3 text-right text-gray-600">{row.rate}%</td>
-                      <td className="py-3 text-right font-bold text-gray-900">${keep100}</td>
-                      <td className="py-3 text-right font-bold text-gray-900">${parseInt(keep10k).toLocaleString()}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            <p className="text-[11px] text-gray-600 mt-3">
-              * Stripe processing fee (~2.9% + $0.30 per transaction) deducted from seller payout.
+      {commissionRows.length > 0 && (
+        <section className="border-y border-border bg-card/40 px-4 sm:px-6 py-12">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
+              Commission breakdown
+            </h2>
+            <p className="text-gray-500 text-center text-sm mb-8">
+              Understand exactly how much you keep from each sale.
             </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left pb-3 font-semibold text-gray-500">Plan</th>
+                    <th className="text-right pb-3 font-semibold text-gray-500">Commission</th>
+                    <th className="text-right pb-3 font-semibold text-gray-500">On a $100 sale, you keep</th>
+                    <th className="text-right pb-3 font-semibold text-gray-500">On $10k/mo GMV, you keep</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {commissionRows.map((row) => {
+                    const rate = Number(row.rate)
+                    const keep100 = (100 * (1 - rate / 100) - 2.9 - 0.30).toFixed(2)
+                    const keep10k = ((10000 * (1 - rate / 100)) - (10000 / 100) * (2.9 + 0.30)).toFixed(0)
+                    return (
+                      <tr key={row.name} className="border-b border-border/50">
+                        <td className="py-3 font-semibold text-foreground">{row.name}</td>
+                        <td className="py-3 text-right text-gray-600">{rate}%</td>
+                        <td className="py-3 text-right font-bold text-gray-900">${keep100}</td>
+                        <td className="py-3 text-right font-bold text-gray-900">
+                          ${parseInt(keep10k).toLocaleString()}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              <p className="text-[11px] text-gray-600 mt-3">
+                * Stripe processing fee (~2.9% + $0.30 per transaction) deducted from seller payout.
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── FAQ ── */}
       <section className="px-4 sm:px-6 py-16">
@@ -387,7 +469,7 @@ export default function PricingPage() {
           </StartSellingLink>
           <Link
             href="/sell"
-            className="inline-flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-gray-50 px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-100 transition-all"
+            className="inline-flex h-12 items-center gap-2 rounded-xl border border-input bg-gray-50 px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-100 transition-all"
           >
             Learn More
           </Link>
