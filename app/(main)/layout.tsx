@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { WhatsAppFab } from "@/components/support/WhatsAppFab"
 
 export default function MainLayout({
   children,
@@ -13,6 +14,7 @@ export default function MainLayout({
         {children}
       </main>
       <Footer />
+      <WhatsAppFab />
     </div>
   )
 }
