@@ -1660,8 +1660,8 @@ export default function CheckoutClient({
             <div className="p-6">
               {step === "payment" ? (
                 <PaymentStep
-                  onBack={() => setStep("review")}
-                  onComplete={handlePaymentComplete}
+                  onBackAction={() => setStep("review")}
+                  onCompleteAction={handlePaymentComplete}
                   total={displayTotal}
                   clientSecret={checkoutResult?.paymentClientSecret ?? null}
                   stripeAvailable={stripeAvailable}
@@ -1669,7 +1669,7 @@ export default function CheckoutClient({
                   saveCard={saveCard}
                   // Toggling triggers a re-mint of the PaymentIntent because the
                   // Stripe Customer must be attached at PI-creation time.
-                  onSaveCardChange={(next) => {
+                  onSaveCardChangeAction={(next) => {
                     setSaveCard(next)
                     idempotencyKeyRef.current = null
                     setStep("review")

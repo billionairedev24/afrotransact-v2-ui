@@ -255,23 +255,23 @@ function StripePaymentForm({
 }
 
 export default function PaymentStep({
-  onBack,
-  onComplete,
+  onBackAction,
+  onCompleteAction,
   total,
   clientSecret,
   stripeAvailable,
   paymentMethods,
   saveCard,
-  onSaveCardChange,
+  onSaveCardChangeAction,
 }: {
-  onBack: () => void
-  onComplete: () => void
+  onBackAction: () => void
+  onCompleteAction: () => void
   total: number
   clientSecret: string | null
   stripeAvailable: boolean
   paymentMethods: RegionPaymentMethod[]
   saveCard: boolean
-  onSaveCardChange: (next: boolean) => void
+  onSaveCardChangeAction: (next: boolean) => void
 }) {
   return (
     <Elements
@@ -285,14 +285,14 @@ export default function PaymentStep({
       }}
     >
       <StripePaymentForm
-        onBack={onBack}
-        onComplete={onComplete}
+        onBack={onBackAction}
+        onComplete={onCompleteAction}
         totalCents={total}
         clientSecret={clientSecret}
         stripeAvailable={stripeAvailable}
         paymentMethods={paymentMethods}
         saveCard={saveCard}
-        onSaveCardChange={onSaveCardChange}
+        onSaveCardChange={onSaveCardChangeAction}
       />
     </Elements>
   )

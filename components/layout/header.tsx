@@ -455,12 +455,6 @@ export function Header() {
                   New Arrivals
                 </Link>
                 <Link
-                  href="/stores"
-                  className="text-white text-[14px] hover:text-brand-gold transition-colors"
-                >
-                  Sellers
-                </Link>
-                <Link
                   href="/help"
                   className="text-white text-[14px] hover:text-brand-gold transition-colors"
                 >
@@ -651,16 +645,6 @@ export function Header() {
                   </Link>
                 )
               })}
-
-              <span className="w-px h-4 bg-white/15 mx-1 shrink-0" />
-
-              <Link
-                href="/stores"
-                className="flex items-center gap-1.5 px-3 h-full text-[13px] text-brand-gold font-medium whitespace-nowrap hover:text-brand-gold-hover hover:bg-white/5 transition-colors"
-              >
-                <Store className="h-3.5 w-3.5" />
-                Browse Stores
-              </Link>
 
               <div className="flex-1" />
 
