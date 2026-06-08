@@ -3,18 +3,24 @@
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 
+// AfroTransact buyer-support WhatsApp number. Hardcoded as the build-time
+// fallback so the FAB just works without an env config in prod. Override
+// per-env by setting NEXT_PUBLIC_WHATSAPP_SUPPORT_NUMBER in Vercel/.env.local
+// (e.g. for staging routing to a different number). E.164 format expected.
+const DEFAULT_WHATSAPP_NUMBER = "+1512508885"
+
 /**
  * Floating WhatsApp chat FAB.
  *
  * Reads NEXT_PUBLIC_WHATSAPP_SUPPORT_NUMBER (E.164, e.g. "+15551234567").
- * Renders nothing if the env var is unset/blank so we never expose a broken link.
+ * Falls back to DEFAULT_WHATSAPP_NUMBER when unset so the widget is always live.
  * Hidden on /checkout to avoid competing with the purchase CTA.
  */
 export function WhatsAppFab() {
   const pathname = usePathname()
   const [hovered, setHovered] = useState(false)
 
-  const raw = process.env.NEXT_PUBLIC_WHATSAPP_SUPPORT_NUMBER?.trim()
+  const raw = (process.env.NEXT_PUBLIC_WHATSAPP_SUPPORT_NUMBER?.trim() || DEFAULT_WHATSAPP_NUMBER)
   if (!raw) return null
 
   // Hide on checkout — FAB competes with the purchase CTA there.

@@ -404,6 +404,8 @@ export interface StoreInfo {
   addressState?: string | null
   addressZip?: string | null
   deliveryRadiusMiles?: number
+  returnsSupported?: boolean
+  returnWindowDays?: number | null
 }
 
 export function getAllStores(opts?: { revalidate?: number }) {
@@ -815,6 +817,8 @@ export interface StoreDetail {
   shipFromZip?: string | null
   shipFromCountry?: string | null
   allowedCarriers?: string[] | null
+  returnsSupported?: boolean
+  returnWindowDays?: number | null
   createdAt: string
   updatedAt: string
 }

@@ -67,6 +67,8 @@ export default function ProductPageClient() {
 
   const [product, setProduct] = useState<Product | null>(null)
   const [storeName, setStoreName] = useState<string>("")
+  const [storeReturnsSupported, setStoreReturnsSupported] = useState<boolean>(false)
+  const [storeReturnWindowDays, setStoreReturnWindowDays] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -112,7 +114,14 @@ export default function ProductPageClient() {
         })
 
         getStoreById(data.storeId)
-          .then((store) => { if (!cancelled) setStoreName(store.name) })
+          .then((store) => {
+            if (cancelled) return
+            setStoreName(store.name)
+            setStoreReturnsSupported(store.returnsSupported === true)
+            setStoreReturnWindowDays(
+              typeof store.returnWindowDays === "number" ? store.returnWindowDays : null,
+            )
+          })
           .catch(() => { if (!cancelled) setStoreName(data.storeId) })
 
         try {
@@ -637,10 +646,15 @@ export default function ProductPageClient() {
               <span className="text-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3 text-gray-400" /> United States
               </span>
-              <span className="text-gray-500">Returns</span>
-              <span className="text-foreground flex items-center gap-1">
-                <RotateCcw className="h-3 w-3 text-gray-400" /> Per seller policy
-              </span>
+              {storeReturnsSupported && storeReturnWindowDays != null && (
+                <>
+                  <span className="text-gray-500">Returns</span>
+                  <span className="text-foreground flex items-center gap-1">
+                    <RotateCcw className="h-3 w-3 text-gray-400" />
+                    {storeReturnWindowDays}-day returns from {storeName || "this store"}
+                  </span>
+                </>
+              )}
             </div>
 
             <hr className="border-gray-200" />
