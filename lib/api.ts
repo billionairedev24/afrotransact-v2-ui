@@ -1101,8 +1101,9 @@ export function getSellerOrders(token: string, storeId: string, page = 0, size =
   return api<Page<OrderDto>>(`/api/v1/orders/store/${storeId}?page=${page}&size=${size}&sort=createdAt,desc`, { token })
 }
 
-export function getBuyerOrders(token: string, page = 0, size = 20) {
-  return api<Page<OrderDto>>(`/api/v1/orders?page=${page}&size=${size}&sort=createdAt,desc`, { token })
+export function getBuyerOrders(token: string, page = 0, size = 20, q?: string) {
+  const qParam = q && q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""
+  return api<Page<OrderDto>>(`/api/v1/orders?page=${page}&size=${size}&sort=createdAt,desc${qParam}`, { token })
 }
 
 export function getOrderByNumber(token: string, orderNumber: string) {

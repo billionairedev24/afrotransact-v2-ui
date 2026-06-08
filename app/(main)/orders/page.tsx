@@ -576,14 +576,8 @@ function OrderThumb({ items }: { items: OrderDto["subOrders"][number]["items"] }
 
 // Mockup (order-1.html) shows 4 orders per page — 2×2 grid + pagination.
 const PAGE_SIZE = 4
-// While a search query is active, fall back to a single large page so the
-// filter runs across the buyer's whole order history (not just the 4 cards
-// currently rendered). Backend doesn't yet expose `?q=` on /api/v1/orders —
-// that's queued as POST-LAUNCH-BACKLOG #42. Until then this ceiling caps the
-// "all orders" search at the most recent 200 — fine for beta where typical
-// buyers have under 20 orders. Larger histories surface a hint in the UI.
-const SEARCH_FETCH_SIZE = 200
 const SEARCH_MIN_CHARS = 2
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function OrdersPage() {
   const session = useSession()
@@ -596,13 +590,28 @@ export default function OrdersPage() {
   const [totalElements, setTotalElements] = useState(0)
   const [tab, setTab] = useState<StatusGroup>("all")
   const [search, setSearch] = useState("")
+  // Debounced copy of `search` — the value we actually send to the server.
+  // Keeping the input snappy (`search`) separate from the fetch trigger
+  // (`debouncedSearch`) avoids a request per keystroke (#42).
+  const [debouncedSearch, setDebouncedSearch] = useState("")
 
-  // Searching needs to span the buyer's full history, not just the 4 cards
-  // currently rendered. We swap to a wide single-page fetch whenever the
-  // search box has 2+ characters; pagination is disabled in that mode.
-  const searchActive = search.trim().length >= SEARCH_MIN_CHARS
-  const fetchSize = searchActive ? SEARCH_FETCH_SIZE : PAGE_SIZE
-  const fetchPage = searchActive ? 0 : page
+  // Debounce keystrokes before firing the search request.
+  useEffect(() => {
+    const trimmed = search.trim()
+    // Treat 1-char queries as empty so we don't search on a stray keystroke.
+    const next = trimmed.length >= SEARCH_MIN_CHARS ? trimmed : ""
+    const t = setTimeout(() => setDebouncedSearch(next), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(t)
+  }, [search])
+
+  const searchActive = debouncedSearch.length > 0
+
+  // Reset to the first page whenever the search query changes — otherwise
+  // a buyer on page 3 of the unsearched list would land on page 3 of a
+  // (potentially much shorter) search result and see "no results".
+  useEffect(() => {
+    setPage(0)
+  }, [debouncedSearch])
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -616,7 +625,7 @@ export default function OrdersPage() {
         setError(null)
         const token = await getAccessToken()
         if (!token || cancelled) return
-        const res = await getBuyerOrders(token, fetchPage, fetchSize)
+        const res = await getBuyerOrders(token, page, PAGE_SIZE, debouncedSearch || undefined)
         if (cancelled) return
         setOrders(res.content)
         setTotalPages(res.totalPages ?? Math.ceil((res.totalElements ?? 0) / PAGE_SIZE))
@@ -630,23 +639,19 @@ export default function OrdersPage() {
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, fetchPage, fetchSize])
+  }, [status, page, debouncedSearch])
 
-  // Tab + search filter, applied client-side over the current page payload.
+  // Tab is still applied client-side over the current page — the server only
+  // owns the text filter. Buyers rarely use both at once.
   const visibleOrders = useMemo(() => {
-    const q = search.trim().toLowerCase()
     return orders.filter((o) => {
       if (tab !== "all") {
         const group = classifyStatus(o.status)
         if (group !== tab) return false
       }
-      if (!q) return true
-      if (o.orderNumber.toLowerCase().includes(q)) return true
-      return o.subOrders
-        .flatMap((so) => so.items)
-        .some((i) => (i.productTitle || "").toLowerCase().includes(q))
+      return true
     })
-  }, [orders, tab, search])
+  }, [orders, tab])
 
   // Per-tab counts (over current page; cheap and informative).
   const tabCounts = useMemo(() => {
@@ -751,14 +756,18 @@ export default function OrdersPage() {
         <div className="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
           <ReceiptText className="mx-auto h-14 w-14 text-gray-300" />
           <h2 className="text-lg font-semibold text-foreground mt-5">
-            {orders.length === 0 ? "No orders yet" : "No matching orders"}
+            {searchActive
+              ? `No orders match "${debouncedSearch}"`
+              : orders.length === 0 ? "No orders yet" : "No matching orders"}
           </h2>
           <p className="text-gray-500 text-sm mt-2 max-w-sm mx-auto">
-            {orders.length === 0
-              ? "When you place an order, it will appear here. Start exploring our marketplace to find products you love."
-              : "Try a different tab or clear your search."}
+            {searchActive
+              ? "Try a different order number or product name."
+              : orders.length === 0
+                ? "When you place an order, it will appear here. Start exploring our marketplace to find products you love."
+                : "Try a different tab or clear your search."}
           </p>
-          {orders.length === 0 && (
+          {!searchActive && orders.length === 0 && (
             <Link
               href="/"
               className="inline-flex items-center gap-2 mt-6 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
@@ -776,13 +785,7 @@ export default function OrdersPage() {
             ))}
           </div>
 
-          {searchActive && orders.length >= SEARCH_FETCH_SIZE && (
-            <p className="text-center text-xs text-gray-500">
-              Showing the most recent {SEARCH_FETCH_SIZE} orders matching your search.
-              Older orders aren&apos;t included yet — server-side search ships post-launch.
-            </p>
-          )}
-          {!searchActive && totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
               <button
                 disabled={page <= 0}
