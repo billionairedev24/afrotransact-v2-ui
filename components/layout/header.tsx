@@ -38,6 +38,7 @@ import { useCartStore } from "@/stores/cart-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useSignOut } from "@/hooks/useSignOut"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
+import { AiNavButton } from "@/components/ai/AiWidget"
 import { searchSuggest, getCategories, type SearchSuggestion, type CategoryRef } from "@/lib/api"
 
 const SLUG_ICON_MAP: Record<string, { icon: typeof Leaf; accent: string }> = {
@@ -580,6 +581,11 @@ export function Header() {
                   </div>
                 )}
               </div>
+
+              {/* AI assistant — Rufus pattern, lives in the navbar so the
+                  bottom-right slot stays open for the WhatsApp FAB. Renders
+                  nothing when NEXT_PUBLIC_AI_ENABLED !== "true". */}
+              <AiNavButton />
 
               {/* Cart — mockup lines 157-161 — text-only hover, badge on icon */}
               <Link
