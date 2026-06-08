@@ -1152,6 +1152,9 @@ export interface CheckoutRequest {
   selectedShippingCarrier?: string
   selectedShippingService?: string
   selectedShippingAmountCents?: number
+  /** Backlog #40: when true the payment service attaches a Stripe Customer +
+   *  setup_future_usage=off_session so the card is saved on success. */
+  saveCard?: boolean
 }
 
 export interface CheckoutResponse {
@@ -1307,6 +1310,25 @@ export function checkout(token: string, data: CheckoutRequest, idempotencyKey?: 
     token,
     headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
   })
+}
+
+// ── Saved payment methods (Backlog #40) ──
+
+export interface SavedPaymentMethod {
+  id: string
+  brand: string | null
+  last4: string | null
+  expMonth: number | null
+  expYear: number | null
+  isDefault: boolean
+}
+
+export function listSavedPaymentMethods(token: string) {
+  return api<SavedPaymentMethod[]>("/api/v1/payments/saved-methods", { token })
+}
+
+export function deleteSavedPaymentMethod(token: string, id: string) {
+  return api<void>(`/api/v1/payments/saved-methods/${id}`, { method: "DELETE", token })
 }
 
 export function getShippingQuotes(

@@ -959,6 +959,11 @@ export default function CheckoutClient({
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState<string | null>(null)
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResponse | null>(null)
+  // Backlog #40: when the buyer ticks "Save this card" on the payment step we
+  // need the PaymentIntent to carry a Stripe Customer + setup_future_usage.
+  // The PI is minted by /orders/checkout, so toggling this flag forces a
+  // re-mint of the order (idempotency key is cleared first).
+  const [saveCard, setSaveCard] = useState(false)
   // Idempotency-Key reused across retries of the same logical placement so
   // a network blip can't create a second order. Reset when the user goes back.
   const idempotencyKeyRef = useRef<string | null>(null)
@@ -1281,6 +1286,7 @@ export default function CheckoutClient({
         selectedShippingCarrier: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.carrier,
         selectedShippingService: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.serviceCode,
         selectedShippingAmountCents: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.amountCents,
+        saveCard,
       }, idempotencyKeyRef.current)
 
       setCheckoutResult(result)
@@ -1660,6 +1666,14 @@ export default function CheckoutClient({
                   clientSecret={checkoutResult?.paymentClientSecret ?? null}
                   stripeAvailable={stripeAvailable}
                   paymentMethods={paymentMethods}
+                  saveCard={saveCard}
+                  // Toggling triggers a re-mint of the PaymentIntent because the
+                  // Stripe Customer must be attached at PI-creation time.
+                  onSaveCardChange={(next) => {
+                    setSaveCard(next)
+                    idempotencyKeyRef.current = null
+                    setStep("review")
+                  }}
                 />
               ) : (
                 <p className="text-sm text-gray-500">

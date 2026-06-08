@@ -64,6 +64,8 @@ function StripePaymentForm({
   clientSecret,
   stripeAvailable,
   paymentMethods,
+  saveCard,
+  onSaveCardChange,
 }: {
   onBack: () => void
   onComplete: () => void
@@ -71,18 +73,13 @@ function StripePaymentForm({
   clientSecret: string | null
   stripeAvailable: boolean
   paymentMethods: RegionPaymentMethod[]
+  saveCard: boolean
+  onSaveCardChange: (next: boolean) => void
 }) {
   const stripe = useStripe()
   const elements = useElements()
   const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
-  // ToDo: Save-card UI is hidden until backend wiring lands (POST-LAUNCH-BACKLOG #40).
-  // `setup_future_usage` is a no-op without a Stripe Customer on the
-  // PaymentIntent, so showing the checkbox would lie to buyers. Once the
-  // Order/Payment services attach a Customer and a webhook persists the
-  // PaymentMethod, flip SAVE_CARD_ENABLED to true and re-surface the UI.
-  const SAVE_CARD_ENABLED = false
-  const [saveCard, setSaveCard] = useState(false)
 
   const handlePay = useCallback(async () => {
     if (!stripe || !elements) return
@@ -104,12 +101,13 @@ function StripePaymentForm({
       return
     }
 
+    // Note: `setup_future_usage` is set on the PaymentIntent server-side when
+    // saveCard is true (see Backlog #40), so we don't need to repeat it here.
     const { error: confirmError } = await stripe.confirmPayment({
       elements,
       clientSecret,
       confirmParams: {
         return_url: `${window.location.origin}/checkout/complete`,
-        ...(saveCard ? { setup_future_usage: "off_session" } : {}),
       },
       redirect: "if_required",
     })
@@ -152,19 +150,18 @@ function StripePaymentForm({
               }}
             />
 
-            {SAVE_CARD_ENABLED && (
-              <label className="mt-4 flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={saveCard}
-                  onChange={(e) => setSaveCard(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                />
-                <span className="text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
-                  Save this card for future transactions
-                </span>
-              </label>
-            )}
+            <label className="mt-4 flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={saveCard}
+                onChange={(e) => onSaveCardChange(e.target.checked)}
+                disabled={processing}
+                className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+              />
+              <span className="text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
+                Save this card for future purchases
+              </span>
+            </label>
           </div>
         </>
       ) : (
@@ -264,6 +261,8 @@ export default function PaymentStep({
   clientSecret,
   stripeAvailable,
   paymentMethods,
+  saveCard,
+  onSaveCardChange,
 }: {
   onBack: () => void
   onComplete: () => void
@@ -271,6 +270,8 @@ export default function PaymentStep({
   clientSecret: string | null
   stripeAvailable: boolean
   paymentMethods: RegionPaymentMethod[]
+  saveCard: boolean
+  onSaveCardChange: (next: boolean) => void
 }) {
   return (
     <Elements
@@ -290,6 +291,8 @@ export default function PaymentStep({
         clientSecret={clientSecret}
         stripeAvailable={stripeAvailable}
         paymentMethods={paymentMethods}
+        saveCard={saveCard}
+        onSaveCardChange={onSaveCardChange}
       />
     </Elements>
   )
