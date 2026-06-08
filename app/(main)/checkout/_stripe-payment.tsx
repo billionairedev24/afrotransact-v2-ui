@@ -76,7 +76,7 @@ function StripePaymentForm({
   const elements = useElements()
   const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
-  // Save-card UI is hidden until backend wiring lands (POST-LAUNCH-BACKLOG #40).
+  // ToDo: Save-card UI is hidden until backend wiring lands (POST-LAUNCH-BACKLOG #40).
   // `setup_future_usage` is a no-op without a Stripe Customer on the
   // PaymentIntent, so showing the checkbox would lie to buyers. Once the
   // Order/Payment services attach a Customer and a webhook persists the
