@@ -274,7 +274,14 @@ export default function PaymentStep({
   onSaveCardChangeAction: (next: boolean) => void
 }) {
   return (
+    // `key` forces a full remount when the PaymentIntent changes (e.g. after
+    // a save-card toggle re-mints the PI). Without this, Stripe Elements
+    // caches the first init it saw and stripe.confirmPayment then targets a
+    // PaymentIntent id that no longer exists on Stripe's side, throwing
+    // "No such payment_intent: pi_…" on Pay. Falls back to "no-pi" when the
+    // user hasn't yet placed the order so the step still renders.
     <Elements
+      key={clientSecret ?? "no-pi"}
       stripe={getStripe()}
       options={{
         mode: "payment",

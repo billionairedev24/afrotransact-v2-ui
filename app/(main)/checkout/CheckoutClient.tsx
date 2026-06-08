@@ -967,6 +967,17 @@ export default function CheckoutClient({
   // Idempotency-Key reused across retries of the same logical placement so
   // a network blip can't create a second order. Reset when the user goes back.
   const idempotencyKeyRef = useRef<string | null>(null)
+
+  // Helper — fully drop the current placement attempt. Used by every
+  // back-navigation handler in the review/payment steps. Without clearing
+  // checkoutResult, a stale paymentClientSecret (referencing a PaymentIntent
+  // that's been canceled or replaced server-side) lingers in state and
+  // Stripe.confirmPayment then 404s with "No such payment_intent" on the next
+  // pay attempt (Backlog #40 cleanup).
+  const resetCheckoutSession = () => {
+    idempotencyKeyRef.current = null
+    setCheckoutResult(null)
+  }
   // Synchronous in-flight gate. setPlacing(true) only disables the button on
   // the next render, which leaves a same-tick double-click able to re-enter
   // syncCartAndCheckout. The ref is set before the first await so a second
@@ -1571,7 +1582,7 @@ export default function CheckoutClient({
                   </div>
                   <button
                     type="button"
-                    onClick={() => { setStep("address"); idempotencyKeyRef.current = null }}
+                    onClick={() => { setStep("address"); resetCheckoutSession() }}
                     disabled={placing}
                     className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
                   >
@@ -1630,7 +1641,7 @@ export default function CheckoutClient({
                   </div>
                   <button
                     type="button"
-                    onClick={() => { setStep("review"); idempotencyKeyRef.current = null }}
+                    onClick={() => { setStep("review"); resetCheckoutSession() }}
                     disabled={placing}
                     className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
                   >
@@ -1671,7 +1682,7 @@ export default function CheckoutClient({
                   // Stripe Customer must be attached at PI-creation time.
                   onSaveCardChangeAction={(next) => {
                     setSaveCard(next)
-                    idempotencyKeyRef.current = null
+                    resetCheckoutSession()
                     setStep("review")
                   }}
                 />
