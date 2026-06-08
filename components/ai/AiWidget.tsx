@@ -29,7 +29,7 @@ export function AiNavButton() {
   return (
     <button
       onClick={isOpen ? close : open}
-      aria-label={isOpen ? "Close AfroTransact AI assistant" : "Open AfroTransact AI assistant"}
+      aria-label={isOpen ? "Close Victory AI assistant" : "Open Victory AI assistant"}
       aria-expanded={isOpen}
       className="relative inline-flex items-center gap-1.5 rounded-full bg-brand-gold/10 px-3 py-1.5 text-brand-gold border border-brand-gold/30 hover:bg-brand-gold/20 hover:border-brand-gold/60 transition-colors shrink-0"
     >
@@ -39,7 +39,7 @@ export function AiNavButton() {
         <Sparkles className="h-4 w-4" strokeWidth={2} />
       )}
       <span className="text-[13px] font-semibold tracking-tight leading-none">
-        Ask AI
+        Ask Victory
       </span>
       {!isOpen && unread && (
         <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-brand-dark" />

@@ -290,9 +290,10 @@ export function Header() {
                 <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-brand-gold leading-none">AfroTransact</span>
               </Link>
 
-              {/* AI assistant pill — placed right after the logo per the
-                  Rufus pattern. Hidden on small screens to keep room for the
-                  search bar, and hidden when NEXT_PUBLIC_AI_ENABLED !== "true". */}
+              {/* "Ask Victory" pill — placed right after the logo per the
+                  Amazon Rufus pattern. Hidden on small screens to keep room
+                  for the search bar, and hidden entirely when
+                  NEXT_PUBLIC_AI_ENABLED !== "true" (beta default). */}
               <div className="hidden lg:flex shrink-0">
                 <AiNavButton />
               </div>
