@@ -10,10 +10,9 @@ import { AiChatPanel } from "./AiChatPanel"
 const AI_ENABLED = process.env.NEXT_PUBLIC_AI_ENABLED === "true"
 
 /**
- * Compact AI trigger styled to sit in the marketplace navbar next to the
- * Cart / Account icons (Amazon "Rufus" pattern). Renders nothing when AI is
- * gated off so the navbar stays clean and the WhatsApp FAB owns the
- * floating bottom-right slot.
+ * Compact AI trigger styled as a pill that sits next to the AfroTransact
+ * logo in the navbar (Amazon "Rufus" pattern). Renders nothing when AI is
+ * gated off — the WhatsApp FAB still owns the floating bottom-right slot.
  */
 export function AiNavButton() {
   const { isOpen, open, close, messages } = useAiStore()
@@ -32,21 +31,19 @@ export function AiNavButton() {
       onClick={isOpen ? close : open}
       aria-label={isOpen ? "Close AfroTransact AI assistant" : "Open AfroTransact AI assistant"}
       aria-expanded={isOpen}
-      className="flex flex-col items-center justify-center text-white hover:text-brand-gold-hover transition-colors shrink-0"
+      className="relative inline-flex items-center gap-1.5 rounded-full bg-brand-gold/10 px-3 py-1.5 text-brand-gold border border-brand-gold/30 hover:bg-brand-gold/20 hover:border-brand-gold/60 transition-colors shrink-0"
     >
-      <div className="relative">
-        {isOpen ? (
-          <X className="h-6 w-6" strokeWidth={1.75} />
-        ) : (
-          <Sparkles className="h-6 w-6" strokeWidth={1.75} />
-        )}
-        {!isOpen && unread && (
-          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-brand-dark" />
-        )}
-      </div>
-      <span className="text-[12px] font-semibold tracking-[0.02em] leading-none mt-0.5">
-        AI
+      {isOpen ? (
+        <X className="h-4 w-4" strokeWidth={2} />
+      ) : (
+        <Sparkles className="h-4 w-4" strokeWidth={2} />
+      )}
+      <span className="text-[13px] font-semibold tracking-tight leading-none">
+        Ask AI
       </span>
+      {!isOpen && unread && (
+        <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-brand-dark" />
+      )}
     </button>
   )
 }

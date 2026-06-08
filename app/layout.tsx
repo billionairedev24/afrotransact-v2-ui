@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { Providers } from "@/components/providers"
 import { AiChatOverlay } from "@/components/ai/AiWidget"
+import { WhatsAppFab } from "@/components/support/WhatsAppFab"
 import { Toaster } from "sonner"
 import "./globals.css"
 
@@ -41,6 +42,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <AiChatOverlay />
+          <WhatsAppFab />
           <Toaster position="bottom-right" richColors closeButton />
         </Providers>
       </body>

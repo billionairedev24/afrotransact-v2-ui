@@ -23,8 +23,22 @@ export function WhatsAppFab() {
   const raw = (process.env.NEXT_PUBLIC_WHATSAPP_SUPPORT_NUMBER?.trim() || DEFAULT_WHATSAPP_NUMBER)
   if (!raw) return null
 
-  // Hide on checkout — FAB competes with the purchase CTA there.
-  if (pathname?.startsWith("/checkout")) return null
+  // Surface gate — buyer-facing pages only. WhatsApp is mounted in the root
+  // layout so the homepage (which lives at app/page.tsx, NOT under (main))
+  // gets the FAB. The trade-off is the root layout also wraps the admin /
+  // seller / auth chrome, so this allow-list-by-exclusion keeps it off
+  // staff surfaces.
+  const HIDDEN_PREFIXES = [
+    "/checkout",   // competes with the purchase CTA
+    "/admin",      // admin shell — internal staff
+    "/dashboard",  // seller dashboard — internal staff
+    "/auth",       // sign-in / register flow
+    "/ob",         // seller onboarding
+    "/d",          // seller dashboard short link
+  ]
+  if (pathname && HIDDEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+    return null
+  }
 
   // wa.me expects digits only, no leading "+".
   const digits = raw.replace(/[^\d]/g, "")

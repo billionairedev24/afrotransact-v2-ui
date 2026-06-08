@@ -290,6 +290,13 @@ export function Header() {
                 <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-brand-gold leading-none">AfroTransact</span>
               </Link>
 
+              {/* AI assistant pill — placed right after the logo per the
+                  Rufus pattern. Hidden on small screens to keep room for the
+                  search bar, and hidden when NEXT_PUBLIC_AI_ENABLED !== "true". */}
+              <div className="hidden lg:flex shrink-0">
+                <AiNavButton />
+              </div>
+
               {/* Search — desktop only */}
               <div className="hidden md:flex flex-1 relative" ref={searchRef}>
                 <form
@@ -581,11 +588,6 @@ export function Header() {
                   </div>
                 )}
               </div>
-
-              {/* AI assistant — Rufus pattern, lives in the navbar so the
-                  bottom-right slot stays open for the WhatsApp FAB. Renders
-                  nothing when NEXT_PUBLIC_AI_ENABLED !== "true". */}
-              <AiNavButton />
 
               {/* Cart — mockup lines 157-161 — text-only hover, badge on icon */}
               <Link
