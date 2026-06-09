@@ -8,6 +8,8 @@ import {
   ApiError,
   getPaymentSettings,
   updatePaymentSettings,
+  getAlertsSettings,
+  updateAlertsSettings,
   getAdminShippingSettings,
   putAdminShippingSettings,
   getAiSettings,
@@ -27,10 +29,11 @@ import {
   Truck,
   Banknote,
   Info,
+  Bell,
 } from "lucide-react"
 
 const INPUT_CLASS =
-  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
+  "w-full rounded-xl border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
 
 function describeSettingsError(section: string, err: unknown): string {
   if (err instanceof ApiError) return `${section} failed (HTTP ${err.status}). ${err.body}`
@@ -88,7 +91,7 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-sm">
+    <div className="rounded-2xl border border-input bg-white overflow-hidden transition-shadow hover:shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -142,6 +145,11 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [savingPayment, setSavingPayment] = useState(false)
 
+  // Alerts (Slack)
+  const [slackEnabled, setSlackEnabled] = useState(false)
+  const [slackWebhookUrl, setSlackWebhookUrl] = useState("")
+  const [savingAlerts, setSavingAlerts] = useState(false)
+
   useEffect(() => {
     if (status !== "authenticated") { setLoading(false); return }
     let cancelled = false
@@ -150,10 +158,11 @@ export default function SettingsPage() {
       const token = await getAccessToken()
       if (!token) { if (!cancelled) setLoading(false); return }
 
-      const [payResult, shipResult, aiResult] = await Promise.allSettled([
+      const [payResult, shipResult, aiResult, alertsResult] = await Promise.allSettled([
         getPaymentSettings(token),
         getAdminShippingSettings(token),
         getAiSettings(token),
+        getAlertsSettings(token),
       ])
 
       if (!cancelled) {
@@ -174,6 +183,13 @@ export default function SettingsPage() {
           setShippingCitiesInput((shipResult.value.shipping_realtime_city_allowlist ?? []).join(", "))
         } else {
           toast.error(describeSettingsError("Shipping settings", shipResult.reason))
+        }
+
+        if (alertsResult.status === "fulfilled") {
+          setSlackEnabled(alertsResult.value.slack_enabled ?? false)
+          setSlackWebhookUrl(alertsResult.value.slack_webhook_url ?? "")
+        } else {
+          toast.error(describeSettingsError("Alerts settings", alertsResult.reason))
         }
 
         if (aiResult.status === "fulfilled") {
@@ -208,6 +224,34 @@ export default function SettingsPage() {
       toast.error(describeSettingsError("AI provider update", err))
     } finally {
       setSavingAi(false)
+    }
+  }
+
+  async function handleSaveAlerts() {
+    const token = await getAccessToken()
+    if (!token) return
+    const url = slackWebhookUrl.trim()
+    if (slackEnabled && url === "") {
+      toast.error("Add a Slack webhook URL to enable alerts.")
+      return
+    }
+    if (url !== "" && !/^https:\/\/hooks\.slack\.com\//.test(url)) {
+      toast.error("Webhook URL should start with https://hooks.slack.com/")
+      return
+    }
+    setSavingAlerts(true)
+    try {
+      const updated = await updateAlertsSettings(token, {
+        slack_enabled: slackEnabled,
+        slack_webhook_url: url,
+      })
+      setSlackEnabled(updated.slack_enabled)
+      setSlackWebhookUrl(updated.slack_webhook_url)
+      toast.success("Alerts settings saved")
+    } catch (err) {
+      toast.error(describeSettingsError("Alerts settings were not saved", err))
+    } finally {
+      setSavingAlerts(false)
     }
   }
 
@@ -305,7 +349,7 @@ export default function SettingsPage() {
                       className={`relative text-left rounded-xl border-2 p-4 transition-all ${
                         isSelected
                           ? "border-primary bg-primary/5"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          : "border-input bg-white hover:border-gray-300"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -336,7 +380,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleSaveAi}
                   disabled={savingAi || !activeProviderChanged}
-                  className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
                 >
                   {savingAi ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Apply
@@ -351,6 +395,54 @@ export default function SettingsPage() {
           )}
         </Section>
       )}
+
+      {/* ── Alerts (Slack webhook) — standalone Save since it doesn't share the payment form's endpoint. ── */}
+      <Section icon={Bell} title="Alerts" subtitle="Slack webhook for critical seller-lifecycle alerts (payouts paused, charges paused, payout failed, rejected accounts).">
+        <div className="space-y-4">
+          <label className="flex items-center gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={slackEnabled}
+              onChange={(e) => setSlackEnabled(e.target.checked)}
+              className="h-4 w-4 rounded border-input accent-primary"
+            />
+            <span className="font-medium text-gray-900">Send critical alerts to Slack</span>
+          </label>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500">
+              Slack webhook URL
+            </label>
+            <input
+              type="url"
+              inputMode="url"
+              value={slackWebhookUrl}
+              onChange={(e) => setSlackWebhookUrl(e.target.value)}
+              placeholder="https://hooks.slack.com/services/T.../B.../xxxxxxxxxxxx"
+              autoComplete="off"
+              className={INPUT_CLASS + " font-mono text-xs"}
+            />
+            <p className="mt-1.5 text-xs text-gray-500 leading-relaxed">
+              Create an Incoming Webhook in your Slack workspace (api.slack.com/apps → your app → Incoming Webhooks) and paste the URL here. The notification service caches it for 5 minutes; changes propagate after a short delay.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={handleSaveAlerts}
+              disabled={savingAlerts || loading}
+              className="flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 text-sm font-bold text-background hover:opacity-90 transition-colors disabled:opacity-50"
+            >
+              {savingAlerts ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save Alerts Settings
+            </button>
+            {slackEnabled && slackWebhookUrl && (
+              <span className="text-xs text-gray-500">Slack delivery active</span>
+            )}
+          </div>
+        </div>
+      </Section>
 
       {/* ── One <form> wraps commission / shipping / payouts since they share
              a single POST endpoint via handleSavePayment. ───────────────── */}
@@ -487,7 +579,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-start gap-3 rounded-xl border border-input bg-gray-50 p-4">
                 <Info className="h-4 w-4 shrink-0 text-gray-400 mt-0.5" />
                 <div className="text-xs text-gray-600 leading-relaxed">
                   <p className="font-medium text-gray-800">Platform weight-based shipping is active.</p>
@@ -534,7 +626,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={savingPayment}
-            className="flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors disabled:opacity-60"
+            className="flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors disabled:opacity-60"
           >
             {savingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save Platform Settings

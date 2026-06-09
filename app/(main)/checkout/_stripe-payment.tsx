@@ -12,8 +12,10 @@ import {
   AlertCircle,
   Lock,
   ShieldCheck,
+  CreditCard,
+  Plus,
 } from "lucide-react"
-import type { RegionPaymentMethod } from "@/lib/api"
+import type { RegionPaymentMethod, SavedPaymentMethod } from "@/lib/api"
 
 // loadStripe is only called after this module loads. Because the whole file is
 // dynamic-imported from the checkout page, Stripe.js (and @stripe/react-stripe-js
@@ -64,6 +66,11 @@ function StripePaymentForm({
   clientSecret,
   stripeAvailable,
   paymentMethods,
+  saveCard,
+  onSaveCardChange,
+  savedCards,
+  selectedSavedCardId,
+  onSelectedSavedCardChange,
 }: {
   onBack: () => void
   onComplete: () => void
@@ -71,30 +78,23 @@ function StripePaymentForm({
   clientSecret: string | null
   stripeAvailable: boolean
   paymentMethods: RegionPaymentMethod[]
+  saveCard: boolean
+  onSaveCardChange: (next: boolean) => void
+  savedCards: SavedPaymentMethod[]
+  selectedSavedCardId: string | null
+  onSelectedSavedCardChange: (id: string | null) => void
 }) {
   const stripe = useStripe()
   const elements = useElements()
   const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
-  // Save-card UI is hidden until backend wiring lands (POST-LAUNCH-BACKLOG #40).
-  // `setup_future_usage` is a no-op without a Stripe Customer on the
-  // PaymentIntent, so showing the checkbox would lie to buyers. Once the
-  // Order/Payment services attach a Customer and a webhook persists the
-  // PaymentMethod, flip SAVE_CARD_ENABLED to true and re-surface the UI.
-  const SAVE_CARD_ENABLED = false
-  const [saveCard, setSaveCard] = useState(false)
+
+  const usingSaved = selectedSavedCardId !== null
 
   const handlePay = useCallback(async () => {
-    if (!stripe || !elements) return
+    if (!stripe) return
     setError(null)
     setProcessing(true)
-
-    const { error: submitError } = await elements.submit()
-    if (submitError) {
-      setError(submitError.message ?? "Payment validation failed.")
-      setProcessing(false)
-      return
-    }
 
     if (!clientSecret) {
       setError(
@@ -104,12 +104,38 @@ function StripePaymentForm({
       return
     }
 
+    if (usingSaved && selectedSavedCardId) {
+      // Pay with the buyer's saved PaymentMethod — no new card collection.
+      const { error: confirmError } = await stripe.confirmCardPayment(
+        clientSecret,
+        { payment_method: selectedSavedCardId },
+      )
+      if (confirmError) {
+        setError(confirmError.message ?? "Payment failed. Please try again.")
+        setProcessing(false)
+      } else {
+        setProcessing(false)
+        onComplete()
+      }
+      return
+    }
+
+    if (!elements) return
+
+    const { error: submitError } = await elements.submit()
+    if (submitError) {
+      setError(submitError.message ?? "Payment validation failed.")
+      setProcessing(false)
+      return
+    }
+
+    // Note: `setup_future_usage` is set on the PaymentIntent server-side when
+    // saveCard is true (see Backlog #40), so we don't need to repeat it here.
     const { error: confirmError } = await stripe.confirmPayment({
       elements,
       clientSecret,
       confirmParams: {
         return_url: `${window.location.origin}/checkout/complete`,
-        ...(saveCard ? { setup_future_usage: "off_session" } : {}),
       },
       redirect: "if_required",
     })
@@ -121,7 +147,7 @@ function StripePaymentForm({
       setProcessing(false)
       onComplete()
     }
-  }, [stripe, elements, clientSecret, onComplete])
+  }, [stripe, elements, clientSecret, onComplete, usingSaved, selectedSavedCardId])
 
   return (
     <div className="space-y-5">
@@ -138,34 +164,100 @@ function StripePaymentForm({
             </p>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Lock className="h-3.5 w-3.5 text-foreground" />
-              <span className="text-xs text-gray-500 font-medium">
-                Secured by Stripe
-              </span>
+          {savedCards.length > 0 && (
+            <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                Pay with a saved card
+              </p>
+              {savedCards.map((card) => {
+                const checked = selectedSavedCardId === card.stripePmId
+                return (
+                  <label
+                    key={card.id}
+                    className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors ${
+                      checked
+                        ? "border-brand-gold bg-brand-gold/10"
+                        : "border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="saved-card"
+                      checked={checked}
+                      onChange={() => onSelectedSavedCardChange(card.stripePmId)}
+                      disabled={processing}
+                      className="h-4 w-4 accent-brand-gold"
+                    />
+                    <CreditCard className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-900 capitalize">
+                      {card.brand ?? "card"}
+                    </span>
+                    <span className="text-sm text-gray-600 font-mono">
+                      •••• {card.last4 ?? "????"}
+                    </span>
+                    {card.expMonth && card.expYear && (
+                      <span className="ml-auto text-xs text-gray-500 tabular-nums">
+                        {String(card.expMonth).padStart(2, "0")}/{String(card.expYear).slice(-2)}
+                      </span>
+                    )}
+                    {card.isDefault && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                        Default
+                      </span>
+                    )}
+                  </label>
+                )
+              })}
+              <label
+                className={`flex items-center gap-3 rounded-lg border border-dashed px-3 py-2.5 cursor-pointer transition-colors ${
+                  selectedSavedCardId === null
+                    ? "border-brand-gold bg-brand-gold/5"
+                    : "border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="saved-card"
+                  checked={selectedSavedCardId === null}
+                  onChange={() => onSelectedSavedCardChange(null)}
+                  disabled={processing}
+                  className="h-4 w-4 accent-brand-gold"
+                />
+                <Plus className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-900">Use a different card</span>
+              </label>
             </div>
-            <PaymentElement
-              options={{
-                layout: "tabs",
-                wallets: { applePay: "auto", googlePay: "auto" },
-              }}
-            />
+          )}
 
-            {SAVE_CARD_ENABLED && (
+          {!usingSaved && (
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Lock className="h-3.5 w-3.5 text-foreground" />
+                <span className="text-xs text-gray-500 font-medium">
+                  Secured by Stripe
+                </span>
+              </div>
+              <PaymentElement
+                options={{
+                  layout: "tabs",
+                  wallets: { applePay: "auto", googlePay: "auto" },
+                }}
+              />
+
               <label className="mt-4 flex items-center gap-2 cursor-pointer group">
                 <input
                   type="checkbox"
                   checked={saveCard}
-                  onChange={(e) => setSaveCard(e.target.checked)}
+                  onChange={(e) => onSaveCardChange(e.target.checked)}
+                  disabled={processing}
                   className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
                 />
                 <span className="text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
-                  Save this card for future transactions
+                  Remember this card for next time
                 </span>
               </label>
-            )}
-          </div>
+            </div>
+          )}
         </>
       ) : (
         <div className="space-y-3 rounded-2xl border border-yellow-500/30 bg-yellow-50 p-4">
@@ -258,22 +350,46 @@ function StripePaymentForm({
 }
 
 export default function PaymentStep({
-  onBack,
-  onComplete,
+  onBackAction,
+  onCompleteAction,
   total,
   clientSecret,
   stripeAvailable,
   paymentMethods,
+  saveCard,
+  onSaveCardChangeAction,
+  savedCards,
+  selectedSavedCardId,
+  onSelectedSavedCardChangeAction,
 }: {
-  onBack: () => void
-  onComplete: () => void
+  onBackAction: () => void
+  onCompleteAction: () => void
   total: number
   clientSecret: string | null
   stripeAvailable: boolean
   paymentMethods: RegionPaymentMethod[]
+  saveCard: boolean
+  onSaveCardChangeAction: (next: boolean) => void
+  savedCards: SavedPaymentMethod[]
+  selectedSavedCardId: string | null
+  onSelectedSavedCardChangeAction: (id: string | null) => void
 }) {
   return (
+    // `key` forces a full remount when the PaymentIntent changes (e.g. after
+    // a save-card toggle re-mints the PI). Without this, Stripe Elements
+    // caches the first init it saw and stripe.confirmPayment then targets a
+    // PaymentIntent id that no longer exists on Stripe's side, throwing
+    // "No such payment_intent: pi_…" on Pay. Falls back to "no-pi" when the
+    // user hasn't yet placed the order so the step still renders.
+    // The Elements `setup_future_usage` option MUST match what the backend
+    // sets on the PaymentIntent. Backend sets `off_session` whenever
+    // `saveCard` is true, so we mirror that here — otherwise Stripe throws
+    // "The provided setup_future_usage does not match the expected
+    // setup_future_usage" on confirm. Also include saveCard in the key so a
+    // mid-flow toggle (without re-minting the PI) recreates Elements with
+    // the new value.
     <Elements
+      key={`${clientSecret ?? "no-pi"}|${saveCard ? "sfu" : "no-sfu"}`}
       stripe={getStripe()}
       options={{
         mode: "payment",
@@ -281,15 +397,21 @@ export default function PaymentStep({
         currency: "usd",
         appearance: STRIPE_APPEARANCE,
         paymentMethodCreation: "manual",
+        ...(saveCard ? { setupFutureUsage: "off_session" as const } : {}),
       }}
     >
       <StripePaymentForm
-        onBack={onBack}
-        onComplete={onComplete}
+        onBack={onBackAction}
+        onComplete={onCompleteAction}
         totalCents={total}
         clientSecret={clientSecret}
         stripeAvailable={stripeAvailable}
         paymentMethods={paymentMethods}
+        saveCard={saveCard}
+        onSaveCardChange={onSaveCardChangeAction}
+        savedCards={savedCards}
+        selectedSavedCardId={selectedSavedCardId}
+        onSelectedSavedCardChange={onSelectedSavedCardChangeAction}
       />
     </Elements>
   )

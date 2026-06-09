@@ -123,7 +123,7 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className="relative flex flex-col rounded-2xl border border-gray-200 bg-white p-6 text-left transition-colors hover:border-primary/40"
+              className="relative flex flex-col rounded-2xl border border-input bg-white p-6 text-left transition-colors hover:border-primary/40"
             >
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-foreground" />
@@ -158,7 +158,7 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
 
               <Link
                 href="/dashboard/subscription"
-                className="mt-6 block rounded-xl bg-brand-gold px-4 py-2.5 text-center text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
+                className="mt-6 block rounded-xl bg-brand-gold px-4 py-2.5 text-center text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
               >
                 Get Started
               </Link>
@@ -170,7 +170,7 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
       {plans.length === 0 && (
         <Link
           href="/dashboard/subscription"
-          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
+          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
         >
           <Sparkles className="h-4 w-4" />
           View Subscription Plans

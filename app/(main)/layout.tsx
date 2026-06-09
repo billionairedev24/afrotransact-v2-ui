@@ -1,6 +1,10 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 
+// WhatsAppFab is mounted in the ROOT app/layout.tsx (not here) so it also
+// renders on app/page.tsx (homepage) which is outside this route group.
+// The component self-hides on admin/seller/auth/onboarding paths.
+
 export default function MainLayout({
   children,
 }: {

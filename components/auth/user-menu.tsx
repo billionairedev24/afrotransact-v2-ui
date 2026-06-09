@@ -4,9 +4,50 @@ import { useSession, signIn } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { User, LogOut, Package, Settings, ChevronDown, Store } from "lucide-react"
+import { User, LogOut, Package, Settings, ChevronDown, Store, Loader2 } from "lucide-react"
 import { useSignOut } from "@/hooks/useSignOut"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
+
+function UnauthedMenu({ returnTo }: { returnTo: string }) {
+  const [pending, setPending] = useState<null | "signin" | "register">(null)
+  function go(provider: "keycloak" | "keycloak-register", kind: "signin" | "register") {
+    if (pending) return
+    setPending(kind)
+    // Two rAFs guarantee React commits the pending state and the browser paints
+    // before signIn() navigates away. Otherwise the spinner never appears.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        void signIn(provider, { callbackUrl: returnTo })
+      })
+    })
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => go("keycloak", "signin")}
+        disabled={pending !== null}
+        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground disabled:cursor-wait disabled:opacity-80"
+      >
+        {pending === "signin" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+        {pending === "signin" ? "Signing in…" : "Sign In"}
+      </button>
+      <button
+        onClick={() => go("keycloak-register", "register")}
+        disabled={pending !== null}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-80"
+      >
+        {pending === "register" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+        {pending === "register" ? "Opening…" : "Register"}
+      </button>
+      <StartSellingLink
+        variant="bare"
+        className="rounded-lg bg-brand-gold px-3 py-1.5 text-sm font-semibold text-brand-gold-foreground shadow-sm shadow-primary/25 transition-colors hover:bg-accent"
+      >
+        Start Selling
+      </StartSellingLink>
+    </div>
+  )
+}
 
 export function UserMenu() {
   const { data: session, status } = useSession()
@@ -33,28 +74,7 @@ export function UserMenu() {
 
   if (!session) {
     const returnTo = pathname || "/"
-    return (
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => signIn("keycloak", { callbackUrl: returnTo })}
-          className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Sign In
-        </button>
-        <button
-          onClick={() => signIn("keycloak-register", { callbackUrl: returnTo })}
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-        >
-          Register
-        </button>
-        <StartSellingLink
-          variant="bare"
-          className="rounded-lg bg-brand-gold px-3 py-1.5 text-sm font-semibold text-brand-gold-foreground shadow-sm shadow-primary/25 transition-colors hover:bg-accent"
-        >
-          Start Selling
-        </StartSellingLink>
-      </div>
-    )
+    return <UnauthedMenu returnTo={returnTo} />
   }
 
   const roles: string[] = (session.user as { roles?: string[] }).roles ?? []

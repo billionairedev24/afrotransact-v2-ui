@@ -54,7 +54,7 @@ const FAQ_TOPICS = [
 export default function SellerHelpPage() {
   return (
     <div className="space-y-8">
-      <header className="rounded-2xl border border-gray-200 bg-white p-6">
+      <header className="rounded-2xl border border-input bg-white p-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-gold/10">
             <HelpCircle className="h-5 w-5 text-brand-gold" />
@@ -68,7 +68,7 @@ export default function SellerHelpPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {FAQ_TOPICS.map((topic) => (
-          <section key={topic.topic} className="rounded-2xl border border-gray-200 bg-white p-6">
+          <section key={topic.topic} className="rounded-2xl border border-input bg-white p-6">
             <div className="flex items-center gap-2">
               {topic.icon}
               <h2 className="text-lg font-bold text-foreground">{topic.topic}</h2>
@@ -101,7 +101,7 @@ export default function SellerHelpPage() {
             </a>
             <Link
               href="/help"
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-input bg-white px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-gray-50 transition-colors"
             >
               <MessageCircle className="h-4 w-4" />
               General FAQ

@@ -226,7 +226,7 @@ export default function AdminProductsPage() {
         cell: (info) => {
           const imgs = info.getValue()
           return imgs?.[0] ? (
-            <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200">
+            <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-input">
               <Image
                 src={imgs[0].url}
                 alt={imgs[0].altText ?? ""}
@@ -236,7 +236,7 @@ export default function AdminProductsPage() {
               />
             </div>
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 border border-gray-200">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 border border-input">
               <ImageOff className="h-4 w-4 text-gray-600" />
             </div>
           )
@@ -368,7 +368,7 @@ export default function AdminProductsPage() {
           </p>
         </div>
         <div
-          className="flex flex-col items-center gap-4 rounded-2xl border border-gray-200 p-12 bg-white"
+          className="flex flex-col items-center gap-4 rounded-2xl border border-input p-12 bg-white"
         >
           <Package className="h-12 w-12 text-gray-600" />
           <div className="text-center">
@@ -410,7 +410,7 @@ export default function AdminProductsPage() {
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPageIndex(0) }}
-            className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
+            className="h-10 rounded-lg border border-input bg-white px-3 text-sm text-gray-600 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
           >
             {STATUS_OPTIONS.map((opt) => (
               <option
@@ -472,7 +472,7 @@ export default function AdminProductsPage() {
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="Reason for rejection…"
             rows={4}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30 resize-none"
+            className="w-full rounded-lg border border-input bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30 resize-none"
           />
         </DialogBody>
         <DialogFooter>
@@ -581,7 +581,7 @@ function ProductDetailPanel({
           <>
             {product.images.length > 0 ? (
               <div className="space-y-3">
-                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-input bg-gray-50">
                   <Image
                     src={product.images[galleryIndex]?.url}
                     alt={product.images[galleryIndex]?.altText ?? product.title}
@@ -623,7 +623,7 @@ function ProductDetailPanel({
                         className={`shrink-0 h-14 w-14 rounded-lg overflow-hidden border-2 transition-colors ${
                           i === galleryIndex
                             ? "border-primary"
-                            : "border-gray-200 hover:border-gray-300"
+                            : "border-input hover:border-gray-300"
                         }`}
                       >
                         <div className="relative h-full w-full">
@@ -641,7 +641,7 @@ function ProductDetailPanel({
                 )}
               </div>
             ) : (
-              <div className="flex aspect-video items-center justify-center rounded-xl border border-gray-200 bg-gray-50">
+              <div className="flex aspect-video items-center justify-center rounded-xl border border-input bg-gray-50">
                 <ImageOff className="h-10 w-10 text-gray-600" />
               </div>
             )}
@@ -731,7 +731,7 @@ function ProductDetailPanel({
                   {product.categories.map((cat) => (
                     <span
                       key={cat.id}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 border border-input px-3 py-1.5 text-xs font-medium text-gray-600"
                     >
                       <Tag className="h-3 w-3 text-gray-500" />
                       {cat.name}

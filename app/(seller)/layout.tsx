@@ -102,10 +102,24 @@ export default async function SellerLayout({
     }
 
     redirect("/dashboard/onboarding")
-  } catch {
-    /* Network failures: don’t strand approved sellers behind onboarding forever */
+  } catch (err) {
+    // Next.js redirect() and notFound() throw control-flow errors that MUST
+    // propagate — catching them swallows the navigation and renders this
+    // catch-arm instead. Identify by the `digest` prefix Next sets on the
+    // thrown error and rethrow.
+    if (
+      err &&
+      typeof err === "object" &&
+      "digest" in err &&
+      typeof (err as { digest?: unknown }).digest === "string" &&
+      ((err as { digest: string }).digest.startsWith("NEXT_REDIRECT") ||
+        (err as { digest: string }).digest === "NEXT_NOT_FOUND")
+    ) {
+      throw err
+    }
+    /* Network failures: don't strand approved sellers behind onboarding forever */
     if (jwtSellerIntent) {
-      console.warn("[seller/layout] seller/me fetch failed — degrading dashboard shell")
+      console.warn("[seller/layout] seller/me fetch failed — degrading dashboard shell", err)
       return degradedShell
     }
     redirect("/")

@@ -257,10 +257,10 @@ function CouponForm({
     }
   }
 
-  const inputCls = "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/50"
+  const inputCls = "w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/50"
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+    <form onSubmit={handleSubmit} className="rounded-xl border border-input bg-white p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">{coupon ? "Edit Coupon" : "Create Site-Wide Coupon"}</h3>
         <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><X className="h-4 w-4" /></button>
@@ -315,7 +315,7 @@ function CouponForm({
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>
-        <button type="submit" disabled={submitting} className="rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-gold/90 disabled:opacity-50 transition-colors">
+        <button type="submit" disabled={submitting} className="rounded-lg bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-50 transition-colors">
           {submitting ? "Saving…" : coupon ? "Update" : "Create"}
         </button>
       </div>

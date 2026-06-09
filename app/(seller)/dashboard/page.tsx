@@ -220,7 +220,7 @@ export default function DashboardOverview() {
           <div className="mt-6 flex justify-center">
             <Link
               href="/sell"
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
             >
               <Package className="h-4 w-4" />
               Start Selling
@@ -308,7 +308,7 @@ export default function DashboardOverview() {
           return (
             <div
               key={card.label}
-              className="rounded-2xl border border-gray-200 p-5 min-h-[120px] flex flex-col justify-between"
+              className="rounded-2xl border border-input p-5 min-h-[120px] flex flex-col justify-between"
               style={{ background: CARD_BG }}
             >
               <div className="flex items-start justify-between">
@@ -327,7 +327,7 @@ export default function DashboardOverview() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div
-          className="rounded-2xl border border-gray-200 p-5"
+          className="rounded-2xl border border-input p-5"
           style={{ background: CARD_BG }}
         >
           <h2 className="text-sm font-semibold text-gray-900 mb-4">Sales Trend (7 days)</h2>
@@ -337,7 +337,7 @@ export default function DashboardOverview() {
         </div>
 
         <div
-          className="rounded-2xl border border-gray-200 p-5"
+          className="rounded-2xl border border-input p-5"
           style={{ background: CARD_BG }}
         >
           <h2 className="text-sm font-semibold text-gray-900 mb-4">Order Status Breakdown</h2>
@@ -376,10 +376,10 @@ export default function DashboardOverview() {
       {/* Recent Orders + Quick Actions */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div
-          className="rounded-2xl border border-gray-200 lg:col-span-2"
+          className="rounded-2xl border border-input lg:col-span-2"
           style={{ background: CARD_BG }}
         >
-          <div className="flex items-center justify-between border-b border-gray-200 p-5">
+          <div className="flex items-center justify-between border-b border-input p-5">
             <h2 className="text-sm font-semibold text-gray-900">Recent Orders</h2>
             <Link
               href="/dashboard/orders"
@@ -431,10 +431,10 @@ export default function DashboardOverview() {
         </div>
 
         <div
-          className="rounded-2xl border border-gray-200"
+          className="rounded-2xl border border-input"
           style={{ background: CARD_BG }}
         >
-          <div className="border-b border-gray-200 p-5">
+          <div className="border-b border-input p-5">
             <h2 className="text-sm font-semibold text-gray-900">Quick Actions</h2>
           </div>
           <div className="divide-y divide-gray-100">

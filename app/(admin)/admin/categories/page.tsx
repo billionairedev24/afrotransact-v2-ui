@@ -254,7 +254,7 @@ export default function AdminCategoriesPage() {
         </div>
         <button
           onClick={() => openCreate()}
-          className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
+          className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
         >
           <Plus className="h-4 w-4" /> New Category
         </button>
@@ -262,7 +262,7 @@ export default function AdminCategoriesPage() {
 
       {/* Category tree */}
       <div
-        className="rounded-2xl border border-gray-200 overflow-hidden bg-white"
+        className="rounded-2xl border border-input overflow-hidden bg-white"
       >
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-3">
@@ -293,7 +293,7 @@ export default function AdminCategoriesPage() {
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
               placeholder="e.g. Fresh Produce"
             />
           </div>
@@ -303,7 +303,7 @@ export default function AdminCategoriesPage() {
               type="text"
               value={form.slug}
               onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
               placeholder="auto-generated if empty"
             />
           </div>
@@ -313,7 +313,7 @@ export default function AdminCategoriesPage() {
               <select
                 value={form.parentId}
                 onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
               >
                 <option value="">— Top Level —</option>
                 {flatParents(categories).map((p) => (
@@ -330,7 +330,7 @@ export default function AdminCategoriesPage() {
               type="number"
               value={form.sortOrder}
               onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none"
             />
           </div>
         </DialogBody>
@@ -344,7 +344,7 @@ export default function AdminCategoriesPage() {
           <button
             onClick={handleSave}
             disabled={saving || !form.name.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold-hover disabled:opacity-50 transition-colors"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {editingId ? "Update" : "Create"}

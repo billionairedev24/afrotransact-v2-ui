@@ -1,29 +1,96 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
+import { useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { Heart, ShoppingBag, Trash2, Package } from "lucide-react"
 import { useWishlistStore } from "@/stores/wishlist-store"
+import { useWishlist } from "@/hooks/use-wishlist"
 import { useCartStore } from "@/stores/cart-store"
 import { getProductById } from "@/lib/api"
+import type { Product } from "@/lib/api"
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
 }
 
-export default function WishlistPage() {
-  const { status } = useSession()
-  const items = useWishlistStore((s) => s.items)
-  const remove = useWishlistStore((s) => s.remove)
+interface DisplayItem {
+  productId: string
+  slug: string
+  title: string
+  imageUrl?: string | null
+  priceCents: number
+  storeName?: string | null
+}
+
+/**
+ * Authenticated wishlist page — server is the source of truth (#43).
+ *
+ * Hydrates display metadata (title, image, price) lazily by calling
+ * getProductById per item not already in the local zustand store. The
+ * local store is still kept around as a metadata cache so subsequent
+ * visits don't re-fetch every product.
+ */
+function ServerWishlist() {
+  const wishlist = useWishlist()
+  const ids = useMemo(() => Array.from(wishlist.ids), [wishlist.ids])
+  const localItems = useWishlistStore((s) => s.items)
+  const localAdd = useWishlistStore((s) => s.add)
+  const localRemove = useWishlistStore((s) => s.remove)
   const addToCart = useCartStore((s) => s.addItem)
-  // Defer rendering items until hydration to avoid SSR/CSR mismatch from
-  // localStorage-backed state. zustand/persist sets _hasHydrated on first
-  // commit; we mirror it locally so the empty-state doesn't flash.
-  const [hydrated, setHydrated] = useState(false)
-  useEffect(() => { setHydrated(true) }, [])
+
+  // Cache productId -> metadata via TanStack Query so re-renders don't refetch.
+  const detailQueries = useQuery({
+    queryKey: ["wishlist", "details", ids.sort().join(",")],
+    queryFn: async () => {
+      const local = new Map(localItems.map((i) => [i.productId, i] as const))
+      const out: DisplayItem[] = []
+      const missing: string[] = []
+      for (const id of ids) {
+        const cached = local.get(id)
+        if (cached && cached.title) {
+          out.push({
+            productId: cached.productId,
+            slug: cached.slug,
+            title: cached.title,
+            imageUrl: cached.imageUrl,
+            priceCents: cached.priceCents,
+            storeName: cached.storeName,
+          })
+        } else {
+          missing.push(id)
+        }
+      }
+      const fetched = await Promise.allSettled(
+        missing.map((id) => getProductById(id)),
+      )
+      fetched.forEach((res, i) => {
+        if (res.status !== "fulfilled") return
+        const product = res.value as Product
+        const display: DisplayItem = {
+          productId: product.id,
+          slug: product.slug,
+          title: product.title,
+          imageUrl: product.images[0]?.url,
+          priceCents: Math.round((product.variants[0]?.price ?? 0) * 100),
+          storeName: null,
+        }
+        out.push(display)
+        // Cache the metadata in the local store so a refresh is free.
+        localAdd(display)
+        // missing[i] is the original id; if mismatch (deleted product) skip.
+        void missing[i]
+      })
+      return out
+    },
+    enabled: ids.length > 0,
+    staleTime: 60_000,
+  })
+
+  const items = detailQueries.data ?? []
 
   async function handleMoveToCart(productId: string) {
     try {
@@ -49,27 +116,12 @@ export default function WishlistPage() {
         widthIn: variant.widthIn ?? null,
         heightIn: variant.heightIn ?? null,
       })
-      remove(productId)
+      await wishlist.remove(productId)
+      localRemove(productId)
       toast.success("Moved to cart")
     } catch {
       toast.error("Could not add to cart")
     }
-  }
-
-  if (status !== "authenticated") {
-    return (
-      <main className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
-        <Heart className="mx-auto h-14 w-14 text-gray-400" />
-        <h1 className="text-xl font-bold text-foreground mt-5">Sign in to view your wishlist</h1>
-        <p className="text-sm text-gray-500 mt-2">Saved items sync to your account so you don&apos;t lose them.</p>
-        <Link
-          href="/auth/login"
-          className="inline-block mt-6 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
-        >
-          Sign In
-        </Link>
-      </main>
-    )
   }
 
   return (
@@ -78,21 +130,21 @@ export default function WishlistPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Your Wishlist</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {hydrated
-              ? items.length === 0
+            {wishlist.loading
+              ? "Loading…"
+              : ids.length === 0
                 ? "Tap the heart on any product to save it for later."
-                : `${items.length} item${items.length === 1 ? "" : "s"} saved.`
-              : "Loading…"}
+                : `${ids.length} item${ids.length === 1 ? "" : "s"} saved.`}
           </p>
         </div>
       </div>
 
-      {hydrated && items.length === 0 ? (
+      {!wishlist.loading && ids.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
           <Heart className="mx-auto h-14 w-14 text-gray-300" />
           <h2 className="text-lg font-semibold text-foreground mt-5">Your wishlist is empty</h2>
           <p className="text-gray-500 text-sm mt-2 max-w-sm mx-auto">
-            Save products you love by tapping the heart icon. Your wishlist helps you keep track of items you want to buy later.
+            Save products you love by tapping the heart icon. Your wishlist syncs across devices.
           </p>
           <Link
             href="/"
@@ -102,7 +154,7 @@ export default function WishlistPage() {
             Browse Products
           </Link>
         </div>
-      ) : hydrated ? (
+      ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {items.map((item) => (
             <article key={item.productId} className="rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-md transition-shadow">
@@ -142,7 +194,10 @@ export default function WishlistPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => remove(item.productId)}
+                    onClick={async () => {
+                      await wishlist.remove(item.productId)
+                      localRemove(item.productId)
+                    }}
                     aria-label="Remove from wishlist"
                     className="inline-flex items-center justify-center rounded-full border border-gray-200 px-3 text-gray-500 hover:bg-gray-50 transition-colors"
                   >
@@ -153,7 +208,37 @@ export default function WishlistPage() {
             </article>
           ))}
         </div>
-      ) : null}
+      )}
     </main>
   )
+}
+
+export default function WishlistPage() {
+  const { status } = useSession()
+
+  if (status === "loading") {
+    return (
+      <main className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
+        <p className="text-sm text-gray-500">Loading…</p>
+      </main>
+    )
+  }
+
+  if (status !== "authenticated") {
+    return (
+      <main className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
+        <Heart className="mx-auto h-14 w-14 text-gray-400" />
+        <h1 className="text-xl font-bold text-foreground mt-5">Sign in to view your wishlist</h1>
+        <p className="text-sm text-gray-500 mt-2">Saved items sync to your account so you don&apos;t lose them.</p>
+        <Link
+          href="/auth/login"
+          className="inline-block mt-6 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
+        >
+          Sign In
+        </Link>
+      </main>
+    )
+  }
+
+  return <ServerWishlist />
 }

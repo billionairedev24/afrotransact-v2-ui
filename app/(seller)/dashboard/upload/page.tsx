@@ -138,7 +138,7 @@ function ActionMenu({
       {open && menuPos && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[80] w-40 rounded-xl border border-gray-200 bg-white py-1 shadow-xl"
+          className="fixed z-[80] w-40 rounded-xl border border-input bg-white py-1 shadow-xl"
           style={{ top: menuPos.top, left: menuPos.left }}
         >
           <button
@@ -448,7 +448,7 @@ export default function MediaPage() {
                     if (e.key === "Enter") void handleInlineRename(item.id, inlineNameDraft)
                     if (e.key === "Escape") setEditingNameId(null)
                   }}
-                  className="h-8 w-full rounded-md border border-gray-200 px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  className="h-8 w-full rounded-md border border-input px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                 />
               ) : (
                 <button
@@ -553,7 +553,7 @@ export default function MediaPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-900">Media Library</h1>
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
+        <div className="rounded-2xl border border-input bg-white p-6">
           <div className="flex flex-col items-center justify-center gap-3 text-center">
             <AlertCircle className="h-12 w-12 text-red-500" />
             <p className="text-sm font-medium text-gray-900">You must be signed in to manage media</p>
@@ -575,7 +575,7 @@ export default function MediaPage() {
           {returnTo && (
             <Link
               href={returnTo}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-input bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Back to Bulk Import
             </Link>
@@ -607,7 +607,7 @@ export default function MediaPage() {
               setUploadOpen(true)
             }}
             disabled={uploading}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl border border-input bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60"
           >
             Bulk Upload
           </button>
@@ -652,15 +652,15 @@ export default function MediaPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl border border-gray-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
+      <div className="rounded-2xl border border-input bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-input px-5 py-4">
           <div className="relative">
             <input
               type="text"
               placeholder="Search media…"
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="h-9 w-64 rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
+              className="h-9 w-64 rounded-lg border border-input bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
             <ImageIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           </div>
@@ -732,14 +732,14 @@ export default function MediaPage() {
                   <button
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
-                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                    className="rounded-lg border border-input px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
-                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                    className="rounded-lg border border-input px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40"
                   >
                     Next
                   </button>
@@ -762,7 +762,7 @@ export default function MediaPage() {
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
@@ -788,7 +788,7 @@ export default function MediaPage() {
               Set a seller-friendly name and metadata for better product mapping.
             </p>
             <div className="mt-4 flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
-              <div className="relative h-14 w-14 overflow-hidden rounded-md border border-gray-200 bg-white">
+              <div className="relative h-14 w-14 overflow-hidden rounded-md border border-input bg-white">
                 <Image src={editItem.url} alt={editItem.name} fill sizes="56px" className="object-cover" />
               </div>
               <div className="min-w-0">
@@ -798,21 +798,21 @@ export default function MediaPage() {
             </div>
             <div className="mt-4 space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Display name</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">Display name</label>
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  className="h-10 w-full rounded-lg border border-input px-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                   placeholder="e.g. Jasmine Rice Front Pack"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Metadata notes (searchable)</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">Metadata notes (searchable)</label>
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows={3}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  className="w-full rounded-lg border border-input px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                   placeholder="e.g. rice,jasmine,5kg,bag,front"
                 />
               </div>
@@ -825,14 +825,14 @@ export default function MediaPage() {
             <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={() => setEditItem(null)}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveEdit}
                 disabled={savingEdit}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-60"
               >
                 {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Save
@@ -867,7 +867,7 @@ export default function MediaPage() {
               <button
                 onClick={() => inputRef.current?.click()}
                 disabled={uploading}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg border border-input bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
               >
                 Select file{uploadMode === "bulk" ? "s" : ""}
               </button>
@@ -960,7 +960,7 @@ export default function MediaPage() {
               </div>
             )}
 
-            <div className="mt-4 max-h-[45vh] overflow-auto rounded-xl border border-gray-200">
+            <div className="mt-4 max-h-[45vh] overflow-auto rounded-xl border border-input">
               <table className="w-full min-w-[680px] text-left">
                 <thead className="border-b border-gray-100 bg-gray-50">
                   <tr>
@@ -1023,7 +1023,7 @@ export default function MediaPage() {
                                 prev.map((r, idx) => (idx === i ? { ...r, name: e.target.value } : r)),
                               )
                             }
-                            className="h-8 w-full rounded-md border border-gray-200 px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                            className="h-8 w-full rounded-md border border-input px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                           />
                         </td>
                         <td className="px-3 py-2">
@@ -1034,14 +1034,14 @@ export default function MediaPage() {
                                 prev.map((r, idx) => (idx === i ? { ...r, description: e.target.value } : r)),
                               )
                             }
-                            className="h-8 w-full rounded-md border border-gray-200 px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                            className="h-8 w-full rounded-md border border-input px-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                             placeholder="e.g. rice,jasmine,5kg,front"
                           />
                         </td>
                         <td className="px-3 py-2 text-right">
                           <button
                             onClick={() => setUploadRows((prev) => prev.filter((r) => r.id !== row.id))}
-                            className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                            className="inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
                             title="Remove row"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -1065,14 +1065,14 @@ export default function MediaPage() {
               <button
                 onClick={() => setUploadOpen(false)}
                 disabled={uploading}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
               >
                 Cancel
               </button>
               <button
                 onClick={submitUploadForm}
                 disabled={uploading || uploadRows.length === 0}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-60"
               >
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {uploading ? "Uploading..." : `Save ${uploadRows.length} file${uploadRows.length !== 1 ? "s" : ""}`}
@@ -1121,7 +1121,7 @@ export default function MediaPage() {
                     "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
                     copiedId === previewItem.id
                       ? "border-primary bg-primary/10 text-foreground"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50",
+                      : "border-input text-gray-600 hover:bg-gray-50",
                   )}
                 >
                   {copiedId === previewItem.id ? (

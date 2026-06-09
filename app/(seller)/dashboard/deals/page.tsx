@@ -71,7 +71,7 @@ function RowActionMenu({ onEdit, onToggle, onDelete, enabled }: {
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open && pos && createPortal(
-        <div ref={menuRef} className="fixed z-[9999] w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-xl" style={{ top: pos.top, left: pos.left }}>
+        <div ref={menuRef} className="fixed z-[9999] w-44 rounded-xl border border-input bg-white py-1 shadow-xl" style={{ top: pos.top, left: pos.left }}>
           <button onClick={() => { onEdit(); setOpen(false) }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"><Pencil className="h-3.5 w-3.5" /> Edit</button>
           <button onClick={() => { onToggle(); setOpen(false) }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">
             {enabled ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />} {enabled ? "Disable" : "Enable"}
@@ -254,26 +254,28 @@ export default function SellerDealsPage() {
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors sm:w-auto"
+          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors sm:w-auto"
         >
           <Plus className="h-4 w-4" /> Create Deal
         </button>
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <Tag className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm text-gray-900 font-medium">How deals work</p>
-          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-            <strong>Store-wide deals</strong> apply across your entire store (e.g. "Free Shipping Weekend").{" "}
-            <strong>Product deals</strong> target a specific product with a discount percentage or fixed price.
-            Active deals appear on the homepage and deals page.
-          </p>
+      {process.env.NEXT_PUBLIC_APP_ENV !== "production" && (
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <Tag className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm text-gray-900 font-medium">How deals work</p>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              <strong>Store-wide deals</strong> apply across your entire store (e.g. "Free Shipping Weekend").{" "}
+              <strong>Product deals</strong> target a specific product with a discount percentage or fixed price.
+              Active deals appear on the homepage and deals page.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-        <div className="border-b border-gray-200 px-4 py-4 sm:px-5">
+      <div className="overflow-hidden rounded-2xl border border-input bg-white">
+        <div className="border-b border-input px-4 py-4 sm:px-5">
           <h2 className="text-base font-semibold text-gray-900">Your Deals</h2>
         </div>
 
@@ -303,7 +305,7 @@ export default function SellerDealsPage() {
                 ) : d.enabled ? (
                   <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-700"><span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />Scheduled</span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500"><span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled</span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-input bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500"><span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled</span>
                 )
                 const priceCell = d.dealPriceCents ? (
                   <span className="flex flex-wrap items-center gap-1">
@@ -394,7 +396,7 @@ export default function SellerDealsPage() {
             {/* Deal type toggle */}
             {!editing && (
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Deal Type</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Deal Type</label>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -402,7 +404,7 @@ export default function SellerDealsPage() {
                     className={`flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 text-left transition-all ${
                       form.dealType === "store-wide"
                         ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-input hover:border-gray-300"
                     }`}
                   >
                     <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
@@ -421,7 +423,7 @@ export default function SellerDealsPage() {
                     className={`flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 text-left transition-all ${
                       form.dealType === "product"
                         ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-input hover:border-gray-300"
                     }`}
                   >
                     <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
@@ -441,7 +443,7 @@ export default function SellerDealsPage() {
             {/* Store selector (store-wide) */}
             {form.dealType === "store-wide" && (
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Store *</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Store *</label>
                 <select
                   value={form.storeId}
                   onChange={e => setForm({ ...form, storeId: e.target.value })}
@@ -459,7 +461,7 @@ export default function SellerDealsPage() {
             {/* Product selector (product deal) */}
             {form.dealType === "product" && (
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Product *</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Product *</label>
                 <select
                   value={form.productId}
                   onChange={e => setForm({ ...form, productId: e.target.value })}
@@ -478,20 +480,20 @@ export default function SellerDealsPage() {
             )}
 
             <div>
-              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Deal Title *</label>
+              <label className="text-xs font-medium text-foreground uppercase tracking-wide">Deal Title *</label>
               <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder={form.dealType === "store-wide" ? "e.g. Free Shipping Weekend" : "e.g. Spring Sale — 20% Off!"} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Description</label>
+              <label className="text-xs font-medium text-foreground uppercase tracking-wide">Description</label>
               <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary resize-none" rows={2} placeholder="Short description" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Badge Text</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Badge Text</label>
                 <input value={form.badgeText} onChange={e => setForm({ ...form, badgeText: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="e.g. HOT, BOGO" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Discount %</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Discount %</label>
                 <input type="number" min={0} max={100} value={form.discountPercent ?? ""} onChange={e => setForm({ ...form, discountPercent: e.target.value ? parseInt(e.target.value) : undefined })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="e.g. 20" />
               </div>
             </div>
@@ -505,26 +507,26 @@ export default function SellerDealsPage() {
             )}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Or Fixed Deal Price (cents)</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Or Fixed Deal Price (cents)</label>
                 <input type="number" value={form.dealPriceCents ?? ""} onChange={e => setForm({ ...form, dealPriceCents: e.target.value ? parseInt(e.target.value) : undefined })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="e.g. 1999 = $19.99" />
               </div>
               <div />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Start Date</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Start Date</label>
                 <input type="datetime-local" value={form.startAt ? new Date(form.startAt).toISOString().slice(0, 16) : ""} onChange={e => setForm({ ...form, startAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">End Date</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">End Date</label>
                 <input type="datetime-local" value={form.endAt ? new Date(form.endAt).toISOString().slice(0, 16) : ""} onChange={e => setForm({ ...form, endAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" />
               </div>
             </div>
           </div>
         </SheetBody>
         <SheetFooter>
-          <button onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={!canSave} className="rounded-xl bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50">
+          <button onClick={() => setShowForm(false)} className="rounded-xl border border-input px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={!canSave} className="rounded-xl bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? "Update" : "Create"}
           </button>
         </SheetFooter>

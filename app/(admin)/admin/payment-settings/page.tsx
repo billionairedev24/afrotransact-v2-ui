@@ -15,7 +15,7 @@ import { toast } from "sonner"
 import { Loader2, Save } from "lucide-react"
 
 const INPUT_CLASS =
-  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
+  "w-full rounded-xl border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
 
 function describeSettingsError(section: string, err: unknown): string {
   if (err instanceof ApiError) {
@@ -160,7 +160,7 @@ export default function PaymentSettingsPage() {
         </div>
       ) : (
         <form onSubmit={handleSave} className="space-y-4">
-          <details open className="rounded-2xl border border-gray-200 bg-white">
+          <details open className="rounded-2xl border border-input bg-white">
             <summary className="cursor-pointer list-none border-b border-gray-100 px-6 py-4 text-sm font-semibold text-gray-900">
               Commission & Platform Controls
             </summary>
@@ -219,7 +219,7 @@ export default function PaymentSettingsPage() {
             </div>
           </details>
 
-          <details open className="rounded-2xl border border-gray-200 bg-white">
+          <details open className="rounded-2xl border border-input bg-white">
             <summary className="cursor-pointer list-none border-b border-gray-100 px-6 py-4 text-sm font-semibold text-gray-900">
               Shipping Controls
             </summary>
@@ -364,7 +364,7 @@ export default function PaymentSettingsPage() {
             </div>
           </details>
 
-          <details open className="rounded-2xl border border-gray-200 bg-white">
+          <details open className="rounded-2xl border border-input bg-white">
             <summary className="cursor-pointer list-none border-b border-gray-100 px-6 py-4 text-sm font-semibold text-gray-900">
               Payout Limits
             </summary>
@@ -434,7 +434,7 @@ export default function PaymentSettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors disabled:opacity-60"
+              className="flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save

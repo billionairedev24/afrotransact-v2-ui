@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils"
 import ProductReviews from "@/components/reviews/ProductReviews"
 import { useCartStore } from "@/stores/cart-store"
 import { useWishlistStore } from "@/stores/wishlist-store"
+import { useWishlist } from "@/hooks/use-wishlist"
 import { getProductReviews } from "@/lib/api"
 import {
   getProductBySlug,
@@ -66,17 +67,25 @@ export default function ProductPageClient() {
 
   const [product, setProduct] = useState<Product | null>(null)
   const [storeName, setStoreName] = useState<string>("")
+  const [storeReturnsSupported, setStoreReturnsSupported] = useState<boolean>(false)
+  const [storeReturnWindowDays, setStoreReturnWindowDays] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
-  const wishlistHas = useWishlistStore((s) => s.has)
-  const wishlistToggle = useWishlistStore((s) => s.toggle)
+  // Cross-device wishlist (#43): for authenticated users this round-trips to
+  // the user-profile service; for anonymous users it falls back to the local
+  // zustand store. Keep `useWishlistStore` for the anonymous metadata write
+  // (title/image/price) — the local store carries display data the server
+  // doesn't track.
+  const wishlist = useWishlist()
+  const localWishlistAdd = useWishlistStore((s) => s.add)
+  const localWishlistRemove = useWishlistStore((s) => s.remove)
   const [wishlistHydrated, setWishlistHydrated] = useState(false)
   useEffect(() => { setWishlistHydrated(true) }, [])
-  const wishlisted = wishlistHydrated && product ? wishlistHas(product.id) : false
+  const wishlisted = wishlistHydrated && product ? wishlist.has(product.id) : false
 
   const items = useCartStore((s) => s.items)
   const addItem = useCartStore((s) => s.addItem)
@@ -105,7 +114,14 @@ export default function ProductPageClient() {
         })
 
         getStoreById(data.storeId)
-          .then((store) => { if (!cancelled) setStoreName(store.name) })
+          .then((store) => {
+            if (cancelled) return
+            setStoreName(store.name)
+            setStoreReturnsSupported(store.returnsSupported === true)
+            setStoreReturnWindowDays(
+              typeof store.returnWindowDays === "number" ? store.returnWindowDays : null,
+            )
+          })
           .catch(() => { if (!cancelled) setStoreName(data.storeId) })
 
         try {
@@ -416,15 +432,23 @@ export default function ProductPageClient() {
 
           <hr className="border-gray-200" />
 
-          {/* Variant selectors */}
-          {product.variants.length > 1 && variant && (
+          {/* Variant selectors — show the picker as soon as the seller defined
+              real variants. A product with a single synthetic "Default"
+              variant is hidden (the seller didn't add any options), but a
+              single named variant like "Akure Yam" must still be visible so
+              the buyer knows what they're buying. */}
+          {(() => {
+            const named = product.variants.filter((v) => (v.name ?? "").trim() && v.name.toLowerCase() !== "default")
+            const showPicker = named.length >= 1 && variant
+            if (!showPicker) return null
+            return (
             <div className="space-y-3">
               <p className="text-sm">
                 <span className="text-gray-500">Option:</span>{" "}
                 <span className="font-bold text-foreground">{variant.name || "Default"}</span>
               </p>
               <div className="flex gap-2 flex-wrap">
-                {product.variants.map((v) => {
+                {named.map((v) => {
                   const active = variant.id === v.id
                   const oos = v.stockQuantity === 0
                   return (
@@ -447,29 +471,41 @@ export default function ProductPageClient() {
                 })}
               </div>
             </div>
-          )}
+            )
+          })()}
 
-          {/* Variant attribute details — Size / Color / Material / Weight / etc.
-              Sources: variant.options JSON ({"size": "L", "color": "Red"}) +
-              variant.weightKg / lengthIn / widthIn / heightIn. Only renders
-              keys that are actually populated. */}
-          {variant && (() => {
+          {/* Product details for the buyer. Pulls *display-safe* fields only:
+              - product.attributes JSON, minus internal/logistics keys
+                (weight, weightUnit, tags, dimensions, sku, etc.)
+              - variant.options JSON (size, color, material, etc.)
+
+              Explicitly NOT shown: variant.sku, variant.weightKg, variant
+              parcel dimensions — those are seller/fulfillment-only fields. */}
+          {(() => {
             const pairs: [string, string][] = []
-            if (variant.options) {
+            const INTERNAL_KEYS = new Set([
+              "weight", "weightunit", "weight_unit",
+              "tags", "sku", "barcode",
+              "length", "width", "height", "dimensions",
+              "lengthin", "widthin", "heightin",
+              "weightkg", "weightlb",
+            ])
+            const humanize = (k: string) =>
+              k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+            const pushFromJson = (raw: string | null | undefined) => {
+              if (!raw) return
               try {
-                const parsed = JSON.parse(variant.options) as Record<string, unknown>
+                const parsed = JSON.parse(raw) as Record<string, unknown>
                 for (const [k, v] of Object.entries(parsed)) {
-                  if (v == null || v === "") continue
-                  const label = k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-                  pairs.push([label, String(v)])
+                  if (v == null || v === "" || (Array.isArray(v) && v.length === 0)) continue
+                  if (INTERNAL_KEYS.has(k.toLowerCase())) continue
+                  const value = Array.isArray(v) ? v.join(", ") : String(v)
+                  pairs.push([humanize(k), value])
                 }
               } catch { /* not JSON — ignore */ }
             }
-            if (variant.weightKg != null) pairs.push(["Weight", `${variant.weightKg} kg`])
-            if (variant.lengthIn != null && variant.widthIn != null && variant.heightIn != null) {
-              pairs.push(["Dimensions", `${variant.lengthIn} × ${variant.widthIn} × ${variant.heightIn} in`])
-            }
-            if (variant.sku) pairs.push(["SKU", variant.sku])
+            pushFromJson(product.attributes ?? null)
+            if (variant) pushFromJson(variant.options ?? null)
             if (pairs.length === 0) return null
             return (
               <>
@@ -477,8 +513,8 @@ export default function ProductPageClient() {
                 <div>
                   <h2 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider">Details</h2>
                   <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm">
-                    {pairs.map(([k, v]) => (
-                      <div key={k} className="contents">
+                    {pairs.map(([k, v], i) => (
+                      <div key={`${k}-${i}`} className="contents">
                         <dt className="text-gray-500">{k}</dt>
                         <dd className="text-foreground">{v}</dd>
                       </div>
@@ -630,27 +666,43 @@ export default function ProductPageClient() {
               <span className="text-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3 text-gray-400" /> United States
               </span>
-              <span className="text-gray-500">Returns</span>
-              <span className="text-foreground flex items-center gap-1">
-                <RotateCcw className="h-3 w-3 text-gray-400" /> Per seller policy
-              </span>
+              {storeReturnsSupported && storeReturnWindowDays != null && (
+                <>
+                  <span className="text-gray-500">Returns</span>
+                  <span className="text-foreground flex items-center gap-1">
+                    <RotateCcw className="h-3 w-3 text-gray-400" />
+                    {storeReturnWindowDays}-day returns from {storeName || "this store"}
+                  </span>
+                </>
+              )}
             </div>
 
             <hr className="border-gray-200" />
 
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 if (!product || !variant) return
-                const added = wishlistToggle({
-                  productId: product.id,
-                  slug: product.slug,
-                  title: product.title,
-                  imageUrl: product.images[0]?.url,
-                  priceCents: displayPriceCents,
-                  storeName: storeName || null,
-                })
-                toast.success(added ? "Saved to wishlist" : "Removed from wishlist")
+                // For anonymous users we additionally keep the rich metadata
+                // (title/image/price/store) in the local zustand store so the
+                // /account/wishlist page can render it without an extra fetch.
+                // Authenticated users get their wishlist hydrated from the
+                // server by productId; the page fetches product details itself.
+                const wasIn = wishlist.has(product.id)
+                if (!wasIn) {
+                  localWishlistAdd({
+                    productId: product.id,
+                    slug: product.slug,
+                    title: product.title,
+                    imageUrl: product.images[0]?.url,
+                    priceCents: displayPriceCents,
+                    storeName: storeName || null,
+                  })
+                } else {
+                  localWishlistRemove(product.id)
+                }
+                const nowIn = await wishlist.toggle(product.id)
+                toast.success(nowIn ? "Saved to wishlist" : "Removed from wishlist")
               }}
               className={cn(
                 "w-full inline-flex items-center justify-center gap-2 rounded-lg border py-2 text-sm font-semibold transition-colors",

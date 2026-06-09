@@ -21,6 +21,7 @@ import {
   type Page as ApiPage,
 } from "@/lib/api"
 import { pickPrimarySellerStoreId } from "@/lib/seller-store"
+import { formatShippingAddressLines } from "@/lib/format-address"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   pending:    { label: "Pending",    className: "bg-yellow-50 text-yellow-700" },
@@ -373,14 +374,27 @@ function OrderDetailModal({
           </div>
         </div>
 
-        {order.raw.shippingAddress && (
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Shipping Address</p>
-            <p className="mt-1 text-sm text-gray-600">{order.raw.shippingAddress}</p>
-          </div>
-        )}
+        {/* Privacy: sellers see only the buyer's name during the pickup-only
+            beta — full shipping address, phone, and email are withheld so
+            sellers can't bypass the platform to contact buyers directly. The
+            address comes back to this view once we enable real shipping
+            (carrier label generation + tracking) and the seller actually
+            needs it to ship. */}
+        {(() => {
+          const lines = formatShippingAddressLines(order.raw.shippingAddress)
+          if (lines.length === 0) return null
+          return (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Buyer</p>
+              <p className="mt-1 text-sm text-gray-600">{lines[0] /* fullName */}</p>
+              <p className="mt-1 text-[11px] text-gray-400 italic">
+                Delivery details withheld — pickup arranged by AfroTransact.
+              </p>
+            </div>
+          )
+        })()}
 
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-2">
+        <div className="rounded-xl border border-input bg-gray-50 p-4 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Customer payment (whole order)</p>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between gap-4">
@@ -403,7 +417,7 @@ function OrderDetailModal({
               <span className="text-gray-600">Shipping collected</span>
               <span className="font-mono tabular-nums text-gray-900">{formatCents(order.raw.shippingCostCents ?? 0, order.currency)}</span>
             </div>
-            <div className="flex justify-between gap-4 border-t border-gray-200 pt-2 font-semibold text-gray-900">
+            <div className="flex justify-between gap-4 border-t border-input pt-2 font-semibold text-gray-900">
               <span>Order total</span>
               <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents, order.currency)}</span>
             </div>
@@ -466,7 +480,7 @@ function OrderDetailModal({
         )}
 
         {subOrderId && !["delivered", "returned", "out_for_delivery", "delivery_exception"].includes(currentFulfillment) && (
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+          <div className="rounded-xl border border-input bg-gray-50 p-4 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Update Fulfillment Status</p>
             <div className="flex flex-wrap gap-2">
               {SELLER_STATUSES.map((s) => (
@@ -477,7 +491,7 @@ function OrderDetailModal({
                   className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40
                     ${s === currentFulfillment
                       ? "border-primary/40 bg-primary/10 text-foreground"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
+                      : "border-input text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                 >
                   {updating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (FULFILLMENT_BADGE[s]?.icon ?? <Package className="h-3.5 w-3.5" />)}
                   {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -490,7 +504,7 @@ function OrderDetailModal({
                 value={trackingInput}
                 onChange={(e) => setTrackingInput(e.target.value)}
                 placeholder="Tracking number (optional)"
-                className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
+                className="h-9 w-full rounded-lg border border-input bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
               />
             )}
           </div>
@@ -498,10 +512,10 @@ function OrderDetailModal({
 
         <div>
           <p className="mb-3 text-xs font-medium uppercase tracking-wider text-gray-500">Items</p>
-          <div className="overflow-hidden rounded-lg border border-gray-200">
+          <div className="overflow-hidden rounded-lg border border-input">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
+                <tr className="border-b border-input bg-gray-50">
                   <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Product</th>
                   <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Qty</th>
                   <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Unit Price</th>
@@ -514,7 +528,7 @@ function OrderDetailModal({
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-3">
                         {item.imageUrl && (
-                          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded border border-gray-200">
+                          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded border border-input">
                             <Image
                               src={item.imageUrl}
                               alt=""
@@ -537,7 +551,7 @@ function OrderDetailModal({
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t border-gray-200">
+                <tr className="border-t border-input">
                   <td colSpan={3} className="px-4 py-3 text-right text-sm font-medium text-gray-500">Items subtotal</td>
                   <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
                     {formatCents(allItems.reduce((acc, item) => acc + item.unitPriceCents * item.quantity, 0), order.currency)}

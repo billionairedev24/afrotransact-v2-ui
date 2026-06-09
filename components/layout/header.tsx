@@ -38,6 +38,7 @@ import { useCartStore } from "@/stores/cart-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useSignOut } from "@/hooks/useSignOut"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
+import { AiNavButton } from "@/components/ai/AiWidget"
 import { searchSuggest, getCategories, type SearchSuggestion, type CategoryRef } from "@/lib/api"
 
 const SLUG_ICON_MAP: Record<string, { icon: typeof Leaf; accent: string }> = {
@@ -142,6 +143,24 @@ export function Header() {
   // Empty slug means "All categories". Persists across submits via local state.
   const [searchCategorySlug, setSearchCategorySlug] = useState<string>("")
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
+  const [authPending, setAuthPending] = useState<null | "signin" | "register">(null)
+
+  function beginSignIn(kind: "signin" | "register") {
+    if (authPending) return
+    setAuthPending(kind)
+    const callbackUrl =
+      typeof window !== "undefined"
+        ? window.location.pathname + window.location.search
+        : "/"
+    // Defer the redirect so React commits the pending state and paints the
+    // spinner before signIn() navigates the page away. Two rAFs guarantee a
+    // paint in every browser; without this the user sees a blank dead time.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        void signIn(kind === "signin" ? "keycloak" : "keycloak-register", { callbackUrl })
+      })
+    })
+  }
   const categoryDropdownRef = useRef<HTMLDivElement>(null)
 
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
@@ -288,6 +307,14 @@ export function Header() {
                 <Image src="/logo.png" alt="" width={28} height={28} className="rounded-md" />
                 <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-brand-gold leading-none">AfroTransact</span>
               </Link>
+
+              {/* "Ask Victory" pill — placed right after the logo per the
+                  Amazon Rufus pattern. Hidden on small screens to keep room
+                  for the search bar, and hidden entirely when
+                  NEXT_PUBLIC_AI_ENABLED !== "true" (beta default). */}
+              <div className="hidden lg:flex shrink-0">
+                <AiNavButton />
+              </div>
 
               {/* Search — desktop only */}
               <div className="hidden md:flex flex-1 relative" ref={searchRef}>
@@ -446,12 +473,6 @@ export function Header() {
                   New Arrivals
                 </Link>
                 <Link
-                  href="/stores"
-                  className="text-white text-[14px] hover:text-brand-gold transition-colors"
-                >
-                  Sellers
-                </Link>
-                <Link
                   href="/help"
                   className="text-white text-[14px] hover:text-brand-gold transition-colors"
                 >
@@ -530,31 +551,27 @@ export function Header() {
                         <div className="px-4 py-3 space-y-2">
                           <button
                             type="button"
+                            disabled={authPending !== null}
                             onClick={() => {
                               setUserMenuOpen(false)
-                              const callbackUrl =
-                                typeof window !== "undefined"
-                                  ? window.location.pathname + window.location.search
-                                  : "/"
-                              void signIn("keycloak", { callbackUrl })
+                              beginSignIn("signin")
                             }}
-                            className="w-full bg-brand-gold hover:bg-brand-gold-hover text-brand-gold-foreground font-bold text-sm py-2 rounded-full transition-colors"
+                            className="inline-flex w-full items-center justify-center gap-1.5 bg-brand-gold hover:bg-brand-gold-hover text-brand-gold-foreground font-bold text-sm py-2 rounded-full transition-colors disabled:cursor-wait disabled:opacity-80"
                           >
-                            Sign in
+                            {authPending === "signin" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                            {authPending === "signin" ? "Signing in…" : "Sign in"}
                           </button>
                           <button
                             type="button"
+                            disabled={authPending !== null}
                             onClick={() => {
                               setUserMenuOpen(false)
-                              const callbackUrl =
-                                typeof window !== "undefined"
-                                  ? window.location.pathname + window.location.search
-                                  : "/"
-                              void signIn("keycloak-register", { callbackUrl })
+                              beginSignIn("register")
                             }}
-                            className="w-full bg-white border border-gray-300 hover:border-gray-400 text-gray-900 font-semibold text-sm py-2 rounded-full transition-colors"
+                            className="inline-flex w-full items-center justify-center gap-1.5 bg-white border border-gray-300 hover:border-gray-400 text-gray-900 font-semibold text-sm py-2 rounded-full transition-colors disabled:cursor-wait disabled:opacity-80"
                           >
-                            Create account
+                            {authPending === "register" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                            {authPending === "register" ? "Opening…" : "Create account"}
                           </button>
                         </div>
                         <div className="border-t border-gray-100 py-1">
@@ -643,16 +660,6 @@ export function Header() {
                 )
               })}
 
-              <span className="w-px h-4 bg-white/15 mx-1 shrink-0" />
-
-              <Link
-                href="/stores"
-                className="flex items-center gap-1.5 px-3 h-full text-[13px] text-brand-gold font-medium whitespace-nowrap hover:text-brand-gold-hover hover:bg-white/5 transition-colors"
-              >
-                <Store className="h-3.5 w-3.5" />
-                Browse Stores
-              </Link>
-
               <div className="flex-1" />
 
               <StartSellingLink variant="header" />
@@ -724,18 +731,24 @@ export function Header() {
                       <p className="text-lg font-bold leading-tight">Welcome to AfroTransact</p>
                       <button
                         type="button"
+                        disabled={authPending !== null}
                         onClick={() => {
                           closeMobileMenu()
-                          const callbackUrl =
-                            typeof window !== "undefined"
-                              ? window.location.pathname + window.location.search
-                              : "/"
-                          void signIn("keycloak", { callbackUrl })
+                          beginSignIn("signin")
                         }}
-                        className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-brand-gold"
+                        className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-brand-gold disabled:cursor-wait disabled:opacity-80"
                       >
-                        Sign in / Register
-                        <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+                        {authPending === "signin" ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+                            Signing in…
+                          </>
+                        ) : (
+                          <>
+                            Sign in / Register
+                            <ArrowRight className="h-4 w-4" strokeWidth={2.25} />
+                          </>
+                        )}
                       </button>
                     </>
                   )}

@@ -261,14 +261,14 @@ export default function ProductsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/dashboard/products/bulk-import"
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl border border-input bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <FileSpreadsheet className="h-4 w-4" />
             Bulk Import
           </Link>
           <Link
             href="/dashboard/products/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add Product
@@ -547,7 +547,7 @@ function ProductDetailSheet({
               {!editing && (
                 <button
                   onClick={() => setEditing(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
                 >
                   <Pencil className="h-3 w-3" /> Edit
                 </button>
@@ -568,7 +568,7 @@ function ProductDetailSheet({
               </div>
             )}
             {product.status === "draft" && (
-              <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+              <div className="rounded-lg border border-input bg-gray-50 px-4 py-3">
                 <p className="text-sm text-gray-500 font-medium">Draft — not submitted</p>
                 <p className="text-xs text-gray-500 mt-0.5">This product is saved as a draft. Submit it for review when you&apos;re ready.</p>
               </div>
@@ -579,7 +579,7 @@ function ProductDetailSheet({
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Images</p>
               <div className="flex flex-wrap gap-3">
                 {product.images.map((img, idx) => (
-                  <div key={img.id} className="group relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200">
+                  <div key={img.id} className="group relative h-20 w-20 overflow-hidden rounded-lg border border-input">
                     <Image
                       src={img.url}
                       alt={img.altText || ""}
@@ -603,12 +603,12 @@ function ProductDetailSheet({
                   </div>
                 ))}
                 {product.images.length === 0 && (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-gray-200">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-input">
                     <ImageIcon className="h-6 w-6 text-gray-500" />
                   </div>
                 )}
                 {editing && (
-                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-200 text-gray-500 hover:border-primary/40 hover:text-foreground transition-colors">
+                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border border-dashed border-input text-gray-500 hover:border-primary/40 hover:text-foreground transition-colors">
                     {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
                   </label>
@@ -627,7 +627,7 @@ function ProductDetailSheet({
                     <input
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary focus:outline-none"
+                      className="h-9 w-full rounded-lg border border-input bg-gray-50 px-3 text-sm text-gray-900 focus:border-primary focus:outline-none"
                     />
                   </div>
                   <div>
@@ -636,7 +636,7 @@ function ProductDetailSheet({
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={3}
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none resize-none"
+                      className="w-full rounded-lg border border-input bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none resize-none"
                     />
                   </div>
                 </div>
@@ -716,14 +716,14 @@ function ProductDetailSheet({
                     ),
                   )
                 }}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveBasicInfo}
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-50 transition-colors"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Save Changes
@@ -735,7 +735,7 @@ function ProductDetailSheet({
                 <button
                   onClick={handleSubmitForReview}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-50 transition-colors"
                 >
                   {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   Submit for Review
@@ -784,7 +784,7 @@ function VariantCard({
     variant.stockQuantity === 0 ? "text-red-600" : variant.stockQuantity < 20 ? "text-yellow-600" : "text-gray-600"
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+    <div className="rounded-xl border border-input bg-gray-50 p-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-900">{variant.name || "Default"}</span>
@@ -804,7 +804,7 @@ function VariantCard({
             <input
               value={draft.sku}
               onChange={(e) => onDraftChange({ sku: e.target.value })}
-              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-primary focus:outline-none"
+              className="h-8 w-full rounded-md border border-input bg-gray-50 px-2 text-xs text-gray-900 focus:border-primary focus:outline-none"
             />
           </div>
           <div>
@@ -814,7 +814,7 @@ function VariantCard({
               step="0.01"
               value={draft.price}
               onChange={(e) => onDraftChange({ price: e.target.value })}
-              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-primary focus:outline-none"
+              className="h-8 w-full rounded-md border border-input bg-gray-50 px-2 text-xs text-gray-900 focus:border-primary focus:outline-none"
             />
           </div>
           <div>
@@ -823,7 +823,7 @@ function VariantCard({
               type="number"
               value={draft.stock}
               onChange={(e) => onDraftChange({ stock: e.target.value })}
-              className="h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 focus:border-primary focus:outline-none"
+              className="h-8 w-full rounded-md border border-input bg-gray-50 px-2 text-xs text-gray-900 focus:border-primary focus:outline-none"
             />
           </div>
         </div>

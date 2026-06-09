@@ -252,61 +252,59 @@ function OrderCard({ order }: { order: OrderDto }) {
   const reviewItem = reviewableItems.find((i) => i.id === reviewItemId) ?? reviewableItems[0]
 
   return (
-    <article className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 gap-4 hover:shadow-md transition-shadow">
-      {/* Header — package icon + order number + ordered date · status pill
-          (mockup order-1 lines 158-166) */}
-      <header className="flex items-start justify-between gap-3 border-b border-gray-200 pb-3">
-        <div className="flex items-start gap-2 min-w-0">
-          <Package className="h-5 w-5 shrink-0 text-gray-500 mt-0.5" strokeWidth={1.75} />
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <p className="text-lg font-bold text-foreground font-mono">#{order.orderNumber}</p>
-            <p className="text-xs text-gray-500">Ordered {formatDate(placedDate)}</p>
+    <article className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      {/* Compact gray header strip — Amazon-style.
+          Order placed | Total | Ship to (left) · Order # + status (right). */}
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-xs">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+          <div>
+            <p className="font-semibold uppercase tracking-wide text-[10px] text-gray-500">Order placed</p>
+            <p className="text-gray-900">{formatDate(placedDate)}</p>
+          </div>
+          <div>
+            <p className="font-semibold uppercase tracking-wide text-[10px] text-gray-500">Total</p>
+            <p className="text-gray-900 font-semibold tabular-nums">{formatCents(order.totalCents, order.currency)}</p>
           </div>
         </div>
-        <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold whitespace-nowrap", badge.tone)}>
-          <badge.Icon className="h-3.5 w-3.5" />
-          {badge.label}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap", badge.tone)}>
+            <badge.Icon className="h-3 w-3" />
+            {badge.label}
+          </span>
+          <span className="text-[11px] text-gray-600 font-mono">#{order.orderNumber}</span>
+        </div>
       </header>
 
-      {/* Body — product visual + summary */}
-      <div className="flex gap-4">
-        {/* Thumbnail or 2x2 grid for multi-item */}
-        <OrderThumb items={allItems} />
-
-        <div className="flex flex-col flex-1 min-w-0 justify-between">
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-foreground line-clamp-2">
-              {allItems.length > 1
-                ? `${firstItem?.productTitle ?? "Multiple items"} + ${allItems.length - 1} more`
-                : firstItem?.productTitle ?? "Order"}
-            </h3>
-            {firstItem?.variantName && (
-              <p className="text-xs text-gray-500 mt-1">{firstItem.variantName}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              {allItems.reduce((n, i) => n + i.quantity, 0)} item{allItems.reduce((n, i) => n + i.quantity, 0) === 1 ? "" : "s"}
-              {order.subOrders.length > 1 && ` · ${order.subOrders.length} stores`}
-            </p>
-          </div>
-          <p className="text-xl font-bold text-foreground mt-2">
-            {formatCents(order.totalCents, order.currency)}
-          </p>
+      {/* Body — tighter row layout */}
+      <div className="flex gap-3 p-4">
+        <div className="shrink-0">
+          <OrderThumb items={allItems} />
         </div>
-      </div>
-
-      {/* Footer — helper text + action row */}
-      <footer className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-gray-200 mt-auto">
-        {helper ? (
-          <p className="flex items-center gap-1.5 text-xs text-gray-500">
-            <helper.Icon className="h-3.5 w-3.5 text-brand-gold" />
-            {helper.text}
+        <div className="flex flex-1 min-w-0 flex-col gap-1">
+          <h3 className="text-sm font-semibold text-foreground line-clamp-2 leading-snug">
+            {allItems.length > 1
+              ? `${firstItem?.productTitle ?? "Multiple items"} + ${allItems.length - 1} more`
+              : firstItem?.productTitle ?? "Order"}
+          </h3>
+          {firstItem?.variantName && (
+            <p className="text-xs text-gray-500">{firstItem.variantName}</p>
+          )}
+          <p className="text-xs text-gray-500">
+            {allItems.reduce((n, i) => n + i.quantity, 0)} item{allItems.reduce((n, i) => n + i.quantity, 0) === 1 ? "" : "s"}
+            {order.subOrders.length > 1 && ` · ${order.subOrders.length} stores`}
           </p>
-        ) : <span />}
-        <div className="flex gap-2 w-full sm:w-auto">
+          {helper && (
+            <p className="flex items-center gap-1.5 text-xs text-gray-600 mt-1">
+              <helper.Icon className="h-3 w-3 text-brand-gold" />
+              {helper.text}
+            </p>
+          )}
+        </div>
+        {/* Action column — right-aligned, stacked, narrow */}
+        <div className="flex shrink-0 flex-col gap-1.5 w-32 sm:w-36">
           {actions}
         </div>
-      </footer>
+      </div>
 
       {reviewOpen && reviewItem?.productId && (
         <WriteReviewModal
@@ -576,14 +574,8 @@ function OrderThumb({ items }: { items: OrderDto["subOrders"][number]["items"] }
 
 // Mockup (order-1.html) shows 4 orders per page — 2×2 grid + pagination.
 const PAGE_SIZE = 4
-// While a search query is active, fall back to a single large page so the
-// filter runs across the buyer's whole order history (not just the 4 cards
-// currently rendered). Backend doesn't yet expose `?q=` on /api/v1/orders —
-// that's queued as POST-LAUNCH-BACKLOG #42. Until then this ceiling caps the
-// "all orders" search at the most recent 200 — fine for beta where typical
-// buyers have under 20 orders. Larger histories surface a hint in the UI.
-const SEARCH_FETCH_SIZE = 200
 const SEARCH_MIN_CHARS = 2
+const SEARCH_DEBOUNCE_MS = 300
 
 export default function OrdersPage() {
   const session = useSession()
@@ -596,13 +588,28 @@ export default function OrdersPage() {
   const [totalElements, setTotalElements] = useState(0)
   const [tab, setTab] = useState<StatusGroup>("all")
   const [search, setSearch] = useState("")
+  // Debounced copy of `search` — the value we actually send to the server.
+  // Keeping the input snappy (`search`) separate from the fetch trigger
+  // (`debouncedSearch`) avoids a request per keystroke (#42).
+  const [debouncedSearch, setDebouncedSearch] = useState("")
 
-  // Searching needs to span the buyer's full history, not just the 4 cards
-  // currently rendered. We swap to a wide single-page fetch whenever the
-  // search box has 2+ characters; pagination is disabled in that mode.
-  const searchActive = search.trim().length >= SEARCH_MIN_CHARS
-  const fetchSize = searchActive ? SEARCH_FETCH_SIZE : PAGE_SIZE
-  const fetchPage = searchActive ? 0 : page
+  // Debounce keystrokes before firing the search request.
+  useEffect(() => {
+    const trimmed = search.trim()
+    // Treat 1-char queries as empty so we don't search on a stray keystroke.
+    const next = trimmed.length >= SEARCH_MIN_CHARS ? trimmed : ""
+    const t = setTimeout(() => setDebouncedSearch(next), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(t)
+  }, [search])
+
+  const searchActive = debouncedSearch.length > 0
+
+  // Reset to the first page whenever the search query changes — otherwise
+  // a buyer on page 3 of the unsearched list would land on page 3 of a
+  // (potentially much shorter) search result and see "no results".
+  useEffect(() => {
+    setPage(0)
+  }, [debouncedSearch])
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -616,9 +623,12 @@ export default function OrdersPage() {
         setError(null)
         const token = await getAccessToken()
         if (!token || cancelled) return
-        const res = await getBuyerOrders(token, fetchPage, fetchSize)
+        const res = await getBuyerOrders(token, page, PAGE_SIZE, debouncedSearch || undefined)
         if (cancelled) return
-        setOrders(res.content)
+        // Server now filters pre-payment placeholders + system-cancelled
+        // sweeps, so totalElements lines up with rendered rows. No client-
+        // side filter needed.
+        setOrders(res.content ?? [])
         setTotalPages(res.totalPages ?? Math.ceil((res.totalElements ?? 0) / PAGE_SIZE))
         setTotalElements(res.totalElements ?? 0)
       } catch (e) {
@@ -630,23 +640,19 @@ export default function OrdersPage() {
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, fetchPage, fetchSize])
+  }, [status, page, debouncedSearch])
 
-  // Tab + search filter, applied client-side over the current page payload.
+  // Tab is still applied client-side over the current page — the server only
+  // owns the text filter. Buyers rarely use both at once.
   const visibleOrders = useMemo(() => {
-    const q = search.trim().toLowerCase()
     return orders.filter((o) => {
       if (tab !== "all") {
         const group = classifyStatus(o.status)
         if (group !== tab) return false
       }
-      if (!q) return true
-      if (o.orderNumber.toLowerCase().includes(q)) return true
-      return o.subOrders
-        .flatMap((so) => so.items)
-        .some((i) => (i.productTitle || "").toLowerCase().includes(q))
+      return true
     })
-  }, [orders, tab, search])
+  }, [orders, tab])
 
   // Per-tab counts (over current page; cheap and informative).
   const tabCounts = useMemo(() => {
@@ -751,14 +757,18 @@ export default function OrdersPage() {
         <div className="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
           <ReceiptText className="mx-auto h-14 w-14 text-gray-300" />
           <h2 className="text-lg font-semibold text-foreground mt-5">
-            {orders.length === 0 ? "No orders yet" : "No matching orders"}
+            {searchActive
+              ? `No orders match "${debouncedSearch}"`
+              : orders.length === 0 ? "No orders yet" : "No matching orders"}
           </h2>
           <p className="text-gray-500 text-sm mt-2 max-w-sm mx-auto">
-            {orders.length === 0
-              ? "When you place an order, it will appear here. Start exploring our marketplace to find products you love."
-              : "Try a different tab or clear your search."}
+            {searchActive
+              ? "Try a different order number or product name."
+              : orders.length === 0
+                ? "When you place an order, it will appear here. Start exploring our marketplace to find products you love."
+                : "Try a different tab or clear your search."}
           </p>
-          {orders.length === 0 && (
+          {!searchActive && orders.length === 0 && (
             <Link
               href="/"
               className="inline-flex items-center gap-2 mt-6 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
@@ -776,13 +786,7 @@ export default function OrdersPage() {
             ))}
           </div>
 
-          {searchActive && orders.length >= SEARCH_FETCH_SIZE && (
-            <p className="text-center text-xs text-gray-500">
-              Showing the most recent {SEARCH_FETCH_SIZE} orders matching your search.
-              Older orders aren&apos;t included yet — server-side search ships post-launch.
-            </p>
-          )}
-          {!searchActive && totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
               <button
                 disabled={page <= 0}

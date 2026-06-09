@@ -76,6 +76,9 @@ import {
   type ShippingQuoteOption,
   type ShippingQuoteResponse,
   getRegionConfig,
+  getStoreById,
+  listSavedPaymentMethods,
+  type SavedPaymentMethod,
 } from "@/lib/api"
 import { resolveDefaultRegion } from "@/lib/regions"
 
@@ -958,9 +961,28 @@ export default function CheckoutClient({
   const [placing, setPlacing] = useState(false)
   const [placeError, setPlaceError] = useState<string | null>(null)
   const [checkoutResult, setCheckoutResult] = useState<CheckoutResponse | null>(null)
+  // Backlog #40: when the buyer ticks "Save this card" on the payment step we
+  // need the PaymentIntent to carry a Stripe Customer + setup_future_usage.
+  // The PI is minted by /orders/checkout, so toggling this flag forces a
+  // re-mint of the order (idempotency key is cleared first).
+  // Off by default — buyer explicitly opts in to remember the card. Some
+  // buyers prefer not to. The picker still surfaces any previously-saved
+  // cards even when this is off.
+  const [saveCard, setSaveCard] = useState(false)
   // Idempotency-Key reused across retries of the same logical placement so
   // a network blip can't create a second order. Reset when the user goes back.
   const idempotencyKeyRef = useRef<string | null>(null)
+
+  // Helper — fully drop the current placement attempt. Used by every
+  // back-navigation handler in the review/payment steps. Without clearing
+  // checkoutResult, a stale paymentClientSecret (referencing a PaymentIntent
+  // that's been canceled or replaced server-side) lingers in state and
+  // Stripe.confirmPayment then 404s with "No such payment_intent" on the next
+  // pay attempt (Backlog #40 cleanup).
+  const resetCheckoutSession = () => {
+    idempotencyKeyRef.current = null
+    setCheckoutResult(null)
+  }
   // Synchronous in-flight gate. setPlacing(true) only disables the button on
   // the next render, which leaves a same-tick double-click able to re-enter
   // syncCartAndCheckout. The ref is set before the first await so a second
@@ -982,10 +1004,43 @@ export default function CheckoutClient({
   const [region, setRegion] = useState<Region | null>(null)
   const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
+  const [savedCards, setSavedCards] = useState<SavedPaymentMethod[]>([])
+  const [selectedSavedCardId, setSelectedSavedCardId] = useState<string | null>(null)
   const [authToken, setAuthToken] = useState<string | null>(null)
   const [allDeals, setAllDeals] = useState<DealData[]>([])
   const [appliedDeal, setAppliedDeal] = useState<DealData | null>(null)
   const [configFeatures, setConfigFeatures] = useState<Record<string, boolean>>({})
+  // Per-store return policies. Backlog #39: each store sets its own policy;
+  // we render exactly what each store sets, grouped by store. No aggregation.
+  const [storeReturnPolicies, setStoreReturnPolicies] = useState<
+    Record<string, { name: string; returnsSupported: boolean; returnWindowDays: number | null }>
+  >({})
+
+  useEffect(() => {
+    const ids = Array.from(new Set(cartItems.map((i) => i.storeId)))
+    if (ids.length === 0) return
+    let cancelled = false
+    Promise.all(
+      ids.map((id) =>
+        getStoreById(id)
+          .then((s) => ({
+            id,
+            name: s.name,
+            returnsSupported: s.returnsSupported === true,
+            returnWindowDays: typeof s.returnWindowDays === "number" ? s.returnWindowDays : null,
+          }))
+          .catch(() => null),
+      ),
+    ).then((rows) => {
+      if (cancelled) return
+      const next: Record<string, { name: string; returnsSupported: boolean; returnWindowDays: number | null }> = {}
+      for (const r of rows) {
+        if (r) next[r.id] = { name: r.name, returnsSupported: r.returnsSupported, returnWindowDays: r.returnWindowDays }
+      }
+      setStoreReturnPolicies(next)
+    })
+    return () => { cancelled = true }
+  }, [cartItems])
 
   const subtotal = getSubtotal()
   const taxRate = region?.taxRate ?? 0.0825
@@ -1089,6 +1144,17 @@ export default function CheckoutClient({
         const token = await getAccessToken()
         if (!token || cancelled) return
         setAuthToken(token)
+        // Saved cards — soft-fail; payment step still works without them.
+        listSavedPaymentMethods(token)
+          .then((cards) => {
+            if (cancelled) return
+            setSavedCards(cards ?? [])
+            const def = (cards ?? []).find((c) => c.isDefault)
+            // Pre-select nothing — let buyers explicitly choose to use a
+            // saved card so the picker isn't accidentally locked in. If you
+            // want a default selection, switch to `def?.stripePmId ?? null`.
+          })
+          .catch(() => { /* no saved cards or endpoint unavailable */ })
         const [allRegions, deals] = await Promise.all([
           getRegions(token, true),
           getActiveDeals().catch((): DealData[] => []),
@@ -1249,6 +1315,7 @@ export default function CheckoutClient({
         selectedShippingCarrier: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.carrier,
         selectedShippingService: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.serviceCode,
         selectedShippingAmountCents: shippingQuotes?.groups.flatMap((g) => g.options).find((o) => o.quoteId === selectedQuoteId)?.amountCents,
+        saveCard,
       }, idempotencyKeyRef.current)
 
       setCheckoutResult(result)
@@ -1533,7 +1600,7 @@ export default function CheckoutClient({
                   </div>
                   <button
                     type="button"
-                    onClick={() => { setStep("address"); idempotencyKeyRef.current = null }}
+                    onClick={() => { setStep("address"); resetCheckoutSession() }}
                     disabled={placing}
                     className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
                   >
@@ -1592,7 +1659,7 @@ export default function CheckoutClient({
                   </div>
                   <button
                     type="button"
-                    onClick={() => { setStep("review"); idempotencyKeyRef.current = null }}
+                    onClick={() => { setStep("review"); resetCheckoutSession() }}
                     disabled={placing}
                     className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
                   >
@@ -1622,12 +1689,19 @@ export default function CheckoutClient({
             <div className="p-6">
               {step === "payment" ? (
                 <PaymentStep
-                  onBack={() => setStep("review")}
-                  onComplete={handlePaymentComplete}
+                  onBackAction={() => setStep("review")}
+                  onCompleteAction={handlePaymentComplete}
                   total={displayTotal}
                   clientSecret={checkoutResult?.paymentClientSecret ?? null}
                   stripeAvailable={stripeAvailable}
                   paymentMethods={paymentMethods}
+                  saveCard={saveCard}
+                  onSaveCardChangeAction={(next) => {
+                    setSaveCard(next)
+                  }}
+                  savedCards={savedCards}
+                  selectedSavedCardId={selectedSavedCardId}
+                  onSelectedSavedCardChangeAction={setSelectedSavedCardId}
                 />
               ) : (
                 <p className="text-sm text-gray-500">
@@ -1772,9 +1846,30 @@ export default function CheckoutClient({
                 Your information is encrypted and protected.
               </p>
             </div>
-            {/* Free returns hidden — per-seller return policy not yet wired.
-                Backlog #39 tracks surfacing this once seller policy is in
-                the DealData/Product payload. */}
+            {/* Per-store return policy. Each store's exact policy is shown — no aggregation. */}
+            {(() => {
+              const storeIdsInCart = Array.from(new Set(cartItems.map((i) => i.storeId)))
+              const rows = storeIdsInCart
+                .map((id) => {
+                  const policy = storeReturnPolicies[id]
+                  const fallbackName = cartItems.find((i) => i.storeId === id)?.storeName ?? "Store"
+                  const name = policy?.name ?? fallbackName
+                  return { id, name, policy }
+                })
+                .filter((r) => r.policy)
+              if (rows.length === 0) return null
+              return rows.map((r) => (
+                <div key={r.id} className="flex items-start gap-2 text-xs text-foreground/70">
+                  <Package className="h-4 w-4 shrink-0 mt-0.5" />
+                  <p>
+                    <span className="font-semibold text-foreground">{r.name}:</span>{" "}
+                    {r.policy!.returnsSupported && r.policy!.returnWindowDays != null
+                      ? `${r.policy!.returnWindowDays}-day return window`
+                      : "Final sale (no returns)"}
+                  </p>
+                </div>
+              ))
+            })()}
           </div>
         </aside>
       </div>

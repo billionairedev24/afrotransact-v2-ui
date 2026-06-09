@@ -220,12 +220,17 @@ interface NotificationPrefs {
   newsletter: boolean
 }
 
-const NOTIF_ITEMS: { key: keyof NotificationPrefs; label: string; desc: string }[] = [
-  { key: "order_updates", label: "Order Updates", desc: "Confirmations, shipping tracking, and delivery alerts" },
-  { key: "promotions", label: "Promotions & Deals", desc: "Exclusive discounts and limited-time offers from stores you like" },
-  { key: "product_reviews", label: "Review Reminders", desc: "Friendly nudges to review products after they arrive" },
-  { key: "seller_updates", label: "Seller Updates", desc: "New products from stores you follow" },
-  { key: "newsletter", label: "Weekly Newsletter", desc: "A curated roundup of what's trending on AfroTransact" },
+// `audience` controls who sees the toggle. "all" shows for everyone (basic
+// account stuff); "buyer" only for users who shop; "seller" only for users
+// with a store. The settings page filters this list against the active
+// session's roles.
+type NotifAudience = "all" | "buyer" | "seller"
+const NOTIF_ITEMS: { key: keyof NotificationPrefs; label: string; desc: string; audience: NotifAudience }[] = [
+  { key: "order_updates",   label: "Order Updates",         desc: "Confirmations, shipping tracking, and delivery alerts",                audience: "buyer" },
+  { key: "promotions",      label: "Promotions & Deals",    desc: "Exclusive discounts and limited-time offers from stores you like",     audience: "buyer" },
+  { key: "product_reviews", label: "Review Reminders",      desc: "Friendly nudges to review products after they arrive",                 audience: "buyer" },
+  { key: "seller_updates",  label: "New from Stores You Follow", desc: "Get notified when stores you follow add new products",            audience: "buyer" },
+  { key: "newsletter",      label: "Weekly Newsletter",     desc: "A curated roundup of what's trending on AfroTransact",                 audience: "all" },
 ]
 
 const DEFAULT_PREFS: NotificationPrefs = {
@@ -237,7 +242,16 @@ const DEFAULT_PREFS: NotificationPrefs = {
 }
 
 function NotificationsSection() {
-  const { status } = useSession()
+  const { data: session, status } = useSession()
+  const roles: string[] = ((session?.user as { roles?: string[] } | undefined)?.roles ?? []).map((r) => r.toLowerCase())
+  const isSeller = roles.includes("seller")
+  // Anyone who isn't a seller is treated as a buyer for setting visibility.
+  const isBuyer = !isSeller
+  const visibleItems = NOTIF_ITEMS.filter((item) =>
+    item.audience === "all" ||
+    (item.audience === "buyer" && isBuyer) ||
+    (item.audience === "seller" && isSeller),
+  )
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -302,7 +316,7 @@ function NotificationsSection() {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100">
-      {NOTIF_ITEMS.map((item) => (
+      {visibleItems.map((item) => (
         <div key={item.key} className="flex items-center justify-between gap-4 px-5 py-4">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-gray-900">{item.label}</p>

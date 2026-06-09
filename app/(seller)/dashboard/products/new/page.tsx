@@ -130,14 +130,14 @@ function defaultVariant(): VariantRow {
 
 // Mockup card chrome (create-product-and-side-bar.html line 261): white
 // surface, soft border, generous padding, 12px radius.
-const CARD = "rounded-xl border border-gray-200 bg-white p-6"
+const CARD = "rounded-xl border border-input bg-white p-6"
 
 function inputCls(error?: string) {
   return cn(
     "h-10 w-full rounded-lg border bg-gray-50 px-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-gray-200 focus:border-primary focus:ring-primary/50",
+      : "border-input focus:border-primary focus:ring-primary/50",
   )
 }
 
@@ -146,7 +146,7 @@ function textareaCls(error?: string) {
     "w-full rounded-lg border bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors resize-none",
     error
       ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/50"
-      : "border-gray-200 focus:border-primary focus:ring-primary/50",
+      : "border-input focus:border-primary focus:ring-primary/50",
   )
 }
 
@@ -741,12 +741,12 @@ export default function NewProductPage() {
     <div className="mx-auto -mx-4 -my-6 sm:-mx-6 lg:-mx-8 lg:-my-8 pb-12">
       {/* Sticky header — mockup lines 233-252: title left, badge + action
           buttons right. Falls back to a stacked layout on mobile. */}
-      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 mb-6">
+      <header className="sticky top-0 z-30 bg-white border-b border-input px-4 sm:px-6 lg:px-8 py-4 mb-6">
         <div className="mx-auto max-w-7xl flex flex-col gap-4 lg:flex-row lg:items-center">
           <div className="flex items-center gap-3 min-w-0">
             <Link
               href="/dashboard/products"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-foreground"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-input text-gray-500 transition-colors hover:bg-gray-50 hover:text-foreground"
               aria-label="Back to products"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -761,12 +761,12 @@ export default function NewProductPage() {
             </div>
           </div>
           <div className="lg:ml-auto flex flex-wrap items-center gap-2">
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded border border-gray-200 bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600">
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded border border-input bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600">
               <AlertCircle className="h-3 w-3" /> Subject to admin review
             </span>
             <Link
               href="/dashboard/products"
-              className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-foreground bg-white hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 rounded-lg border border-input text-sm font-semibold text-foreground bg-white hover:bg-gray-50 transition-colors"
             >
               Cancel
             </Link>
@@ -774,7 +774,7 @@ export default function NewProductPage() {
               type="button"
               disabled={!canSubmit}
               onClick={() => { setSubmitAction("draft"); (document.getElementById("create-product-form") as HTMLFormElement | null)?.requestSubmit() }}
-              className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-foreground bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+              className="px-4 py-2 rounded-lg border border-input text-sm font-semibold text-foreground bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               <Save className="h-3.5 w-3.5" /> Save Draft
             </button>
@@ -866,7 +866,7 @@ export default function NewProductPage() {
               <label htmlFor="desc" className="mb-2 block text-sm font-semibold text-foreground">
                 Description <span className="text-red-600">*</span>
               </label>
-              <div className="flex gap-1 rounded-t-lg border border-b-0 border-gray-200 bg-gray-50 px-2 py-1.5">
+              <div className="flex gap-1 rounded-t-lg border border-b-0 border-input bg-gray-50 px-2 py-1.5">
                 <button
                   type="button"
                   title="Bold"
@@ -1141,7 +1141,7 @@ export default function NewProductPage() {
           </div>
 
           {/* ─── Product Variants (sub-section of Pricing & Inventory) ─── */}
-          <hr className="my-6 border-gray-200" />
+          <hr className="my-6 border-input" />
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h4 className="text-base font-bold text-foreground">Product Variants</h4>
@@ -1149,17 +1149,27 @@ export default function NewProductPage() {
                 Manage size, color, and material options.
               </p>
             </div>
-            <a
-              href="#custom-attributes"
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shrink-0"
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("custom-attributes")
+                if (!el) return
+                el.scrollIntoView({ behavior: "smooth", block: "start" })
+                // Briefly highlight so the seller knows where they landed.
+                el.classList.add("ring-2", "ring-brand-gold", "ring-offset-2")
+                window.setTimeout(() => {
+                  el.classList.remove("ring-2", "ring-brand-gold", "ring-offset-2")
+                }, 1600)
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-input bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shrink-0"
             >
               <Settings className="h-4 w-4" />
               Configure Attributes
-            </a>
+            </button>
           </div>
 
           {/* Variants table — mockup lines 344-373 */}
-          <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200">
+          <div className="mt-4 overflow-x-auto rounded-lg border border-input">
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -1190,7 +1200,7 @@ export default function NewProductPage() {
                             value={variant.name}
                             onChange={(e) => updateVariantField(variant.id, "name", e.target.value)}
                             placeholder={displayName}
-                            className="w-full rounded border border-gray-200 bg-white px-3 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
+                            className="w-full rounded border border-input bg-white px-3 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
                           />
                         </td>
                         <td className="px-4 py-3">
@@ -1201,7 +1211,7 @@ export default function NewProductPage() {
                             value={variant.price}
                             onChange={(e) => updateVariantField(variant.id, "price", e.target.value)}
                             placeholder="$0.00"
-                            className="w-24 rounded border border-gray-200 bg-white px-2 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
+                            className="w-24 rounded border border-input bg-white px-2 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
                           />
                         </td>
                         <td className="px-4 py-3">
@@ -1211,7 +1221,7 @@ export default function NewProductPage() {
                             value={variant.stockQuantity}
                             onChange={(e) => updateVariantField(variant.id, "stockQuantity", e.target.value)}
                             placeholder="0"
-                            className="w-20 rounded border border-gray-200 bg-white px-2 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
+                            className="w-20 rounded border border-input bg-white px-2 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
                           />
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -1253,7 +1263,7 @@ export default function NewProductPage() {
               <div
                 className={cn(
                   "flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-lg border bg-gray-50 px-2 py-1.5 transition-colors focus-within:ring-1",
-                  "border-gray-200 focus-within:border-primary focus-within:ring-primary/50",
+                  "border-input focus-within:border-primary focus-within:ring-primary/50",
                 )}
               >
                 {tags.map((tag) => (
@@ -1305,7 +1315,7 @@ export default function NewProductPage() {
             {/* Compact upload zone — mockup lines 384-390 */}
             {images.length < maxImages && (
               <>
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 py-8 transition-colors hover:border-brand-gold/40 hover:bg-brand-gold/5">
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-input py-8 transition-colors hover:border-brand-gold/40 hover:bg-brand-gold/5">
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-gray-100">
                     <Upload className="h-5 w-5 text-gray-500" />
                   </div>
@@ -1340,7 +1350,7 @@ export default function NewProductPage() {
                     key={img.id}
                     className={cn(
                       "group relative aspect-square overflow-hidden rounded-lg border-2 bg-gray-50",
-                      img.isPrimary ? "border-primary" : "border-gray-200",
+                      img.isPrimary ? "border-primary" : "border-input",
                     )}
                   >
                     {img.status === "done" && img.url ? (
@@ -1416,7 +1426,7 @@ export default function NewProductPage() {
             <button
               type="button"
               onClick={addVariant}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
               <Plus className="h-3.5 w-3.5" />
               Add Variant
@@ -1424,7 +1434,7 @@ export default function NewProductPage() {
           </div>
 
           {variants.length === 0 ? (
-            <p className="mt-5 rounded-lg border border-dashed border-gray-200 py-6 text-center text-sm text-gray-500">
+            <p className="mt-5 rounded-lg border border-dashed border-input py-6 text-center text-sm text-gray-500">
               No variants. Your product will be listed without size/color options.
             </p>
           ) : (
@@ -1432,7 +1442,7 @@ export default function NewProductPage() {
             {variants.map((variant, idx) => (
               <div
                 key={variant.id}
-                className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+                className="rounded-xl border border-input bg-gray-50 p-4"
               >
                 {/* Variant header */}
                 <div className="mb-3 flex items-center justify-between">
@@ -1518,7 +1528,7 @@ export default function NewProductPage() {
                 </div>
 
                 {/* Options key-value pairs */}
-                <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="mt-3 border-t border-input pt-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">Options</span>
                     <button
@@ -1540,7 +1550,7 @@ export default function NewProductPage() {
                               updateVariantOption(variant.id, opt.id, "key", e.target.value)
                             }
                             placeholder="Key (e.g. Size)"
-                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-input bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                           />
                           <input
                             type="text"
@@ -1549,7 +1559,7 @@ export default function NewProductPage() {
                               updateVariantOption(variant.id, opt.id, "value", e.target.value)
                             }
                             placeholder="Value (e.g. M)"
-                            className="h-8 flex-1 rounded-md border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
+                            className="h-8 flex-1 rounded-md border border-input bg-gray-50 px-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                           />
                           <button
                             type="button"
@@ -1565,10 +1575,10 @@ export default function NewProductPage() {
                 </div>
 
                 {/* Variant image */}
-                <div className="mt-3 border-t border-gray-200 pt-3">
+                <div className="mt-3 border-t border-input pt-3">
                   <span className="mb-1.5 block text-xs text-gray-500">Variant Image</span>
                   {variant.imagePreview || variant.imageUrl ? (
-                    <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
+                    <div className="relative inline-block h-16 w-16 overflow-hidden rounded-lg border border-input">
                       {/* eslint-disable-next-line @next/next/no-img-element -- may be a blob: URL preview */}
                       <img
                         src={variant.imageUrl || variant.imagePreview}
@@ -1589,7 +1599,7 @@ export default function NewProductPage() {
                       </button>
                     </div>
                   ) : (
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-600">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-input px-3 py-2 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:text-foreground">
                       <Upload className="h-3.5 w-3.5" />
                       Upload
                       <input
@@ -1620,7 +1630,7 @@ export default function NewProductPage() {
             <button
               type="button"
               onClick={addAttribute}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
               <Plus className="h-3.5 w-3.5" />
               Add
@@ -1628,7 +1638,7 @@ export default function NewProductPage() {
           </div>
 
           {attributes.length === 0 ? (
-            <p className="mt-5 rounded-lg border border-dashed border-gray-200 py-6 text-center text-sm text-gray-500">
+            <p className="mt-5 rounded-lg border border-dashed border-input py-6 text-center text-sm text-gray-500">
               No attributes yet. Click Add to create one.
             </p>
           ) : (
@@ -1640,14 +1650,14 @@ export default function NewProductPage() {
                     value={attr.key}
                     onChange={(e) => updateAttribute(attr.id, "key", e.target.value)}
                     placeholder="Key"
-                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-input bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                   />
                   <input
                     type="text"
                     value={attr.value}
                     onChange={(e) => updateAttribute(attr.id, "value", e.target.value)}
                     placeholder="Value"
-                    className="h-9 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
+                    className="h-9 flex-1 rounded-lg border border-input bg-gray-50 px-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-none"
                   />
                   <button
                     type="button"
@@ -1680,19 +1690,19 @@ export default function NewProductPage() {
                 onChange={(e) => setCreateDeal(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-brand-gold transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-gray-200 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+              <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-brand-gold transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-input after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
             </label>
           </div>
 
           {createDeal && (
-            <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+            <div className="mt-4 pt-4 border-t border-input space-y-4">
               <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <Tag className="h-4 w-4" />
                 Deal Details
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Deal Title *</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">Deal Title *</label>
                 <input
                   type="text"
                   value={dealTitle}
@@ -1703,7 +1713,7 @@ export default function NewProductPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Description</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">Description</label>
                 <textarea
                   value={dealDescription}
                   onChange={(e) => setDealDescription(e.target.value)}
@@ -1715,7 +1725,7 @@ export default function NewProductPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Badge Text</label>
+                  <label className="mb-1 block text-xs font-medium text-foreground">Badge Text</label>
                   <input
                     type="text"
                     value={dealBadgeText}
@@ -1725,7 +1735,7 @@ export default function NewProductPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Discount %</label>
+                  <label className="mb-1 block text-xs font-medium text-foreground">Discount %</label>
                   <input
                     type="number"
                     min={0}
@@ -1752,7 +1762,7 @@ export default function NewProductPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Start Date</label>
+                  <label className="mb-1 block text-xs font-medium text-foreground">Start Date</label>
                   <input
                     type="datetime-local"
                     value={dealStartAt}
@@ -1761,7 +1771,7 @@ export default function NewProductPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">End Date</label>
+                  <label className="mb-1 block text-xs font-medium text-foreground">End Date</label>
                   <input
                     type="datetime-local"
                     value={dealEndAt}
@@ -1777,10 +1787,10 @@ export default function NewProductPage() {
         </div>{/* end of 2-column grid */}
 
         {/* ─── Submit bar ─── */}
-        <div className="flex flex-col-reverse items-center justify-end gap-3 border-t border-gray-200 pt-6 sm:flex-row">
+        <div className="flex flex-col-reverse items-center justify-end gap-3 border-t border-input pt-6 sm:flex-row">
           <Link
             href="/dashboard/products"
-            className="w-full rounded-lg border border-gray-200 px-5 py-2.5 text-center text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900 sm:w-auto"
+            className="w-full rounded-lg border border-input px-5 py-2.5 text-center text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900 sm:w-auto"
           >
             Cancel
           </Link>
@@ -1788,7 +1798,7 @@ export default function NewProductPage() {
             type="submit"
             disabled={!canSubmit}
             onClick={() => setSubmitAction("draft")}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-5 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-input bg-gray-50 px-5 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           >
             {saving && submitAction === "draft" ? (
               <>
@@ -1806,7 +1816,7 @@ export default function NewProductPage() {
             type="submit"
             disabled={!canSubmit}
             onClick={() => setSubmitAction("pending_review")}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-gold px-6 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-gold px-6 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           >
             {saving && submitAction === "pending_review" ? (
               <>
@@ -1824,7 +1834,7 @@ export default function NewProductPage() {
       {showMediaPicker && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setShowMediaPicker(false)}>
           <div className="w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-input px-6 py-4">
               <h3 className="text-lg font-semibold text-gray-900">Select from Media Library</h3>
               <button type="button" onClick={() => setShowMediaPicker(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
                 <X className="h-5 w-5" />
@@ -1855,7 +1865,7 @@ export default function NewProductPage() {
                           "group relative aspect-square overflow-hidden rounded-lg border-2 transition-colors",
                           alreadyAdded
                             ? "border-primary opacity-60 cursor-not-allowed"
-                            : "border-gray-200 hover:border-primary/60 cursor-pointer",
+                            : "border-input hover:border-primary/60 cursor-pointer",
                         )}
                       >
                         <Image src={item.url} alt={item.name} fill sizes="(max-width: 640px) 33vw, 20vw" className="object-cover" />

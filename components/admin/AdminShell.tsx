@@ -148,7 +148,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen min-w-0 bg-gray-50">
       {/* Mobile header */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-gray-200 px-4 lg:hidden bg-white">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-input px-4 lg:hidden bg-white">
         <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-foreground transition-colors">
           <Menu className="h-5 w-5" />
         </button>

@@ -386,7 +386,7 @@ export default function RegionsPage() {
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors shrink-0"
+          className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors shrink-0"
         >
           <Plus className="h-4 w-4" />
           Add Region
@@ -548,7 +548,7 @@ export default function RegionsPage() {
           <button
             onClick={handleSave}
             disabled={saving || !form.code.trim() || !form.name.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
           >
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {editingRegion ? "Update" : "Create"}

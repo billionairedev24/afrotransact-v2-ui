@@ -158,7 +158,7 @@ export default function AdminDealsPage() {
           </span>
         )
         return (
-          <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
+          <span className="inline-flex items-center gap-1 rounded-full border border-input bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
             <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />Disabled
           </span>
         )
@@ -231,7 +231,7 @@ export default function AdminDealsPage() {
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 sm:w-auto"
+          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover sm:w-auto"
         >
           <Plus className="h-4 w-4" /> New Deal
         </button>
@@ -253,35 +253,35 @@ export default function AdminDealsPage() {
         <SheetBody>
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Title *</label>
+              <label className="text-xs font-medium text-foreground uppercase tracking-wide">Title *</label>
               <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="e.g. Become a Seller — First Month Free!" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Description</label>
+              <label className="text-xs font-medium text-foreground uppercase tracking-wide">Description</label>
               <textarea value={form.description || ""} onChange={e => setForm({ ...form, description: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary resize-none" rows={2} placeholder="Short description for the banner" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Content</label>
+              <label className="text-xs font-medium text-foreground uppercase tracking-wide">Content</label>
               <textarea value={form.content || ""} onChange={e => setForm({ ...form, content: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary resize-none" rows={3} placeholder="Extended content / details" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Badge Text</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Badge Text</label>
                 <input value={form.badgeText || ""} onChange={e => setForm({ ...form, badgeText: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="e.g. NEW, HOT, FREE" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Target Audience</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Target Audience</label>
                 <select value={form.targetAudience || "GENERAL"} onChange={e => setForm({ ...form, targetAudience: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary bg-white">
                   {AUDIENCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Banner Image URL</label>
+              <label className="text-xs font-medium text-foreground uppercase tracking-wide">Banner Image URL</label>
               <input value={form.bannerImageUrl || ""} onChange={e => setForm({ ...form, bannerImageUrl: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="https://... (optional)" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-1"><Palette className="h-3.5 w-3.5" /> Colors</label>
+              <label className="text-xs font-medium text-foreground uppercase tracking-wide flex items-center gap-1"><Palette className="h-3.5 w-3.5" /> Colors</label>
               <div className="grid grid-cols-3 gap-3 mt-1">
                 <div>
                   <span className="text-[10px] text-gray-500">Primary</span>
@@ -309,8 +309,8 @@ export default function AdminDealsPage() {
 
             {form.title && (
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Preview</label>
-                <div className="mt-1 rounded-xl overflow-hidden border border-gray-200" style={{
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Preview</label>
+                <div className="mt-1 rounded-xl overflow-hidden border border-input" style={{
                   background: form.bannerImageUrl ? `url(${form.bannerImageUrl}) center/cover no-repeat` : `linear-gradient(135deg, ${form.secondaryColor}, ${form.primaryColor}40)`,
                 }}>
                   <div className="p-5 min-h-[120px] flex flex-col justify-between" style={{ background: form.bannerImageUrl ? "rgba(0,0,0,0.45)" : undefined }}>
@@ -331,33 +331,33 @@ export default function AdminDealsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">CTA Button Text</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">CTA Button Text</label>
                 <input value={form.ctaText || ""} onChange={e => setForm({ ...form, ctaText: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="e.g. Start Selling" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">CTA Link</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">CTA Link</label>
                 <input value={form.ctaLink || ""} onChange={e => setForm({ ...form, ctaLink: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" placeholder="/sell or https://..." />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Start Date</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Start Date</label>
                 <input type="datetime-local" value={form.startAt ? new Date(form.startAt).toISOString().slice(0, 16) : ""} onChange={e => setForm({ ...form, startAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">End Date</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">End Date</label>
                 <input type="datetime-local" value={form.endAt ? new Date(form.endAt).toISOString().slice(0, 16) : ""} onChange={e => setForm({ ...form, endAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Sort Order</label>
+                <label className="text-xs font-medium text-foreground uppercase tracking-wide">Sort Order</label>
                 <input type="number" value={form.sortOrder ?? 0} onChange={e => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary" />
               </div>
             </div>
           </div>
         </SheetBody>
         <SheetFooter>
-          <button onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={saving || !form.title} className="rounded-xl bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-50">
+          <button onClick={() => setShowForm(false)} className="rounded-xl border border-input px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={saving || !form.title} className="rounded-xl bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? "Update" : "Create"}
           </button>
         </SheetFooter>
@@ -369,7 +369,7 @@ export default function AdminDealsPage() {
         <SheetBody>
           {preview && (
             <div className="space-y-4">
-              <div className="rounded-xl overflow-hidden border border-gray-200" style={{
+              <div className="rounded-xl overflow-hidden border border-input" style={{
                 background: preview.bannerImageUrl ? `url(${preview.bannerImageUrl}) center/cover no-repeat` : `linear-gradient(135deg, ${preview.secondaryColor}, ${preview.primaryColor}40)`,
               }}>
                 <div className="p-6 min-h-[160px] flex flex-col justify-between" style={{ background: preview.bannerImageUrl ? "rgba(0,0,0,0.45)" : undefined }}>
@@ -386,24 +386,24 @@ export default function AdminDealsPage() {
                 </div>
               </div>
               {preview.content && (
-                <div className="rounded-xl border border-gray-200 p-4">
+                <div className="rounded-xl border border-input p-4">
                   <p className="text-sm text-gray-600 whitespace-pre-wrap">{preview.content}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-xl border border-gray-200 p-3">
+                <div className="rounded-xl border border-input p-3">
                   <p className="text-[11px] text-gray-500 uppercase font-medium">Target</p>
                   <p className="text-gray-900 font-medium">{AUDIENCE_OPTIONS.find(a => a.value === preview.targetAudience)?.label}</p>
                 </div>
-                <div className="rounded-xl border border-gray-200 p-3">
+                <div className="rounded-xl border border-input p-3">
                   <p className="text-[11px] text-gray-500 uppercase font-medium">Status</p>
                   <p className="text-gray-900 font-medium">{preview.active ? "Active" : preview.enabled ? "Scheduled" : "Disabled"}</p>
                 </div>
-                <div className="rounded-xl border border-gray-200 p-3">
+                <div className="rounded-xl border border-input p-3">
                   <p className="text-[11px] text-gray-500 uppercase font-medium">CTA Link</p>
                   <p className="text-gray-900 font-medium truncate">{preview.ctaLink || "—"}</p>
                 </div>
-                <div className="rounded-xl border border-gray-200 p-3">
+                <div className="rounded-xl border border-input p-3">
                   <p className="text-[11px] text-gray-500 uppercase font-medium">Created</p>
                   <p className="text-gray-900 font-medium">{formatDate(preview.createdAt)}</p>
                 </div>
@@ -412,7 +412,7 @@ export default function AdminDealsPage() {
           )}
         </SheetBody>
         <SheetFooter>
-          <button onClick={() => setPreview(null)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Close</button>
+          <button onClick={() => setPreview(null)} className="rounded-xl border border-input px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">Close</button>
         </SheetFooter>
       </Sheet>
     </div>

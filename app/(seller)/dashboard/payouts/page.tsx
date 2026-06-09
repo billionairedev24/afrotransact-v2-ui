@@ -55,7 +55,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? { label: status, color: "text-gray-600", bg: "bg-gray-50 border-gray-200", dot: "bg-gray-400" }
+  const cfg = STATUS_CONFIG[status] ?? { label: status, color: "text-gray-600", bg: "bg-gray-50 border-input", dot: "bg-gray-400" }
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.bg} ${cfg.color}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
@@ -74,7 +74,7 @@ function BreakdownLine({ label, amount, variant = "default", indent = false }: {
   const isTotal = variant === "total"
   const isHighlight = variant === "highlight"
   return (
-    <div className={`flex items-center justify-between py-1.5 ${isTotal ? "border-t border-gray-200 pt-3 mt-1" : ""} ${indent ? "pl-4" : ""}`}>
+    <div className={`flex items-center justify-between py-1.5 ${isTotal ? "border-t border-input pt-3 mt-1" : ""} ${indent ? "pl-4" : ""}`}>
       <span className={`text-sm ${isTotal || isHighlight ? "font-semibold text-gray-900" : "text-gray-600"}`}>{label}</span>
       <span className={`text-sm font-mono tabular-nums ${isDeduction ? "text-red-600" : isTotal || isHighlight ? "font-semibold text-gray-900" : "text-gray-900"}`}>
         {isDeduction ? `−${formatCents(amount)}` : formatCents(amount)}
@@ -266,7 +266,7 @@ export default function PayoutsPage() {
         ].map((card) => {
           const Icon = card.icon
           return (
-            <div key={card.label} className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3 sm:p-5">
+            <div key={card.label} className="min-w-0 rounded-2xl border border-input bg-white p-3 sm:p-5">
               <div className="mb-2 flex items-center gap-2 sm:mb-3 sm:gap-3">
                 <div className={`shrink-0 rounded-lg p-1.5 sm:p-2 ${card.iconBg}`}>
                   <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${card.color}`} />
@@ -280,18 +280,21 @@ export default function PayoutsPage() {
         })}
       </div>
 
-      {/* How payouts work */}
-      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <DollarSign className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm text-gray-900 font-medium">How payouts work</p>
-          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-            When a customer pays, Stripe deducts its processing fee (~2.9% + $0.30). The platform then deducts its
-            commission. Tax and shipping are collected and remitted separately. The remaining amount is your net payout,
-            transferred to your Stripe account after ~2 business days of settlement.
-          </p>
+      {/* How payouts work — internal explainer, hidden in production. Set
+          NEXT_PUBLIC_APP_ENV=production in prod env to suppress. */}
+      {process.env.NEXT_PUBLIC_APP_ENV !== "production" && (
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <DollarSign className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm text-gray-900 font-medium">How payouts work</p>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              When a customer pays, Stripe deducts its processing fee (~2.9% + $0.30). The platform then deducts its
+              commission. Tax and shipping are collected and remitted separately. The remaining amount is your net payout,
+              transferred to your Stripe account after ~2 business days of settlement.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Status filter + table */}
       <div className="space-y-3">
@@ -300,7 +303,7 @@ export default function PayoutsPage() {
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPageIndex(0) }}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 outline-none focus:border-primary/60"
+            className="rounded-lg border border-input bg-white px-3 py-1.5 text-xs text-gray-600 outline-none focus:border-primary/60"
           >
             <option value="">All statuses</option>
             <option value="pending_settlement">Settling</option>
@@ -371,14 +374,14 @@ export default function PayoutsPage() {
                 return (
                   <div className="space-y-3">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Financial Breakdown</h3>
-                    <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-1">
+                    <div className="rounded-xl border border-input bg-white p-5 space-y-1">
                       <BreakdownLine label="Product subtotal" amount={selected.subtotalCents} />
                       {discount > 0 && (
                         <BreakdownLine label={selected.couponCode ? `Coupon applied (${selected.couponCode})` : "Coupon discount"} amount={discount} variant="deduction" />
                       )}
                       <BreakdownLine label="Shipping collected" amount={selected.shippingCents} />
                       <BreakdownLine label="Tax collected" amount={selected.taxCents} />
-                      <div className="border-t border-gray-200 my-2" />
+                      <div className="border-t border-input my-2" />
                       <BreakdownLine label="Total customer charge" amount={customerPaid} variant="highlight" />
                       <div className="border-t border-dashed border-gray-300 my-3" />
                       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 pb-1">Deductions</p>
@@ -417,7 +420,7 @@ export default function PayoutsPage() {
                     { label: "Transferred At", value: formatDateTime(selected.transferredAt) },
                     { label: "Stripe Transfer ID", value: selected.stripeTransferId || "Pending" },
                   ].map((item) => (
-                    <div key={item.label} className="rounded-xl border border-gray-200 bg-gray-50 p-3.5">
+                    <div key={item.label} className="rounded-xl border border-input bg-gray-50 p-3.5">
                       <p className="text-[11px] font-medium uppercase tracking-wider text-gray-500 mb-1">{item.label}</p>
                       <div className="flex items-center gap-2">
                         <p className="break-all text-sm font-medium text-gray-900 truncate">{item.value}</p>
@@ -435,7 +438,7 @@ export default function PayoutsPage() {
           )}
         </SheetBody>
         <SheetFooter>
-          <button onClick={() => setSelected(null)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+          <button onClick={() => setSelected(null)} className="rounded-xl border border-input px-5 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
             Close
           </button>
         </SheetFooter>

@@ -53,6 +53,8 @@ type FormData = {
   allowedCarriers: string[]
   logoUrl: string
   bannerUrl: string
+  returnsSupported: boolean
+  returnWindowDays: string
 }
 
 function storeToForm(store: any): FormData {
@@ -75,6 +77,8 @@ function storeToForm(store: any): FormData {
       allowedCarriers: ["usps", "ups", "fedex"],
       logoUrl: "",
       bannerUrl: "",
+      returnsSupported: false,
+      returnWindowDays: "30",
     }
   }
   return {
@@ -95,6 +99,8 @@ function storeToForm(store: any): FormData {
     allowedCarriers: store.allowedCarriers ?? ["usps", "ups", "fedex"],
     logoUrl: store.logoUrl ?? "",
     bannerUrl: store.bannerUrl ?? "",
+    returnsSupported: store.returnsSupported ?? false,
+    returnWindowDays: String(store.returnWindowDays ?? 30),
   }
 }
 
@@ -126,6 +132,10 @@ function validateForm(data: FormData, carrierShippingEnabled: boolean): { valid:
     errors.push(
       "Carrier shipping is enabled for the platform: complete your ship-from address (or match it to your business address with a full business address).",
     )
+  }
+  if (data.returnsSupported) {
+    const w = parseInt(data.returnWindowDays, 10)
+    if (isNaN(w) || w < 1 || w > 365) errors.push("Return window must be between 1 and 365 days")
   }
   // Logo and banner URLs come from UploadThing — no manual URL validation needed
   return { valid: errors.length === 0, errors }
@@ -303,6 +313,10 @@ export default function StoreSettingsPage() {
           allowedCarriers: form.allowedCarriers,
           logoUrl: form.logoUrl.trim() || null,
           bannerUrl: form.bannerUrl.trim() || null,
+          returnsSupported: form.returnsSupported,
+          returnWindowDays: form.returnsSupported
+            ? parseInt(form.returnWindowDays, 10) || 30
+            : null,
         }
         const updated = await updateStore(token, store.id, payload)
         setForm(storeToForm(updated))
@@ -326,10 +340,14 @@ export default function StoreSettingsPage() {
           allowedCarriers: form.allowedCarriers,
         }
         const created = await createStore(token, createPayload)
-        if (form.logoUrl.trim() || form.bannerUrl.trim()) {
+        if (form.logoUrl.trim() || form.bannerUrl.trim() || form.returnsSupported) {
           await updateStore(token, created.id, {
             logoUrl: form.logoUrl.trim() || null,
             bannerUrl: form.bannerUrl.trim() || null,
+            returnsSupported: form.returnsSupported,
+            returnWindowDays: form.returnsSupported
+              ? parseInt(form.returnWindowDays, 10) || 30
+              : null,
           })
         }
         setSuccess(true)
@@ -776,6 +794,61 @@ export default function StoreSettingsPage() {
           </div>
         </section>}
 
+        {/* Returns Policy — per-store. Shown verbatim on PDP & checkout. */}
+        <section className="rounded-lg border border-border bg-card p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+              <Store className="h-4 w-4 text-foreground" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Returns Policy</h2>
+              <p className="text-sm text-muted-foreground">
+                Buyers see this exact policy on the product page and at checkout.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <label className="inline-flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={form.returnsSupported}
+                onChange={(e) => update("returnsSupported", e.target.checked)}
+                className="h-4 w-4 rounded border-input text-foreground"
+              />
+              We accept returns
+            </label>
+
+            {form.returnsSupported && (
+              <div className="max-w-xs">
+                <label
+                  htmlFor="returnWindowDays"
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Return window (days) *
+                </label>
+                <div className="relative">
+                  <input
+                    id="returnWindowDays"
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={form.returnWindowDays}
+                    onChange={(e) => update("returnWindowDays", e.target.value)}
+                    className={inputClass}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    days
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Days from delivery within which buyers may initiate a return (1–365).
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* Branding */}
         <section className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center gap-3">
@@ -827,7 +900,7 @@ export default function StoreSettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-md bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold/90 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover disabled:opacity-50"
           >
             {saving ? (
               <>

@@ -17,7 +17,7 @@ import {
 import { useAdminAnalyticsSettings, useInvalidateAnalyticsSettings } from "@/hooks/use-analytics-settings"
 
 const INPUT_CLASS =
-  "rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
+  "rounded-xl border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
 
 function humanizeKey(key: string): string {
   return key
@@ -211,8 +211,8 @@ export default function FeatureFlagsPage() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
-        <div className="px-5 py-4 border-b border-gray-200 flex items-start gap-3">
+      <div className="rounded-2xl border border-input overflow-hidden bg-white">
+        <div className="px-5 py-4 border-b border-input flex items-start gap-3">
           <BarChart2 className="h-5 w-5 text-gray-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-gray-900 font-semibold text-sm">Analytics access</p>
@@ -341,7 +341,7 @@ export default function FeatureFlagsPage() {
             </div>
           ) : (
             <>
-              <div className="rounded-2xl border border-gray-200 divide-y divide-gray-100 overflow-hidden bg-white">
+              <div className="rounded-2xl border border-input divide-y divide-gray-100 overflow-hidden bg-white">
                 {flags.map((flag) => (
                   <div key={flag.id || flag.key} className="flex items-center gap-4 px-5 py-4">
                     <div className="flex-1 min-w-0">
@@ -380,8 +380,8 @@ export default function FeatureFlagsPage() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
-                <div className="px-5 py-4 border-b border-gray-200">
+              <div className="rounded-2xl border border-input overflow-hidden bg-white">
+                <div className="px-5 py-4 border-b border-input">
                   <p className="text-gray-900 font-medium text-sm">Add region flag</p>
                 </div>
                 <form onSubmit={handleAddFlag} className="p-5 flex items-end gap-3">
@@ -398,7 +398,7 @@ export default function FeatureFlagsPage() {
                   <button
                     type="submit"
                     disabled={adding || !newFlagKey.trim()}
-                    className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-900 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    className="flex items-center gap-2 rounded-xl border border-input bg-gray-50 px-4 py-2 text-sm text-gray-900 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                   >
                     {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                     Add flag
