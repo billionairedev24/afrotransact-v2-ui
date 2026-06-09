@@ -252,61 +252,59 @@ function OrderCard({ order }: { order: OrderDto }) {
   const reviewItem = reviewableItems.find((i) => i.id === reviewItemId) ?? reviewableItems[0]
 
   return (
-    <article className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 gap-4 hover:shadow-md transition-shadow">
-      {/* Header — package icon + order number + ordered date · status pill
-          (mockup order-1 lines 158-166) */}
-      <header className="flex items-start justify-between gap-3 border-b border-gray-200 pb-3">
-        <div className="flex items-start gap-2 min-w-0">
-          <Package className="h-5 w-5 shrink-0 text-gray-500 mt-0.5" strokeWidth={1.75} />
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <p className="text-lg font-bold text-foreground font-mono">#{order.orderNumber}</p>
-            <p className="text-xs text-gray-500">Ordered {formatDate(placedDate)}</p>
+    <article className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      {/* Compact gray header strip — Amazon-style.
+          Order placed | Total | Ship to (left) · Order # + status (right). */}
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-xs">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+          <div>
+            <p className="font-semibold uppercase tracking-wide text-[10px] text-gray-500">Order placed</p>
+            <p className="text-gray-900">{formatDate(placedDate)}</p>
+          </div>
+          <div>
+            <p className="font-semibold uppercase tracking-wide text-[10px] text-gray-500">Total</p>
+            <p className="text-gray-900 font-semibold tabular-nums">{formatCents(order.totalCents, order.currency)}</p>
           </div>
         </div>
-        <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold whitespace-nowrap", badge.tone)}>
-          <badge.Icon className="h-3.5 w-3.5" />
-          {badge.label}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap", badge.tone)}>
+            <badge.Icon className="h-3 w-3" />
+            {badge.label}
+          </span>
+          <span className="text-[11px] text-gray-600 font-mono">#{order.orderNumber}</span>
+        </div>
       </header>
 
-      {/* Body — product visual + summary */}
-      <div className="flex gap-4">
-        {/* Thumbnail or 2x2 grid for multi-item */}
-        <OrderThumb items={allItems} />
-
-        <div className="flex flex-col flex-1 min-w-0 justify-between">
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-foreground line-clamp-2">
-              {allItems.length > 1
-                ? `${firstItem?.productTitle ?? "Multiple items"} + ${allItems.length - 1} more`
-                : firstItem?.productTitle ?? "Order"}
-            </h3>
-            {firstItem?.variantName && (
-              <p className="text-xs text-gray-500 mt-1">{firstItem.variantName}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              {allItems.reduce((n, i) => n + i.quantity, 0)} item{allItems.reduce((n, i) => n + i.quantity, 0) === 1 ? "" : "s"}
-              {order.subOrders.length > 1 && ` · ${order.subOrders.length} stores`}
-            </p>
-          </div>
-          <p className="text-xl font-bold text-foreground mt-2">
-            {formatCents(order.totalCents, order.currency)}
-          </p>
+      {/* Body — tighter row layout */}
+      <div className="flex gap-3 p-4">
+        <div className="shrink-0">
+          <OrderThumb items={allItems} />
         </div>
-      </div>
-
-      {/* Footer — helper text + action row */}
-      <footer className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-gray-200 mt-auto">
-        {helper ? (
-          <p className="flex items-center gap-1.5 text-xs text-gray-500">
-            <helper.Icon className="h-3.5 w-3.5 text-brand-gold" />
-            {helper.text}
+        <div className="flex flex-1 min-w-0 flex-col gap-1">
+          <h3 className="text-sm font-semibold text-foreground line-clamp-2 leading-snug">
+            {allItems.length > 1
+              ? `${firstItem?.productTitle ?? "Multiple items"} + ${allItems.length - 1} more`
+              : firstItem?.productTitle ?? "Order"}
+          </h3>
+          {firstItem?.variantName && (
+            <p className="text-xs text-gray-500">{firstItem.variantName}</p>
+          )}
+          <p className="text-xs text-gray-500">
+            {allItems.reduce((n, i) => n + i.quantity, 0)} item{allItems.reduce((n, i) => n + i.quantity, 0) === 1 ? "" : "s"}
+            {order.subOrders.length > 1 && ` · ${order.subOrders.length} stores`}
           </p>
-        ) : <span />}
-        <div className="flex gap-2 w-full sm:w-auto">
+          {helper && (
+            <p className="flex items-center gap-1.5 text-xs text-gray-600 mt-1">
+              <helper.Icon className="h-3 w-3 text-brand-gold" />
+              {helper.text}
+            </p>
+          )}
+        </div>
+        {/* Action column — right-aligned, stacked, narrow */}
+        <div className="flex shrink-0 flex-col gap-1.5 w-32 sm:w-36">
           {actions}
         </div>
-      </footer>
+      </div>
 
       {reviewOpen && reviewItem?.productId && (
         <WriteReviewModal
@@ -627,7 +625,10 @@ export default function OrdersPage() {
         if (!token || cancelled) return
         const res = await getBuyerOrders(token, page, PAGE_SIZE, debouncedSearch || undefined)
         if (cancelled) return
-        setOrders(res.content)
+        // Server now filters pre-payment placeholders + system-cancelled
+        // sweeps, so totalElements lines up with rendered rows. No client-
+        // side filter needed.
+        setOrders(res.content ?? [])
         setTotalPages(res.totalPages ?? Math.ceil((res.totalElements ?? 0) / PAGE_SIZE))
         setTotalElements(res.totalElements ?? 0)
       } catch (e) {

@@ -280,18 +280,21 @@ export default function PayoutsPage() {
         })}
       </div>
 
-      {/* How payouts work */}
-      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <DollarSign className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm text-gray-900 font-medium">How payouts work</p>
-          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-            When a customer pays, Stripe deducts its processing fee (~2.9% + $0.30). The platform then deducts its
-            commission. Tax and shipping are collected and remitted separately. The remaining amount is your net payout,
-            transferred to your Stripe account after ~2 business days of settlement.
-          </p>
+      {/* How payouts work — internal explainer, hidden in production. Set
+          NEXT_PUBLIC_APP_ENV=production in prod env to suppress. */}
+      {process.env.NEXT_PUBLIC_APP_ENV !== "production" && (
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <DollarSign className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm text-gray-900 font-medium">How payouts work</p>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              When a customer pays, Stripe deducts its processing fee (~2.9% + $0.30). The platform then deducts its
+              commission. Tax and shipping are collected and remitted separately. The remaining amount is your net payout,
+              transferred to your Stripe account after ~2 business days of settlement.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Status filter + table */}
       <div className="space-y-3">

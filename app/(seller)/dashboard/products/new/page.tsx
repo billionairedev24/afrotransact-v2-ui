@@ -1149,13 +1149,23 @@ export default function NewProductPage() {
                 Manage size, color, and material options.
               </p>
             </div>
-            <a
-              href="#custom-attributes"
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("custom-attributes")
+                if (!el) return
+                el.scrollIntoView({ behavior: "smooth", block: "start" })
+                // Briefly highlight so the seller knows where they landed.
+                el.classList.add("ring-2", "ring-brand-gold", "ring-offset-2")
+                window.setTimeout(() => {
+                  el.classList.remove("ring-2", "ring-brand-gold", "ring-offset-2")
+                }, 1600)
+              }}
               className="inline-flex items-center gap-2 rounded-lg border border-input bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shrink-0"
             >
               <Settings className="h-4 w-4" />
               Configure Attributes
-            </a>
+            </button>
           </div>
 
           {/* Variants table — mockup lines 344-373 */}

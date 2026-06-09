@@ -21,6 +21,7 @@ import {
   type Page as ApiPage,
 } from "@/lib/api"
 import { pickPrimarySellerStoreId } from "@/lib/seller-store"
+import { formatShippingAddressLines } from "@/lib/format-address"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   pending:    { label: "Pending",    className: "bg-yellow-50 text-yellow-700" },
@@ -373,12 +374,25 @@ function OrderDetailModal({
           </div>
         </div>
 
-        {order.raw.shippingAddress && (
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Shipping Address</p>
-            <p className="mt-1 text-sm text-gray-600">{order.raw.shippingAddress}</p>
-          </div>
-        )}
+        {/* Privacy: sellers see only the buyer's name during the pickup-only
+            beta — full shipping address, phone, and email are withheld so
+            sellers can't bypass the platform to contact buyers directly. The
+            address comes back to this view once we enable real shipping
+            (carrier label generation + tracking) and the seller actually
+            needs it to ship. */}
+        {(() => {
+          const lines = formatShippingAddressLines(order.raw.shippingAddress)
+          if (lines.length === 0) return null
+          return (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Buyer</p>
+              <p className="mt-1 text-sm text-gray-600">{lines[0] /* fullName */}</p>
+              <p className="mt-1 text-[11px] text-gray-400 italic">
+                Delivery details withheld — pickup arranged by AfroTransact.
+              </p>
+            </div>
+          )
+        })()}
 
         <div className="rounded-xl border border-input bg-gray-50 p-4 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Customer payment (whole order)</p>

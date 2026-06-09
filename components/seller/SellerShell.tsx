@@ -19,6 +19,7 @@ import {
   Ticket,
   Tag,
   BarChart2,
+  ShieldAlert,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/deals",        label: "Deals",          icon: Tag             },
   { href: "/dashboard/payouts",      label: "Payouts",        icon: DollarSign      },
   { href: "/dashboard/subscription", label: "Subscription",   icon: CreditCard      },
+  { href: "/dashboard/account-status", label: "Account Status", icon: ShieldAlert    },
   { href: "/dashboard/store",        label: "Store Settings", icon: Settings        },
 ]
 
@@ -60,6 +62,11 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
   )
 
   const avatarLetter = userName?.charAt(0)?.toUpperCase() ?? "S"
+
+  const sellerAtRisk = !!seller && (
+    (seller.lifecycleStage && seller.lifecycleStage !== "ACTIVE") ||
+    (!seller.lifecycleStage && (seller.stripeRequirementsDue || !seller.chargesEnabled || !seller.payoutsEnabled))
+  )
 
   return (
     <div className="min-h-screen min-w-0 bg-gray-50">
@@ -115,6 +122,9 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
                 >
                   <Icon className="h-5 w-5 shrink-0" />
                   <span>{item.label}</span>
+                  {item.href === "/dashboard/account-status" && sellerAtRisk && (
+                    <span className="ml-auto inline-flex h-2 w-2 rounded-full bg-rose-500" aria-label="Action required" />
+                  )}
                 </Link>
               )
             })}

@@ -27,6 +27,7 @@ import {
   type Page as ApiPage,
 } from "@/lib/api"
 import { useStoreNameMap } from "@/hooks/use-stores"
+import { formatShippingAddressLines } from "@/lib/format-address"
 
 function statusBadge(status: string) {
   const s = getStatusStyle(status)
@@ -315,12 +316,18 @@ function AdminOrderDetailSheet({
               </div>
             </div>
 
-            {order.raw.shippingAddress && (
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Shipping Address</p>
-                <p className="mt-1 text-sm text-gray-600">{order.raw.shippingAddress}</p>
-              </div>
-            )}
+            {(() => {
+              const lines = formatShippingAddressLines(order.raw.shippingAddress)
+              if (lines.length === 0) return null
+              return (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Shipping Address</p>
+                  <div className="mt-1 text-sm text-gray-600 space-y-0.5">
+                    {lines.map((line, i) => <p key={i}>{line}</p>)}
+                  </div>
+                </div>
+              )
+            })()}
 
             {order.raw.subOrders.map((sub) => (
               <div key={sub.id} className="rounded-xl border border-input p-4 space-y-4 bg-gray-50">

@@ -77,6 +77,8 @@ import {
   type ShippingQuoteResponse,
   getRegionConfig,
   getStoreById,
+  listSavedPaymentMethods,
+  type SavedPaymentMethod,
 } from "@/lib/api"
 import { resolveDefaultRegion } from "@/lib/regions"
 
@@ -963,6 +965,9 @@ export default function CheckoutClient({
   // need the PaymentIntent to carry a Stripe Customer + setup_future_usage.
   // The PI is minted by /orders/checkout, so toggling this flag forces a
   // re-mint of the order (idempotency key is cleared first).
+  // Off by default — buyer explicitly opts in to remember the card. Some
+  // buyers prefer not to. The picker still surfaces any previously-saved
+  // cards even when this is off.
   const [saveCard, setSaveCard] = useState(false)
   // Idempotency-Key reused across retries of the same logical placement so
   // a network blip can't create a second order. Reset when the user goes back.
@@ -999,6 +1004,8 @@ export default function CheckoutClient({
   const [region, setRegion] = useState<Region | null>(null)
   const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
+  const [savedCards, setSavedCards] = useState<SavedPaymentMethod[]>([])
+  const [selectedSavedCardId, setSelectedSavedCardId] = useState<string | null>(null)
   const [authToken, setAuthToken] = useState<string | null>(null)
   const [allDeals, setAllDeals] = useState<DealData[]>([])
   const [appliedDeal, setAppliedDeal] = useState<DealData | null>(null)
@@ -1137,6 +1144,17 @@ export default function CheckoutClient({
         const token = await getAccessToken()
         if (!token || cancelled) return
         setAuthToken(token)
+        // Saved cards — soft-fail; payment step still works without them.
+        listSavedPaymentMethods(token)
+          .then((cards) => {
+            if (cancelled) return
+            setSavedCards(cards ?? [])
+            const def = (cards ?? []).find((c) => c.isDefault)
+            // Pre-select nothing — let buyers explicitly choose to use a
+            // saved card so the picker isn't accidentally locked in. If you
+            // want a default selection, switch to `def?.stripePmId ?? null`.
+          })
+          .catch(() => { /* no saved cards or endpoint unavailable */ })
         const [allRegions, deals] = await Promise.all([
           getRegions(token, true),
           getActiveDeals().catch((): DealData[] => []),
@@ -1678,13 +1696,12 @@ export default function CheckoutClient({
                   stripeAvailable={stripeAvailable}
                   paymentMethods={paymentMethods}
                   saveCard={saveCard}
-                  // Toggling triggers a re-mint of the PaymentIntent because the
-                  // Stripe Customer must be attached at PI-creation time.
                   onSaveCardChangeAction={(next) => {
                     setSaveCard(next)
-                    resetCheckoutSession()
-                    setStep("review")
                   }}
+                  savedCards={savedCards}
+                  selectedSavedCardId={selectedSavedCardId}
+                  onSelectedSavedCardChangeAction={setSelectedSavedCardId}
                 />
               ) : (
                 <p className="text-sm text-gray-500">

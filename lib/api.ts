@@ -520,6 +520,10 @@ export interface SellerInfo {
   payoutsEnabled: boolean
   stripeRequirementsDue: boolean
   stripeDisabledReason: string | null
+  lifecycleStage: string | null
+  currentlyDueItems: string[] | null
+  pastDueItems: string[] | null
+  currentDeadline: string | null
   commissionRate: number
   contactEmail: string | null
   createdAt: string
@@ -570,6 +574,21 @@ export function getPaymentSettings(token: string) {
 
 export function updatePaymentSettings(token: string, data: PaymentSettings) {
   return api<PaymentSettings>("/api/v1/admin/settings/payment", { method: "PUT", body: data, token })
+}
+
+// ── Admin: Alerts settings (Slack webhook) ──
+
+export interface AlertsSettings {
+  slack_enabled: boolean
+  slack_webhook_url: string
+}
+
+export function getAlertsSettings(token: string) {
+  return api<AlertsSettings>("/api/v1/admin/settings/alerts", { token })
+}
+
+export function updateAlertsSettings(token: string, data: AlertsSettings) {
+  return api<AlertsSettings>("/api/v1/admin/settings/alerts", { method: "PUT", body: data, token })
 }
 
 // ── Seller Onboarding (multi-step) ──
@@ -1316,6 +1335,9 @@ export function checkout(token: string, data: CheckoutRequest, idempotencyKey?: 
 
 export interface SavedPaymentMethod {
   id: string
+  /** Stripe's PaymentMethod id (pm_...). Send this — not `id` — to
+   *  stripe.confirmCardPayment / confirmPayment. */
+  stripePmId: string
   brand: string | null
   last4: string | null
   expMonth: number | null
@@ -1629,11 +1651,23 @@ export function rejectProduct(token: string, productId: string, reason: string) 
 
 // ── Admin: Sellers ──
 
-export function getAdminSellers(token: string, status?: string, page = 0, size = 20, onboardingStatus?: string) {
+export function getAdminSellers(token: string, status?: string, page = 0, size = 20, onboardingStatus?: string, atRisk?: boolean) {
   let qs = `?page=${page}&size=${size}`
   if (status) qs += `&status=${status}`
   if (onboardingStatus) qs += `&onboardingStatus=${onboardingStatus}`
+  if (atRisk) qs += `&at_risk=true`
   return api<Page<SellerInfo>>(`/api/v1/admin/sellers${qs}`, { token })
+}
+
+export function getSellerLifecycleSummary(token: string) {
+  return api<Record<string, number>>(`/api/v1/admin/sellers/lifecycle-summary`, { token })
+}
+
+export function nudgeSellerLifecycle(token: string, sellerId: string) {
+  return api<{ ok: boolean; stage?: string; reason?: string }>(
+    `/api/v1/admin/sellers/${encodeURIComponent(sellerId)}/lifecycle-nudge`,
+    { method: "POST", token },
+  )
 }
 
 export function approveSeller(token: string, id: string) {
@@ -2764,7 +2798,7 @@ export async function getRecommendations(
 
 // ── Seller Invites ────────────────────────────────────────────────────────────
 
-export type SellerInviteStatus = "pending" | "used" | "expired" | "revoked"
+export type SellerInviteStatus = "pending" | "consumed" | "expired" | "revoked"
 
 export interface SellerInvite {
   id: string
@@ -2816,6 +2850,10 @@ export function listSellerInvites(token: string, params: ListSellerInvitesParams
   if (params.size !== undefined) qs.set("size", String(params.size))
   const suffix = qs.toString() ? `?${qs.toString()}` : ""
   return api<Page<SellerInvite>>(`/api/v1/admin/seller-invites${suffix}`, { token })
+}
+
+export function getSellerInviteStats(token: string) {
+  return api<Record<SellerInviteStatus, number>>(`/api/v1/admin/seller-invites/stats`, { token })
 }
 
 export function revokeSellerInvite(token: string, id: string) {

@@ -260,17 +260,19 @@ export default function SellerDealsPage() {
         </button>
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <Tag className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm text-gray-900 font-medium">How deals work</p>
-          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-            <strong>Store-wide deals</strong> apply across your entire store (e.g. "Free Shipping Weekend").{" "}
-            <strong>Product deals</strong> target a specific product with a discount percentage or fixed price.
-            Active deals appear on the homepage and deals page.
-          </p>
+      {process.env.NEXT_PUBLIC_APP_ENV !== "production" && (
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <Tag className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm text-gray-900 font-medium">How deals work</p>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              <strong>Store-wide deals</strong> apply across your entire store (e.g. "Free Shipping Weekend").{" "}
+              <strong>Product deals</strong> target a specific product with a discount percentage or fixed price.
+              Active deals appear on the homepage and deals page.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="overflow-hidden rounded-2xl border border-input bg-white">
         <div className="border-b border-input px-4 py-4 sm:px-5">
