@@ -7,7 +7,7 @@ import { useState } from "react"
 // fallback so the FAB just works without an env config in prod. Override
 // per-env by setting NEXT_PUBLIC_WHATSAPP_SUPPORT_NUMBER in Vercel/.env.local
 // (e.g. for staging routing to a different number). E.164 format expected.
-const DEFAULT_WHATSAPP_NUMBER = "+1512508885"
+const DEFAULT_WHATSAPP_NUMBER = "+15125088885"
 
 /**
  * Floating WhatsApp chat FAB.

@@ -44,9 +44,11 @@ import {
   submitOnboardingForReview,
   getPublicPlans,
   refreshOnboardingStripeStatus,
+  getCategories,
   type OnboardingProgress,
   type OnboardingDocument,
   type SubscriptionPlan,
+  type CategoryRef,
 } from "@/lib/api"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import { useUploadThing } from "@/lib/uploadthing"
@@ -99,14 +101,6 @@ const ENTITY_TYPES = [
 // product-only. Re-add when services category goes live.
 const BUSINESS_TYPES = [
   { value: "goods", label: "Goods" },
-]
-
-const INDUSTRY_CATEGORIES = [
-  "Food & Beverage", "Fashion & Apparel", "Beauty & Personal Care",
-  "Home & Garden", "Electronics", "Arts & Crafts", "Health & Wellness",
-  "Jewelry & Accessories", "Books & Media", "Sports & Outdoors",
-  "Toys & Games", "Automotive", "Pet Supplies", "Agriculture",
-  "Professional Services", "Other",
 ]
 
 interface Principal {
@@ -246,6 +240,7 @@ export default function SellerOnboardingPage() {
   const [zip, setZip] = useState("")
   const [country, setCountry] = useState("US")
   const [industryCategory, setIndustryCategory] = useState("")
+  const [industryCategories, setIndustryCategories] = useState<CategoryRef[]>([])
   const [annualRevenue, setAnnualRevenue] = useState("")
   const [numberOfEmployees, setNumberOfEmployees] = useState("")
 
@@ -379,6 +374,13 @@ export default function SellerOnboardingPage() {
         const allPlans = await getPublicPlans()
         setPlans(allPlans.filter((p) => p.active).sort((a, b) => a.displayOrder - b.displayOrder))
       } catch { /* plans will show empty state */ }
+      try {
+        const cats = await getCategories()
+        const roots = cats
+          .filter((c) => c.parentId === null)
+          .sort((a, b) => (a.sortOrder - b.sortOrder) || a.name.localeCompare(b.name))
+        setIndustryCategories(roots)
+      } catch { /* industry select will show empty state */ }
       setLoading(false)
     }
 
@@ -844,6 +846,7 @@ export default function SellerOnboardingPage() {
             zip={zip} setZip={setZip}
             country={country} setCountry={setCountry}
             industryCategory={industryCategory} setIndustryCategory={setIndustryCategory}
+            industryCategories={industryCategories}
             annualRevenue={annualRevenue} setAnnualRevenue={setAnnualRevenue}
             numberOfEmployees={numberOfEmployees} setNumberOfEmployees={setNumberOfEmployees}
             sensitiveFieldsLocked={maxReachedStep > 0}
@@ -1055,7 +1058,7 @@ function BusinessStep({
   website, setWebsite, businessDescription, setBusinessDescription,
   addressLine1, setAddressLine1, addressLine2, setAddressLine2,
   city, setCity, state, setState, zip, setZip, country, setCountry,
-  industryCategory, setIndustryCategory,
+  industryCategory, setIndustryCategory, industryCategories,
   annualRevenue, setAnnualRevenue,
   numberOfEmployees, setNumberOfEmployees,
   sensitiveFieldsLocked = false,
@@ -1076,6 +1079,7 @@ function BusinessStep({
   zip: string; setZip: (v: string) => void
   country: string; setCountry: (v: string) => void
   industryCategory: string; setIndustryCategory: (v: string) => void
+  industryCategories: CategoryRef[]
   annualRevenue: string; setAnnualRevenue: (v: string) => void
   numberOfEmployees: string; setNumberOfEmployees: (v: string) => void
   sensitiveFieldsLocked?: boolean
@@ -1111,8 +1115,8 @@ function BusinessStep({
         <div>
           <label className={labelCls}>Industry Category</label>
           <select value={industryCategory} onChange={(e) => setIndustryCategory(e.target.value)} className={selectCls}>
-            <option value="" className="bg-white">Select…</option>
-            {INDUSTRY_CATEGORIES.map((c) => <option key={c} value={c} className="bg-white">{c}</option>)}
+            <option value="" className="bg-white">{industryCategories.length === 0 ? "Loading…" : "Select…"}</option>
+            {industryCategories.map((c) => <option key={c.id} value={c.name} className="bg-white">{c.name}</option>)}
           </select>
         </div>
         <div>
