@@ -96,6 +96,21 @@ const STEP_LABELS: Record<number, string> = {
   6: "Payment Setup",
 }
 
+const TERMINAL_STATUSES = new Set([
+  "submitted",
+  "pending_review",
+  "under_review",
+  "approved",
+  "active",
+  "rejected",
+  "suspended",
+])
+
+function progressLabel(status: string, step: number): string {
+  if (TERMINAL_STATUSES.has(status.toLowerCase().replace(/ /g, "_"))) return "Complete"
+  return STEP_LABELS[step] || `Step ${step}`
+}
+
 function fmtDate(iso: string | null) {
   if (!iso) return "—"
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -316,7 +331,7 @@ export default function AdminSellersPage() {
                           <StatusBadge status={s.onboardingStatus} />
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                          {STEP_LABELS[s.onboardingStep] || `Step ${s.onboardingStep}`}
+                          {progressLabel(s.onboardingStatus, s.onboardingStep)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{fmtDate(s.submittedAt)}</td>
                         <td className="px-4 py-3">

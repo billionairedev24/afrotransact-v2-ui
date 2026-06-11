@@ -636,6 +636,17 @@ export default function SellerOnboardingPage() {
   // ── Step 5: Payment Setup (Stripe Connect + Payment Method) ──
 
   async function saveStripe() {
+    // Skip the round-trip if a Connect account already exists. The backend is
+    // idempotent, but skipping avoids any chance of triggering Stripe's risk
+    // signals on retries and short-circuits the UX for already-connected sellers.
+    if (progress?.stripe?.stripeAccountId) {
+      if (progress.stripe.chargesEnabled && progress.stripe.payoutsEnabled) {
+        toast.success("Stripe is already connected")
+      } else {
+        toast.info("Stripe account exists. Click 'Continue Stripe Setup' to finish verification.")
+      }
+      return true
+    }
     setSaving(true)
     try {
       const p = await withToken((t) => setupOnboardingStripe(t))
@@ -820,7 +831,7 @@ export default function SellerOnboardingPage() {
       <div
         className={`rounded-2xl border ${BORDER} ${CARD} p-6 sm:p-8 mt-8`}
       >
-        {submitted && step < 6 && (
+        {submitted && (
           <div className="mb-6 flex items-center gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
             <Lock className="h-4 w-4 text-yellow-400 shrink-0" />
             <p className="text-sm text-yellow-600">
@@ -828,7 +839,7 @@ export default function SellerOnboardingPage() {
             </p>
           </div>
         )}
-        <fieldset disabled={submitted && step < 6} className={submitted && step < 6 ? "opacity-70 pointer-events-none" : ""}>
+        <fieldset disabled={submitted} className={submitted ? "opacity-70 pointer-events-none" : ""}>
         {step === 0 && (
           <BusinessStep
             businessName={businessName} setBusinessName={setBusinessName}
@@ -849,7 +860,7 @@ export default function SellerOnboardingPage() {
             industryCategories={industryCategories}
             annualRevenue={annualRevenue} setAnnualRevenue={setAnnualRevenue}
             numberOfEmployees={numberOfEmployees} setNumberOfEmployees={setNumberOfEmployees}
-            sensitiveFieldsLocked={maxReachedStep > 0}
+            sensitiveFieldsLocked={submitted}
             errors={fieldErrors}
           />
         )}
@@ -863,7 +874,7 @@ export default function SellerOnboardingPage() {
             formationDate={formationDate} setFormationDate={setFormationDate}
             dbaName={dbaName} setDbaName={setDbaName}
             principals={principals} setPrincipals={setPrincipals}
-            sensitiveFieldsLocked={maxReachedStep > 1}
+            sensitiveFieldsLocked={submitted}
             errors={fieldErrors}
           />
         )}
