@@ -2257,7 +2257,11 @@ function ReviewStep({
             <span className="text-sm text-gray-700">
               I have read and agree to the{" "}
               <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary underline font-medium">
-                AfroTransact Seller Terms &amp; Conditions
+                Terms &amp; Conditions
+              </Link>
+              {" "}and the{" "}
+              <Link href="/seller-agreement" target="_blank" rel="noopener noreferrer" className="text-primary underline font-medium">
+                Seller Agreement
               </Link>
               . I confirm the information above is true and accurate.
             </span>
