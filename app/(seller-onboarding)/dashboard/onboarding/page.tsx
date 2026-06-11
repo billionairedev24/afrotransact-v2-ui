@@ -132,6 +132,11 @@ interface DocumentSlot {
   uploaded?: OnboardingDocument
 }
 
+// TODO: re-enable document tooltips once final legal/ops-approved verbiage
+// lands. Flip SHOW_DOCUMENT_HINTS back to true (or replace with an env-driven
+// flag) after the copy review.
+const SHOW_DOCUMENT_HINTS = false
+
 const DOCUMENT_HINTS: Record<string, string> = {
   government_id: "Clear photo of a current government-issued ID (driver's license, passport, or state ID). Both front and back if applicable; all four corners visible, no glare.",
   business_license: "Current business license or DBA registration issued by your city / county / state. PDF or image of the full document.",
@@ -1860,7 +1865,7 @@ function DocumentsStep({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-gray-900">{slot.label}</p>
-                    {DOCUMENT_HINTS[slot.type] && (
+                    {SHOW_DOCUMENT_HINTS && DOCUMENT_HINTS[slot.type] && (
                       <InfoTooltip text={DOCUMENT_HINTS[slot.type]} />
                     )}
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${slot.required ? "bg-red-500/10 text-red-600" : "bg-gray-50 text-gray-500"}`}>
