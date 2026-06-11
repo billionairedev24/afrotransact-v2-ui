@@ -29,6 +29,8 @@ import {
   Wallet,
   ImageIcon,
   Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
@@ -177,6 +179,18 @@ function getRequiredDocuments(entityType: string): DocumentSlot[] {
     default:
       return []
   }
+}
+
+/**
+ * Strip leading zeros from a string-backed numeric input so that e.g. typing
+ * "21" after the placeholder "0" doesn't leave you with "021". Empty stays
+ * empty; a lone "0" stays "0".
+ */
+function stripLeadingZeros(v: string): string {
+  const cleaned = v.replace(/\D/g, "")
+  if (cleaned === "") return ""
+  const trimmed = cleaned.replace(/^0+/, "")
+  return trimmed === "" ? "0" : trimmed
 }
 
 function needsEIN(entityType: string) {
@@ -1220,7 +1234,7 @@ function BusinessStep({
         </div>
         <div>
           <label className={labelCls}>Number of Employees</label>
-          <input value={numberOfEmployees} onChange={(e) => setNumberOfEmployees(e.target.value)} className={inputCls} placeholder="e.g. 5" type="number" min="0" />
+          <input value={numberOfEmployees} onChange={(e) => setNumberOfEmployees(stripLeadingZeros(e.target.value))} className={inputCls} placeholder="e.g. 5" inputMode="numeric" min="0" />
         </div>
         <div className="sm:col-span-2">
           <label className={labelCls}>Business Description</label>
@@ -1327,6 +1341,7 @@ function EntityDetailsStep({
   const isIndividual = ["individual", "sole_proprietorship"].includes(et)
   const showEIN = needsEIN(et)
   const showPrincipals = needsPrincipals(et)
+  const [einVisible, setEinVisible] = useState(false)
 
   function addPrincipal() {
     setPrincipals([...principals, emptyPrincipal()])
@@ -1393,20 +1408,30 @@ function EntityDetailsStep({
                 <InfoTooltip text="Your 9-digit IRS-issued Employer Identification Number. Encrypted at rest. Cannot be changed after submission." />
                 {sensitiveFieldsLocked && ein && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}
               </label>
-              <input
-                value={ein}
-                onChange={(e) => {
-                  let v = e.target.value.replace(/[^\d-]/g, "")
-                  if (v.length === 2 && !v.includes("-") && ein.length < v.length) v += "-"
-                  setEin(v.slice(0, 10))
-                }}
-                className={errors.ein ? inputErrCls : inputCls}
-                placeholder="XX-XXXXXXX"
-                maxLength={10}
-                type="password"
-                autoComplete="off"
-                disabled={sensitiveFieldsLocked && !!ein}
-              />
+              <div className="relative">
+                <input
+                  value={ein}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/[^\d-]/g, "")
+                    if (v.length === 2 && !v.includes("-") && ein.length < v.length) v += "-"
+                    setEin(v.slice(0, 10))
+                  }}
+                  className={`${errors.ein ? inputErrCls : inputCls} pr-10`}
+                  placeholder="XX-XXXXXXX"
+                  maxLength={10}
+                  type={einVisible ? "text" : "password"}
+                  autoComplete="off"
+                  disabled={sensitiveFieldsLocked && !!ein}
+                />
+                <button
+                  type="button"
+                  onClick={() => setEinVisible((v) => !v)}
+                  aria-label={einVisible ? "Hide EIN" : "Show EIN"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary rounded-r-xl"
+                >
+                  {einVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <FieldError error={errors.ein} />
             </div>
             <div>
@@ -1717,10 +1742,10 @@ function StoreStep({
           <label className={labelCls}>Delivery Radius (miles)</label>
           <input
             value={deliveryRadius}
-            onChange={(e) => setDeliveryRadius(e.target.value)}
+            onChange={(e) => setDeliveryRadius(stripLeadingZeros(e.target.value))}
             className={inputCls}
             placeholder="25"
-            type="number"
+            inputMode="numeric"
             min="0"
             max="500"
           />
