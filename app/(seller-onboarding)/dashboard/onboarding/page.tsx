@@ -1166,9 +1166,9 @@ function BusinessStep({
         <div>
           <label className={`${labelCls} inline-flex items-center gap-1.5`}>
             What do you sell?<RequiredDot />
-            <InfoTooltip text="Determines which entity types and verification documents apply. Cannot be changed after submission." />
+            <InfoTooltip text="Determines which entity types and verification documents apply. After submission, changing this requires admin re-validation and may require re-uploading compliance documents." />
           </label>
-          <select value={businessType} onChange={(e) => setBusinessType(e.target.value)} className={selectCls} disabled={locked && !!businessType}>
+          <select value={businessType} onChange={(e) => setBusinessType(e.target.value)} className={selectCls}>
             <option value="" className="bg-white">Select…</option>
             {BUSINESS_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-white">{t.label}</option>)}
           </select>
@@ -1198,11 +1198,8 @@ function BusinessStep({
           <FieldError error={errors.contactPhone} />
         </div>
         <div>
-          <label className={`${labelCls} inline-flex items-center gap-1.5`}>
-            Contact Email<RequiredDot />
-            <InfoTooltip text="Primary email for account notices and Stripe communication. Cannot be changed after submission." />
-          </label>
-          <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={errors.contactEmail ? inputErrCls : inputCls} placeholder="business@example.com" type="email" disabled={locked && !!contactEmail} />
+          <label className={labelCls}>Contact Email<RequiredDot /></label>
+          <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={errors.contactEmail ? inputErrCls : inputCls} placeholder="business@example.com" type="email" />
           <FieldError error={errors.contactEmail} />
         </div>
         <div>
@@ -2256,12 +2253,8 @@ function ReviewStep({
             />
             <span className="text-sm text-gray-700">
               I have read and agree to the{" "}
-              <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary underline font-medium">
-                Terms &amp; Conditions
-              </Link>
-              {" "}and the{" "}
               <Link href="/seller-agreement" target="_blank" rel="noopener noreferrer" className="text-primary underline font-medium">
-                Seller Agreement
+                AfroTransact Seller Agreement
               </Link>
               . I confirm the information above is true and accurate.
             </span>
