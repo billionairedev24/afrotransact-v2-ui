@@ -13,6 +13,7 @@ import {
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   reviewAdminSeller,
+  suspendSeller,
   triggerOnboardingReminders,
   sendSellerReminder,
   API_BASE,
@@ -61,7 +62,7 @@ interface AdminSellerRow {
   approvedAt: string | null
 }
 
-type ActionMode = "none" | "reject" | "request"
+type ActionMode = "none" | "reject" | "request" | "suspend"
 
 const TABS = [
   { key: "all", label: "All" },
@@ -190,6 +191,20 @@ export default function AdminSellersPage() {
   }
 
   const loading = sellersLoading || (sessionStatus === "loading")
+
+  async function handleSuspend(sellerId: string, reason: string) {
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      await suspendSeller(token, sellerId, reason)
+      toast.success("Seller suspended")
+      closeDetail()
+      invalidateSellers()
+    } catch (e) {
+      logError(e, "suspending seller")
+      toast.error("Failed to suspend seller")
+    }
+  }
 
   async function handleReview(sellerId: string, action: string, reason?: string, adminNotes?: string) {
     try {
@@ -340,6 +355,7 @@ export default function AdminSellersPage() {
                             onView={() => openDetail(s.id)}
                             onApprove={() => handleReview(s.id, "approve")}
                             onReject={() => openDetail(s.id, "reject")}
+                            onSuspend={() => openDetail(s.id, "suspend")}
                             onRequestInfo={() => openDetail(s.id, "request")}
                             onSendReminder={async () => {
                               try {
@@ -396,6 +412,7 @@ export default function AdminSellersPage() {
         initialMode={panelAction}
         onClose={closeDetail}
         onReview={handleReview}
+        onSuspend={handleSuspend}
       />
       <InviteSellerModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
@@ -457,6 +474,7 @@ function ActionDropdown({
   onView,
   onApprove,
   onReject,
+  onSuspend,
   onRequestInfo,
   onSendReminder,
 }: {
@@ -464,6 +482,7 @@ function ActionDropdown({
   onView: () => void
   onApprove: () => void
   onReject: () => void
+  onSuspend: () => void
   onRequestInfo: () => void
   onSendReminder: () => void
 }) {
@@ -550,7 +569,7 @@ function ActionDropdown({
               </DdItem>
             )}
             {canSuspend && (
-              <DdItem icon={<XIcon className="h-3.5 w-3.5" />} className="text-red-700" onClick={() => { onReject(); setOpen(false) }}>
+              <DdItem icon={<XIcon className="h-3.5 w-3.5" />} className="text-red-700" onClick={() => { onSuspend(); setOpen(false) }}>
                 Suspend Seller
               </DdItem>
             )}
@@ -584,6 +603,7 @@ function DetailPanel({
   initialMode,
   onClose,
   onReview,
+  onSuspend,
 }: {
   open: boolean
   detail: AdminSellerDetail | null
@@ -591,10 +611,12 @@ function DetailPanel({
   initialMode: ActionMode
   onClose: () => void
   onReview: (id: string, action: string, reason?: string, adminNotes?: string) => Promise<void>
+  onSuspend: (id: string, reason: string) => Promise<void>
 }) {
   const [mode, setMode] = useState<ActionMode>("none")
   const [reason, setReason] = useState("")
   const [message, setMessage] = useState("")
+  const [suspensionReason, setSuspensionReason] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -604,6 +626,7 @@ function DetailPanel({
     setMode(initialMode)
     setReason("")
     setMessage("")
+    setSuspensionReason("")
     setSubmitting(false)
   }, [detail?.id, initialMode])
 
@@ -612,6 +635,17 @@ function DetailPanel({
     setSubmitting(true)
     try {
       await onReview(detail.id, action, action === "reject" ? text : undefined, action === "request_info" ? text : undefined)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function submitSuspend() {
+    if (!detail) return
+    if (!suspensionReason.trim()) { toast.error("Please provide a suspension reason"); return }
+    setSubmitting(true)
+    try {
+      await onSuspend(detail.id, suspensionReason.trim())
     } finally {
       setSubmitting(false)
     }
@@ -781,6 +815,12 @@ function DetailPanel({
                       <p className="text-sm text-red-600">{detail.rejectionReason}</p>
                     </div>
                   )}
+                  {detail.suspensionReason && (
+                    <div className="mt-3 rounded-xl border border-red-200 px-4 py-3 bg-white">
+                      <p className="text-xs text-red-600 mb-1">Suspension Reason</p>
+                      <p className="text-sm text-red-600">{detail.suspensionReason}</p>
+                    </div>
+                  )}
                   {detail.adminNotes && (
                     <div className="mt-2 rounded-xl border border-gray-100 px-4 py-3 bg-white">
                       <p className="text-xs text-gray-500 mb-1">Admin Notes</p>
@@ -802,7 +842,7 @@ function DetailPanel({
                           {submitting ? "Approving…" : "Approve"}
                         </button>
                       )}
-                      {!isApproved && (
+                      {!isApproved && st !== "suspended" && (
                         <>
                           <button onClick={() => setMode("reject")} className="flex-1 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors">
                             Reject
@@ -811,6 +851,11 @@ function DetailPanel({
                             Request Info
                           </button>
                         </>
+                      )}
+                      {isApproved && (
+                        <button onClick={() => setMode("suspend")} className="flex-1 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors">
+                          Suspend
+                        </button>
                       )}
                     </div>
                   )}
@@ -837,6 +882,36 @@ function DetailPanel({
                           className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50 transition-colors"
                         >
                           {submitting ? "Rejecting…" : "Confirm Reject"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {mode === "suspend" && (
+                    <div className="space-y-3">
+                      <div className="rounded-xl border border-red-200 bg-red-50/50 px-4 py-3">
+                        <p className="text-xs font-semibold text-red-700 mb-1">Suspend {detail.businessName}</p>
+                        <p className="text-xs text-red-600/80">
+                          This will disable the seller&apos;s stores and prevent new orders. The seller is notified with the reason below.
+                        </p>
+                      </div>
+                      <textarea
+                        value={suspensionReason}
+                        onChange={(e) => setSuspensionReason(e.target.value)}
+                        placeholder="Reason for suspension (required)…"
+                        rows={3}
+                        className="w-full rounded-xl border border-input bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-red-500/50 resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setMode("none")} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                          Cancel
+                        </button>
+                        <button
+                          onClick={submitSuspend}
+                          disabled={submitting || !suspensionReason.trim()}
+                          className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50 transition-colors"
+                        >
+                          {submitting ? "Suspending…" : "Confirm Suspend"}
                         </button>
                       </div>
                     </div>

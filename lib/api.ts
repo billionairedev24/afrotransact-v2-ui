@@ -795,6 +795,8 @@ export interface AdminSellerDetail {
   payoutsEnabled: boolean
   commissionRate: number
   rejectionReason: string | null
+  suspensionReason: string | null
+  suspendedAt: string | null
   adminNotes: string | null
   createdAt: string
   submittedAt: string | null
@@ -1681,8 +1683,12 @@ export function approveSeller(token: string, id: string) {
   return api<SellerInfo>(`/api/v1/admin/sellers/${id}/approve`, { method: "POST", token })
 }
 
-export function suspendSeller(token: string, id: string) {
-  return api<SellerInfo>(`/api/v1/admin/sellers/${id}/suspend`, { method: "POST", token })
+export function suspendSeller(token: string, id: string, reason: string) {
+  return api<SellerInfo>(`/api/v1/admin/sellers/${id}/suspend`, {
+    method: "POST",
+    token,
+    body: { reason },
+  })
 }
 
 export function triggerOnboardingReminders(token: string) {
