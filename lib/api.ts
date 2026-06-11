@@ -747,8 +747,15 @@ export function confirmOnboardingPaymentMethod(token: string, paymentMethodId: s
   return api<OnboardingProgress>(`/api/v1/seller/onboarding/stripe/confirm-payment-method?paymentMethodId=${paymentMethodId}`, { method: "POST", token })
 }
 
-export function submitOnboardingForReview(token: string) {
-  return api<OnboardingProgress>("/api/v1/seller/onboarding/submit", { method: "POST", token })
+export function submitOnboardingForReview(
+  token: string,
+  body: { signedName: string; termsVersion: string }
+) {
+  return api<OnboardingProgress>("/api/v1/seller/onboarding/submit", {
+    method: "POST",
+    token,
+    body,
+  })
 }
 
 // ── Admin Seller Management (enhanced) ──
