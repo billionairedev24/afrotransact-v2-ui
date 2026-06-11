@@ -1331,6 +1331,8 @@ function EntityDetailsStep({
   const showEIN = needsEIN(et)
   const showPrincipals = needsPrincipals(et)
   const [einVisible, setEinVisible] = useState(false)
+  const [ssnVisible, setSsnVisible] = useState(false)
+  const [visiblePrincipalSsn, setVisiblePrincipalSsn] = useState<Record<string, boolean>>({})
 
   function addPrincipal() {
     setPrincipals([...principals, emptyPrincipal()])
@@ -1371,18 +1373,28 @@ function EntityDetailsStep({
                 <InfoTooltip text="Encrypted at rest. Used only for identity verification. Cannot be changed after submission." />
                 {sensitiveFieldsLocked && ssnLast4 && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}
               </label>
-              <input
-                value={ssnLast4}
-                onChange={(e) => setSsnLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                className={errors.ssnLast4 ? inputErrCls : inputCls}
-                placeholder="••••"
-                maxLength={4}
-                inputMode="numeric"
-                pattern="\d{4}"
-                type="password"
-                autoComplete="off"
-                disabled={sensitiveFieldsLocked && !!ssnLast4}
-              />
+              <div className="relative">
+                <input
+                  value={ssnLast4}
+                  onChange={(e) => setSsnLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  className={`${errors.ssnLast4 ? inputErrCls : inputCls} pr-10`}
+                  placeholder="••••"
+                  maxLength={4}
+                  inputMode="numeric"
+                  pattern="\d{4}"
+                  type={ssnVisible ? "text" : "password"}
+                  autoComplete="off"
+                  disabled={sensitiveFieldsLocked && !!ssnLast4}
+                />
+                <button
+                  type="button"
+                  onClick={() => setSsnVisible((v) => !v)}
+                  aria-label={ssnVisible ? "Hide SSN" : "Show SSN"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary rounded-r-xl"
+                >
+                  {ssnVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <FieldError error={errors.ssnLast4} />
               {!errors.ssnLast4 && <p className="text-xs text-gray-500 mt-1">Encrypted and stored securely. Used for identity verification only.</p>}
             </div>
@@ -1550,13 +1562,26 @@ function EntityDetailsStep({
                     </div>
                     <div>
                       <label className={labelCls}>SSN (last 4)</label>
-                      <input
-                        value={pr.ssnLast4}
-                        onChange={(e) => updatePrincipal(pr.id, "ssnLast4", e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        className={pe("ssn") ? inputErrCls : inputCls}
-                        maxLength={4}
-                        placeholder="••••"
-                      />
+                      <div className="relative">
+                        <input
+                          value={pr.ssnLast4}
+                          onChange={(e) => updatePrincipal(pr.id, "ssnLast4", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          className={`${pe("ssn") ? inputErrCls : inputCls} pr-10`}
+                          maxLength={4}
+                          placeholder="••••"
+                          inputMode="numeric"
+                          type={visiblePrincipalSsn[pr.id] ? "text" : "password"}
+                          autoComplete="off"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setVisiblePrincipalSsn((s) => ({ ...s, [pr.id]: !s[pr.id] }))}
+                          aria-label={visiblePrincipalSsn[pr.id] ? "Hide SSN" : "Show SSN"}
+                          className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary rounded-r-xl"
+                        >
+                          {visiblePrincipalSsn[pr.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                       <FieldError error={pe("ssn")} />
                     </div>
                     <div className="sm:col-span-3">
