@@ -8,6 +8,7 @@ import {
   X, CheckCircle2, XCircle, Search, Package, Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { normalizeInt, normalizeDecimal } from "@/lib/inputs"
 import { useUploadThing } from "@/lib/uploadthing"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { createMediaItem, type MediaItem, type CategoryRef } from "@/lib/api"
@@ -649,7 +650,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                       <div className="flex items-center h-9">
                         <span className="pl-2.5 text-xs text-gray-400 shrink-0">$</span>
                         <input type="number" placeholder="0.00" min="0" step="0.01" value={row.price}
-                          onChange={e => update(row.id, "price", e.target.value)}
+                          onChange={e => update(row.id, "price", normalizeDecimal(e.target.value))}
                           className={cn(CELL, "h-full pl-1")} />
                       </div>
                     </td>
@@ -662,7 +663,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                       <div className="flex items-center h-9">
                         <span className="pl-2.5 text-xs text-gray-400 shrink-0">$</span>
                         <input type="number" placeholder="0.00" min="0" step="0.01" value={row.compare_at_price}
-                          onChange={e => update(row.id, "compare_at_price", e.target.value)}
+                          onChange={e => update(row.id, "compare_at_price", normalizeDecimal(e.target.value))}
                           className={cn(CELL, "h-full pl-1")} />
                       </div>
                     </td>
@@ -673,7 +674,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                       style={{ width: colWidths.stock, minWidth: colWidths.stock }}
                     >
                       <input type="number" placeholder="0" min="0" step="1" value={row.stock}
-                        onChange={e => update(row.id, "stock", e.target.value)}
+                        onChange={e => update(row.id, "stock", normalizeInt(e.target.value))}
                         className={cn(CELL, "h-9")} />
                     </td>
 
@@ -684,7 +685,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
                     >
                       <div className="flex items-center h-9">
                         <input type="number" placeholder="0.0" min="0" step="0.1" value={row.weight}
-                          onChange={e => update(row.id, "weight", e.target.value)}
+                          onChange={e => update(row.id, "weight", normalizeDecimal(e.target.value))}
                           className={cn(CELL, "h-full flex-1 min-w-0")} />
                         <select value={row.weight_unit} onChange={e => update(row.id, "weight_unit", e.target.value as "lb" | "kg")}
                           className="h-full shrink-0 border-l border-gray-100 bg-gray-50 px-1 text-[11px] text-gray-500 outline-none cursor-pointer">

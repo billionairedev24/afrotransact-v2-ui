@@ -25,6 +25,7 @@ import {
   Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { normalizeInt, normalizeDecimal } from "@/lib/inputs"
 import {
   getCurrentSeller,
   getSellerStores,
@@ -993,7 +994,7 @@ export default function NewProductPage() {
                   step="0.01"
                   min="0"
                   value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
+                  onChange={(e) => setWeight(normalizeDecimal(e.target.value))}
                   onBlur={() => touch("weight")}
                   placeholder="0.00"
                   className={cn(inputCls(err("weight")), "flex-1")}
@@ -1024,7 +1025,7 @@ export default function NewProductPage() {
                     step="0.01"
                     min="0"
                     value={parcelLengthIn}
-                    onChange={(e) => setParcelLengthIn(e.target.value)}
+                    onChange={(e) => setParcelLengthIn(normalizeDecimal(e.target.value))}
                     onBlur={() => touch("parcelLengthIn")}
                     placeholder="L"
                     className={cn(inputCls(err("parcelLengthIn")), "w-full text-center")}
@@ -1038,7 +1039,7 @@ export default function NewProductPage() {
                     step="0.01"
                     min="0"
                     value={parcelWidthIn}
-                    onChange={(e) => setParcelWidthIn(e.target.value)}
+                    onChange={(e) => setParcelWidthIn(normalizeDecimal(e.target.value))}
                     onBlur={() => touch("parcelWidthIn")}
                     placeholder="W"
                     className={cn(inputCls(err("parcelWidthIn")), "w-full text-center")}
@@ -1052,7 +1053,7 @@ export default function NewProductPage() {
                     step="0.01"
                     min="0"
                     value={parcelHeightIn}
-                    onChange={(e) => setParcelHeightIn(e.target.value)}
+                    onChange={(e) => setParcelHeightIn(normalizeDecimal(e.target.value))}
                     onBlur={() => touch("parcelHeightIn")}
                     placeholder="H"
                     className={cn(inputCls(err("parcelHeightIn")), "w-full text-center")}
@@ -1085,7 +1086,7 @@ export default function NewProductPage() {
                     step="0.01"
                     min="0"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(e) => setPrice(normalizeDecimal(e.target.value))}
                     onBlur={() => touch("price")}
                     placeholder="0.00"
                     className={cn(inputCls(err("price")), "pl-8")}
@@ -1107,7 +1108,7 @@ export default function NewProductPage() {
                     step="0.01"
                     min="0"
                     value={compareAtPrice}
-                    onChange={(e) => setCompareAtPrice(e.target.value)}
+                    onChange={(e) => setCompareAtPrice(normalizeDecimal(e.target.value))}
                     onBlur={() => touch("compareAtPrice")}
                     placeholder="0.00"
                     className={cn(inputCls(err("compareAtPrice")), "pl-8")}
@@ -1130,7 +1131,7 @@ export default function NewProductPage() {
                   min="0"
                   step="1"
                   value={stockQuantity}
-                  onChange={(e) => setStockQuantity(e.target.value)}
+                  onChange={(e) => setStockQuantity(normalizeInt(e.target.value))}
                   onBlur={() => touch("stockQuantity")}
                   placeholder="0"
                   className={inputCls(err("stockQuantity"))}
@@ -1209,7 +1210,7 @@ export default function NewProductPage() {
                             step="0.01"
                             min="0"
                             value={variant.price}
-                            onChange={(e) => updateVariantField(variant.id, "price", e.target.value)}
+                            onChange={(e) => updateVariantField(variant.id, "price", normalizeDecimal(e.target.value))}
                             placeholder="$0.00"
                             className="w-24 rounded border border-input bg-white px-2 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
                           />
@@ -1219,7 +1220,7 @@ export default function NewProductPage() {
                             type="number"
                             min="0"
                             value={variant.stockQuantity}
-                            onChange={(e) => updateVariantField(variant.id, "stockQuantity", e.target.value)}
+                            onChange={(e) => updateVariantField(variant.id, "stockQuantity", normalizeInt(e.target.value))}
                             placeholder="0"
                             className="w-20 rounded border border-input bg-white px-2 py-1.5 text-sm text-foreground placeholder:text-gray-400 focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold"
                           />
@@ -1486,7 +1487,7 @@ export default function NewProductPage() {
                       step="0.01"
                       min="0"
                       value={variant.price}
-                      onChange={(e) => updateVariantField(variant.id, "price", e.target.value)}
+                      onChange={(e) => updateVariantField(variant.id, "price", normalizeDecimal(e.target.value))}
                       onBlur={() => touch(`v${idx}_price`)}
                       placeholder="0.00"
                       className={cn(inputCls(err(`v${idx}_price`)), "h-9")}
@@ -1502,7 +1503,7 @@ export default function NewProductPage() {
                       step="0.01"
                       min="0"
                       value={variant.compareAtPrice}
-                      onChange={(e) => updateVariantField(variant.id, "compareAtPrice", e.target.value)}
+                      onChange={(e) => updateVariantField(variant.id, "compareAtPrice", normalizeDecimal(e.target.value))}
                       placeholder="0.00"
                       className={cn(inputCls(err(`v${idx}_compare`)), "h-9")}
                     />
@@ -1518,7 +1519,7 @@ export default function NewProductPage() {
                       type="number"
                       min="0"
                       value={variant.stockQuantity}
-                      onChange={(e) => updateVariantField(variant.id, "stockQuantity", e.target.value)}
+                      onChange={(e) => updateVariantField(variant.id, "stockQuantity", normalizeInt(e.target.value))}
                       onBlur={() => touch(`v${idx}_stock`)}
                       placeholder="0"
                       className={cn(inputCls(err(`v${idx}_stock`)), "h-9")}

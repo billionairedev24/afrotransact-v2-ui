@@ -54,6 +54,7 @@ import {
 } from "@/lib/api"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import { InfoTooltip } from "@/components/ui/InfoTooltip"
+import { normalizeInt } from "@/lib/inputs"
 import Link from "next/link"
 import { useUploadThing } from "@/lib/uploadthing"
 import dynamic from "next/dynamic"
@@ -179,18 +180,6 @@ function getRequiredDocuments(entityType: string): DocumentSlot[] {
     default:
       return []
   }
-}
-
-/**
- * Strip leading zeros from a string-backed numeric input so that e.g. typing
- * "21" after the placeholder "0" doesn't leave you with "021". Empty stays
- * empty; a lone "0" stays "0".
- */
-function stripLeadingZeros(v: string): string {
-  const cleaned = v.replace(/\D/g, "")
-  if (cleaned === "") return ""
-  const trimmed = cleaned.replace(/^0+/, "")
-  return trimmed === "" ? "0" : trimmed
 }
 
 function needsEIN(entityType: string) {
@@ -1234,7 +1223,7 @@ function BusinessStep({
         </div>
         <div>
           <label className={labelCls}>Number of Employees</label>
-          <input value={numberOfEmployees} onChange={(e) => setNumberOfEmployees(stripLeadingZeros(e.target.value))} className={inputCls} placeholder="e.g. 5" inputMode="numeric" min="0" />
+          <input value={numberOfEmployees} onChange={(e) => setNumberOfEmployees(normalizeInt(e.target.value))} className={inputCls} placeholder="e.g. 5" inputMode="numeric" min="0" />
         </div>
         <div className="sm:col-span-2">
           <label className={labelCls}>Business Description</label>
@@ -1533,7 +1522,16 @@ function EntityDetailsStep({
                     </div>
                     <div>
                       <label className={labelCls}>Ownership %</label>
-                      <input value={pr.ownershipPct} onChange={(e) => updatePrincipal(pr.id, "ownershipPct", Number(e.target.value))} className={pe("ownership") ? inputErrCls : inputCls} type="number" min="0" max="100" placeholder="25" />
+                      <input
+                        value={pr.ownershipPct === 0 ? "" : String(pr.ownershipPct)}
+                        onChange={(e) => {
+                          const cleaned = normalizeInt(e.target.value)
+                          updatePrincipal(pr.id, "ownershipPct", cleaned === "" ? 0 : Math.min(100, Number(cleaned)))
+                        }}
+                        className={pe("ownership") ? inputErrCls : inputCls}
+                        inputMode="numeric"
+                        placeholder="25"
+                      />
                       <FieldError error={pe("ownership")} />
                     </div>
                     <div>
@@ -1742,7 +1740,7 @@ function StoreStep({
           <label className={labelCls}>Delivery Radius (miles)</label>
           <input
             value={deliveryRadius}
-            onChange={(e) => setDeliveryRadius(stripLeadingZeros(e.target.value))}
+            onChange={(e) => setDeliveryRadius(normalizeInt(e.target.value))}
             className={inputCls}
             placeholder="25"
             inputMode="numeric"
