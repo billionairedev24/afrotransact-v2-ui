@@ -71,8 +71,10 @@ function FilterSidebar({
   category,
   minPrice,
   maxPrice,
+  minRating,
   onCategoryChange,
   onPriceChange,
+  onRatingChange,
   onClearAll,
   hasActiveFilters,
 }: {
@@ -80,8 +82,10 @@ function FilterSidebar({
   category: string
   minPrice: string
   maxPrice: string
+  minRating: string
   onCategoryChange: (key: string) => void
   onPriceChange: (min: string, max: string) => void
+  onRatingChange: (stars: number) => void
   onClearAll: () => void
   hasActiveFilters: boolean
 }) {
@@ -162,44 +166,57 @@ function FilterSidebar({
         )}
       </FilterSection>
 
-      {/* Ratings — mockup all-products.html lines 192-229, radio + stars row */}
-      {facets.ratings.length > 0 && (
-        <FilterSection title="Customer Rating">
-          <div className="flex flex-col gap-2">
-            {facets.ratings.map((f) => {
-              const stars = parseInt(f.key, 10) || 0
-              return (
-                <label
-                  key={f.key}
-                  className="flex items-center gap-2 cursor-pointer group"
-                >
-                  <input
-                    type="radio"
-                    name="rating"
-                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                  />
-                  <span className="flex items-center">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={cn(
-                          "h-4 w-4",
-                          i < stars
-                            ? "fill-brand-gold text-brand-gold"
-                            : "fill-gray-200 text-gray-200"
-                        )}
-                      />
-                    ))}
-                  </span>
-                  <span className="text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    &amp; Up
-                  </span>
-                  <span className="ml-auto text-xs text-gray-400">({f.count})</span>
-                </label>
-              )
-            })}
-          </div>
-        </FilterSection>
+      {/* Ratings — render 1-5 stars unconditionally so the buyer can always
+          pick a threshold; the backend filters on min_rating (>= stars).
+          Facet counts are shown when the search response includes them. */}
+      <FilterSection title="Customer Rating">
+        <div className="flex flex-col gap-2">
+          {[5, 4, 3, 2, 1].map((stars) => {
+            const facet = facets.ratings.find((f) => parseInt(f.key, 10) === stars)
+            const checked = minRating === String(stars)
+            return (
+              <label
+                key={stars}
+                className="flex items-center gap-2 cursor-pointer group"
+              >
+                <input
+                  type="radio"
+                  name="rating"
+                  checked={checked}
+                  onChange={() => onRatingChange(stars)}
+                  className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                />
+                <span className="flex items-center">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={cn(
+                        "h-4 w-4",
+                        i < stars
+                          ? "fill-brand-gold text-brand-gold"
+                          : "fill-gray-200 text-gray-200"
+                      )}
+                    />
+                  ))}
+                </span>
+                <span className="text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
+                  &amp; Up
+                </span>
+                {facet && (
+                  <span className="ml-auto text-xs text-gray-400">({facet.count})</span>
+                )}
+              </label>
+            )
+          })}
+        </div>
+      </FilterSection>
+      {minRating && (
+        <button
+          onClick={() => onRatingChange(parseInt(minRating, 10))}
+          className="text-xs text-gray-500 hover:text-foreground underline -mt-2 ml-2"
+        >
+          Clear rating filter
+        </button>
       )}
 
       {/* Stores */}
@@ -303,8 +320,10 @@ function MobileFilterPanel({
   category,
   minPrice,
   maxPrice,
+  minRating,
   onCategoryChange,
   onPriceChange,
+  onRatingChange,
   onClearAll,
   hasActiveFilters,
 }: {
@@ -314,8 +333,10 @@ function MobileFilterPanel({
   category: string
   minPrice: string
   maxPrice: string
+  minRating: string
   onCategoryChange: (key: string) => void
   onPriceChange: (min: string, max: string) => void
+  onRatingChange: (stars: number) => void
   onClearAll: () => void
   hasActiveFilters: boolean
 }) {
@@ -358,12 +379,17 @@ function MobileFilterPanel({
               category={category}
               minPrice={minPrice}
               maxPrice={maxPrice}
+              minRating={minRating}
               onCategoryChange={(key) => {
                 onCategoryChange(key)
                 onClose()
               }}
               onPriceChange={(min, max) => {
                 onPriceChange(min, max)
+                onClose()
+              }}
+              onRatingChange={(stars) => {
+                onRatingChange(stars)
                 onClose()
               }}
               onClearAll={() => {
@@ -669,9 +695,10 @@ function SearchContent() {
   const sortBy = searchParams.get("sort") || "relevance"
   const minPrice = searchParams.get("min_price") || ""
   const maxPrice = searchParams.get("max_price") || ""
+  const minRating = searchParams.get("min_rating") || ""
   const page = parseInt(searchParams.get("page") || "1", 10)
 
-  const hasActiveFilters = !!(category || minPrice || maxPrice)
+  const hasActiveFilters = !!(category || minPrice || maxPrice || minRating)
 
   useEffect(() => {
     let cancelled = false
@@ -705,6 +732,7 @@ function SearchContent() {
     if (category) params.category = category
     if (minPrice) params.min_price = minPrice
     if (maxPrice) params.max_price = maxPrice
+    if (minRating) params.min_rating = minRating
 
     searchProducts(params)
       .then((res) => {
@@ -735,7 +763,7 @@ function SearchContent() {
     return () => {
       cancelled = true
     }
-  }, [query, category, sortBy, minPrice, maxPrice, page, flagsLoaded, marketplaceEnabled])
+  }, [query, category, sortBy, minPrice, maxPrice, minRating, page, flagsLoaded, marketplaceEnabled])
 
   const results = data?.results ?? []
   const totalResults = data?.total ?? 0
@@ -774,7 +802,12 @@ function SearchContent() {
   }
 
   function handleClearAll() {
-    updateMultipleParams({ category: "", min_price: "", max_price: "" })
+    updateMultipleParams({ category: "", min_price: "", max_price: "", min_rating: "" })
+  }
+
+  function handleRatingChange(stars: number) {
+    const next = minRating === String(stars) ? "" : String(stars)
+    updateParam("min_rating", next)
   }
 
   const emptyFacets: SearchResponse["facets"] = {
@@ -942,8 +975,10 @@ function SearchContent() {
                 category={category}
                 minPrice={minPrice}
                 maxPrice={maxPrice}
+                minRating={minRating}
                 onCategoryChange={handleCategoryChange}
                 onPriceChange={handlePriceChange}
+                onRatingChange={handleRatingChange}
                 onClearAll={handleClearAll}
                 hasActiveFilters={hasActiveFilters}
               />
@@ -960,8 +995,10 @@ function SearchContent() {
             category={category}
             minPrice={minPrice}
             maxPrice={maxPrice}
+            minRating={minRating}
             onCategoryChange={handleCategoryChange}
             onPriceChange={handlePriceChange}
+            onRatingChange={handleRatingChange}
             onClearAll={handleClearAll}
             hasActiveFilters={hasActiveFilters}
           />

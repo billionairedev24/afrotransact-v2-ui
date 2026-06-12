@@ -15,9 +15,9 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ChevronRight, Grid3X3, LayoutList, Loader2, Star, Tag } from "lucide-react"
+import { ChevronRight, Grid3X3, LayoutList, Loader2, Tag } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getActiveDeals, getCategories, type DealData, type CategoryRef } from "@/lib/api"
+import { getActiveDeals, type DealData } from "@/lib/api"
 import { BrandProductCard, BrandProductRow, type BrandProductCardItem } from "@/components/products/BrandProductCard"
 import { Pagination } from "@/components/products/Pagination"
 
@@ -47,26 +47,26 @@ function dealToCardItem(deal: DealData): BrandProductCardItem | null {
 
 export default function DealsPageClient() {
   const [deals, setDeals] = useState<DealData[]>([])
-  const [categories, setCategories] = useState<CategoryRef[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Client-side filter state — backend has no deal-faceting endpoint yet.
-  const [selectedCategorySlugs, setSelectedCategorySlugs] = useState<Set<string>>(new Set())
+  // Client-side filter state. Department + Customer Rating are intentionally
+  // hidden until the deals endpoint exposes product category / avg-rating
+  // alongside each deal — without those fields any client-side filter would
+  // either be a no-op or hide every deal. Discount can be filtered locally
+  // because it lives on DealData.
   const [discountMin, setDiscountMin] = useState<number | null>(null)
-  const [ratingMin, setRatingMin] = useState<number | null>(null)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [page, setPage] = useState(1)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const [dRes, cRes] = await Promise.allSettled([getActiveDeals(), getCategories()])
-      if (cancelled) return
-      if (dRes.status === "fulfilled") setDeals(dRes.value)
-      if (cRes.status === "fulfilled") {
-        setCategories(cRes.value.filter((c) => !c.parentId && c.slug !== "services"))
+      try {
+        const value = await getActiveDeals()
+        if (!cancelled) setDeals(value)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setLoading(false)
     }
     load()
     return () => {
@@ -77,37 +77,15 @@ export default function DealsPageClient() {
   const filtered = useMemo(() => {
     return deals.filter((d) => {
       if (discountMin != null && (d.discountPercent ?? 0) < discountMin) return false
-      // Rating filter requires a join to product data that DealData doesn't
-      // currently carry; honoured as a no-op until backend exposes it. Kept
-      // here so the UI control behaves as expected when data arrives.
-      if (ratingMin != null) {
-        // no-op; left intentionally — see comment above.
-      }
-      if (selectedCategorySlugs.size > 0) {
-        // DealData has no category — fall back to "match all" to avoid hiding
-        // every deal. When backend adds product.categories[] to DealData, swap
-        // this for an Array.some() check.
-        return true
-      }
       return true
     })
-  }, [deals, discountMin, ratingMin, selectedCategorySlugs])
+  }, [deals, discountMin])
 
   const total = filtered.length
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const startIdx = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const endIdx = Math.min(page * PAGE_SIZE, total)
-
-  function toggleCategory(slug: string) {
-    setSelectedCategorySlugs((prev) => {
-      const next = new Set(prev)
-      if (next.has(slug)) next.delete(slug)
-      else next.add(slug)
-      return next
-    })
-    setPage(1)
-  }
 
   return (
     <main className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 py-10">
@@ -123,36 +101,9 @@ export default function DealsPageClient() {
       <div className="flex gap-6 items-start">
         {/* Sidebar — mockup lines 163-242 */}
         <aside className="hidden lg:block w-64 shrink-0 sticky top-24 space-y-8">
-          <section>
-            <h3 className="text-xl font-bold text-foreground mb-3">Department</h3>
-            <div className="flex flex-col gap-2 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={selectedCategorySlugs.size === 0}
-                  onChange={() => { setSelectedCategorySlugs(new Set()); setPage(1) }}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                />
-                <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                  All Deals
-                </span>
-              </label>
-              {categories.map((c) => (
-                <label key={c.id} className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={selectedCategorySlugs.has(c.slug)}
-                    onChange={() => toggleCategory(c.slug)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                  />
-                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    {c.name}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </section>
-
+          {/* Department + Customer Rating filters intentionally omitted —
+              DealData doesn't carry category or avg-rating yet; restore once
+              the deals endpoint joins them so the filters can actually filter. */}
           <section>
             <h3 className="text-xl font-bold text-foreground mb-3">Discount</h3>
             <div className="flex flex-col gap-2 text-sm">
@@ -179,37 +130,6 @@ export default function DealsPageClient() {
                   />
                   <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
                     {tier}% Off or more
-                  </span>
-                </label>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-xl font-bold text-foreground mb-3">Customer Rating</h3>
-            <div className="flex flex-col gap-2 text-sm">
-              {[4, 3].map((stars) => (
-                <label key={stars} className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="radio"
-                    name="rating"
-                    checked={ratingMin === stars}
-                    onChange={() => { setRatingMin(stars); setPage(1) }}
-                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                  />
-                  <span className="flex items-center">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={cn(
-                          "h-4 w-4",
-                          i < stars ? "fill-brand-gold text-brand-gold" : "fill-gray-200 text-gray-200",
-                        )}
-                      />
-                    ))}
-                  </span>
-                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    &amp; Up
                   </span>
                 </label>
               ))}
