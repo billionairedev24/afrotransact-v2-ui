@@ -4,7 +4,7 @@ import { FileText, Scale } from "lucide-react"
 const EFFECTIVE_DATE = "March 3, 2026"
 const COMPANY = "AfroTransact, LLC"
 const COMPANY_SHORT = "AfroTransact"
-const CONTACT_EMAIL = "legal@afrotransact.com"
+const CONTACT_EMAIL = "hello@afrotransact.com"
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
@@ -206,8 +206,8 @@ export default function TermsPage() {
             </ul>
             <p>
               To initiate a return or dispute, contact our support team at{" "}
-              <a href="mailto:support@afrotransact.com" className="text-foreground hover:underline">
-                support@afrotransact.com
+              <a href="mailto:hello@afrotransact.com" className="text-foreground hover:underline">
+                hello@afrotransact.com
               </a>{" "}
               within 48 hours of delivery.
             </p>
@@ -384,8 +384,8 @@ export default function TermsPage() {
               </p>
               <p>
                 Support:{" "}
-                <a href="mailto:support@afrotransact.com" className="text-foreground hover:underline">
-                  support@afrotransact.com
+                <a href="mailto:hello@afrotransact.com" className="text-foreground hover:underline">
+                  hello@afrotransact.com
                 </a>
               </p>
             </div>

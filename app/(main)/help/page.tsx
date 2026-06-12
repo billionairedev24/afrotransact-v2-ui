@@ -68,7 +68,7 @@ export default function HelpPage() {
         <h2 className="text-xl font-bold text-gray-900 mb-2">Still need help?</h2>
         <p className="text-gray-500 text-sm mb-5">Our support team typically responds within 2 hours during business hours.</p>
         <a
-          href="mailto:support@afrotransact.com"
+          href="mailto:hello@afrotransact.com"
           className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-gold px-8 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-all"
         >
           <Mail className="h-4 w-4" />

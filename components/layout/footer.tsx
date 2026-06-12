@@ -102,11 +102,11 @@ export function Footer() {
                 hello@afrotransact.com
               </a>
               <a
-                href="tel:+15125550100"
+                href="tel:+15125088885"
                 className="flex items-center gap-2 text-xs text-white/70 hover:text-brand-gold transition-colors"
               >
                 <Phone className="h-3.5 w-3.5 shrink-0" />
-                (512) 555-0100
+                (512) 508-8885
               </a>
             </div>
 
