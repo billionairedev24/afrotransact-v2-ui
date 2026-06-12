@@ -78,29 +78,42 @@ const SORT_OPTIONS = [
  * The radio fires its own onChange when checked transitions; we never call
  * onSelect synthetically on re-render.
  */
+/**
+ * Renders as a native radio but is actually a button with role="radio".
+ * Controlled `<input type="radio">` had two intermittent failure modes here:
+ * a checked re-click never fired onChange (so picking "All" after URL was
+ * already empty was a no-op), and React's controlled-state reconciliation
+ * occasionally lost the visual checked state when the URL update happened
+ * mid-render. Button + aria-checked sidesteps both — click always fires,
+ * the visual state is pure CSS driven by `checked`, no edge cases.
+ */
 function FilterRadio({
   checked,
   onSelect,
-  name,
   ariaLabel,
   children,
 }: {
   checked: boolean
   onSelect: () => void
-  name: string
+  name?: string
   ariaLabel: string
   children: React.ReactNode
 }) {
   return (
     <div className="flex items-center gap-2">
-      <input
-        type="radio"
-        name={name}
-        checked={checked}
-        onChange={onSelect}
+      <button
+        type="button"
+        role="radio"
+        aria-checked={checked}
         aria-label={ariaLabel}
-        className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-      />
+        onClick={onSelect}
+        className={cn(
+          "h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold",
+          checked ? "border-brand-gold" : "border-gray-300 hover:border-gray-400",
+        )}
+      >
+        {checked && <span className="h-2 w-2 rounded-full bg-brand-gold" />}
+      </button>
       {children}
     </div>
   )

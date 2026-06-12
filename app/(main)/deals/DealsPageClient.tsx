@@ -151,24 +151,19 @@ export default function DealsPageClient() {
             <h3 className="text-xl font-bold text-foreground mb-3">Department</h3>
             <div className="flex flex-col gap-2 text-sm">
               <FilterRow>
-                <input
-                  type="radio"
-                  name="department"
+                <FilterRadioDot
                   checked={selectedCategorySlugs.size === 0}
-                  onChange={() => { setSelectedCategorySlugs(new Set()); setPage(1) }}
-                  className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                  aria-label="All deals"
+                  onSelect={() => { setSelectedCategorySlugs(new Set()); setPage(1) }}
+                  ariaLabel="All deals"
                 />
                 <span className="text-foreground">All Deals</span>
               </FilterRow>
               {categories.map((c) => (
                 <FilterRow key={c.id}>
-                  <input
-                    type="checkbox"
+                  <FilterCheckboxDot
                     checked={selectedCategorySlugs.has(c.slug)}
-                    onChange={() => toggleCategory(c.slug)}
-                    className="h-4 w-4 cursor-pointer rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                    aria-label={c.name}
+                    onToggle={() => toggleCategory(c.slug)}
+                    ariaLabel={c.name}
                   />
                   <span className="text-foreground">{c.name}</span>
                 </FilterRow>
@@ -180,25 +175,19 @@ export default function DealsPageClient() {
             <h3 className="text-xl font-bold text-foreground mb-3">Discount</h3>
             <div className="flex flex-col gap-2 text-sm">
               <FilterRow>
-                <input
-                  type="radio"
-                  name="discount"
+                <FilterRadioDot
                   checked={discountMin == null}
-                  onChange={() => { setDiscountMin(null); setPage(1) }}
-                  className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                  aria-label="Any discount"
+                  onSelect={() => { setDiscountMin(null); setPage(1) }}
+                  ariaLabel="Any discount"
                 />
                 <span className="text-foreground">Any</span>
               </FilterRow>
               {DISCOUNT_TIERS.map((tier) => (
                 <FilterRow key={tier}>
-                  <input
-                    type="radio"
-                    name="discount"
+                  <FilterRadioDot
                     checked={discountMin === tier}
-                    onChange={() => { setDiscountMin(tier); setPage(1) }}
-                    className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                    aria-label={`${tier}% off or more`}
+                    onSelect={() => { setDiscountMin(tier); setPage(1) }}
+                    ariaLabel={`${tier}% off or more`}
                   />
                   <span className="text-foreground">{tier}% Off or more</span>
                 </FilterRow>
@@ -210,25 +199,19 @@ export default function DealsPageClient() {
             <h3 className="text-xl font-bold text-foreground mb-3">Customer Rating</h3>
             <div className="flex flex-col gap-2 text-sm">
               <FilterRow>
-                <input
-                  type="radio"
-                  name="rating"
+                <FilterRadioDot
                   checked={ratingMin == null}
-                  onChange={() => { setRatingMin(null); setPage(1) }}
-                  className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                  aria-label="Any rating"
+                  onSelect={() => { setRatingMin(null); setPage(1) }}
+                  ariaLabel="Any rating"
                 />
                 <span className="text-foreground">Any</span>
               </FilterRow>
               {[5, 4, 3, 2, 1].map((stars) => (
                 <FilterRow key={stars}>
-                  <input
-                    type="radio"
-                    name="rating"
+                  <FilterRadioDot
                     checked={ratingMin === stars}
-                    onChange={() => { setRatingMin(stars); setPage(1) }}
-                    className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                    aria-label={`${stars} stars and up`}
+                    onSelect={() => { setRatingMin(stars); setPage(1) }}
+                    ariaLabel={`${stars} stars and up`}
                   />
                   <span className="flex items-center">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -352,4 +335,64 @@ export default function DealsPageClient() {
  */
 function FilterRow({ children }: { children: React.ReactNode }) {
   return <div className="flex items-center gap-2">{children}</div>
+}
+
+/**
+ * See note in /search page — native controlled radios were flaky.
+ * Button + aria-checked has deterministic visual state.
+ */
+function FilterRadioDot({
+  checked,
+  onSelect,
+  ariaLabel,
+}: {
+  checked: boolean
+  onSelect: () => void
+  ariaLabel: string
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={onSelect}
+      className={cn(
+        "h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold",
+        checked ? "border-brand-gold" : "border-gray-300 hover:border-gray-400",
+      )}
+    >
+      {checked && <span className="h-2 w-2 rounded-full bg-brand-gold" />}
+    </button>
+  )
+}
+
+function FilterCheckboxDot({
+  checked,
+  onToggle,
+  ariaLabel,
+}: {
+  checked: boolean
+  onToggle: () => void
+  ariaLabel: string
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={onToggle}
+      className={cn(
+        "h-4 w-4 shrink-0 rounded border-2 flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold",
+        checked ? "bg-brand-gold border-brand-gold" : "border-gray-300 hover:border-gray-400",
+      )}
+    >
+      {checked && (
+        <svg viewBox="0 0 12 12" className="h-3 w-3 text-brand-gold-foreground" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M2 6 L5 9 L10 3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </button>
+  )
 }
