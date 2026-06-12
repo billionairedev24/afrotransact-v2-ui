@@ -2097,6 +2097,9 @@ export interface DealData {
   productImageUrl: string | null
   storeName: string | null
   couponCode?: string
+  /** Slugs of the linked product's categories — populated by the backend
+      enrichWithProduct step so /deals can filter by department. */
+  categorySlugs?: string[] | null
 }
 
 export interface PlatformDealDto {
