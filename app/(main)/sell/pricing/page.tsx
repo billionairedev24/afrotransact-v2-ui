@@ -68,22 +68,6 @@ function getPlanAccent(index: number, total: number): PlanAccent {
   }
 }
 
-/**
- * Backend stores commissionRateOverride as a *fraction* (0.080 = 8%). When
- * we surface it to the marketer we have to multiply by 100 — otherwise the
- * Growth plan renders as "0.08%" instead of "8%".
- */
-function commissionPercent(plan: SubscriptionPlan): number | null {
-  return plan.commissionRateOverride != null
-    ? Number((plan.commissionRateOverride * 100).toFixed(2))
-    : null
-}
-
-function commissionLabel(plan: SubscriptionPlan): string {
-  const pct = commissionPercent(plan)
-  return pct != null ? `${pct}%` : "Standard"
-}
-
 function monthlyPriceDisplay(plan: SubscriptionPlan): string {
   if (plan.priceCentsPerMonth === 0) return "Free"
   // Prefer the server-formatted priceDisplay when present so currency/cadence
@@ -113,8 +97,8 @@ const FAQ = [
     a: "Yes. You can upgrade or downgrade at any time from your seller dashboard. Changes take effect at the start of your next billing cycle.",
   },
   {
-    q: "What is the platform commission?",
-    a: "AfroTransact charges a percentage of each sale to cover payment processing, platform infrastructure, and marketing. The rate depends on your plan. This is separate from Stripe's payment processing fee.",
+    q: "Does AfroTransact take a cut of each sale?",
+    a: "Yes — we charge a small platform commission on each sale to cover payment processing, infrastructure, and marketing. We'll share the exact rate as part of your seller onboarding. This is separate from Stripe's payment processing fee.",
   },
   {
     q: "What happens if my payment fails?",
@@ -177,6 +161,10 @@ function PlanCard({
           </p>
         )}
 
+        {/* commissionRateOverride is an internal negotiation tool (used when
+            we cut a custom deal for a high-volume seller), not a public
+            marketing fact. Surface products + stores instead so the buyer
+            sees the catalog limits at a glance. */}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
             <p className="text-xs text-gray-500">Products</p>
@@ -185,8 +173,10 @@ function PlanCard({
             </p>
           </div>
           <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
-            <p className="text-xs text-gray-500">Commission</p>
-            <p className="text-sm font-bold text-gray-900">{commissionLabel(plan)}</p>
+            <p className="text-xs text-gray-500">Stores</p>
+            <p className="text-sm font-bold text-gray-900">
+              {plan.maxStores === -1 ? "Unlimited" : `${plan.maxStores}`}
+            </p>
           </div>
         </div>
       </div>
@@ -273,14 +263,6 @@ export default function PricingPage() {
   const plans = (rawPlans ?? [])
     .filter((p) => p.active)
     .sort((a, b) => a.displayOrder - b.displayOrder)
-
-  // Commission table renders only plans whose admin-set override is known.
-  // Plans on the "standard" rate (commissionRateOverride == null) are
-  // omitted rather than guessed — the table is meant to be precise, and we
-  // don't currently surface the standard platform rate to this page.
-  const commissionRows = plans
-    .map((p) => ({ name: p.name, rate: commissionPercent(p) }))
-    .filter((r): r is { name: string; rate: number } => r.rate != null)
 
   return (
     <main className="min-h-screen">
@@ -390,51 +372,11 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* ── Commission comparison ── */}
-      {commissionRows.length > 0 && (
-        <section className="border-y border-border bg-card/40 px-4 sm:px-6 py-12">
-          <div className="mx-auto max-w-4xl">
-            <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
-              Commission breakdown
-            </h2>
-            <p className="text-gray-500 text-center text-sm mb-8">
-              Understand exactly how much you keep from each sale.
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left pb-3 font-semibold text-gray-500">Plan</th>
-                    <th className="text-right pb-3 font-semibold text-gray-500">Commission</th>
-                    <th className="text-right pb-3 font-semibold text-gray-500">On a $100 sale, you keep</th>
-                    <th className="text-right pb-3 font-semibold text-gray-500">On $10k/mo GMV, you keep</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {commissionRows.map((row) => {
-                    const rate = Number(row.rate)
-                    const keep100 = (100 * (1 - rate / 100) - 2.9 - 0.30).toFixed(2)
-                    const keep10k = ((10000 * (1 - rate / 100)) - (10000 / 100) * (2.9 + 0.30)).toFixed(0)
-                    return (
-                      <tr key={row.name} className="border-b border-border/50">
-                        <td className="py-3 font-semibold text-foreground">{row.name}</td>
-                        <td className="py-3 text-right text-gray-600">{rate}%</td>
-                        <td className="py-3 text-right font-bold text-gray-900">${keep100}</td>
-                        <td className="py-3 text-right font-bold text-gray-900">
-                          ${parseInt(keep10k).toLocaleString()}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-              <p className="text-[11px] text-gray-600 mt-3">
-                * Stripe processing fee (~2.9% + $0.30 per transaction) deducted from seller payout.
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Commission breakdown section intentionally removed — per-plan
+          commission rates aren't public marketing facts. The
+          commissionRateOverride field is for internal negotiation with
+          high-volume sellers, not a tier benefit. The FAQ entry below
+          still explains how commission works at a conceptual level. */}
 
       {/* ── FAQ ── */}
       <section className="px-4 sm:px-6 py-16">
