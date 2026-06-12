@@ -173,6 +173,11 @@ export function Header() {
   const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
   const isAdmin = roles.includes("admin")
   const isSeller = roles.includes("seller")
+  // Developers carry admin + seller + buyer via the composite role, so the
+  // existing isAdmin / isSeller checks already grant access. This is here for
+  // dev-only surfaces (debug pages, internal toggles) we may add later.
+  const _isDeveloper = roles.includes("developer")
+  void _isDeveloper
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
   const firstName = userName?.trim().split(/\s+/)[0] ?? null
