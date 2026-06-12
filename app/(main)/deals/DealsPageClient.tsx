@@ -18,7 +18,7 @@ import Link from "next/link"
 import { ChevronRight, Grid3X3, LayoutList, Loader2, Star, Tag } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getActiveDeals, getCategories, type DealData, type CategoryRef } from "@/lib/api"
-import { BrandProductCard, type BrandProductCardItem } from "@/components/products/BrandProductCard"
+import { BrandProductCard, BrandProductRow, type BrandProductCardItem } from "@/components/products/BrandProductCard"
 import { Pagination } from "@/components/products/Pagination"
 
 const PAGE_SIZE = 24
@@ -292,7 +292,9 @@ export default function DealsPageClient() {
                 {pageItems.map((deal) => {
                   const card = dealToCardItem(deal)
                   if (!card) return null
-                  return <BrandProductCard key={deal.id} item={card} />
+                  return viewMode === "list"
+                    ? <BrandProductRow key={deal.id} item={card} />
+                    : <BrandProductCard key={deal.id} item={card} />
                 })}
               </div>
 
