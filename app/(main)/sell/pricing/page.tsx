@@ -67,16 +67,29 @@ function getPlanAccent(index: number, total: number): PlanAccent {
   }
 }
 
-function commissionLabel(plan: SubscriptionPlan): string {
+/**
+ * Backend stores commissionRateOverride as a *fraction* (0.080 = 8%). When
+ * we surface it to the marketer we have to multiply by 100 — otherwise the
+ * Growth plan renders as "0.08%" instead of "8%".
+ */
+function commissionPercent(plan: SubscriptionPlan): number | null {
   return plan.commissionRateOverride != null
-    ? `${plan.commissionRateOverride}%`
-    : "Standard"
+    ? Number((plan.commissionRateOverride * 100).toFixed(2))
+    : null
+}
+
+function commissionLabel(plan: SubscriptionPlan): string {
+  const pct = commissionPercent(plan)
+  return pct != null ? `${pct}%` : "Standard"
 }
 
 function monthlyPriceDisplay(plan: SubscriptionPlan): string {
-  return plan.priceCentsPerMonth === 0
-    ? "Free"
-    : `$${(plan.priceCentsPerMonth / 100).toFixed(2)}`
+  if (plan.priceCentsPerMonth === 0) return "Free"
+  // Prefer the server-formatted priceDisplay when present so currency/cadence
+  // copy stays consistent with what the admin set. Strip the trailing "/mo"
+  // because the UI renders that label separately next to the number.
+  if (plan.priceDisplay) return plan.priceDisplay.replace(/\s*\/\s*mo\b/i, "")
+  return `$${(plan.priceCentsPerMonth / 100).toFixed(2)}`
 }
 
 const FAQ = [
@@ -120,8 +133,12 @@ function PlanCard({
   isAnnual: boolean
 }) {
   const monthly = plan.priceCentsPerMonth / 100
-  const price = isAnnual
-    ? `$${(monthly * 10).toFixed(2)}`
+  // Annual = 10 months billed once = 2 months free. Display the monthly
+  // equivalent ("$xx.xx") so the value next to "/month" stays apples-to-apples
+  // with the monthly toggle. The "2 months free" copy below makes the savings
+  // explicit.
+  const price = isAnnual && plan.priceCentsPerMonth > 0
+    ? `$${((monthly * 10) / 12).toFixed(2)}`
     : monthlyPriceDisplay(plan)
 
   return (
@@ -173,31 +190,14 @@ function PlanCard({
 
       <div className="flex-1 p-6 space-y-4">
         <div className="space-y-2">
-          <div className="flex items-start gap-2 text-sm">
-            <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-            <span className="text-gray-600">
-              {plan.maxProducts === -1
-                ? "Unlimited products"
-                : `Up to ${plan.maxProducts} products`}
-            </span>
-          </div>
-          <div className="flex items-start gap-2 text-sm">
-            <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-            <span className="text-gray-600">
-              {plan.maxStores === 1
-                ? "1 store"
-                : plan.maxStores === -1
-                ? "Unlimited stores"
-                : `Up to ${plan.maxStores} stores`}
-            </span>
-          </div>
-          {plan.commissionRateOverride != null && (
-            <div className="flex items-start gap-2 text-sm">
-              <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-              <span className="text-gray-600">
-                {plan.commissionRateOverride}% platform commission
-              </span>
-            </div>
+          {/* Feature list comes straight from the API. The product / store /
+              commission summary already lives in the metrics grid above, so
+              we no longer auto-derive a redundant row from maxProducts /
+              maxStores / commissionRateOverride — that was producing six
+              duplicate rows per card. Admins control the feature copy via
+              the subscription-plans admin page. */}
+          {(plan.features ?? []).length === 0 && (
+            <p className="text-xs text-gray-500 italic">No features listed yet.</p>
           )}
           {(plan.features ?? []).map((f) => (
             <div key={f} className="flex items-start gap-2 text-sm">
@@ -263,10 +263,13 @@ export default function PricingPage() {
     .filter((p) => p.active)
     .sort((a, b) => a.displayOrder - b.displayOrder)
 
-  const commissionRows = plans.map((p) => ({
-    name: p.name,
-    rate: p.commissionRateOverride ?? 10,
-  }))
+  // Commission table renders only plans whose admin-set override is known.
+  // Plans on the "standard" rate (commissionRateOverride == null) are
+  // omitted rather than guessed — the table is meant to be precise, and we
+  // don't currently surface the standard platform rate to this page.
+  const commissionRows = plans
+    .map((p) => ({ name: p.name, rate: commissionPercent(p) }))
+    .filter((r): r is { name: string; rate: number } => r.rate != null)
 
   return (
     <main className="min-h-screen">
