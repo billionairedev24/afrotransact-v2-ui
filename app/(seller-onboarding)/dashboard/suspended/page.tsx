@@ -4,7 +4,10 @@ import { headers } from "next/headers"
 import { getServerSession } from "next-auth"
 import { ShieldOff, Mail } from "lucide-react"
 import { authOptions } from "@/lib/auth"
-import { parseSellerMeResponse } from "@/lib/seller-dashboard-access"
+import {
+  isSellerSuspended,
+  parseSellerMeResponse,
+} from "@/lib/seller-dashboard-access"
 
 const SUPPORT_EMAIL =
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@afrotransact.com"
@@ -54,20 +57,37 @@ export default async function SuspendedSellerPage() {
         cache: "no-store",
       })
       const seller = await parseSellerMeResponse(res)
-      const status =
-        typeof seller?.onboardingStatus === "string" ? seller.onboardingStatus : ""
-      // Defense in depth: if the seller is no longer suspended, send them back
-      // to the regular dashboard rather than leaving them stuck on this page.
-      if (status.toLowerCase() !== "suspended") {
+      // Only redirect AWAY when we have a confirmed non-suspended status.
+      // A null seller / network failure must NOT bounce the page — that's
+      // what was causing the "flash of suspended then back to onboarding"
+      // (suspended page redirected to /dashboard, which re-evaluated and
+      // sometimes resolved to /dashboard/onboarding before the layout
+      // could re-redirect here).
+      const statusRaw =
+        typeof seller?.onboardingStatus === "string"
+          ? seller.onboardingStatus
+          : typeof seller?.status === "string"
+            ? seller.status
+            : null
+      if (statusRaw && !isSellerSuspended(statusRaw)) {
         redirect("/dashboard")
       }
       suspensionReason =
         typeof seller?.suspensionReason === "string" ? seller.suspensionReason : null
       suspendedAt =
         typeof seller?.suspendedAt === "string" ? seller.suspendedAt : null
-    } catch {
-      // Fall through to the generic copy — we still want this page to render
-      // when the API is unreachable rather than bouncing back to login.
+    } catch (err) {
+      // Preserve next/navigation redirects.
+      if (
+        err &&
+        typeof err === "object" &&
+        "digest" in err &&
+        typeof (err as { digest?: unknown }).digest === "string" &&
+        (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+      ) {
+        throw err
+      }
+      // Network/parse failure — render generic copy and stay on this page.
     }
   }
 
