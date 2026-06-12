@@ -2,7 +2,7 @@
    directive opts in to our existing v3-style config (theme tokens,
    content globs, plugin list) without rewriting everything as @theme
    directives. Remove once we migrate to v4-native config. */
-@config "../tailwind.config.ts";
+@config "../tailwind.config.mts";
 
 @tailwind base;
 @tailwind components;
