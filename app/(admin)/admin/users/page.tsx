@@ -13,6 +13,7 @@ import {
   Shield,
   ShoppingBag,
   Store,
+  Code,
   MoreHorizontal,
   User as UserIcon,
   Calendar,
@@ -35,14 +36,21 @@ interface AdminUser {
 }
 
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
-  admin:  { label: "Admin",  className: "bg-purple-50 text-purple-700 border border-purple-200" },
-  seller: { label: "Seller", className: "bg-blue-50 text-blue-700 border border-blue-200" },
-  buyer:  { label: "Buyer",  className: "bg-green-50 text-green-700 border border-green-200" },
+  developer: { label: "Developer", className: "bg-purple-100 text-purple-800 border border-purple-300" },
+  admin:     { label: "Admin",     className: "bg-amber-50 text-amber-800 border border-amber-300" },
+  seller:    { label: "Seller",    className: "bg-blue-50 text-blue-700 border border-blue-200" },
+  buyer:     { label: "Buyer",     className: "bg-green-50 text-green-700 border border-green-200" },
 }
 
 function classifyRoles(user: AdminUser): string[] {
-  const found: string[] = []
   const lowerRoles = user.roles.map((r) => r.toLowerCase())
+  // Developer is a Keycloak composite that includes admin + seller + buyer.
+  // Showing all four would be visual noise; collapse to a single Developer
+  // badge so the admin can tell at a glance that this account has elevated
+  // debug access.
+  if (lowerRoles.includes("developer")) return ["developer"]
+
+  const found: string[] = []
   if (lowerRoles.includes("admin")) found.push("admin")
   if (lowerRoles.includes("seller") || user.registrationRole === "seller") found.push("seller")
   if (found.length === 0 || (!found.includes("admin") && !found.includes("seller"))) {
@@ -169,14 +177,15 @@ export default function UsersPage() {
   }, [status, loadUsers])
 
   const stats = useMemo(() => {
-    let admins = 0, sellers = 0, buyers = 0
+    let developers = 0, admins = 0, sellers = 0, buyers = 0
     for (const user of users) {
       const roles = classifyRoles(user)
+      if (roles.includes("developer")) developers++
       if (roles.includes("admin")) admins++
       if (roles.includes("seller")) sellers++
       if (roles.includes("buyer")) buyers++
     }
-    return { total: users.length, admins, sellers, buyers }
+    return { total: users.length, developers, admins, sellers, buyers }
   }, [users])
 
   const columns = useMemo(() => [
@@ -267,9 +276,10 @@ export default function UsersPage() {
         <p className="mt-1 text-sm text-gray-500">All registered users across the platform.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Total Users" value={stats.total} icon={Users} iconColor="bg-gray-100 text-gray-700" />
-        <StatCard label="Admins" value={stats.admins} icon={Shield} iconColor="bg-purple-50 text-purple-700" />
+        <StatCard label="Developers" value={stats.developers} icon={Code} iconColor="bg-purple-50 text-purple-700" />
+        <StatCard label="Admins" value={stats.admins} icon={Shield} iconColor="bg-amber-50 text-amber-700" />
         <StatCard label="Sellers" value={stats.sellers} icon={Store} iconColor="bg-blue-50 text-blue-700" />
         <StatCard label="Buyers" value={stats.buyers} icon={ShoppingBag} iconColor="bg-green-50 text-green-700" />
       </div>
