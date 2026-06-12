@@ -611,7 +611,8 @@ export default function SellerOnboardingPage() {
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pr.email.trim())) errs[`p${i}_email`] = "Invalid email"
         if (!pr.dateOfBirth) errs[`p${i}_dob`] = "Required"
         if (pr.ssnLast4 && !/^\d{4}$/.test(pr.ssnLast4.trim())) errs[`p${i}_ssn`] = "Must be 4 digits"
-        if (pr.ownershipPct < 0 || pr.ownershipPct > 100) errs[`p${i}_ownership`] = "Must be 0–100%"
+        if (!pr.ownershipPct || pr.ownershipPct <= 0) errs[`p${i}_ownership`] = "Required"
+        else if (pr.ownershipPct > 100) errs[`p${i}_ownership`] = "Must be 0–100%"
         if (!pr.addressLine1.trim()) errs[`p${i}_address`] = "Address is required"
         if (!pr.city.trim()) errs[`p${i}_city`] = "Required"
         if (!pr.state) errs[`p${i}_state`] = "Required"
@@ -1575,7 +1576,7 @@ function EntityDetailsStep({
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls}>Ownership %</label>
+                      <label className={labelCls}>Ownership %<RequiredDot /></label>
                       <input
                         value={pr.ownershipPct === 0 ? "" : String(pr.ownershipPct)}
                         onChange={(e) => {
