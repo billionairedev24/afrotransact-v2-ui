@@ -10,6 +10,11 @@ export function isSellerDashboardOnboardingReady(status: unknown): boolean {
   return s === "approved" || s === "completed" || s === "active"
 }
 
+export function isSellerSuspended(status: unknown): boolean {
+  const s = typeof status === "string" ? status.trim().toLowerCase() : ""
+  return s === "suspended"
+}
+
 /**
  * Safe JSON read for `/api/v1/seller/me` which returns **204 No Content**
  * when the user has no seller row (instead of JSON). `res.ok` is still true for 204,

@@ -553,6 +553,8 @@ export interface SellerInfo {
   createdAt: string
   submittedAt: string | null
   approvedAt: string | null
+  suspensionReason?: string | null
+  suspendedAt?: string | null
 }
 
 /** @throws {ApiError} 204 when user has no seller profile (backend returns No Content). */
