@@ -29,6 +29,8 @@ import {
   Wallet,
   ImageIcon,
   Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
@@ -51,6 +53,9 @@ import {
   type CategoryRef,
 } from "@/lib/api"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
+import { InfoTooltip } from "@/components/ui/InfoTooltip"
+import { normalizeInt } from "@/lib/inputs"
+import Link from "next/link"
 import { useUploadThing } from "@/lib/uploadthing"
 import dynamic from "next/dynamic"
 
@@ -127,6 +132,20 @@ interface DocumentSlot {
   uploaded?: OnboardingDocument
 }
 
+// TODO: re-enable document tooltips once final legal/ops-approved verbiage
+// lands. Flip SHOW_DOCUMENT_HINTS back to true (or replace with an env-driven
+// flag) after the copy review.
+const SHOW_DOCUMENT_HINTS = false
+
+const DOCUMENT_HINTS: Record<string, string> = {
+  government_id: "Clear photo of a current government-issued ID (driver's license, passport, or state ID). Both front and back if applicable; all four corners visible, no glare.",
+  business_license: "Current business license or DBA registration issued by your city / county / state. PDF or image of the full document.",
+  ein_letter: "Your IRS-issued EIN Confirmation Letter (Form CP 575 or 147C). Must show the business name exactly as registered.",
+  articles_of_incorporation: "Stamped/filed Articles of Incorporation, Organization, or Partnership Agreement issued by your Secretary of State.",
+  operating_agreement: "Signed LLC Operating Agreement listing members and ownership percentages.",
+  "501c3_letter": "IRS determination letter granting your 501(c)(3) tax-exempt status.",
+}
+
 function getRequiredDocuments(entityType: string): DocumentSlot[] {
   switch (entityType.toLowerCase()) {
     case "individual":
@@ -172,9 +191,24 @@ function needsEIN(entityType: string) {
   return ["llc", "corporation", "partnership", "nonprofit"].includes(entityType.toLowerCase())
 }
 
+/**
+ * Which entity types are valid for a given business type. Today AfroTransact
+ * is goods-only so every entity type is allowed; the filter is wired through
+ * the BusinessStep dropdown so future business types (e.g. "services") can
+ * restrict entity options without UI surgery.
+ */
+function entityTypesFor(businessType: string): typeof ENTITY_TYPES {
+  if (!businessType) return []
+  return ENTITY_TYPES
+}
+
 function needsPrincipals(entityType: string) {
   return ["llc", "corporation", "partnership"].includes(entityType.toLowerCase())
 }
+
+// Bump when the seller-terms text changes so we capture which version each
+// seller signed. Persisted alongside terms_signed_name + terms_accepted_at.
+const SELLER_TERMS_VERSION = "2026-06-11"
 
 const inputCls =
   "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
@@ -220,6 +254,8 @@ export default function SellerOnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [signatureName, setSignatureName] = useState("")
   const [progress, setProgress] = useState<OnboardingProgress | null>(null)
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [initialized, setInitialized] = useState(false)
@@ -456,7 +492,6 @@ export default function SellerOnboardingPage() {
           businessName: businessName.trim(),
           entityType,
           businessType: businessType || undefined,
-          taxId: taxId.trim() || undefined,
           contactPhone: contactPhone.trim() || undefined,
           contactEmail: contactEmail.trim() || undefined,
           website: website.trim() || undefined,
@@ -708,10 +743,28 @@ export default function SellerOnboardingPage() {
     }
   }
 
+  function normalizeName(s: string) {
+    return s.trim().toLowerCase().replace(/\s+/g, " ")
+  }
+  const signatureValid = !!signatureName && normalizeName(signatureName) === normalizeName(businessName)
+
   async function handleSubmit() {
+    if (!termsAccepted) {
+      toast.error("Please agree to the Seller Terms before submitting")
+      return
+    }
+    if (!signatureValid) {
+      toast.error("Your typed signature must match the legal business name exactly")
+      return
+    }
     setSubmitting(true)
     try {
-      const p = await withToken((t) => submitOnboardingForReview(t))
+      const p = await withToken((t) =>
+        submitOnboardingForReview(t, {
+          signedName: signatureName.trim(),
+          termsVersion: SELLER_TERMS_VERSION,
+        })
+      )
       if (p) {
         hydrateFromProgress(p)
         setSubmitted(true)
@@ -915,7 +968,7 @@ export default function SellerOnboardingPage() {
         {step === 6 && (
           <ReviewStep
             businessName={businessName} entityType={entityType} businessType={businessType}
-            taxId={taxId} contactPhone={contactPhone} contactEmail={contactEmail}
+            contactPhone={contactPhone} contactEmail={contactEmail}
             website={website} businessDescription={businessDescription}
             addressLine1={addressLine1} addressLine2={addressLine2}
             city={city} state={state} zip={zip} country={country}
@@ -930,6 +983,12 @@ export default function SellerOnboardingPage() {
             subscription={progress?.subscription}
             stripe={progress?.stripe ?? null}
             completionChecks={completionChecks}
+            termsAccepted={termsAccepted}
+            setTermsAccepted={setTermsAccepted}
+            signatureName={signatureName}
+            setSignatureName={setSignatureName}
+            signatureValid={signatureValid}
+            submitted={submitted}
           />
         )}
       </div>
@@ -972,7 +1031,7 @@ export default function SellerOnboardingPage() {
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={!allComplete || submitting}
+              disabled={!allComplete || submitting || !termsAccepted || !signatureValid}
               className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
@@ -1104,24 +1163,35 @@ function BusinessStep({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
-          <label className={labelCls}>Legal Business Name<RequiredDot />{locked && businessName && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}</label>
+          <label className={`${labelCls} inline-flex items-center gap-1.5`}>
+            Legal Business Name<RequiredDot />
+            <InfoTooltip text="This is your legal name on file with the IRS / Secretary of State. It cannot be changed after you submit your application." />
+            {locked && businessName && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}
+          </label>
           <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} className={errors.businessName ? inputErrCls : inputCls} placeholder="Your registered business name" disabled={locked && !!businessName} />
           <FieldError error={errors.businessName} />
         </div>
         <div>
-          <label className={labelCls}>Entity Type<RequiredDot />{locked && entityType && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}</label>
-          <select value={entityType} onChange={(e) => setEntityType(e.target.value)} className={errors.entityType ? selectErrCls : selectCls} disabled={locked && !!entityType}>
-            <option value="" className="bg-white">Select type…</option>
-            {ENTITY_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-white">{t.label}</option>)}
-          </select>
-          <FieldError error={errors.entityType} />
-        </div>
-        <div>
-          <label className={labelCls}>What do you sell?</label>
+          <label className={`${labelCls} inline-flex items-center gap-1.5`}>
+            What do you sell?<RequiredDot />
+            <InfoTooltip text="Determines which entity types and verification documents apply. After submission, changing this requires admin re-validation and may require re-uploading compliance documents." />
+          </label>
           <select value={businessType} onChange={(e) => setBusinessType(e.target.value)} className={selectCls}>
             <option value="" className="bg-white">Select…</option>
             {BUSINESS_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-white">{t.label}</option>)}
           </select>
+        </div>
+        <div>
+          <label className={`${labelCls} inline-flex items-center gap-1.5`}>
+            Entity Type<RequiredDot />
+            <InfoTooltip text="How your business is legally structured (LLC, sole prop, etc.). Drives which IDs and documents we collect. Cannot be changed after submission." />
+            {locked && entityType && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}
+          </label>
+          <select value={entityType} onChange={(e) => setEntityType(e.target.value)} className={errors.entityType ? selectErrCls : selectCls} disabled={(locked && !!entityType) || !businessType}>
+            <option value="" className="bg-white">{businessType ? "Select type…" : "Select what you sell first"}</option>
+            {entityTypesFor(businessType).map((t) => <option key={t.value} value={t.value} className="bg-white">{t.label}</option>)}
+          </select>
+          <FieldError error={errors.entityType} />
         </div>
         <div>
           <label className={labelCls}>Industry Category</label>
@@ -1129,10 +1199,6 @@ function BusinessStep({
             <option value="" className="bg-white">{industryCategories.length === 0 ? "Loading…" : "Select…"}</option>
             {industryCategories.map((c) => <option key={c.id} value={c.name} className="bg-white">{c.name}</option>)}
           </select>
-        </div>
-        <div>
-          <label className={labelCls}>Tax ID / EIN{locked && taxId && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}</label>
-          <input value={taxId} onChange={(e) => { const v = e.target.value.replace(/[^\d-]/g, ""); setTaxId(v) }} className={inputCls} placeholder="XX-XXXXXXX" maxLength={10} disabled={locked && !!taxId} />
         </div>
         <div>
           <label className={labelCls}>Contact Phone<RequiredDot /></label>
@@ -1162,7 +1228,7 @@ function BusinessStep({
         </div>
         <div>
           <label className={labelCls}>Number of Employees</label>
-          <input value={numberOfEmployees} onChange={(e) => setNumberOfEmployees(e.target.value)} className={inputCls} placeholder="e.g. 5" type="number" min="0" />
+          <input value={numberOfEmployees} onChange={(e) => setNumberOfEmployees(normalizeInt(e.target.value))} className={inputCls} placeholder="e.g. 5" inputMode="numeric" min="0" />
         </div>
         <div className="sm:col-span-2">
           <label className={labelCls}>Business Description</label>
@@ -1269,6 +1335,9 @@ function EntityDetailsStep({
   const isIndividual = ["individual", "sole_proprietorship"].includes(et)
   const showEIN = needsEIN(et)
   const showPrincipals = needsPrincipals(et)
+  const [einVisible, setEinVisible] = useState(false)
+  const [ssnVisible, setSsnVisible] = useState(false)
+  const [visiblePrincipalSsn, setVisiblePrincipalSsn] = useState<Record<string, boolean>>({})
 
   function addPrincipal() {
     setPrincipals([...principals, emptyPrincipal()])
@@ -1295,22 +1364,42 @@ function EntityDetailsStep({
         {isIndividual && (
           <>
             <div>
-              <label className={labelCls}>Date of Birth<RequiredDot />{sensitiveFieldsLocked && dateOfBirth && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}</label>
+              <label className={`${labelCls} inline-flex items-center gap-1.5`}>
+                Date of Birth<RequiredDot />
+                <InfoTooltip text="Used for identity verification (KYC). Cannot be changed after submission." />
+                {sensitiveFieldsLocked && dateOfBirth && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}
+              </label>
               <input value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className={errors.dateOfBirth ? inputErrCls : inputCls} type="date" disabled={sensitiveFieldsLocked && !!dateOfBirth} />
               <FieldError error={errors.dateOfBirth} />
             </div>
             <div>
-              <label className={labelCls}>SSN (last 4 digits)<RequiredDot />{sensitiveFieldsLocked && ssnLast4 && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}</label>
-              <input
-                value={ssnLast4}
-                onChange={(e) => setSsnLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                className={errors.ssnLast4 ? inputErrCls : inputCls}
-                placeholder="••••"
-                maxLength={4}
-                inputMode="numeric"
-                pattern="\d{4}"
-                disabled={sensitiveFieldsLocked && !!ssnLast4}
-              />
+              <label className={`${labelCls} inline-flex items-center gap-1.5`}>
+                SSN (last 4 digits)<RequiredDot />
+                <InfoTooltip text="Encrypted at rest. Used only for identity verification. Cannot be changed after submission." />
+                {sensitiveFieldsLocked && ssnLast4 && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}
+              </label>
+              <div className="relative">
+                <input
+                  value={ssnLast4}
+                  onChange={(e) => setSsnLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  className={`${errors.ssnLast4 ? inputErrCls : inputCls} pr-10`}
+                  placeholder="••••"
+                  maxLength={4}
+                  inputMode="numeric"
+                  pattern="\d{4}"
+                  type={ssnVisible ? "text" : "password"}
+                  autoComplete="off"
+                  disabled={sensitiveFieldsLocked && !!ssnLast4}
+                />
+                <button
+                  type="button"
+                  onClick={() => setSsnVisible((v) => !v)}
+                  aria-label={ssnVisible ? "Hide SSN" : "Show SSN"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary rounded-r-xl"
+                >
+                  {ssnVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <FieldError error={errors.ssnLast4} />
               {!errors.ssnLast4 && <p className="text-xs text-gray-500 mt-1">Encrypted and stored securely. Used for identity verification only.</p>}
             </div>
@@ -1320,19 +1409,35 @@ function EntityDetailsStep({
         {showEIN && (
           <>
             <div>
-              <label className={labelCls}>EIN (Employer Identification Number)<RequiredDot />{sensitiveFieldsLocked && ein && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}</label>
-              <input
-                value={ein}
-                onChange={(e) => {
-                  let v = e.target.value.replace(/[^\d-]/g, "")
-                  if (v.length === 2 && !v.includes("-") && ein.length < v.length) v += "-"
-                  setEin(v.slice(0, 10))
-                }}
-                className={errors.ein ? inputErrCls : inputCls}
-                placeholder="XX-XXXXXXX"
-                maxLength={10}
-                disabled={sensitiveFieldsLocked && !!ein}
-              />
+              <label className={`${labelCls} inline-flex items-center gap-1.5`}>
+                EIN (Employer Identification Number)<RequiredDot />
+                <InfoTooltip text="Your 9-digit IRS-issued Employer Identification Number. Encrypted at rest. Cannot be changed after submission." />
+                {sensitiveFieldsLocked && ein && <span className="ml-2 text-[10px] text-yellow-500/70">(locked)</span>}
+              </label>
+              <div className="relative">
+                <input
+                  value={ein}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/[^\d-]/g, "")
+                    if (v.length === 2 && !v.includes("-") && ein.length < v.length) v += "-"
+                    setEin(v.slice(0, 10))
+                  }}
+                  className={`${errors.ein ? inputErrCls : inputCls} pr-10`}
+                  placeholder="XX-XXXXXXX"
+                  maxLength={10}
+                  type={einVisible ? "text" : "password"}
+                  autoComplete="off"
+                  disabled={sensitiveFieldsLocked && !!ein}
+                />
+                <button
+                  type="button"
+                  onClick={() => setEinVisible((v) => !v)}
+                  aria-label={einVisible ? "Hide EIN" : "Show EIN"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary rounded-r-xl"
+                >
+                  {einVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <FieldError error={errors.ein} />
             </div>
             <div>
@@ -1434,7 +1539,16 @@ function EntityDetailsStep({
                     </div>
                     <div>
                       <label className={labelCls}>Ownership %</label>
-                      <input value={pr.ownershipPct} onChange={(e) => updatePrincipal(pr.id, "ownershipPct", Number(e.target.value))} className={pe("ownership") ? inputErrCls : inputCls} type="number" min="0" max="100" placeholder="25" />
+                      <input
+                        value={pr.ownershipPct === 0 ? "" : String(pr.ownershipPct)}
+                        onChange={(e) => {
+                          const cleaned = normalizeInt(e.target.value)
+                          updatePrincipal(pr.id, "ownershipPct", cleaned === "" ? 0 : Math.min(100, Number(cleaned)))
+                        }}
+                        className={pe("ownership") ? inputErrCls : inputCls}
+                        inputMode="numeric"
+                        placeholder="25"
+                      />
                       <FieldError error={pe("ownership")} />
                     </div>
                     <div>
@@ -1453,13 +1567,26 @@ function EntityDetailsStep({
                     </div>
                     <div>
                       <label className={labelCls}>SSN (last 4)</label>
-                      <input
-                        value={pr.ssnLast4}
-                        onChange={(e) => updatePrincipal(pr.id, "ssnLast4", e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        className={pe("ssn") ? inputErrCls : inputCls}
-                        maxLength={4}
-                        placeholder="••••"
-                      />
+                      <div className="relative">
+                        <input
+                          value={pr.ssnLast4}
+                          onChange={(e) => updatePrincipal(pr.id, "ssnLast4", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          className={`${pe("ssn") ? inputErrCls : inputCls} pr-10`}
+                          maxLength={4}
+                          placeholder="••••"
+                          inputMode="numeric"
+                          type={visiblePrincipalSsn[pr.id] ? "text" : "password"}
+                          autoComplete="off"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setVisiblePrincipalSsn((s) => ({ ...s, [pr.id]: !s[pr.id] }))}
+                          aria-label={visiblePrincipalSsn[pr.id] ? "Hide SSN" : "Show SSN"}
+                          className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary rounded-r-xl"
+                        >
+                          {visiblePrincipalSsn[pr.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                       <FieldError error={pe("ssn")} />
                     </div>
                     <div className="sm:col-span-3">
@@ -1643,10 +1770,10 @@ function StoreStep({
           <label className={labelCls}>Delivery Radius (miles)</label>
           <input
             value={deliveryRadius}
-            onChange={(e) => setDeliveryRadius(e.target.value)}
+            onChange={(e) => setDeliveryRadius(normalizeInt(e.target.value))}
             className={inputCls}
             placeholder="25"
-            type="number"
+            inputMode="numeric"
             min="0"
             max="500"
           />
@@ -1738,6 +1865,9 @@ function DocumentsStep({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-gray-900">{slot.label}</p>
+                    {SHOW_DOCUMENT_HINTS && DOCUMENT_HINTS[slot.type] && (
+                      <InfoTooltip text={DOCUMENT_HINTS[slot.type]} />
+                    )}
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${slot.required ? "bg-red-500/10 text-red-600" : "bg-gray-50 text-gray-500"}`}>
                       {slot.required ? "Required" : "Optional"}
                     </span>
@@ -1869,11 +1999,11 @@ function SubscriptionStep({
                 <ul className="space-y-2 mb-5">
                   <li className="flex items-center gap-2 text-xs text-gray-500">
                     <Check className="h-3.5 w-3.5 text-foreground shrink-0" />
-                    Up to {plan.maxProducts.toLocaleString()} products
+                    {plan.maxProducts < 0 ? "Unlimited products" : `Up to ${plan.maxProducts.toLocaleString()} products`}
                   </li>
                   <li className="flex items-center gap-2 text-xs text-gray-500">
                     <Check className="h-3.5 w-3.5 text-foreground shrink-0" />
-                    {plan.maxStores} store{plan.maxStores > 1 ? "s" : ""}
+                    {plan.maxStores < 0 ? "Unlimited stores" : `${plan.maxStores} store${plan.maxStores > 1 ? "s" : ""}`}
                   </li>
                   {plan.commissionRateOverride !== null && (
                     <li className="flex items-center gap-2 text-xs text-gray-500">
@@ -2032,15 +2162,16 @@ function PaymentSetupStep({
 // ── Step 6: Review & Submit ──
 
 function ReviewStep({
-  businessName, entityType, businessType, taxId, contactPhone, contactEmail,
+  businessName, entityType, businessType, contactPhone, contactEmail,
   website, businessDescription, addressLine1, addressLine2, city, state, zip, country,
   industryCategory, annualRevenue, numberOfEmployees,
   dateOfBirth, ssnLast4, ein, stateOfIncorporation, formationDate, dbaName,
   principals,
   storeName, storeDescription, logoUrl, bannerUrl, deliveryRadius,
   documents, subscription, stripe, completionChecks,
+  termsAccepted, setTermsAccepted, signatureName, setSignatureName, signatureValid, submitted,
 }: {
-  businessName: string; entityType: string; businessType: string; taxId: string
+  businessName: string; entityType: string; businessType: string
   contactPhone: string; contactEmail: string; website: string; businessDescription: string
   addressLine1: string; addressLine2: string; city: string; state: string; zip: string; country: string
   industryCategory: string; annualRevenue: string; numberOfEmployees: string
@@ -2052,6 +2183,9 @@ function ReviewStep({
   subscription: OnboardingProgress["subscription"] | undefined | null
   stripe: OnboardingProgress["stripe"] | null
   completionChecks: Record<string, boolean>
+  termsAccepted: boolean; setTermsAccepted: (v: boolean) => void
+  signatureName: string; setSignatureName: (v: string) => void
+  signatureValid: boolean; submitted: boolean
 }) {
   const checks = [
     { key: "business", label: "Business Information", done: completionChecks.business },
@@ -2096,7 +2230,6 @@ function ReviewStep({
           <ReviewRow label="Entity Type" value={ENTITY_TYPES.find((t) => t.value === entityType)?.label ?? entityType} />
           <ReviewRow label="Business Type" value={BUSINESS_TYPES.find((t) => t.value === businessType)?.label} />
           <ReviewRow label="Industry" value={industryCategory} />
-          <ReviewRow label="Tax ID" value={taxId} />
           <ReviewRow label="Phone" value={contactPhone} />
           <ReviewRow label="Email" value={contactEmail} />
           <ReviewRow label="Website" value={website} />
@@ -2160,6 +2293,53 @@ function ReviewStep({
           <ReviewRow label="Stripe Connect" value={stripe?.chargesEnabled ? "Connected" : "Pending"} />
           <ReviewRow label="Payment Method" value={stripe?.hasPaymentMethod ? "Card on file" : "Not added"} />
         </ReviewSection>
+
+        <div className={`rounded-xl border ${BORDER} p-4 bg-gray-50/50`}>
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">Agreement & Signature</h4>
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              disabled={submitted}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-gray-700">
+              I have read and agree to the{" "}
+              <Link href="/seller-agreement" target="_blank" rel="noopener noreferrer" className="text-primary underline font-medium">
+                AfroTransact Seller Agreement
+              </Link>
+              . I confirm the information above is true and accurate.
+            </span>
+          </label>
+
+          <div className="mt-4">
+            <label className={`${labelCls} inline-flex items-center gap-1.5`}>
+              Typed signature<RequiredDot />
+              <InfoTooltip text={`Type your legal business name exactly as entered above (“${businessName || "Legal Business Name"}”). This serves as your electronic signature.`} />
+            </label>
+            <input
+              value={signatureName}
+              onChange={(e) => setSignatureName(e.target.value)}
+              disabled={submitted}
+              className={signatureName && !signatureValid ? inputErrCls : inputCls}
+              placeholder={businessName || "Type your legal business name"}
+              autoComplete="off"
+            />
+            {signatureName && !signatureValid && (
+              <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                Signature must match the legal business name exactly.
+              </p>
+            )}
+            {signatureValid && (
+              <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                <Check className="h-3 w-3 shrink-0" />
+                Signature matches.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

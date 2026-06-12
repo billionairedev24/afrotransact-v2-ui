@@ -803,8 +803,8 @@ export function Header() {
                 Settings
               </MobileMenuRow>
 
-              {/* ── For Sellers (gated off during beta) ── */}
-              {!HIDE_SELLER_FOR_BETA && (
+              {/* ── For Sellers (public CTA gated off during beta) ── */}
+              {(isSeller || isAdmin || !HIDE_SELLER_FOR_BETA) && (
                 <>
                   <div className="mx-5 my-2 border-t border-gray-200" />
                   <MobileMenuSectionTitle>For Sellers</MobileMenuSectionTitle>
@@ -817,12 +817,14 @@ export function Header() {
                       Seller Dashboard
                     </MobileMenuRow>
                   )}
-                  <MobileMenuRow href="/sell" onClick={closeMobileMenu} icon={Store}>
-                    Sell on AfroTransact
-                  </MobileMenuRow>
+                  {!HIDE_SELLER_FOR_BETA && (
+                    <MobileMenuRow href="/sell" onClick={closeMobileMenu} icon={Store}>
+                      Sell on AfroTransact
+                    </MobileMenuRow>
+                  )}
                   {isAdmin && (
                     <MobileMenuRow href="/admin" onClick={closeMobileMenu} icon={ShieldCheck}>
-                      Admin
+                      Admin Panel
                     </MobileMenuRow>
                   )}
                 </>

@@ -20,6 +20,7 @@ import {
   Star,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { normalizeInt, normalizeDecimal } from "@/lib/inputs"
 import {
   getProductById,
   getCategories,
@@ -917,7 +918,7 @@ export default function EditProductPage() {
                   step="0.01"
                   min="0"
                   value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
+                  onChange={(e) => setWeight(normalizeDecimal(e.target.value))}
                   onBlur={() => touch("weight")}
                   placeholder="0.00"
                   className={cn(inputCls(err("weight")), "flex-1")}
@@ -953,7 +954,7 @@ export default function EditProductPage() {
                     step="0.01"
                     min="0"
                     value={parcelLengthIn}
-                    onChange={(e) => setParcelLengthIn(e.target.value)}
+                    onChange={(e) => setParcelLengthIn(normalizeDecimal(e.target.value))}
                     onBlur={() => touch("parcelLengthIn")}
                     className={cn(inputCls(err("parcelLengthIn")), "w-full")}
                   />
@@ -966,7 +967,7 @@ export default function EditProductPage() {
                     step="0.01"
                     min="0"
                     value={parcelWidthIn}
-                    onChange={(e) => setParcelWidthIn(e.target.value)}
+                    onChange={(e) => setParcelWidthIn(normalizeDecimal(e.target.value))}
                     onBlur={() => touch("parcelWidthIn")}
                     className={cn(inputCls(err("parcelWidthIn")), "w-full")}
                   />
@@ -979,7 +980,7 @@ export default function EditProductPage() {
                     step="0.01"
                     min="0"
                     value={parcelHeightIn}
-                    onChange={(e) => setParcelHeightIn(e.target.value)}
+                    onChange={(e) => setParcelHeightIn(normalizeDecimal(e.target.value))}
                     onBlur={() => touch("parcelHeightIn")}
                     className={cn(inputCls(err("parcelHeightIn")), "w-full")}
                   />
@@ -1290,7 +1291,7 @@ export default function EditProductPage() {
                       step="0.01"
                       min="0"
                       value={variant.price}
-                      onChange={(e) => updateVariantField(variant.id, "price", e.target.value)}
+                      onChange={(e) => updateVariantField(variant.id, "price", normalizeDecimal(e.target.value))}
                       onBlur={() => touch(`v${idx}_price`)}
                       placeholder="0.00"
                       className={cn(inputCls(err(`v${idx}_price`)), "h-9")}
@@ -1304,7 +1305,7 @@ export default function EditProductPage() {
                       step="0.01"
                       min="0"
                       value={variant.compareAtPrice}
-                      onChange={(e) => updateVariantField(variant.id, "compareAtPrice", e.target.value)}
+                      onChange={(e) => updateVariantField(variant.id, "compareAtPrice", normalizeDecimal(e.target.value))}
                       placeholder="0.00"
                       className={cn(inputCls(err(`v${idx}_compare`)), "h-9")}
                     />
@@ -1318,7 +1319,7 @@ export default function EditProductPage() {
                       type="number"
                       min="0"
                       value={variant.stockQuantity}
-                      onChange={(e) => updateVariantField(variant.id, "stockQuantity", e.target.value)}
+                      onChange={(e) => updateVariantField(variant.id, "stockQuantity", normalizeInt(e.target.value))}
                       onBlur={() => touch(`v${idx}_stock`)}
                       placeholder="0"
                       className={cn(inputCls(err(`v${idx}_stock`)), "h-9")}
