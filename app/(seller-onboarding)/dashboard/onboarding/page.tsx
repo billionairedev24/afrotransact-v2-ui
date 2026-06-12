@@ -611,7 +611,11 @@ export default function SellerOnboardingPage() {
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pr.email.trim())) errs[`p${i}_email`] = "Invalid email"
         if (!pr.dateOfBirth) errs[`p${i}_dob`] = "Required"
         if (pr.ssnLast4 && !/^\d{4}$/.test(pr.ssnLast4.trim())) errs[`p${i}_ssn`] = "Must be 4 digits"
-        if (pr.ownershipPct < 0 || pr.ownershipPct > 100) errs[`p${i}_ownership`] = "Must be 0–100%"
+        // Beneficial-owner threshold per FinCEN BOI / typical Stripe Connect
+        // policy: only list principals with >=25% ownership stake.
+        if (!pr.ownershipPct) errs[`p${i}_ownership`] = "Required"
+        else if (pr.ownershipPct < 25) errs[`p${i}_ownership`] = "Must be 25% or more"
+        else if (pr.ownershipPct > 100) errs[`p${i}_ownership`] = "Must be 25–100%"
         if (!pr.addressLine1.trim()) errs[`p${i}_address`] = "Address is required"
         if (!pr.city.trim()) errs[`p${i}_city`] = "Required"
         if (!pr.state) errs[`p${i}_state`] = "Required"
@@ -1575,7 +1579,7 @@ function EntityDetailsStep({
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls}>Ownership %</label>
+                      <label className={labelCls}>Ownership %<RequiredDot /></label>
                       <input
                         value={pr.ownershipPct === 0 ? "" : String(pr.ownershipPct)}
                         onChange={(e) => {
@@ -1587,6 +1591,9 @@ function EntityDetailsStep({
                         placeholder="25"
                       />
                       <FieldError error={pe("ownership")} />
+                      {!pe("ownership") && (
+                        <p className="text-xs text-gray-500 mt-1">Only list beneficial owners with 25% or more.</p>
+                      )}
                     </div>
                     <div>
                       <label className={labelCls}>Email<RequiredDot /></label>
