@@ -4,7 +4,7 @@ import { Store, FileText } from "lucide-react"
 const EFFECTIVE_DATE = "March 3, 2026"
 const COMPANY = "AfroTransact, LLC"
 const COMPANY_SHORT = "AfroTransact"
-const CONTACT_EMAIL = "sellers@afrotransact.com"
+const CONTACT_EMAIL = "hello@afrotransact.com"
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
@@ -406,8 +406,8 @@ export default function SellerAgreementPage() {
               </p>
               <p>
                 General Support:{" "}
-                <a href="mailto:support@afrotransact.com" className="text-foreground hover:underline">
-                  support@afrotransact.com
+                <a href="mailto:hello@afrotransact.com" className="text-foreground hover:underline">
+                  hello@afrotransact.com
                 </a>
               </p>
             </div>

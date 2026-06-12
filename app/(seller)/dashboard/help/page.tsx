@@ -93,7 +93,7 @@ export default function SellerHelpPage() {
           </div>
           <div className="flex gap-2">
             <a
-              href="mailto:sellers@afrotransact.com"
+              href="mailto:hello@afrotransact.com"
               className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
             >
               <Mail className="h-4 w-4" />

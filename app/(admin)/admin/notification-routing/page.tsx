@@ -316,7 +316,7 @@ export default function NotificationRoutingPage() {
                   type="email"
                   value={addEmail}
                   onChange={e => setAddEmail(e.target.value)}
-                  placeholder="team@afrotransact.com"
+                  placeholder="hello@afrotransact.com"
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
                 />
               </div>

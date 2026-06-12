@@ -10,7 +10,7 @@ import {
 } from "@/lib/seller-dashboard-access"
 
 const SUPPORT_EMAIL =
-  process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@afrotransact.com"
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "hello@afrotransact.com"
 
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return null

@@ -3,7 +3,7 @@ import { Lock, Shield } from "lucide-react"
 
 const EFFECTIVE_DATE = "March 3, 2026"
 const COMPANY = "AfroTransact, LLC"
-const CONTACT_EMAIL = "privacy@afrotransact.com"
+const CONTACT_EMAIL = "hello@afrotransact.com"
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (

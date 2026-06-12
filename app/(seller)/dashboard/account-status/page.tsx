@@ -204,7 +204,7 @@ export default function AccountStatusPage() {
           )}
           {stage === "REJECTED" && (
             <a
-              href="mailto:support@afrotransact.com"
+              href="mailto:hello@afrotransact.com"
               className="mt-5 inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2 text-sm font-semibold text-background hover:opacity-90"
             >
               <ArrowRight className="h-4 w-4" />
