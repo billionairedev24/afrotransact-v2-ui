@@ -501,6 +501,30 @@ export function getReviewsByProducts(productIds: string[], page = 1, size = 20) 
   return api<ProductReviewsResponse>(`/api/v1/reviews/by-products?product_ids=${productIds.join(",")}&page=${page}&size=${size}`)
 }
 
+export interface ProductRatingSummary {
+  productId: string
+  avgRating: number
+  reviewCount: number
+}
+
+/** Per-product avg-rating + review-count for a batch of products. Used by /deals
+ *  to power the Customer Rating filter. Products with no reviews are omitted. */
+export async function getRatingAggregatesByProducts(
+  productIds: string[]
+): Promise<ProductRatingSummary[]> {
+  if (productIds.length === 0) return []
+  // Review service returns snake_case product_id / avg_rating / review_count;
+  // remap to the camelCase shape the UI uses everywhere else.
+  const raw = await api<Array<{ product_id: string; avg_rating: number; review_count: number }>>(
+    `/api/v1/reviews/aggregates-by-products?product_ids=${productIds.join(",")}`
+  )
+  return raw.map((r) => ({
+    productId: r.product_id,
+    avgRating: r.avg_rating,
+    reviewCount: r.review_count,
+  }))
+}
+
 export function getAdminReviews(token: string, page = 1, size = 50) {
   return api<ProductReviewsResponse>(`/api/v1/reviews/admin/all?page=${page}&size=${size}`, { token })
 }

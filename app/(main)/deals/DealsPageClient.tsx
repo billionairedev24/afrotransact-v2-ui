@@ -15,9 +15,15 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ChevronRight, Grid3X3, LayoutList, Loader2, Tag } from "lucide-react"
+import { ChevronRight, Grid3X3, LayoutList, Loader2, Star, Tag } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getActiveDeals, getCategories, type DealData, type CategoryRef } from "@/lib/api"
+import {
+  getActiveDeals,
+  getCategories,
+  getRatingAggregatesByProducts,
+  type DealData,
+  type CategoryRef,
+} from "@/lib/api"
 import { BrandProductCard, BrandProductRow, type BrandProductCardItem } from "@/components/products/BrandProductCard"
 import { Pagination } from "@/components/products/Pagination"
 
@@ -48,13 +54,13 @@ function dealToCardItem(deal: DealData): BrandProductCardItem | null {
 export default function DealsPageClient() {
   const [deals, setDeals] = useState<DealData[]>([])
   const [categories, setCategories] = useState<CategoryRef[]>([])
+  const [ratings, setRatings] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
 
-  // Department filter uses the new DealData.categorySlugs backend field
-  // (populated by enrichWithProduct). Customer-rating is still hidden until
-  // avg-rating is denormalized onto Product (tracked in catalog backlog).
   const [selectedCategorySlugs, setSelectedCategorySlugs] = useState<Set<string>>(new Set())
   const [discountMin, setDiscountMin] = useState<number | null>(null)
+  // Star threshold (>=). `null` means "any", which is the default Any-radio.
+  const [ratingMin, setRatingMin] = useState<number | null>(null)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [page, setPage] = useState(1)
 
@@ -67,6 +73,24 @@ export default function DealsPageClient() {
         if (dRes.status === "fulfilled") setDeals(dRes.value)
         if (cRes.status === "fulfilled") {
           setCategories(cRes.value.filter((c) => !c.parentId && c.slug !== "services"))
+        }
+        // Fetch per-product rating aggregates so the Customer Rating filter
+        // can actually narrow results. Failures are non-fatal: with no
+        // ratings data, picking a star threshold simply hides all deals.
+        if (dRes.status === "fulfilled") {
+          const productIds = dRes.value
+            .map((d) => d.productId)
+            .filter((id): id is string => !!id)
+          if (productIds.length > 0) {
+            try {
+              const aggs = await getRatingAggregatesByProducts(productIds)
+              if (!cancelled) {
+                setRatings(Object.fromEntries(aggs.map((a) => [a.productId, a.avgRating])))
+              }
+            } catch {
+              // ignore — rating data isn't critical for the page to render.
+            }
+          }
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -85,9 +109,13 @@ export default function DealsPageClient() {
         const slugs = d.categorySlugs ?? []
         if (!slugs.some((s) => selectedCategorySlugs.has(s))) return false
       }
+      if (ratingMin != null) {
+        const r = d.productId ? ratings[d.productId] : undefined
+        if (r == null || r < ratingMin) return false
+      }
       return true
     })
-  }, [deals, discountMin, selectedCategorySlugs])
+  }, [deals, discountMin, selectedCategorySlugs, ratingMin, ratings])
 
   function toggleCategory(slug: string) {
     setSelectedCategorySlugs((prev) => {
@@ -175,6 +203,49 @@ export default function DealsPageClient() {
                   />
                   <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
                     {tier}% Off or more
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-xl font-bold text-foreground mb-3">Customer Rating</h3>
+            <div className="flex flex-col gap-2 text-sm">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="radio"
+                  name="rating"
+                  checked={ratingMin == null}
+                  onChange={() => { setRatingMin(null); setPage(1) }}
+                  className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                />
+                <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
+                  Any
+                </span>
+              </label>
+              {[5, 4, 3, 2, 1].map((stars) => (
+                <label key={stars} className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="rating"
+                    checked={ratingMin === stars}
+                    onChange={() => { setRatingMin(stars); setPage(1) }}
+                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  />
+                  <span className="flex items-center">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={cn(
+                          "h-4 w-4",
+                          i < stars ? "fill-brand-gold text-brand-gold" : "fill-gray-200 text-gray-200",
+                        )}
+                      />
+                    ))}
+                  </span>
+                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
+                    &amp; Up
                   </span>
                 </label>
               ))}
