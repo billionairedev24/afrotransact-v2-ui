@@ -1717,6 +1717,13 @@ export function suspendSeller(token: string, id: string, reason: string) {
   })
 }
 
+export function reinstateSeller(token: string, id: string) {
+  return api<SellerInfo>(`/api/v1/admin/sellers/${id}/reinstate`, {
+    method: "POST",
+    token,
+  })
+}
+
 export function triggerOnboardingReminders(token: string) {
   return api<{ triggered: number }>(`/api/v1/admin/sellers/onboarding-reminders/trigger`, { method: "POST", token })
 }
