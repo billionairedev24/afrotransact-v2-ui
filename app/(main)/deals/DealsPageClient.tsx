@@ -150,29 +150,28 @@ export default function DealsPageClient() {
           <section>
             <h3 className="text-xl font-bold text-foreground mb-3">Department</h3>
             <div className="flex flex-col gap-2 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <FilterRow>
                 <input
-                  type="checkbox"
+                  type="radio"
+                  name="department"
                   checked={selectedCategorySlugs.size === 0}
                   onChange={() => { setSelectedCategorySlugs(new Set()); setPage(1) }}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  aria-label="All deals"
                 />
-                <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                  All Deals
-                </span>
-              </label>
+                <span className="text-foreground">All Deals</span>
+              </FilterRow>
               {categories.map((c) => (
-                <label key={c.id} className="flex items-center gap-2 cursor-pointer group">
+                <FilterRow key={c.id}>
                   <input
                     type="checkbox"
                     checked={selectedCategorySlugs.has(c.slug)}
                     onChange={() => toggleCategory(c.slug)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    className="h-4 w-4 cursor-pointer rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    aria-label={c.name}
                   />
-                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    {c.name}
-                  </span>
-                </label>
+                  <span className="text-foreground">{c.name}</span>
+                </FilterRow>
               ))}
             </div>
           </section>
@@ -180,31 +179,29 @@ export default function DealsPageClient() {
           <section>
             <h3 className="text-xl font-bold text-foreground mb-3">Discount</h3>
             <div className="flex flex-col gap-2 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <FilterRow>
                 <input
                   type="radio"
                   name="discount"
                   checked={discountMin == null}
                   onChange={() => { setDiscountMin(null); setPage(1) }}
-                  className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  aria-label="Any discount"
                 />
-                <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                  Any
-                </span>
-              </label>
+                <span className="text-foreground">Any</span>
+              </FilterRow>
               {DISCOUNT_TIERS.map((tier) => (
-                <label key={tier} className="flex items-center gap-2 cursor-pointer group">
+                <FilterRow key={tier}>
                   <input
                     type="radio"
                     name="discount"
                     checked={discountMin === tier}
                     onChange={() => { setDiscountMin(tier); setPage(1) }}
-                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    aria-label={`${tier}% off or more`}
                   />
-                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    {tier}% Off or more
-                  </span>
-                </label>
+                  <span className="text-foreground">{tier}% Off or more</span>
+                </FilterRow>
               ))}
             </div>
           </section>
@@ -212,26 +209,26 @@ export default function DealsPageClient() {
           <section>
             <h3 className="text-xl font-bold text-foreground mb-3">Customer Rating</h3>
             <div className="flex flex-col gap-2 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <FilterRow>
                 <input
                   type="radio"
                   name="rating"
                   checked={ratingMin == null}
                   onChange={() => { setRatingMin(null); setPage(1) }}
-                  className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  aria-label="Any rating"
                 />
-                <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                  Any
-                </span>
-              </label>
+                <span className="text-foreground">Any</span>
+              </FilterRow>
               {[5, 4, 3, 2, 1].map((stars) => (
-                <label key={stars} className="flex items-center gap-2 cursor-pointer group">
+                <FilterRow key={stars}>
                   <input
                     type="radio"
                     name="rating"
                     checked={ratingMin === stars}
                     onChange={() => { setRatingMin(stars); setPage(1) }}
-                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    aria-label={`${stars} stars and up`}
                   />
                   <span className="flex items-center">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -244,10 +241,8 @@ export default function DealsPageClient() {
                       />
                     ))}
                   </span>
-                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    &amp; Up
-                  </span>
-                </label>
+                  <span className="text-foreground">&amp; Up</span>
+                </FilterRow>
               ))}
             </div>
           </section>
@@ -348,4 +343,13 @@ export default function DealsPageClient() {
       </div>
     </main>
   )
+}
+
+/**
+ * Sidebar filter row: only the input is clickable, the label text is just
+ * read-only context. Avoids the `<label>`-wraps-input pattern so a stray
+ * click on the text never toggles the filter — Amazon-style facet UX.
+ */
+function FilterRow({ children }: { children: React.ReactNode }) {
+  return <div className="flex items-center gap-2">{children}</div>
 }

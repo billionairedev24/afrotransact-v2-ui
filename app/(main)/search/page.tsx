@@ -66,6 +66,46 @@ const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
 ]
 
+/**
+ * Filter row primitive used by Department + Customer Rating.
+ *
+ * Intentionally NOT a `<label>` — we don't want a click anywhere on the row
+ * to trigger the radio. Only the radio circle itself selects, which matches
+ * the standard Amazon facet UX and avoids the "wait, did that click?"
+ * ambiguity when stars / text overlap other clickable elements (links,
+ * counts, etc).
+ *
+ * The radio fires its own onChange when checked transitions; we never call
+ * onSelect synthetically on re-render.
+ */
+function FilterRadio({
+  checked,
+  onSelect,
+  name,
+  ariaLabel,
+  children,
+}: {
+  checked: boolean
+  onSelect: () => void
+  name: string
+  ariaLabel: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="radio"
+        name={name}
+        checked={checked}
+        onChange={onSelect}
+        aria-label={ariaLabel}
+        className="h-4 w-4 cursor-pointer border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+      />
+      {children}
+    </div>
+  )
+}
+
 /* ─────────────────────────────── Sidebar ─────────────────────────────── */
 
 function FilterSidebar({
@@ -78,6 +118,7 @@ function FilterSidebar({
   onCategoryChange,
   onPriceChange,
   onRatingChange,
+  onClearRating,
   onClearAll,
   hasActiveFilters,
 }: {
@@ -90,6 +131,7 @@ function FilterSidebar({
   onCategoryChange: (key: string) => void
   onPriceChange: (min: string, max: string) => void
   onRatingChange: (stars: number) => void
+  onClearRating: () => void
   onClearAll: () => void
   hasActiveFilters: boolean
 }) {
@@ -112,42 +154,32 @@ function FilterSidebar({
       {categoryList.length > 0 && (
         <FilterSection title="Department">
           <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <input
-                type="radio"
-                name="category"
-                checked={!category}
-                onChange={() => onCategoryChange("")}
-                className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-              />
-              <span className="flex-1 text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
-                All
-              </span>
-            </label>
+            <FilterRadio
+              checked={!category}
+              onSelect={() => onCategoryChange("")}
+              name="category"
+              ariaLabel="All categories"
+            >
+              <span className="flex-1 text-sm text-foreground">All</span>
+            </FilterRadio>
             {categoryList.map((c) => {
               const active = category === c.slug
               const facet = facets.categories.find(
                 (f) => f.key === c.slug || f.key === c.name.toLowerCase()
               )
               return (
-                <label
+                <FilterRadio
                   key={c.id}
-                  className="flex items-center gap-2 cursor-pointer group"
+                  checked={active}
+                  onSelect={() => onCategoryChange(c.slug)}
+                  name="category"
+                  ariaLabel={c.name}
                 >
-                  <input
-                    type="radio"
-                    name="category"
-                    checked={active}
-                    onChange={() => onCategoryChange(c.slug)}
-                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                  />
-                  <span className="flex-1 text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    {c.name}
-                  </span>
+                  <span className="flex-1 text-sm text-foreground">{c.name}</span>
                   {facet && (
                     <span className="text-xs text-gray-400">({facet.count})</span>
                   )}
-                </label>
+                </FilterRadio>
               )
             })}
           </div>
@@ -190,26 +222,22 @@ function FilterSidebar({
         )}
       </FilterSection>
 
-      {/* Ratings — render 1-5 stars unconditionally so the buyer can always
-          pick a threshold; the backend filters on min_rating (>= stars).
-          Facet counts are shown when the search response includes them. */}
+      {/* Customer Rating — 1-5 stars always rendered; only the radio circle
+          is clickable, text + stars are decorative so accidental clicks on
+          the row don't toggle the filter. */}
       <FilterSection title="Customer Rating">
         <div className="flex flex-col gap-2">
           {[5, 4, 3, 2, 1].map((stars) => {
             const facet = facets.ratings.find((f) => parseInt(f.key, 10) === stars)
             const checked = minRating === String(stars)
             return (
-              <label
+              <FilterRadio
                 key={stars}
-                className="flex items-center gap-2 cursor-pointer group"
+                checked={checked}
+                onSelect={() => onRatingChange(stars)}
+                name="rating"
+                ariaLabel={`${stars} stars and up`}
               >
-                <input
-                  type="radio"
-                  name="rating"
-                  checked={checked}
-                  onChange={() => onRatingChange(stars)}
-                  className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                />
                 <span className="flex items-center">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star
@@ -223,20 +251,18 @@ function FilterSidebar({
                     />
                   ))}
                 </span>
-                <span className="text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
-                  &amp; Up
-                </span>
+                <span className="text-sm text-foreground">&amp; Up</span>
                 {facet && (
                   <span className="ml-auto text-xs text-gray-400">({facet.count})</span>
                 )}
-              </label>
+              </FilterRadio>
             )
           })}
         </div>
       </FilterSection>
       {minRating && (
         <button
-          onClick={() => onRatingChange(parseInt(minRating, 10))}
+          onClick={onClearRating}
           className="text-xs text-gray-500 hover:text-foreground underline -mt-2 ml-2"
         >
           Clear rating filter
@@ -349,6 +375,7 @@ function MobileFilterPanel({
   onCategoryChange,
   onPriceChange,
   onRatingChange,
+  onClearRating,
   onClearAll,
   hasActiveFilters,
 }: {
@@ -363,6 +390,7 @@ function MobileFilterPanel({
   onCategoryChange: (key: string) => void
   onPriceChange: (min: string, max: string) => void
   onRatingChange: (stars: number) => void
+  onClearRating: () => void
   onClearAll: () => void
   hasActiveFilters: boolean
 }) {
@@ -417,6 +445,10 @@ function MobileFilterPanel({
               }}
               onRatingChange={(stars) => {
                 onRatingChange(stars)
+                onClose()
+              }}
+              onClearRating={() => {
+                onClearRating()
                 onClose()
               }}
               onClearAll={() => {
@@ -837,7 +869,10 @@ function SearchContent() {
   )
 
   function handleCategoryChange(key: string) {
-    updateParam("category", category === key ? "" : key)
+    // Radio semantics — clicking a category always sets it, even if the same
+    // value (handler is only fired by a real input change). The "All" radio
+    // sends "" which clears the URL param.
+    updateParam("category", key)
   }
 
   function handlePriceChange(min: string, max: string) {
@@ -849,8 +884,10 @@ function SearchContent() {
   }
 
   function handleRatingChange(stars: number) {
-    const next = minRating === String(stars) ? "" : String(stars)
-    updateParam("min_rating", next)
+    updateParam("min_rating", String(stars))
+  }
+  function handleClearRating() {
+    updateParam("min_rating", "")
   }
 
   const emptyFacets: SearchResponse["facets"] = {
@@ -1027,6 +1064,7 @@ function SearchContent() {
                 onCategoryChange={handleCategoryChange}
                 onPriceChange={handlePriceChange}
                 onRatingChange={handleRatingChange}
+                onClearRating={handleClearRating}
                 onClearAll={handleClearAll}
                 hasActiveFilters={hasActiveFilters}
               />
@@ -1048,6 +1086,7 @@ function SearchContent() {
             onCategoryChange={handleCategoryChange}
             onPriceChange={handlePriceChange}
             onRatingChange={handleRatingChange}
+            onClearRating={handleClearRating}
             onClearAll={handleClearAll}
             hasActiveFilters={hasActiveFilters}
           />
