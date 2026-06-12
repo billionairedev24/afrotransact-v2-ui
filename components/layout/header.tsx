@@ -259,19 +259,29 @@ export function Header() {
     }, 200)
   }
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    const q = query.trim()
-    // Allow submitting with only a category selected (no text) — sends user to
-    // the category-scoped search results, matching Amazon's "All" dropdown UX.
-    if (!q && !searchCategorySlug) return
+  function navigateToSearch(opts: { query: string; categorySlug: string }) {
+    const q = opts.query.trim()
+    if (!q && !opts.categorySlug) return
     const params = new URLSearchParams()
     if (q) params.set("q", q)
-    if (searchCategorySlug) params.set("category", searchCategorySlug)
+    if (opts.categorySlug) params.set("category", opts.categorySlug)
     router.push(`/search?${params.toString()}`)
     setShowSuggestions(false)
     setMobileSearchOpen(false)
     setCategoryDropdownOpen(false)
+  }
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    navigateToSearch({ query, categorySlug: searchCategorySlug })
+  }
+
+  // Picking a category from the dropdown should immediately scope the
+  // results, matching Amazon's behavior. If there's no query text we still
+  // navigate (sends the user to a category-only listing).
+  function handleCategoryPick(slug: string) {
+    setSearchCategorySlug(slug)
+    navigateToSearch({ query, categorySlug: slug })
   }
 
   const selectedCategoryLabel =
@@ -338,11 +348,7 @@ export function Header() {
                       <div className="absolute left-0 top-full mt-1 w-56 max-h-[60vh] overflow-y-auto rounded-lg border border-gray-200 shadow-xl bg-white z-[60] py-1">
                         <button
                           type="button"
-                          onClick={() => {
-                            setSearchCategorySlug("")
-                            setCategoryDropdownOpen(false)
-                            inputRef.current?.focus()
-                          }}
+                          onClick={() => handleCategoryPick("")}
                           className={cn(
                             "w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors",
                             searchCategorySlug === "" ? "font-semibold text-foreground" : "text-gray-700",
@@ -357,11 +363,7 @@ export function Header() {
                             <button
                               key={c.id}
                               type="button"
-                              onClick={() => {
-                                setSearchCategorySlug(c.slug)
-                                setCategoryDropdownOpen(false)
-                                inputRef.current?.focus()
-                              }}
+                              onClick={() => handleCategoryPick(c.slug)}
                               className={cn(
                                 "w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors",
                                 searchCategorySlug === c.slug

@@ -25,10 +25,12 @@ import {
   getProductById,
   getRegions,
   getRegionFeatures,
+  getCategories,
   type SearchResponse,
   type SearchResult,
   type Region,
   type FeatureFlag,
+  type CategoryRef,
 } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
@@ -68,6 +70,7 @@ const SORT_OPTIONS = [
 
 function FilterSidebar({
   facets,
+  categoryList,
   category,
   minPrice,
   maxPrice,
@@ -79,6 +82,7 @@ function FilterSidebar({
   hasActiveFilters,
 }: {
   facets: SearchResponse["facets"]
+  categoryList: CategoryRef[]
   category: string
   minPrice: string
   maxPrice: string
@@ -100,29 +104,49 @@ function FilterSidebar({
         </button>
       )}
 
-      {/* Categories — mockup all-products.html lines 148-172, checkbox-style.
-          Backend currently single-selects; checkbox is visual sugar so an
-          item that's already checked uncheckes on click. */}
-      {facets.categories.length > 0 && (
-        <FilterSection title="Categories">
+      {/* Categories — always render the full canonical list (radio-style,
+          since the backend supports a single category filter). Facet counts
+          from the current search response are shown when available; absent
+          counts don't hide the option, so the list never reshuffles or
+          loses items when you pick one (which was the prior bug). */}
+      {categoryList.length > 0 && (
+        <FilterSection title="Department">
           <div className="flex flex-col gap-2">
-            {facets.categories.map((f) => {
-              const active = category === f.key
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="radio"
+                name="category"
+                checked={!category}
+                onChange={() => onCategoryChange("")}
+                className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+              />
+              <span className="flex-1 text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
+                All
+              </span>
+            </label>
+            {categoryList.map((c) => {
+              const active = category === c.slug
+              const facet = facets.categories.find(
+                (f) => f.key === c.slug || f.key === c.name.toLowerCase()
+              )
               return (
                 <label
-                  key={f.key}
+                  key={c.id}
                   className="flex items-center gap-2 cursor-pointer group"
                 >
                   <input
-                    type="checkbox"
+                    type="radio"
+                    name="category"
                     checked={active}
-                    onChange={() => onCategoryChange(f.key)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    onChange={() => onCategoryChange(c.slug)}
+                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
                   />
                   <span className="flex-1 text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    {f.label || f.key}
+                    {c.name}
                   </span>
-                  <span className="text-xs text-gray-400">({f.count})</span>
+                  {facet && (
+                    <span className="text-xs text-gray-400">({facet.count})</span>
+                  )}
                 </label>
               )
             })}
@@ -317,6 +341,7 @@ function MobileFilterPanel({
   open,
   onClose,
   facets,
+  categoryList,
   category,
   minPrice,
   maxPrice,
@@ -330,6 +355,7 @@ function MobileFilterPanel({
   open: boolean
   onClose: () => void
   facets: SearchResponse["facets"]
+  categoryList: CategoryRef[]
   category: string
   minPrice: string
   maxPrice: string
@@ -376,6 +402,7 @@ function MobileFilterPanel({
           <div className="flex-1 overflow-y-auto px-5 py-4">
             <FilterSidebar
               facets={facets}
+              categoryList={categoryList}
               category={category}
               minPrice={minPrice}
               maxPrice={maxPrice}
@@ -686,6 +713,7 @@ function SearchContent() {
   const [data, setData] = useState<SearchResponse | null>(null)
   const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [flagsLoaded, setFlagsLoaded] = useState(false)
+  const [categoryList, setCategoryList] = useState<CategoryRef[]>([])
 
   const marketplaceEnabled = flags.find((f) => f.key === "marketplace_enabled")?.enabled ?? true
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
@@ -713,6 +741,21 @@ function SearchContent() {
         if (!cancelled) setFlagsLoaded(true)
       }
     })()
+    return () => { cancelled = true }
+  }, [])
+
+  // Canonical category list. Fetched once and rendered in the sidebar
+  // unconditionally so picking a filter never makes other options vanish
+  // (the buckets in facets.categories shrink as you filter — that was the
+  // "options disappear" bug).
+  useEffect(() => {
+    let cancelled = false
+    getCategories()
+      .then((cats) => {
+        if (cancelled) return
+        setCategoryList(cats.filter((c) => !c.parentId && c.slug !== "services"))
+      })
+      .catch(() => { /* non-fatal */ })
     return () => { cancelled = true }
   }, [])
 
@@ -817,7 +860,11 @@ function SearchContent() {
     stores: [],
   }
   const safeFacets = facets ?? emptyFacets
+  // Sidebar should appear whenever there's anything to filter against — the
+  // canonical category list counts even when the current result set produces
+  // no facet buckets (e.g. a query that hit zero results).
   const hasFacets =
+    categoryList.length > 0 ||
     safeFacets.categories.length > 0 ||
     safeFacets.price_ranges.length > 0 ||
     safeFacets.ratings.length > 0 ||
@@ -972,6 +1019,7 @@ function SearchContent() {
             <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-5">
               <FilterSidebar
                 facets={safeFacets}
+                categoryList={categoryList}
                 category={category}
                 minPrice={minPrice}
                 maxPrice={maxPrice}
@@ -992,6 +1040,7 @@ function SearchContent() {
             open={mobileFiltersOpen}
             onClose={() => setMobileFiltersOpen(false)}
             facets={safeFacets}
+            categoryList={categoryList}
             category={category}
             minPrice={minPrice}
             maxPrice={maxPrice}
