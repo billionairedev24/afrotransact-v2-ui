@@ -17,8 +17,14 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { ChevronRight, Grid3X3, LayoutList, Loader2, Star, Tag } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getActiveDeals, getCategories, type DealData, type CategoryRef } from "@/lib/api"
-import { BrandProductCard, type BrandProductCardItem } from "@/components/products/BrandProductCard"
+import {
+  getActiveDeals,
+  getCategories,
+  getRatingAggregatesByProducts,
+  type DealData,
+  type CategoryRef,
+} from "@/lib/api"
+import { BrandProductCard, BrandProductRow, type BrandProductCardItem } from "@/components/products/BrandProductCard"
 import { Pagination } from "@/components/products/Pagination"
 
 const PAGE_SIZE = 24
@@ -48,11 +54,12 @@ function dealToCardItem(deal: DealData): BrandProductCardItem | null {
 export default function DealsPageClient() {
   const [deals, setDeals] = useState<DealData[]>([])
   const [categories, setCategories] = useState<CategoryRef[]>([])
+  const [ratings, setRatings] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
 
-  // Client-side filter state — backend has no deal-faceting endpoint yet.
   const [selectedCategorySlugs, setSelectedCategorySlugs] = useState<Set<string>>(new Set())
   const [discountMin, setDiscountMin] = useState<number | null>(null)
+  // Star threshold (>=). `null` means "any", which is the default Any-radio.
   const [ratingMin, setRatingMin] = useState<number | null>(null)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [page, setPage] = useState(1)
@@ -60,13 +67,34 @@ export default function DealsPageClient() {
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const [dRes, cRes] = await Promise.allSettled([getActiveDeals(), getCategories()])
-      if (cancelled) return
-      if (dRes.status === "fulfilled") setDeals(dRes.value)
-      if (cRes.status === "fulfilled") {
-        setCategories(cRes.value.filter((c) => !c.parentId && c.slug !== "services"))
+      try {
+        const [dRes, cRes] = await Promise.allSettled([getActiveDeals(), getCategories()])
+        if (cancelled) return
+        if (dRes.status === "fulfilled") setDeals(dRes.value)
+        if (cRes.status === "fulfilled") {
+          setCategories(cRes.value.filter((c) => !c.parentId && c.slug !== "services"))
+        }
+        // Fetch per-product rating aggregates so the Customer Rating filter
+        // can actually narrow results. Failures are non-fatal: with no
+        // ratings data, picking a star threshold simply hides all deals.
+        if (dRes.status === "fulfilled") {
+          const productIds = dRes.value
+            .map((d) => d.productId)
+            .filter((id): id is string => !!id)
+          if (productIds.length > 0) {
+            try {
+              const aggs = await getRatingAggregatesByProducts(productIds)
+              if (!cancelled) {
+                setRatings(Object.fromEntries(aggs.map((a) => [a.productId, a.avgRating])))
+              }
+            } catch {
+              // ignore — rating data isn't critical for the page to render.
+            }
+          }
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setLoading(false)
     }
     load()
     return () => {
@@ -77,27 +105,17 @@ export default function DealsPageClient() {
   const filtered = useMemo(() => {
     return deals.filter((d) => {
       if (discountMin != null && (d.discountPercent ?? 0) < discountMin) return false
-      // Rating filter requires a join to product data that DealData doesn't
-      // currently carry; honoured as a no-op until backend exposes it. Kept
-      // here so the UI control behaves as expected when data arrives.
-      if (ratingMin != null) {
-        // no-op; left intentionally — see comment above.
-      }
       if (selectedCategorySlugs.size > 0) {
-        // DealData has no category — fall back to "match all" to avoid hiding
-        // every deal. When backend adds product.categories[] to DealData, swap
-        // this for an Array.some() check.
-        return true
+        const slugs = d.categorySlugs ?? []
+        if (!slugs.some((s) => selectedCategorySlugs.has(s))) return false
+      }
+      if (ratingMin != null) {
+        const r = d.productId ? ratings[d.productId] : undefined
+        if (r == null || r < ratingMin) return false
       }
       return true
     })
-  }, [deals, discountMin, ratingMin, selectedCategorySlugs])
-
-  const total = filtered.length
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const startIdx = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const endIdx = Math.min(page * PAGE_SIZE, total)
+  }, [deals, discountMin, selectedCategorySlugs, ratingMin, ratings])
 
   function toggleCategory(slug: string) {
     setSelectedCategorySlugs((prev) => {
@@ -108,6 +126,12 @@ export default function DealsPageClient() {
     })
     setPage(1)
   }
+
+  const total = filtered.length
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const startIdx = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const endIdx = Math.min(page * PAGE_SIZE, total)
 
   return (
     <main className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 py-10">
@@ -126,29 +150,23 @@ export default function DealsPageClient() {
           <section>
             <h3 className="text-xl font-bold text-foreground mb-3">Department</h3>
             <div className="flex flex-col gap-2 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
+              <FilterRow>
+                <FilterRadioDot
                   checked={selectedCategorySlugs.size === 0}
-                  onChange={() => { setSelectedCategorySlugs(new Set()); setPage(1) }}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  onSelect={() => { setSelectedCategorySlugs(new Set()); setPage(1) }}
+                  ariaLabel="All deals"
                 />
-                <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                  All Deals
-                </span>
-              </label>
+                <span className="text-foreground">All Deals</span>
+              </FilterRow>
               {categories.map((c) => (
-                <label key={c.id} className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="checkbox"
+                <FilterRow key={c.id}>
+                  <FilterCheckboxDot
                     checked={selectedCategorySlugs.has(c.slug)}
-                    onChange={() => toggleCategory(c.slug)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    onToggle={() => toggleCategory(c.slug)}
+                    ariaLabel={c.name}
                   />
-                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    {c.name}
-                  </span>
-                </label>
+                  <span className="text-foreground">{c.name}</span>
+                </FilterRow>
               ))}
             </div>
           </section>
@@ -156,31 +174,23 @@ export default function DealsPageClient() {
           <section>
             <h3 className="text-xl font-bold text-foreground mb-3">Discount</h3>
             <div className="flex flex-col gap-2 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="radio"
-                  name="discount"
+              <FilterRow>
+                <FilterRadioDot
                   checked={discountMin == null}
-                  onChange={() => { setDiscountMin(null); setPage(1) }}
-                  className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  onSelect={() => { setDiscountMin(null); setPage(1) }}
+                  ariaLabel="Any discount"
                 />
-                <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                  Any
-                </span>
-              </label>
+                <span className="text-foreground">Any</span>
+              </FilterRow>
               {DISCOUNT_TIERS.map((tier) => (
-                <label key={tier} className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="radio"
-                    name="discount"
+                <FilterRow key={tier}>
+                  <FilterRadioDot
                     checked={discountMin === tier}
-                    onChange={() => { setDiscountMin(tier); setPage(1) }}
-                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    onSelect={() => { setDiscountMin(tier); setPage(1) }}
+                    ariaLabel={`${tier}% off or more`}
                   />
-                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    {tier}% Off or more
-                  </span>
-                </label>
+                  <span className="text-foreground">{tier}% Off or more</span>
+                </FilterRow>
               ))}
             </div>
           </section>
@@ -188,14 +198,20 @@ export default function DealsPageClient() {
           <section>
             <h3 className="text-xl font-bold text-foreground mb-3">Customer Rating</h3>
             <div className="flex flex-col gap-2 text-sm">
-              {[4, 3].map((stars) => (
-                <label key={stars} className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="radio"
-                    name="rating"
+              <FilterRow>
+                <FilterRadioDot
+                  checked={ratingMin == null}
+                  onSelect={() => { setRatingMin(null); setPage(1) }}
+                  ariaLabel="Any rating"
+                />
+                <span className="text-foreground">Any</span>
+              </FilterRow>
+              {[5, 4, 3, 2, 1].map((stars) => (
+                <FilterRow key={stars}>
+                  <FilterRadioDot
                     checked={ratingMin === stars}
-                    onChange={() => { setRatingMin(stars); setPage(1) }}
-                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    onSelect={() => { setRatingMin(stars); setPage(1) }}
+                    ariaLabel={`${stars} stars and up`}
                   />
                   <span className="flex items-center">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -208,10 +224,8 @@ export default function DealsPageClient() {
                       />
                     ))}
                   </span>
-                  <span className="text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    &amp; Up
-                  </span>
-                </label>
+                  <span className="text-foreground">&amp; Up</span>
+                </FilterRow>
               ))}
             </div>
           </section>
@@ -292,7 +306,9 @@ export default function DealsPageClient() {
                 {pageItems.map((deal) => {
                   const card = dealToCardItem(deal)
                   if (!card) return null
-                  return <BrandProductCard key={deal.id} item={card} />
+                  return viewMode === "list"
+                    ? <BrandProductRow key={deal.id} item={card} />
+                    : <BrandProductCard key={deal.id} item={card} />
                 })}
               </div>
 
@@ -309,5 +325,74 @@ export default function DealsPageClient() {
         </div>
       </div>
     </main>
+  )
+}
+
+/**
+ * Sidebar filter row: only the input is clickable, the label text is just
+ * read-only context. Avoids the `<label>`-wraps-input pattern so a stray
+ * click on the text never toggles the filter — Amazon-style facet UX.
+ */
+function FilterRow({ children }: { children: React.ReactNode }) {
+  return <div className="flex items-center gap-2">{children}</div>
+}
+
+/**
+ * See note in /search page — native controlled radios were flaky.
+ * Button + aria-checked has deterministic visual state.
+ */
+function FilterRadioDot({
+  checked,
+  onSelect,
+  ariaLabel,
+}: {
+  checked: boolean
+  onSelect: () => void
+  ariaLabel: string
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={onSelect}
+      className={cn(
+        "h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold",
+        checked ? "border-brand-gold" : "border-gray-300 hover:border-gray-400",
+      )}
+    >
+      {checked && <span className="h-2 w-2 rounded-full bg-brand-gold" />}
+    </button>
+  )
+}
+
+function FilterCheckboxDot({
+  checked,
+  onToggle,
+  ariaLabel,
+}: {
+  checked: boolean
+  onToggle: () => void
+  ariaLabel: string
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={onToggle}
+      className={cn(
+        "h-4 w-4 shrink-0 rounded border-2 flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold",
+        checked ? "bg-brand-gold border-brand-gold" : "border-gray-300 hover:border-gray-400",
+      )}
+    >
+      {checked && (
+        <svg viewBox="0 0 12 12" className="h-3 w-3 text-brand-gold-foreground" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M2 6 L5 9 L10 3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </button>
   )
 }

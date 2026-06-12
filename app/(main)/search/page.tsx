@@ -25,10 +25,12 @@ import {
   getProductById,
   getRegions,
   getRegionFeatures,
+  getCategories,
   type SearchResponse,
   type SearchResult,
   type Region,
   type FeatureFlag,
+  type CategoryRef,
 } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
@@ -64,24 +66,85 @@ const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
 ]
 
+/**
+ * Filter row primitive used by Department + Customer Rating.
+ *
+ * Intentionally NOT a `<label>` — we don't want a click anywhere on the row
+ * to trigger the radio. Only the radio circle itself selects, which matches
+ * the standard Amazon facet UX and avoids the "wait, did that click?"
+ * ambiguity when stars / text overlap other clickable elements (links,
+ * counts, etc).
+ *
+ * The radio fires its own onChange when checked transitions; we never call
+ * onSelect synthetically on re-render.
+ */
+/**
+ * Renders as a native radio but is actually a button with role="radio".
+ * Controlled `<input type="radio">` had two intermittent failure modes here:
+ * a checked re-click never fired onChange (so picking "All" after URL was
+ * already empty was a no-op), and React's controlled-state reconciliation
+ * occasionally lost the visual checked state when the URL update happened
+ * mid-render. Button + aria-checked sidesteps both — click always fires,
+ * the visual state is pure CSS driven by `checked`, no edge cases.
+ */
+function FilterRadio({
+  checked,
+  onSelect,
+  ariaLabel,
+  children,
+}: {
+  checked: boolean
+  onSelect: () => void
+  name?: string
+  ariaLabel: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        role="radio"
+        aria-checked={checked}
+        aria-label={ariaLabel}
+        onClick={onSelect}
+        className={cn(
+          "h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold",
+          checked ? "border-brand-gold" : "border-gray-300 hover:border-gray-400",
+        )}
+      >
+        {checked && <span className="h-2 w-2 rounded-full bg-brand-gold" />}
+      </button>
+      {children}
+    </div>
+  )
+}
+
 /* ─────────────────────────────── Sidebar ─────────────────────────────── */
 
 function FilterSidebar({
   facets,
+  categoryList,
   category,
   minPrice,
   maxPrice,
+  minRating,
   onCategoryChange,
   onPriceChange,
+  onRatingChange,
+  onClearRating,
   onClearAll,
   hasActiveFilters,
 }: {
   facets: SearchResponse["facets"]
+  categoryList: CategoryRef[]
   category: string
   minPrice: string
   maxPrice: string
+  minRating: string
   onCategoryChange: (key: string) => void
   onPriceChange: (min: string, max: string) => void
+  onRatingChange: (stars: number) => void
+  onClearRating: () => void
   onClearAll: () => void
   hasActiveFilters: boolean
 }) {
@@ -96,30 +159,45 @@ function FilterSidebar({
         </button>
       )}
 
-      {/* Categories — mockup all-products.html lines 148-172, checkbox-style.
-          Backend currently single-selects; checkbox is visual sugar so an
-          item that's already checked uncheckes on click. */}
-      {facets.categories.length > 0 && (
-        <FilterSection title="Categories">
+      {/* Categories — always render the full canonical list (radio-style,
+          since the backend supports a single category filter). Facet counts
+          from the current search response are shown when available; absent
+          counts don't hide the option, so the list never reshuffles or
+          loses items when you pick one (which was the prior bug). */}
+      {categoryList.length > 0 && (
+        <FilterSection title="Department">
           <div className="flex flex-col gap-2">
-            {facets.categories.map((f) => {
-              const active = category === f.key
+            <FilterRadio
+              checked={!category}
+              onSelect={() => onCategoryChange("")}
+              name="category"
+              ariaLabel="All categories"
+            >
+              <span className="flex-1 text-sm text-foreground">All</span>
+            </FilterRadio>
+            {categoryList.map((c) => {
+              // Match the active filter against either the canonical slug or
+              // the lowercased name — the backend accepts both, and a category
+              // arriving via header search vs. sidebar click can land here in
+              // either form.
+              const lcName = c.name.toLowerCase()
+              const active = category === c.slug || category === lcName
+              const facet = facets.categories.find(
+                (f) => f.key === c.slug || f.key === lcName
+              )
               return (
-                <label
-                  key={f.key}
-                  className="flex items-center gap-2 cursor-pointer group"
+                <FilterRadio
+                  key={c.id}
+                  checked={active}
+                  onSelect={() => onCategoryChange(c.slug)}
+                  name="category"
+                  ariaLabel={c.name}
                 >
-                  <input
-                    type="checkbox"
-                    checked={active}
-                    onChange={() => onCategoryChange(f.key)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                  />
-                  <span className="flex-1 text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    {f.label || f.key}
-                  </span>
-                  <span className="text-xs text-gray-400">({f.count})</span>
-                </label>
+                  <span className="flex-1 text-sm text-foreground">{c.name}</span>
+                  {facet && (
+                    <span className="text-xs text-gray-400">({facet.count})</span>
+                  )}
+                </FilterRadio>
               )
             })}
           </div>
@@ -162,44 +240,51 @@ function FilterSidebar({
         )}
       </FilterSection>
 
-      {/* Ratings — mockup all-products.html lines 192-229, radio + stars row */}
-      {facets.ratings.length > 0 && (
-        <FilterSection title="Customer Rating">
-          <div className="flex flex-col gap-2">
-            {facets.ratings.map((f) => {
-              const stars = parseInt(f.key, 10) || 0
-              return (
-                <label
-                  key={f.key}
-                  className="flex items-center gap-2 cursor-pointer group"
-                >
-                  <input
-                    type="radio"
-                    name="rating"
-                    className="h-4 w-4 border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                  />
-                  <span className="flex items-center">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={cn(
-                          "h-4 w-4",
-                          i < stars
-                            ? "fill-brand-gold text-brand-gold"
-                            : "fill-gray-200 text-gray-200"
-                        )}
-                      />
-                    ))}
-                  </span>
-                  <span className="text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
-                    &amp; Up
-                  </span>
-                  <span className="ml-auto text-xs text-gray-400">({f.count})</span>
-                </label>
-              )
-            })}
-          </div>
-        </FilterSection>
+      {/* Customer Rating — 1-5 stars always rendered; only the radio circle
+          is clickable, text + stars are decorative so accidental clicks on
+          the row don't toggle the filter. */}
+      <FilterSection title="Customer Rating">
+        <div className="flex flex-col gap-2">
+          {[5, 4, 3, 2, 1].map((stars) => {
+            const facet = facets.ratings.find((f) => parseInt(f.key, 10) === stars)
+            const checked = minRating === String(stars)
+            return (
+              <FilterRadio
+                key={stars}
+                checked={checked}
+                onSelect={() => onRatingChange(stars)}
+                name="rating"
+                ariaLabel={`${stars} stars and up`}
+              >
+                <span className="flex items-center">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={cn(
+                        "h-4 w-4",
+                        i < stars
+                          ? "fill-brand-gold text-brand-gold"
+                          : "fill-gray-200 text-gray-200"
+                      )}
+                    />
+                  ))}
+                </span>
+                <span className="text-sm text-foreground">&amp; Up</span>
+                {facet && (
+                  <span className="ml-auto text-xs text-gray-400">({facet.count})</span>
+                )}
+              </FilterRadio>
+            )
+          })}
+        </div>
+      </FilterSection>
+      {minRating && (
+        <button
+          onClick={onClearRating}
+          className="text-xs text-gray-500 hover:text-foreground underline -mt-2 ml-2"
+        >
+          Clear rating filter
+        </button>
       )}
 
       {/* Stores */}
@@ -300,22 +385,30 @@ function MobileFilterPanel({
   open,
   onClose,
   facets,
+  categoryList,
   category,
   minPrice,
   maxPrice,
+  minRating,
   onCategoryChange,
   onPriceChange,
+  onRatingChange,
+  onClearRating,
   onClearAll,
   hasActiveFilters,
 }: {
   open: boolean
   onClose: () => void
   facets: SearchResponse["facets"]
+  categoryList: CategoryRef[]
   category: string
   minPrice: string
   maxPrice: string
+  minRating: string
   onCategoryChange: (key: string) => void
   onPriceChange: (min: string, max: string) => void
+  onRatingChange: (stars: number) => void
+  onClearRating: () => void
   onClearAll: () => void
   hasActiveFilters: boolean
 }) {
@@ -355,15 +448,25 @@ function MobileFilterPanel({
           <div className="flex-1 overflow-y-auto px-5 py-4">
             <FilterSidebar
               facets={facets}
+              categoryList={categoryList}
               category={category}
               minPrice={minPrice}
               maxPrice={maxPrice}
+              minRating={minRating}
               onCategoryChange={(key) => {
                 onCategoryChange(key)
                 onClose()
               }}
               onPriceChange={(min, max) => {
                 onPriceChange(min, max)
+                onClose()
+              }}
+              onRatingChange={(stars) => {
+                onRatingChange(stars)
+                onClose()
+              }}
+              onClearRating={() => {
+                onClearRating()
                 onClose()
               }}
               onClearAll={() => {
@@ -660,6 +763,7 @@ function SearchContent() {
   const [data, setData] = useState<SearchResponse | null>(null)
   const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [flagsLoaded, setFlagsLoaded] = useState(false)
+  const [categoryList, setCategoryList] = useState<CategoryRef[]>([])
 
   const marketplaceEnabled = flags.find((f) => f.key === "marketplace_enabled")?.enabled ?? true
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
@@ -669,9 +773,10 @@ function SearchContent() {
   const sortBy = searchParams.get("sort") || "relevance"
   const minPrice = searchParams.get("min_price") || ""
   const maxPrice = searchParams.get("max_price") || ""
+  const minRating = searchParams.get("min_rating") || ""
   const page = parseInt(searchParams.get("page") || "1", 10)
 
-  const hasActiveFilters = !!(category || minPrice || maxPrice)
+  const hasActiveFilters = !!(category || minPrice || maxPrice || minRating)
 
   useEffect(() => {
     let cancelled = false
@@ -689,6 +794,21 @@ function SearchContent() {
     return () => { cancelled = true }
   }, [])
 
+  // Canonical category list. Fetched once and rendered in the sidebar
+  // unconditionally so picking a filter never makes other options vanish
+  // (the buckets in facets.categories shrink as you filter — that was the
+  // "options disappear" bug).
+  useEffect(() => {
+    let cancelled = false
+    getCategories()
+      .then((cats) => {
+        if (cancelled) return
+        setCategoryList(cats.filter((c) => !c.parentId && c.slug !== "services"))
+      })
+      .catch(() => { /* non-fatal */ })
+    return () => { cancelled = true }
+  }, [])
+
   useEffect(() => {
     if (!flagsLoaded) return
     if (!marketplaceEnabled) return
@@ -702,9 +822,18 @@ function SearchContent() {
       sort_by: sortBy,
     }
     if (query) params.q = query
-    if (category) params.category = category
+    if (category) {
+      // The URL keeps a clean slug, but ES historically indexed only the
+      // lowercased name on `categories` (the `category_slugs` field is only
+      // populated for documents indexed after that change shipped). Sending
+      // the name when we can resolve it lets older documents match while the
+      // backend's OR-filter still catches new ones via the slug field.
+      const matched = categoryList.find((c) => c.slug === category)
+      params.category = matched ? matched.name.toLowerCase() : category
+    }
     if (minPrice) params.min_price = minPrice
     if (maxPrice) params.max_price = maxPrice
+    if (minRating) params.min_rating = minRating
 
     searchProducts(params)
       .then((res) => {
@@ -735,7 +864,7 @@ function SearchContent() {
     return () => {
       cancelled = true
     }
-  }, [query, category, sortBy, minPrice, maxPrice, page, flagsLoaded, marketplaceEnabled])
+  }, [query, category, sortBy, minPrice, maxPrice, minRating, page, flagsLoaded, marketplaceEnabled, categoryList])
 
   const results = data?.results ?? []
   const totalResults = data?.total ?? 0
@@ -766,7 +895,10 @@ function SearchContent() {
   )
 
   function handleCategoryChange(key: string) {
-    updateParam("category", category === key ? "" : key)
+    // Radio semantics — clicking a category always sets it, even if the same
+    // value (handler is only fired by a real input change). The "All" radio
+    // sends "" which clears the URL param.
+    updateParam("category", key)
   }
 
   function handlePriceChange(min: string, max: string) {
@@ -774,7 +906,14 @@ function SearchContent() {
   }
 
   function handleClearAll() {
-    updateMultipleParams({ category: "", min_price: "", max_price: "" })
+    updateMultipleParams({ category: "", min_price: "", max_price: "", min_rating: "" })
+  }
+
+  function handleRatingChange(stars: number) {
+    updateParam("min_rating", String(stars))
+  }
+  function handleClearRating() {
+    updateParam("min_rating", "")
   }
 
   const emptyFacets: SearchResponse["facets"] = {
@@ -784,7 +923,11 @@ function SearchContent() {
     stores: [],
   }
   const safeFacets = facets ?? emptyFacets
+  // Sidebar should appear whenever there's anything to filter against — the
+  // canonical category list counts even when the current result set produces
+  // no facet buckets (e.g. a query that hit zero results).
   const hasFacets =
+    categoryList.length > 0 ||
     safeFacets.categories.length > 0 ||
     safeFacets.price_ranges.length > 0 ||
     safeFacets.ratings.length > 0 ||
@@ -939,11 +1082,15 @@ function SearchContent() {
             <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-5">
               <FilterSidebar
                 facets={safeFacets}
+                categoryList={categoryList}
                 category={category}
                 minPrice={minPrice}
                 maxPrice={maxPrice}
+                minRating={minRating}
                 onCategoryChange={handleCategoryChange}
                 onPriceChange={handlePriceChange}
+                onRatingChange={handleRatingChange}
+                onClearRating={handleClearRating}
                 onClearAll={handleClearAll}
                 hasActiveFilters={hasActiveFilters}
               />
@@ -957,11 +1104,15 @@ function SearchContent() {
             open={mobileFiltersOpen}
             onClose={() => setMobileFiltersOpen(false)}
             facets={safeFacets}
+            categoryList={categoryList}
             category={category}
             minPrice={minPrice}
             maxPrice={maxPrice}
+            minRating={minRating}
             onCategoryChange={handleCategoryChange}
             onPriceChange={handlePriceChange}
+            onRatingChange={handleRatingChange}
+            onClearRating={handleClearRating}
             onClearAll={handleClearAll}
             hasActiveFilters={hasActiveFilters}
           />

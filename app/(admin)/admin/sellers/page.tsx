@@ -14,6 +14,7 @@ import { getAccessToken } from "@/lib/auth-helpers"
 import {
   reviewAdminSeller,
   suspendSeller,
+  reinstateSeller,
   triggerOnboardingReminders,
   sendSellerReminder,
   API_BASE,
@@ -192,6 +193,20 @@ export default function AdminSellersPage() {
 
   const loading = sellersLoading || (sessionStatus === "loading")
 
+  async function handleReinstate(sellerId: string) {
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      await reinstateSeller(token, sellerId)
+      toast.success("Seller reinstated")
+      closeDetail()
+      invalidateSellers()
+    } catch (e) {
+      logError(e, "reinstating seller")
+      toast.error("Failed to reinstate seller")
+    }
+  }
+
   async function handleSuspend(sellerId: string, reason: string) {
     try {
       const token = await getAccessToken()
@@ -356,6 +371,7 @@ export default function AdminSellersPage() {
                             onApprove={() => handleReview(s.id, "approve")}
                             onReject={() => openDetail(s.id, "reject")}
                             onSuspend={() => openDetail(s.id, "suspend")}
+                            onReinstate={() => handleReinstate(s.id)}
                             onRequestInfo={() => openDetail(s.id, "request")}
                             onSendReminder={async () => {
                               try {
@@ -413,6 +429,7 @@ export default function AdminSellersPage() {
         onClose={closeDetail}
         onReview={handleReview}
         onSuspend={handleSuspend}
+        onReinstate={handleReinstate}
       />
       <InviteSellerModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
@@ -475,6 +492,7 @@ function ActionDropdown({
   onApprove,
   onReject,
   onSuspend,
+  onReinstate,
   onRequestInfo,
   onSendReminder,
 }: {
@@ -483,6 +501,7 @@ function ActionDropdown({
   onApprove: () => void
   onReject: () => void
   onSuspend: () => void
+  onReinstate: () => void
   onRequestInfo: () => void
   onSendReminder: () => void
 }) {
@@ -501,20 +520,21 @@ function ActionDropdown({
   const canReject = (isSubmitted || ob === "needs_action") && !isApproved
   const canRequestInfo = (isSubmitted || ob === "needs_action") && !isApproved
   const canSuspend = isApproved && !isSuspended
+  const canReinstate = isSuspended
   const canRemind = !isApproved && ob !== "rejected"
 
   const recalc = useCallback(() => {
     if (!triggerRef.current) return
     const rect = triggerRef.current.getBoundingClientRect()
     const menuWidth = 192
-    const itemCount = [true, canApprove, canReject, canRequestInfo, canSuspend, canRemind].filter(Boolean).length
+    const itemCount = [true, canApprove, canReject, canRequestInfo, canSuspend, canReinstate, canRemind].filter(Boolean).length
     const menuHeight = Math.max(itemCount * 40 + 16, 100)
     const spaceBelow = window.innerHeight - rect.bottom
     const openUp = spaceBelow < menuHeight + 20
     const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8))
     setCoords({ top: openUp ? rect.top - 4 : rect.bottom + 4, left, openUp })
     setPositioned(true)
-  }, [canApprove, canReject, canRequestInfo, canSuspend])
+  }, [canApprove, canReject, canRequestInfo, canSuspend, canReinstate])
 
   useEffect(() => {
     if (!open) { setPositioned(false); return }
@@ -573,6 +593,11 @@ function ActionDropdown({
                 Suspend Seller
               </DdItem>
             )}
+            {canReinstate && (
+              <DdItem icon={<CheckCircle2 className="h-3.5 w-3.5" />} className="text-emerald-700" onClick={() => { onReinstate(); setOpen(false) }}>
+                Reinstate Seller
+              </DdItem>
+            )}
             {canRemind && (
               <DdItem icon={<Send className="h-3.5 w-3.5" />} className="text-blue-600" onClick={() => { onSendReminder(); setOpen(false) }}>
                 Send Reminder
@@ -604,6 +629,7 @@ function DetailPanel({
   onClose,
   onReview,
   onSuspend,
+  onReinstate,
 }: {
   open: boolean
   detail: AdminSellerDetail | null
@@ -612,6 +638,7 @@ function DetailPanel({
   onClose: () => void
   onReview: (id: string, action: string, reason?: string, adminNotes?: string) => Promise<void>
   onSuspend: (id: string, reason: string) => Promise<void>
+  onReinstate: (id: string) => Promise<void>
 }) {
   const [mode, setMode] = useState<ActionMode>("none")
   const [reason, setReason] = useState("")
@@ -653,7 +680,18 @@ function DetailPanel({
 
   const st = (detail?.onboardingStatus || "").toLowerCase()
   const isApproved = st === "approved" || st === "active"
+  const isSuspended = st === "suspended"
   const canApprove = (st === "submitted" || st === "pending_review" || st === "under_review") && !isApproved
+
+  async function submitReinstate() {
+    if (!detail) return
+    setSubmitting(true)
+    try {
+      await onReinstate(detail.id)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const panel = (
     <>
@@ -855,6 +893,15 @@ function DetailPanel({
                       {isApproved && (
                         <button onClick={() => setMode("suspend")} className="flex-1 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors">
                           Suspend
+                        </button>
+                      )}
+                      {isSuspended && (
+                        <button
+                          onClick={submitReinstate}
+                          disabled={submitting}
+                          className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+                        >
+                          {submitting ? "Reinstating…" : "Reinstate Seller"}
                         </button>
                       )}
                     </div>

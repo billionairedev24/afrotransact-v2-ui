@@ -35,6 +35,7 @@ import {
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   startOnboarding,
+  getCurrentSeller,
   getOnboardingProgress,
   updateOnboardingBusiness,
   updateOnboardingStore,
@@ -388,23 +389,59 @@ export default function SellerOnboardingPage() {
     if (initialized) return
     setInitialized(true)
 
+    function isSuspendedStatus(p: OnboardingProgress | null | undefined): boolean {
+      if (!p) return false
+      const s = (p.onboardingStatus ?? (p as { status?: string }).status ?? "")
+        .trim().toLowerCase()
+      return s === "suspended"
+    }
+
     async function init() {
       const token = await getAccessToken()
       if (!token) { setLoading(false); return }
+
+      // Pre-flight check: if the seller record already exists and is
+      // suspended, never touch the onboarding endpoints. This prevents
+      // both the brief wizard flash and the case where the onboarding
+      // call returns 4xx and we can't read the status from its payload.
       try {
-        const p = await startOnboarding(token)
-        hydrateFromProgress(p)
-        document.cookie = "afro_seller_intent=; path=/; max-age=0"
+        const me = await getCurrentSeller(token)
+        const s = (me.onboardingStatus ?? me.status ?? "").trim().toLowerCase()
+        if (s === "suspended") {
+          router.replace("/dashboard/suspended")
+          return
+        }
+      } catch {
+        // 204 No Content (no seller row yet) or transient failure — fall
+        // through to startOnboarding, which is the legitimate first-time
+        // path for brand-new sellers.
+      }
+
+      let progress: OnboardingProgress | null = null
+      try {
+        progress = await startOnboarding(token)
       } catch {
         try {
           const token2 = await getAccessToken()
           if (token2) {
-            const p = await getOnboardingProgress(token2)
-            hydrateFromProgress(p)
+            progress = await getOnboardingProgress(token2)
           }
         } catch {
           toast.error("Failed to load onboarding progress")
         }
+      }
+      // Defense in depth — the server layout already redirects suspended
+      // sellers, but if a stale session or a route-group transition slips
+      // them through, send them to the suspended landing here too. This
+      // path runs before any onboarding state hydrates onto the page so
+      // the wizard never flashes.
+      if (isSuspendedStatus(progress)) {
+        router.replace("/dashboard/suspended")
+        return
+      }
+      if (progress) {
+        hydrateFromProgress(progress)
+        document.cookie = "afro_seller_intent=; path=/; max-age=0"
       }
       try {
         const allPlans = await getPublicPlans()

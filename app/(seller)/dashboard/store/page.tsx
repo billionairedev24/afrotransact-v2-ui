@@ -413,18 +413,6 @@ export default function StoreSettingsPage() {
               : "Create your store to start selling"}
           </p>
         </div>
-        {store && store.slug && (
-          <a
-            href={`/store/${store.slug}?preview=1`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-gold-foreground shadow-sm hover:bg-brand-gold-hover transition-colors"
-            title={`/store/${store.slug}`}
-          >
-            <Store className="h-4 w-4" />
-            Preview Storefront
-          </a>
-        )}
       </div>
 
       {(error || validationErrors.length > 0) && (

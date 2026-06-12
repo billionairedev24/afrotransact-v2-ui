@@ -5,6 +5,7 @@ import { SellerShell } from "@/components/seller/SellerShell"
 import type { SellerInfo } from "@/lib/api"
 import {
   isSellerDashboardOnboardingReady,
+  isSellerSuspended,
   parseSellerMeResponse,
 } from "@/lib/seller-dashboard-access"
 
@@ -88,6 +89,13 @@ export default async function SellerLayout({
 
     const obStatusRaw =
       sellerRecord.onboardingStatus ?? sellerRecord.status ?? ""
+
+    // Suspended sellers must never see the onboarding wizard (it looks
+    // identical to a fresh registration). Route them to a dedicated
+    // suspended-account landing instead.
+    if (isSellerSuspended(obStatusRaw)) {
+      redirect("/dashboard/suspended")
+    }
 
     if (isSellerDashboardOnboardingReady(obStatusRaw)) {
       return (

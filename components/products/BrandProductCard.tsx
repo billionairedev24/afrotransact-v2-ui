@@ -45,7 +45,29 @@ export interface BrandProductCardItem {
   endsAt?: string | null
 }
 
-function Countdown({ endsAt }: { endsAt: string }) {
+/**
+ * Render a human-readable "ends in" label.
+ *   >= 2 days  -> "Ends in 5d"          (drop hours below the day scale)
+ *   >= 1 day   -> "Ends in 1d 4h"       (one-and-some, hours still relevant)
+ *   >= 1 hour  -> "Ends in 3h 12m"
+ *   >= 1 min   -> "Ends in 12m 34s"
+ *   < 1 min    -> "Ends in 45s"
+ * No more "Ends in 371:48:49" — shoppers shouldn't have to parse that.
+ */
+function formatRemaining(diffMs: number): string {
+  const totalSec = Math.floor(diffMs / 1000)
+  const days = Math.floor(totalSec / 86400)
+  const hours = Math.floor((totalSec % 86400) / 3600)
+  const minutes = Math.floor((totalSec % 3600) / 60)
+  const seconds = totalSec % 60
+  if (days >= 2) return `${days}d`
+  if (days >= 1) return `${days}d ${hours}h`
+  if (hours >= 1) return `${hours}h ${minutes}m`
+  if (minutes >= 1) return `${minutes}m ${seconds}s`
+  return `${seconds}s`
+}
+
+function Countdown({ endsAt, compact = false }: { endsAt: string; compact?: boolean }) {
   const [now, setNow] = useState<number>(() => Date.now())
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000)
@@ -54,14 +76,10 @@ function Countdown({ endsAt }: { endsAt: string }) {
   const end = new Date(endsAt).getTime()
   const diff = Math.max(0, end - now)
   if (diff === 0) return null
-  const h = Math.floor(diff / 3_600_000)
-  const m = Math.floor((diff % 3_600_000) / 60_000)
-  const s = Math.floor((diff % 60_000) / 1000)
-  const fmt = (n: number) => String(n).padStart(2, "0")
   return (
-    <div className="flex items-center gap-1 text-red-600 text-xs font-bold mb-2">
+    <div className={cn("flex items-center gap-1 text-red-600 font-bold", compact ? "text-[11px]" : "text-xs mb-2")}>
       <Timer className="h-3.5 w-3.5" />
-      <span>Ends in {fmt(h)}:{fmt(m)}:{fmt(s)}</span>
+      <span>Ends in {formatRemaining(diff)}</span>
     </div>
   )
 }
@@ -168,6 +186,86 @@ export function BrandProductCard({ item }: Props) {
         )}
 
         <div className="pt-1">
+          <CardAddToCart item={item} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Horizontal list-row variant used by /deals + /search list view. Same data
+ * model as BrandProductCard, but the image is capped to a 160px square on
+ * the left so a single deal can't blow up to full-content-width like the
+ * grid card does (which assumes it's one of N siblings in a grid).
+ */
+export function BrandProductRow({ item }: { item: BrandProductCardItem }) {
+  const href = `/product/${item.slug || item.productId}`
+  const hasOriginal =
+    typeof item.originalPrice === "number" &&
+    item.originalPrice !== null &&
+    item.originalPrice > item.price
+
+  return (
+    <div className="group flex bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+      <Link href={href} className="relative block shrink-0 w-32 sm:w-40 aspect-square bg-gray-100 overflow-hidden">
+        {typeof item.discountPercent === "number" && item.discountPercent > 0 && (
+          <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded z-10">
+            {item.discountPercent}% Off
+          </div>
+        )}
+        {item.imageUrl ? (
+          <Image
+            src={item.imageUrl}
+            alt={item.title}
+            fill
+            sizes="160px"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <Package className="h-10 w-10 text-gray-300" />
+          </div>
+        )}
+        {item.inStock === false && (
+          <span className="absolute left-2 bottom-2 rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
+            Out of Stock
+          </span>
+        )}
+      </Link>
+
+      <div className="flex-1 min-w-0 p-4 flex flex-col gap-2">
+        {item.dealOfTheDay && (
+          <span className="self-start bg-gray-100 text-red-600 font-bold text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded">
+            Deal of the Day
+          </span>
+        )}
+        {item.endsAt && !item.dealOfTheDay && <Countdown endsAt={item.endsAt} compact />}
+
+        <Link href={href}>
+          <h3 className="text-sm sm:text-base font-medium leading-tight text-foreground line-clamp-2 group-hover:text-brand-gold-hover transition-colors">
+            {item.title}
+          </h3>
+        </Link>
+
+        {typeof item.avgRating === "number" && item.avgRating > 0 && (
+          <StarRow rating={item.avgRating} count={item.reviewCount} />
+        )}
+
+        <div className="flex items-baseline gap-2">
+          <span className="text-xl font-bold text-foreground">${item.price.toFixed(2)}</span>
+          {hasOriginal && (
+            <span className="text-sm text-gray-400 line-through">
+              ${(item.originalPrice as number).toFixed(2)}
+            </span>
+          )}
+        </div>
+
+        {item.storeName && (
+          <p className="text-xs text-gray-500 truncate">{item.storeName}</p>
+        )}
+
+        <div className="mt-auto sm:max-w-[200px]">
           <CardAddToCart item={item} />
         </div>
       </div>
