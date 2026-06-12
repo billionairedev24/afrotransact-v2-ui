@@ -174,10 +174,9 @@ export function Header() {
   const isAdmin = roles.includes("admin")
   const isSeller = roles.includes("seller")
   // Developers carry admin + seller + buyer via the composite role, so the
-  // existing isAdmin / isSeller checks already grant access. This is here for
-  // dev-only surfaces (debug pages, internal toggles) we may add later.
-  const _isDeveloper = roles.includes("developer")
-  void _isDeveloper
+  // existing isAdmin / isSeller checks already grant access. We surface the
+  // discriminator with a badge so it's obvious who has elevated debug access.
+  const isDeveloper = roles.includes("developer")
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
   const firstName = userName?.trim().split(/\s+/)[0] ?? null
@@ -504,7 +503,11 @@ export function Header() {
                     {isAuthenticated ? (
                       <>
                         <div className="px-4 py-3 border-b border-gray-100">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{userName ?? "User"}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{userName ?? "User"}</p>
+                            {isDeveloper && <RoleBadge label="DEV" />}
+                            {!isDeveloper && isAdmin && <RoleBadge label="ADMIN" tone="amber" />}
+                          </div>
                           <p className="text-xs text-gray-500 truncate">{userEmail}</p>
                         </div>
 
@@ -724,7 +727,11 @@ export function Header() {
                 <div className="min-w-0 flex-1 pr-10">
                   {isAuthenticated && firstName ? (
                     <>
-                      <p className="truncate text-lg font-bold leading-tight">Hello, {firstName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-lg font-bold leading-tight">Hello, {firstName}</p>
+                        {isDeveloper && <RoleBadge label="DEV" />}
+                        {!isDeveloper && isAdmin && <RoleBadge label="ADMIN" tone="amber" />}
+                      </div>
                       <Link
                         href="/account"
                         onClick={closeMobileMenu}
@@ -972,5 +979,28 @@ export function Header() {
         </div>
       )}
     </>
+  )
+}
+
+/**
+ * Small pill used to surface elevated-access roles next to the user name in
+ * the desktop user-menu + the mobile menu greeting strip.
+ *
+ * Developers get DEV (purple) — the badge is the visible signal that a
+ * Keycloak composite role is granting admin+seller+buyer at once. Admins get
+ * ADMIN (amber). Sellers don't get a badge; the seller dashboard surface
+ * already tells them.
+ */
+function RoleBadge({ label, tone = "purple" }: { label: string; tone?: "purple" | "amber" }) {
+  const cls = tone === "amber"
+    ? "bg-amber-100 text-amber-800 border-amber-300"
+    : "bg-purple-100 text-purple-800 border-purple-300"
+  return (
+    <span
+      title={`Signed in as ${label.toLowerCase()}`}
+      className={`inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${cls}`}
+    >
+      {label}
+    </span>
   )
 }
