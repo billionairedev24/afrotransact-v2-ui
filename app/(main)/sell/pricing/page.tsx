@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react"
 import { useSubscriptionPlans } from "@/hooks/use-subscription-plans"
+import { useTrialBonusFlag } from "@/hooks/use-trial-bonus-flag"
 import type { SubscriptionPlan } from "@/lib/api"
 
 /* ─────────────────────────────────────────────────────────────
@@ -67,17 +68,16 @@ function getPlanAccent(index: number, total: number): PlanAccent {
   }
 }
 
-function commissionLabel(plan: SubscriptionPlan): string {
-  return plan.commissionRateOverride != null
-    ? `${plan.commissionRateOverride}%`
-    : "Standard"
+function monthlyPriceDisplay(plan: SubscriptionPlan): string {
+  if (plan.priceCentsPerMonth === 0) return "Free"
+  // Prefer the server-formatted priceDisplay when present so currency/cadence
+  // copy stays consistent with what the admin set. Strip the trailing "/mo"
+  // because the UI renders that label separately next to the number.
+  if (plan.priceDisplay) return plan.priceDisplay.replace(/\s*\/\s*mo\b/i, "")
+  return `$${(plan.priceCentsPerMonth / 100).toFixed(2)}`
 }
 
-function monthlyPriceDisplay(plan: SubscriptionPlan): string {
-  return plan.priceCentsPerMonth === 0
-    ? "Free"
-    : `$${(plan.priceCentsPerMonth / 100).toFixed(2)}`
-}
+const FAQ_TRIAL_BONUS_Q = "How do I get a second free month?"
 
 const FAQ = [
   {
@@ -85,7 +85,7 @@ const FAQ = [
     a: "Yes — every new seller gets their first full month free, regardless of which plan you choose. No credit card required to start.",
   },
   {
-    q: "How do I get a second free month?",
+    q: FAQ_TRIAL_BONUS_Q,
     a: "If you list at least 9 active products in your store before your first trial month ends, we automatically extend your free period for another 30 days. This threshold is our way of ensuring you're set up for success.",
   },
   {
@@ -97,8 +97,8 @@ const FAQ = [
     a: "Yes. You can upgrade or downgrade at any time from your seller dashboard. Changes take effect at the start of your next billing cycle.",
   },
   {
-    q: "What is the platform commission?",
-    a: "AfroTransact charges a percentage of each sale to cover payment processing, platform infrastructure, and marketing. The rate depends on your plan. This is separate from Stripe's payment processing fee.",
+    q: "Does AfroTransact take a cut of each sale?",
+    a: "Yes — we charge a small platform commission on each sale to cover payment processing, infrastructure, and marketing. We'll share the exact rate as part of your seller onboarding. This is separate from Stripe's payment processing fee.",
   },
   {
     q: "What happens if my payment fails?",
@@ -120,8 +120,12 @@ function PlanCard({
   isAnnual: boolean
 }) {
   const monthly = plan.priceCentsPerMonth / 100
-  const price = isAnnual
-    ? `$${(monthly * 10).toFixed(2)}`
+  // Annual = 10 months billed once = 2 months free. Display the monthly
+  // equivalent ("$xx.xx") so the value next to "/month" stays apples-to-apples
+  // with the monthly toggle. The "2 months free" copy below makes the savings
+  // explicit.
+  const price = isAnnual && plan.priceCentsPerMonth > 0
+    ? `$${((monthly * 10) / 12).toFixed(2)}`
     : monthlyPriceDisplay(plan)
 
   return (
@@ -157,6 +161,10 @@ function PlanCard({
           </p>
         )}
 
+        {/* commissionRateOverride is an internal negotiation tool (used when
+            we cut a custom deal for a high-volume seller), not a public
+            marketing fact. Surface products + stores instead so the buyer
+            sees the catalog limits at a glance. */}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
             <p className="text-xs text-gray-500">Products</p>
@@ -165,39 +173,24 @@ function PlanCard({
             </p>
           </div>
           <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
-            <p className="text-xs text-gray-500">Commission</p>
-            <p className="text-sm font-bold text-gray-900">{commissionLabel(plan)}</p>
+            <p className="text-xs text-gray-500">Stores</p>
+            <p className="text-sm font-bold text-gray-900">
+              {plan.maxStores === -1 ? "Unlimited" : `${plan.maxStores}`}
+            </p>
           </div>
         </div>
       </div>
 
       <div className="flex-1 p-6 space-y-4">
         <div className="space-y-2">
-          <div className="flex items-start gap-2 text-sm">
-            <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-            <span className="text-gray-600">
-              {plan.maxProducts === -1
-                ? "Unlimited products"
-                : `Up to ${plan.maxProducts} products`}
-            </span>
-          </div>
-          <div className="flex items-start gap-2 text-sm">
-            <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-            <span className="text-gray-600">
-              {plan.maxStores === 1
-                ? "1 store"
-                : plan.maxStores === -1
-                ? "Unlimited stores"
-                : `Up to ${plan.maxStores} stores`}
-            </span>
-          </div>
-          {plan.commissionRateOverride != null && (
-            <div className="flex items-start gap-2 text-sm">
-              <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-              <span className="text-gray-600">
-                {plan.commissionRateOverride}% platform commission
-              </span>
-            </div>
+          {/* Feature list comes straight from the API. The product / store /
+              commission summary already lives in the metrics grid above, so
+              we no longer auto-derive a redundant row from maxProducts /
+              maxStores / commissionRateOverride — that was producing six
+              duplicate rows per card. Admins control the feature copy via
+              the subscription-plans admin page. */}
+          {(plan.features ?? []).length === 0 && (
+            <p className="text-xs text-gray-500 italic">No features listed yet.</p>
           )}
           {(plan.features ?? []).map((f) => (
             <div key={f} className="flex items-start gap-2 text-sm">
@@ -258,15 +251,18 @@ export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const { data: rawPlans, isLoading, error } = useSubscriptionPlans()
+  // Region feature flag — admins disable the 9-product → free month 2
+  // promo from the admin feature-flags page when we want to stop the offer.
+  // Defaults to true so the offer keeps showing if the config service is
+  // unreachable or the flag is unset.
+  const { enabled: trialBonusEnabled } = useTrialBonusFlag()
+  const visibleFaq = trialBonusEnabled
+    ? FAQ
+    : FAQ.filter((item) => item.q !== FAQ_TRIAL_BONUS_Q)
 
   const plans = (rawPlans ?? [])
     .filter((p) => p.active)
     .sort((a, b) => a.displayOrder - b.displayOrder)
-
-  const commissionRows = plans.map((p) => ({
-    name: p.name,
-    rate: p.commissionRateOverride ?? 10,
-  }))
 
   return (
     <main className="min-h-screen">
@@ -290,17 +286,18 @@ export default function PricingPage() {
             <span className="text-foreground">Pay only when you&apos;re ready.</span>
           </h1>
           <p className="mt-4 text-lg text-gray-500 max-w-xl mx-auto">
-            First month always free. Second month free if you list 9+ products.
-            Then choose the plan that fits your stage.
+            {trialBonusEnabled
+              ? "First month always free. Second month free if you list 9+ products. Then choose the plan that fits your stage."
+              : "First month always free. Then choose the plan that fits your stage."}
           </p>
 
           {/* Trial highlight */}
           <div className="mt-8 inline-flex flex-col sm:flex-row gap-3 items-center justify-center">
             {[
-              { icon: <Sparkles className="h-4 w-4 text-foreground" />, text: "Month 1: Always free" },
-              { icon: <Zap className="h-4 w-4 text-emerald-400" />,  text: "Month 2: Free with 9+ products" },
-              { icon: <ShieldCheck className="h-4 w-4 text-sky-400" />, text: "Month 3+: Pay your chosen plan" },
-            ].map(({ icon, text }) => (
+              { icon: <Sparkles className="h-4 w-4 text-foreground" />, text: "Month 1: Always free", show: true },
+              { icon: <Zap className="h-4 w-4 text-emerald-400" />,  text: "Month 2: Free with 9+ products", show: trialBonusEnabled },
+              { icon: <ShieldCheck className="h-4 w-4 text-sky-400" />, text: trialBonusEnabled ? "Month 3+: Pay your chosen plan" : "Month 2+: Pay your chosen plan", show: true },
+            ].filter(({ show }) => show).map(({ icon, text }) => (
               <div key={text} className="flex items-center gap-2 rounded-xl border border-input bg-gray-50 px-4 py-2 text-sm text-gray-600">
                 {icon}
                 {text}
@@ -375,51 +372,11 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* ── Commission comparison ── */}
-      {commissionRows.length > 0 && (
-        <section className="border-y border-border bg-card/40 px-4 sm:px-6 py-12">
-          <div className="mx-auto max-w-4xl">
-            <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
-              Commission breakdown
-            </h2>
-            <p className="text-gray-500 text-center text-sm mb-8">
-              Understand exactly how much you keep from each sale.
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left pb-3 font-semibold text-gray-500">Plan</th>
-                    <th className="text-right pb-3 font-semibold text-gray-500">Commission</th>
-                    <th className="text-right pb-3 font-semibold text-gray-500">On a $100 sale, you keep</th>
-                    <th className="text-right pb-3 font-semibold text-gray-500">On $10k/mo GMV, you keep</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {commissionRows.map((row) => {
-                    const rate = Number(row.rate)
-                    const keep100 = (100 * (1 - rate / 100) - 2.9 - 0.30).toFixed(2)
-                    const keep10k = ((10000 * (1 - rate / 100)) - (10000 / 100) * (2.9 + 0.30)).toFixed(0)
-                    return (
-                      <tr key={row.name} className="border-b border-border/50">
-                        <td className="py-3 font-semibold text-foreground">{row.name}</td>
-                        <td className="py-3 text-right text-gray-600">{rate}%</td>
-                        <td className="py-3 text-right font-bold text-gray-900">${keep100}</td>
-                        <td className="py-3 text-right font-bold text-gray-900">
-                          ${parseInt(keep10k).toLocaleString()}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-              <p className="text-[11px] text-gray-600 mt-3">
-                * Stripe processing fee (~2.9% + $0.30 per transaction) deducted from seller payout.
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Commission breakdown section intentionally removed — per-plan
+          commission rates aren't public marketing facts. The
+          commissionRateOverride field is for internal negotiation with
+          high-volume sellers, not a tier benefit. The FAQ entry below
+          still explains how commission works at a conceptual level. */}
 
       {/* ── FAQ ── */}
       <section className="px-4 sm:px-6 py-16">
@@ -429,7 +386,7 @@ export default function PricingPage() {
             Frequently asked questions
           </h2>
           <div className="space-y-2">
-            {FAQ.map((item, i) => (
+            {visibleFaq.map((item, i) => (
               <div
                 key={i}
                 className="rounded-xl border border-border overflow-hidden bg-white"
