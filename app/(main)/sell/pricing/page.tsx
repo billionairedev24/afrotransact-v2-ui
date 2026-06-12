@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react"
 import { useSubscriptionPlans } from "@/hooks/use-subscription-plans"
+import { useTrialBonusFlag } from "@/hooks/use-trial-bonus-flag"
 import type { SubscriptionPlan } from "@/lib/api"
 
 /* ─────────────────────────────────────────────────────────────
@@ -92,13 +93,15 @@ function monthlyPriceDisplay(plan: SubscriptionPlan): string {
   return `$${(plan.priceCentsPerMonth / 100).toFixed(2)}`
 }
 
+const FAQ_TRIAL_BONUS_Q = "How do I get a second free month?"
+
 const FAQ = [
   {
     q: "Is the first month really free?",
     a: "Yes — every new seller gets their first full month free, regardless of which plan you choose. No credit card required to start.",
   },
   {
-    q: "How do I get a second free month?",
+    q: FAQ_TRIAL_BONUS_Q,
     a: "If you list at least 9 active products in your store before your first trial month ends, we automatically extend your free period for another 30 days. This threshold is our way of ensuring you're set up for success.",
   },
   {
@@ -258,6 +261,14 @@ export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const { data: rawPlans, isLoading, error } = useSubscriptionPlans()
+  // Region feature flag — admins disable the 9-product → free month 2
+  // promo from the admin feature-flags page when we want to stop the offer.
+  // Defaults to true so the offer keeps showing if the config service is
+  // unreachable or the flag is unset.
+  const { enabled: trialBonusEnabled } = useTrialBonusFlag()
+  const visibleFaq = trialBonusEnabled
+    ? FAQ
+    : FAQ.filter((item) => item.q !== FAQ_TRIAL_BONUS_Q)
 
   const plans = (rawPlans ?? [])
     .filter((p) => p.active)
@@ -293,17 +304,18 @@ export default function PricingPage() {
             <span className="text-foreground">Pay only when you&apos;re ready.</span>
           </h1>
           <p className="mt-4 text-lg text-gray-500 max-w-xl mx-auto">
-            First month always free. Second month free if you list 9+ products.
-            Then choose the plan that fits your stage.
+            {trialBonusEnabled
+              ? "First month always free. Second month free if you list 9+ products. Then choose the plan that fits your stage."
+              : "First month always free. Then choose the plan that fits your stage."}
           </p>
 
           {/* Trial highlight */}
           <div className="mt-8 inline-flex flex-col sm:flex-row gap-3 items-center justify-center">
             {[
-              { icon: <Sparkles className="h-4 w-4 text-foreground" />, text: "Month 1: Always free" },
-              { icon: <Zap className="h-4 w-4 text-emerald-400" />,  text: "Month 2: Free with 9+ products" },
-              { icon: <ShieldCheck className="h-4 w-4 text-sky-400" />, text: "Month 3+: Pay your chosen plan" },
-            ].map(({ icon, text }) => (
+              { icon: <Sparkles className="h-4 w-4 text-foreground" />, text: "Month 1: Always free", show: true },
+              { icon: <Zap className="h-4 w-4 text-emerald-400" />,  text: "Month 2: Free with 9+ products", show: trialBonusEnabled },
+              { icon: <ShieldCheck className="h-4 w-4 text-sky-400" />, text: trialBonusEnabled ? "Month 3+: Pay your chosen plan" : "Month 2+: Pay your chosen plan", show: true },
+            ].filter(({ show }) => show).map(({ icon, text }) => (
               <div key={text} className="flex items-center gap-2 rounded-xl border border-input bg-gray-50 px-4 py-2 text-sm text-gray-600">
                 {icon}
                 {text}
@@ -432,7 +444,7 @@ export default function PricingPage() {
             Frequently asked questions
           </h2>
           <div className="space-y-2">
-            {FAQ.map((item, i) => (
+            {visibleFaq.map((item, i) => (
               <div
                 key={i}
                 className="rounded-xl border border-border overflow-hidden bg-white"
