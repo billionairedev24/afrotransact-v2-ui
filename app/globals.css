@@ -1,3 +1,9 @@
+/* Tailwind v4 doesn't auto-discover tailwind.config.ts; the @config
+   directive opts in to our existing v3-style config (theme tokens,
+   content globs, plugin list) without rewriting everything as @theme
+   directives. Remove once we migrate to v4-native config. */
+@config "../tailwind.config.ts";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
