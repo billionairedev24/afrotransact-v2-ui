@@ -163,9 +163,14 @@ function FilterSidebar({
               <span className="flex-1 text-sm text-foreground">All</span>
             </FilterRadio>
             {categoryList.map((c) => {
-              const active = category === c.slug
+              // Match the active filter against either the canonical slug or
+              // the lowercased name — the backend accepts both, and a category
+              // arriving via header search vs. sidebar click can land here in
+              // either form.
+              const lcName = c.name.toLowerCase()
+              const active = category === c.slug || category === lcName
               const facet = facets.categories.find(
-                (f) => f.key === c.slug || f.key === c.name.toLowerCase()
+                (f) => f.key === c.slug || f.key === lcName
               )
               return (
                 <FilterRadio
@@ -804,7 +809,15 @@ function SearchContent() {
       sort_by: sortBy,
     }
     if (query) params.q = query
-    if (category) params.category = category
+    if (category) {
+      // The URL keeps a clean slug, but ES historically indexed only the
+      // lowercased name on `categories` (the `category_slugs` field is only
+      // populated for documents indexed after that change shipped). Sending
+      // the name when we can resolve it lets older documents match while the
+      // backend's OR-filter still catches new ones via the slug field.
+      const matched = categoryList.find((c) => c.slug === category)
+      params.category = matched ? matched.name.toLowerCase() : category
+    }
     if (minPrice) params.min_price = minPrice
     if (maxPrice) params.max_price = maxPrice
     if (minRating) params.min_rating = minRating
@@ -838,7 +851,7 @@ function SearchContent() {
     return () => {
       cancelled = true
     }
-  }, [query, category, sortBy, minPrice, maxPrice, minRating, page, flagsLoaded, marketplaceEnabled])
+  }, [query, category, sortBy, minPrice, maxPrice, minRating, page, flagsLoaded, marketplaceEnabled, categoryList])
 
   const results = data?.results ?? []
   const totalResults = data?.total ?? 0
