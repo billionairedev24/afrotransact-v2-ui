@@ -19,16 +19,28 @@ import {
 } from "@/lib/api"
 
 const STAGE_META: Record<string, { label: string; icon: typeof AlertTriangle; tone: string }> = {
+  ONBOARDING:       { label: "Onboarding",       icon: Hourglass,    tone: "bg-blue-50 text-blue-900 border-blue-200" },
   PAYOUTS_PAUSED:   { label: "Payouts paused",   icon: ShieldOff,    tone: "bg-amber-50 text-amber-900 border-amber-200" },
   CHARGES_PAUSED:   { label: "Charges paused",   icon: CreditCard,   tone: "bg-rose-50 text-rose-900 border-rose-200" },
   ACTION_REQUIRED:  { label: "Action required",  icon: AlertTriangle,tone: "bg-amber-50 text-amber-900 border-amber-200" },
   PAST_DUE:         { label: "Past due",         icon: Clock,        tone: "bg-rose-50 text-rose-900 border-rose-200" },
+  PENDING_VERIFICATION: { label: "Pending verification", icon: Hourglass, tone: "bg-blue-50 text-blue-900 border-blue-200" },
   UNDER_REVIEW:     { label: "Under review",     icon: Hourglass,    tone: "bg-blue-50 text-blue-900 border-blue-200" },
   REJECTED:         { label: "Rejected",         icon: XCircle,      tone: "bg-rose-100 text-rose-900 border-rose-300" },
+  ACTIVE:           { label: "Active",           icon: AlertTriangle,tone: "bg-emerald-50 text-emerald-900 border-emerald-200" },
 }
 
 function stageBadge(stage: string | null) {
-  if (!stage || stage === "ACTIVE") {
+  if (!stage) {
+    // Distinct from ACTIVE — we just haven't fetched the Stripe snapshot for
+    // this row yet. Clicking Refresh on the row populates it.
+    return (
+      <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 border border-gray-300">
+        Not refreshed
+      </span>
+    )
+  }
+  if (stage === "ACTIVE") {
     return <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-900 border border-emerald-200">Active</span>
   }
   const meta = STAGE_META[stage] ?? { label: stage, icon: AlertTriangle, tone: "bg-muted text-foreground border-border" }
@@ -178,15 +190,20 @@ export default function SellerLifecyclePage() {
         // a populated lifecycle_stage on our side.
         const canNudge = !!s.stripeAccountId
         const canRefresh = !!s.stripeAccountId
+        // Scope the in-flight state to THIS row's mutation only — React
+        // Query exposes isPending globally, so without the variables check
+        // every row's button would disable while one was running.
+        const refreshing = refresh.isPending && refresh.variables === s.id
+        const nudging = nudge.isPending && nudge.variables === s.id
         return (
           <div className="inline-flex justify-end gap-1">
             <button
-              disabled={!canRefresh || refresh.isPending}
+              disabled={!canRefresh || refreshing}
               onClick={() => refresh.mutate(s.id)}
               title="Pull live state from Stripe (use when a webhook never delivered)"
               className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {refresh.isPending && refresh.variables === s.id ? (
+              {refreshing ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
                 <RefreshCw className="h-3 w-3" />
@@ -194,12 +211,12 @@ export default function SellerLifecyclePage() {
               Refresh
             </button>
             <button
-              disabled={!canNudge || nudge.isPending}
+              disabled={!canNudge || nudging}
               onClick={() => nudge.mutate(s.id)}
               title="Re-fire the seller's current-stage email"
               className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {nudge.isPending && nudge.variables === s.id ? (
+              {nudging ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
                 <Mail className="h-3 w-3" />
