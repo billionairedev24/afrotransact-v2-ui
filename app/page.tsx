@@ -42,17 +42,20 @@ export default async function HomePage() {
   const emptySearch = { results: [] as SearchResult[] } as Awaited<ReturnType<typeof searchProducts>>
   const [
     categories,
-    _deals,
+    todaysDeals,
     _platformDealsRaw,
     heroConfig,
     featuredRating,
     _featuredNewest,
-    todaysDealsRes,
     trendingAustinRes,
     newLocalRes,
   ] = await Promise.all([
     safe<CategoryRef[]>(getCategories({ revalidate: 300 }), []),
-    safe<DealData[]>(getFeaturedDeals({ revalidate: 60 }), []),
+    // Today's Deals: source from the deals endpoint, NOT from
+    // searchProducts({is_deal:"true"}) — the search service silently
+    // ignores is_deal so it was returning every product, including
+    // non-deals. Deals endpoint already enforces enabled+window+discount.
+    safe<DealData[]>(getFeaturedDeals({ revalidate: 30 }), []),
     safe<PlatformDealData[]>(getPublicPlatformDeals(undefined, { revalidate: 60 }), []),
     safe(getPublicHeroSlides({ revalidate: 60 }), []),
     safe(
@@ -66,7 +69,6 @@ export default async function HomePage() {
       searchProducts({ size: "8", sort_by: "newest" }, { revalidate: 60 }),
       emptySearch,
     ),
-    safe(searchProducts({ is_deal: "true", size: "20" }, { revalidate: 60 }), emptySearch),
     safe(
       searchProducts(
         { region_code: "us-tx-austin", sort: "popularity", size: "20" },
@@ -76,6 +78,50 @@ export default async function HomePage() {
     ),
     safe(searchProducts({ sort: "newest", size: "20" }, { revalidate: 60 }), emptySearch),
   ])
+
+  // Map deals -> SearchResult-compatible mini cards so ProductRow can
+  // reuse its existing rendering. Apply the same strict filter as /deals
+  // so non-deal rows can never appear here.
+  const now = Date.now()
+  const todaysDealsRes = {
+    ...emptySearch,
+    results: todaysDeals
+      .filter((d) => d.productId && d.productImageUrl)
+      .filter((d) => d.enabled !== false && d.active !== false)
+      .filter((d) => !d.startAt || new Date(d.startAt).getTime() <= now)
+      .filter((d) => !d.endAt || new Date(d.endAt).getTime() > now)
+      .filter((d) => {
+        if (d.discountPercent && d.discountPercent > 0) return true
+        if (d.dealPriceCents != null && d.originalPriceCents != null
+            && d.dealPriceCents < d.originalPriceCents) return true
+        return false
+      })
+      .map<SearchResult>((d) => {
+        const price = (d.dealPriceCents ?? 0) / 100
+        const original = (d.originalPriceCents ?? d.dealPriceCents ?? 0) / 100
+        return {
+          product_id: d.productId!,
+          store_id: d.storeId,
+          store_name: d.storeName ?? "",
+          title: d.productTitle || d.title,
+          description: "",
+          product_type: "",
+          categories: [],
+          min_price: price,
+          max_price: original,
+          currency: "USD",
+          in_stock: true,
+          image_url: d.productImageUrl,
+          avg_rating: 0,
+          review_count: 0,
+          distance_miles: null,
+          highlight_title: null,
+          highlight_description: null,
+          score: null,
+          slug: d.productSlug ?? undefined,
+        }
+      }),
+  }
 
   // Exclude `services` everywhere in the landing render (closed-beta requirement).
   const roots = categories
@@ -87,12 +133,40 @@ export default async function HomePage() {
   // productsByCategoryId, but the fetcher dedupes against future mounts.
   await fetchCategoryTiles(roots, { revalidate: 300 })
 
-  // Build productsByCategoryId from the rating pool by name match.
+  // Build productsByCategoryId by matching the product's leaf categories
+  // against the ROOT category AND all of its descendants (case-insensitive
+  // on both name and slug). The previous version only matched the root
+  // name, so a product tagged with a leaf like "Beans" under "Groceries"
+  // never showed up in the Groceries tile.
+  const childrenByParent = new Map<string, string[]>()
+  for (const c of categories) {
+    if (c.parentId) {
+      const list = childrenByParent.get(c.parentId) ?? []
+      list.push(c.name.toLowerCase(), c.slug.toLowerCase())
+      childrenByParent.set(c.parentId, list)
+    }
+  }
+  function collectDescendantTokens(rootId: string, rootName: string, rootSlug: string): Set<string> {
+    const tokens = new Set<string>([rootName.toLowerCase(), rootSlug.toLowerCase()])
+    const queue = [rootId]
+    while (queue.length) {
+      const id = queue.shift()!
+      for (const c of categories) {
+        if (c.parentId === id) {
+          tokens.add(c.name.toLowerCase())
+          tokens.add(c.slug.toLowerCase())
+          queue.push(c.id)
+        }
+      }
+    }
+    return tokens
+  }
   const productsByCategoryId: Record<string, SearchResult[]> = {}
   for (const cat of roots) {
-    const lower = cat.name.toLowerCase()
+    const tokens = collectDescendantTokens(cat.id, cat.name, cat.slug)
     productsByCategoryId[cat.id] = featuredRating.results
-      .filter((p) => p.categories?.some((c) => c.toLowerCase() === lower))
+      .filter((p) => p.image_url)
+      .filter((p) => p.categories?.some((c) => tokens.has(c.toLowerCase())))
       .slice(0, 4)
   }
 
