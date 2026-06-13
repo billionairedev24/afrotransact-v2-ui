@@ -190,15 +190,20 @@ export default function SellerLifecyclePage() {
         // a populated lifecycle_stage on our side.
         const canNudge = !!s.stripeAccountId
         const canRefresh = !!s.stripeAccountId
+        // Scope the in-flight state to THIS row's mutation only — React
+        // Query exposes isPending globally, so without the variables check
+        // every row's button would disable while one was running.
+        const refreshing = refresh.isPending && refresh.variables === s.id
+        const nudging = nudge.isPending && nudge.variables === s.id
         return (
           <div className="inline-flex justify-end gap-1">
             <button
-              disabled={!canRefresh || refresh.isPending}
+              disabled={!canRefresh || refreshing}
               onClick={() => refresh.mutate(s.id)}
               title="Pull live state from Stripe (use when a webhook never delivered)"
               className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {refresh.isPending && refresh.variables === s.id ? (
+              {refreshing ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
                 <RefreshCw className="h-3 w-3" />
@@ -206,12 +211,12 @@ export default function SellerLifecyclePage() {
               Refresh
             </button>
             <button
-              disabled={!canNudge || nudge.isPending}
+              disabled={!canNudge || nudging}
               onClick={() => nudge.mutate(s.id)}
               title="Re-fire the seller's current-stage email"
               className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {nudge.isPending && nudge.variables === s.id ? (
+              {nudging ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
                 <Mail className="h-3 w-3" />
