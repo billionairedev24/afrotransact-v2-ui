@@ -392,16 +392,10 @@ export default function ProductPageClient() {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
               {product.title}
             </h1>
-            {storeName && (
-              <Link
-                href={`/store/${product.storeId}`}
-                className="inline-block mt-2 text-sm text-foreground/70 hover:text-brand-gold-hover underline underline-offset-2"
-              >
-                Visit the {storeName} store
-              </Link>
-            )}
             {/* Rating row — driven by the reviews summary so a 0-review
-                product doesn't show 5 filled stars. */}
+                product doesn't show 5 filled stars. Zero-review state is
+                silent: we only solicit reviews from verified buyers via
+                their order history, not from any anonymous PDP visitor. */}
             <RatingSummary productId={product.id} />
           </div>
 
@@ -754,16 +748,10 @@ function RatingSummary({ productId }: { productId: string }) {
     return <div className="mt-3 h-5 w-40 rounded bg-gray-100 animate-pulse" />
   }
   if (count === 0) {
-    return (
-      <a href="#reviews" className="mt-3 inline-flex items-center gap-2 text-xs text-gray-500 hover:text-foreground transition-colors">
-        <span className="flex" aria-hidden>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Star key={i} className="h-4 w-4 fill-gray-200 text-gray-200" />
-          ))}
-        </span>
-        <span className="underline underline-offset-2">No reviews yet — be the first</span>
-      </a>
-    )
+    // No CTA — reviews are only solicited from verified buyers via their
+    // order history. Render nothing so we don't tease shoppers with a link
+    // that can't actually accept their review.
+    return null
   }
   const filled = Math.round(avg ?? 0)
   return (

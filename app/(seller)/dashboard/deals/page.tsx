@@ -210,6 +210,14 @@ export default function SellerDealsPage() {
       }
       setShowForm(false)
       loadData()
+      try {
+        const { revalidateDeals, revalidateSearch, revalidateHomeData } = await import("@/lib/revalidate-actions")
+        await revalidateDeals()
+        await revalidateSearch()
+        await revalidateHomeData()
+      } catch {
+        // best-effort
+      }
     } catch { toast.error("Failed to save deal") }
     setSaving(false)
   }
@@ -221,6 +229,14 @@ export default function SellerDealsPage() {
       await toggleSellerDeal(token, d.id)
       toast.success(d.enabled ? "Deal disabled" : "Deal enabled")
       loadData()
+      try {
+        const { revalidateDeals, revalidateSearch, revalidateHomeData } = await import("@/lib/revalidate-actions")
+        await revalidateDeals()
+        await revalidateSearch()
+        await revalidateHomeData()
+      } catch {
+        // best-effort
+      }
     } catch { toast.error("Failed to toggle deal") }
   }
 
@@ -232,6 +248,14 @@ export default function SellerDealsPage() {
       await deleteSellerDeal(token, d.id)
       toast.success("Deal deleted")
       loadData()
+      try {
+        const { revalidateDeals, revalidateSearch, revalidateHomeData } = await import("@/lib/revalidate-actions")
+        await revalidateDeals()
+        await revalidateSearch()
+        await revalidateHomeData()
+      } catch {
+        // best-effort
+      }
     } catch { toast.error("Failed to delete deal") }
   }
 

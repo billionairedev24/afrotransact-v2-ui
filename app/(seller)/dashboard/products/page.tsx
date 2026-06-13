@@ -136,7 +136,7 @@ export default function ProductsPage() {
       if (!token) return
       await deleteProduct(token, deleteTarget.id)
       toast.success("Product archived")
-      removeProductFromList(deleteTarget.id)
+      queryClient.invalidateQueries({ queryKey: [SELLER_PRODUCTS_KEY] })
       setDeleteTarget(null)
     } catch (e) {
       logError(e, "deleting product")
@@ -153,6 +153,7 @@ export default function ProductsPage() {
       const updated = await updateProduct(token, productId, { status: "pending_review" })
       toast.success("Product submitted for review")
       applyProductUpdate(updated)
+      queryClient.invalidateQueries({ queryKey: [SELLER_PRODUCTS_KEY] })
     } catch (e) {
       logError(e, "submitting product for review")
       toast.error("Failed to submit")
@@ -332,6 +333,7 @@ function ProductDetailSheet({
   onClose: () => void
   onUpdated: (product: Product) => void
 }) {
+  const queryClient = useQueryClient()
   const [product, setProduct] = useState<Product | null>(null)
   const [_categories, setCategories] = useState<CategoryRef[]>([])
   const [loading, setLoading] = useState(false)
@@ -409,6 +411,19 @@ function ProductDetailSheet({
       setEditing(false)
       toast.success("Product updated")
       onUpdated(refreshed)
+
+      // Invalidate the seller's product grid query
+      queryClient.invalidateQueries({ queryKey: [SELLER_PRODUCTS_KEY] })
+      // Bust customer-facing caches
+      try {
+        const { revalidateProduct, revalidateSearch, revalidateDeals, revalidateHomeData } = await import("@/lib/revalidate-actions")
+        await revalidateProduct(refreshed.slug)
+        await revalidateSearch()
+        await revalidateDeals()
+        await revalidateHomeData()
+      } catch {
+        // best-effort
+      }
     } catch (e) {
       logError(e, "updating product")
       toast.error("Failed to update product")

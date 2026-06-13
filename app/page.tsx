@@ -28,7 +28,7 @@ import {
 
 // Home is public, catalog-driven content: revalidate often enough to feel fresh,
 // long enough to dedupe bursts from spiders/warm navigations.
-export const revalidate = 60
+export const revalidate = 30
 
 async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
   try {
@@ -56,7 +56,10 @@ export default async function HomePage() {
     safe<PlatformDealData[]>(getPublicPlatformDeals(undefined, { revalidate: 60 }), []),
     safe(getPublicHeroSlides({ revalidate: 60 }), []),
     safe(
-      searchProducts({ size: "96", sort_by: "rating" }, { revalidate: 300 }),
+      // Powers the category bento grid. 30s matches the page-level ISR so
+      // an ES re-index lands on the next request instead of staying stale
+      // for 5 minutes after a seller updates a product.
+      searchProducts({ size: "96", sort_by: "rating" }, { revalidate: 30 }),
       emptySearch,
     ),
     safe(
