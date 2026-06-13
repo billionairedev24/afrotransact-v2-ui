@@ -15,6 +15,7 @@ import {
   reviewAdminSeller,
   suspendSeller,
   reinstateSeller,
+  refreshSellerStripe,
   triggerOnboardingReminders,
   sendSellerReminder,
   API_BASE,
@@ -204,6 +205,19 @@ export default function AdminSellersPage() {
     } catch (e) {
       logError(e, "reinstating seller")
       toast.error("Failed to reinstate seller")
+    }
+  }
+
+  async function handleRefreshStripe(sellerId: string) {
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      await refreshSellerStripe(token, sellerId)
+      toast.success("Stripe Connect snapshot refreshed")
+      invalidateSellers()
+    } catch (e) {
+      logError(e, "refreshing stripe snapshot")
+      toast.error("Failed to refresh from Stripe")
     }
   }
 
@@ -430,6 +444,7 @@ export default function AdminSellersPage() {
         onReview={handleReview}
         onSuspend={handleSuspend}
         onReinstate={handleReinstate}
+        onRefreshStripe={handleRefreshStripe}
       />
       <InviteSellerModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
@@ -630,6 +645,7 @@ function DetailPanel({
   onReview,
   onSuspend,
   onReinstate,
+  onRefreshStripe,
 }: {
   open: boolean
   detail: AdminSellerDetail | null
@@ -639,7 +655,14 @@ function DetailPanel({
   onReview: (id: string, action: string, reason?: string, adminNotes?: string) => Promise<void>
   onSuspend: (id: string, reason: string) => Promise<void>
   onReinstate: (id: string) => Promise<void>
+  onRefreshStripe: (id: string) => Promise<void>
 }) {
+  const [refreshing, setRefreshing] = useState(false)
+  async function doRefresh() {
+    if (!detail) return
+    setRefreshing(true)
+    try { await onRefreshStripe(detail.id) } finally { setRefreshing(false) }
+  }
   const [mode, setMode] = useState<ActionMode>("none")
   const [reason, setReason] = useState("")
   const [message, setMessage] = useState("")
@@ -818,16 +841,55 @@ function DetailPanel({
                   )}
                 </Section>
 
-                {/* Stripe */}
-                <Section title="Stripe Connect">
+                {/* Stripe Connect */}
+                <section>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Stripe Connect</h3>
+                    {detail.stripeAccountId && (
+                      <button
+                        onClick={doRefresh}
+                        disabled={refreshing}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 transition-colors"
+                        title="Pull live state from Stripe (use when a webhook never delivered)"
+                      >
+                        {refreshing ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+                        Refresh from Stripe
+                      </button>
+                    )}
+                  </div>
                   <InfoTable>
                     <InfoRow icon={<CreditCard className="h-4 w-4" />} label="Connect Account ID" value={detail.stripeAccountId || "Not created"} mono />
-                    <InfoRow icon={<CreditCard className="h-4 w-4" />} label="Connect Country" value={detail.stripeConnectCountry || "—"} />
-                    <InfoRow icon={<CreditCard className="h-4 w-4" />} label="Connect Business Type" value={detail.stripeConnectBusinessType || "—"} />
+                    <InfoRow icon={<CreditCard className="h-4 w-4" />} label="Country" value={detail.stripeConnectCountry || "—"} />
+                    <InfoRow icon={<CreditCard className="h-4 w-4" />} label="Business Type" value={detail.stripeConnectBusinessType || "—"} />
                     <InfoRow icon={<CheckCircle2 className="h-4 w-4" />} label="Charges" value={detail.chargesEnabled ? "Enabled" : "Disabled"} valueColor={detail.chargesEnabled ? "text-emerald-700" : "text-red-700"} />
                     <InfoRow icon={<CheckCircle2 className="h-4 w-4" />} label="Payouts" value={detail.payoutsEnabled ? "Enabled" : "Disabled"} valueColor={detail.payoutsEnabled ? "text-emerald-700" : "text-red-700"} />
+                    {detail.lifecycleStage && (
+                      <InfoRow label="Lifecycle Stage" value={detail.lifecycleStage} valueColor={lifecycleStageColor(detail.lifecycleStage)} />
+                    )}
+                    {detail.stripeDisabledReason && (
+                      <InfoRow label="Disabled Reason" value={detail.stripeDisabledReason} valueColor="text-red-700" />
+                    )}
+                    {detail.lastWebhookEventAt && (
+                      <InfoRow label="Last Webhook Event" value={fmtDate(detail.lastWebhookEventAt)} />
+                    )}
+                    {detail.currentDeadline && (
+                      <InfoRow label="Stripe Deadline" value={fmtDate(detail.currentDeadline)} valueColor="text-amber-700" />
+                    )}
                   </InfoTable>
-                </Section>
+                  {(detail.currentlyDueItems?.length || detail.pastDueItems?.length || detail.pendingVerificationItems?.length) ? (
+                    <div className="mt-3 space-y-2">
+                      {detail.pastDueItems && detail.pastDueItems.length > 0 && (
+                        <RequirementsList title="Past due" tone="red" items={detail.pastDueItems} />
+                      )}
+                      {detail.currentlyDueItems && detail.currentlyDueItems.length > 0 && (
+                        <RequirementsList title="Currently due" tone="amber" items={detail.currentlyDueItems} />
+                      )}
+                      {detail.pendingVerificationItems && detail.pendingVerificationItems.length > 0 && (
+                        <RequirementsList title="Pending verification" tone="blue" items={detail.pendingVerificationItems} />
+                      )}
+                    </div>
+                  ) : null}
+                </section>
 
                 <Section title="Stripe Billing (Subscription Charges)">
                   <InfoTable>
@@ -1030,6 +1092,33 @@ function InfoRow({ icon, label, value, mono, valueColor }: { icon?: React.ReactN
         <span className="text-sm text-gray-500">{label}</span>
       </div>
       <span className={`text-sm text-right max-w-[55%] truncate ${valueColor || "text-gray-700"} ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
+    </div>
+  )
+}
+
+function lifecycleStageColor(stage: string): string {
+  const s = stage.toUpperCase()
+  if (s === "ACTIVE") return "text-emerald-700"
+  if (s === "ONBOARDING" || s === "UNDER_REVIEW" || s === "PENDING_VERIFICATION") return "text-blue-700"
+  if (s === "ACTION_REQUIRED" || s === "PAYOUTS_PAUSED") return "text-amber-700"
+  if (s === "PAST_DUE" || s === "CHARGES_PAUSED" || s === "REJECTED") return "text-red-700"
+  return "text-gray-700"
+}
+
+function RequirementsList({ title, tone, items }: { title: string; tone: "red" | "amber" | "blue"; items: string[] }) {
+  const toneCls = tone === "red"
+    ? "border-red-200 bg-red-50 text-red-700"
+    : tone === "amber"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : "border-blue-200 bg-blue-50 text-blue-700"
+  return (
+    <div className={`rounded-xl border ${toneCls} px-4 py-3`}>
+      <p className="text-xs font-semibold uppercase tracking-wider mb-1">{title}</p>
+      <ul className="text-xs space-y-0.5">
+        {items.map((it) => (
+          <li key={it} className="font-mono">• {it}</li>
+        ))}
+      </ul>
     </div>
   )
 }

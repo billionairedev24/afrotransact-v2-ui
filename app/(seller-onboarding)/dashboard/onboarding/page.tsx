@@ -712,17 +712,29 @@ export default function SellerOnboardingPage() {
   // ── Step 5: Payment Setup (Stripe Connect + Payment Method) ──
 
   async function saveStripe() {
-    // Skip the round-trip if a Connect account already exists. The backend is
-    // idempotent, but skipping avoids any chance of triggering Stripe's risk
-    // signals on retries and short-circuits the UX for already-connected sellers.
-    if (progress?.stripe?.stripeAccountId) {
-      if (progress.stripe.chargesEnabled && progress.stripe.payoutsEnabled) {
-        toast.success("Stripe is already connected")
-      } else {
-        toast.info("Stripe account exists. Click 'Continue Stripe Setup' to finish verification.")
-      }
+    // Already fully connected — nothing to do, just confirm.
+    if (
+      progress?.stripe?.stripeAccountId &&
+      progress.stripe.chargesEnabled &&
+      progress.stripe.payoutsEnabled
+    ) {
+      toast.success("Stripe is already connected")
       return true
     }
+
+    // The /onboarding/start response we hydrated from already includes a
+    // fresh AccountLink (`onboardingUrl`) whenever a Stripe account exists.
+    // If we have it, jump straight to Stripe — no need to POST
+    // /onboarding/stripe again (which would also bump Stripe's risk
+    // signals for repeated account-creation calls).
+    if (progress?.stripe?.onboardingUrl) {
+      toast.info("Redirecting to Stripe to complete verification…")
+      window.location.href = progress.stripe.onboardingUrl
+      return true
+    }
+
+    // Brand-new seller, no Connect account yet — create it now and follow
+    // the link the backend returns.
     setSaving(true)
     try {
       const p = await withToken((t) => setupOnboardingStripe(t))
@@ -735,7 +747,7 @@ export default function SellerOnboardingPage() {
           window.location.href = p.stripe.onboardingUrl
           return true
         } else if (p.stripe?.stripeAccountId) {
-          toast.info("Stripe account created. Click 'Continue Stripe Setup' to complete verification.")
+          toast.error("Couldn't get a Stripe verification link. Try again in a moment.")
         }
       }
       return true
