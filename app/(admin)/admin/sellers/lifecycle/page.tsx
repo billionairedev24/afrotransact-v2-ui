@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createColumnHelper } from "@tanstack/react-table"
 import {
-  AlertTriangle, ShieldOff, CreditCard, Clock, Hourglass, XCircle, Loader2, Mail, ExternalLink,
+  AlertTriangle, ShieldOff, CreditCard, Clock, Hourglass, XCircle, Loader2, Mail, ExternalLink, RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
@@ -14,6 +14,7 @@ import {
   getAdminSellers,
   getSellerLifecycleSummary,
   nudgeSellerLifecycle,
+  refreshSellerStripe,
   type SellerInfo,
 } from "@/lib/api"
 
@@ -82,6 +83,24 @@ export default function SellerLifecyclePage() {
       qc.invalidateQueries({ queryKey: ["admin", "sellers", "at-risk"] })
     },
     onError: () => toast.error("Failed to send nudge"),
+  })
+
+  // Pull live Account state from Stripe — same code path the account.updated
+  // webhook uses. Covers the case where the seller bailed mid-onboarding and
+  // no webhook ever fired (Stripe doesn't emit account.updated unless
+  // something actually transitions on the account).
+  const refresh = useMutation({
+    mutationFn: async (sellerId: string) => {
+      const token = await getAccessToken()
+      if (!token) throw new Error("No token")
+      return refreshSellerStripe(token, sellerId)
+    },
+    onSuccess: () => {
+      toast.success("Stripe state refreshed")
+      qc.invalidateQueries({ queryKey: ["admin", "sellers", "at-risk"] })
+      qc.invalidateQueries({ queryKey: ["admin", "sellers", "lifecycle-summary"] })
+    },
+    onError: () => toast.error("Failed to refresh from Stripe"),
   })
 
   const rows = useMemo<SellerInfo[]>(() => sellers.data?.content ?? [], [sellers.data])
@@ -155,8 +174,22 @@ export default function SellerLifecyclePage() {
       cell: (info) => {
         const s = info.row.original
         const canNudge = s.lifecycleStage && s.lifecycleStage !== "ACTIVE"
+        const canRefresh = !!s.stripeAccountId
         return (
           <div className="inline-flex justify-end gap-1">
+            <button
+              disabled={!canRefresh || refresh.isPending}
+              onClick={() => refresh.mutate(s.id)}
+              title="Pull live state from Stripe (use when a webhook never delivered)"
+              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {refresh.isPending && refresh.variables === s.id ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              Refresh
+            </button>
             <button
               disabled={!canNudge || nudge.isPending}
               onClick={() => nudge.mutate(s.id)}
@@ -182,7 +215,7 @@ export default function SellerLifecyclePage() {
       },
     }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [nudge.isPending, nudge.variables])
+  ], [nudge.isPending, nudge.variables, refresh.isPending, refresh.variables])
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
