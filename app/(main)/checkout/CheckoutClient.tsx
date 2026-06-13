@@ -124,6 +124,7 @@ function AddressStep({
     ? [seedProfile.firstName, seedProfile.lastName].filter(Boolean).join(" ")
     : ""
 
+  const router = useRouter()
   const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>(seedAddrs)
   const [selectedId, setSelectedId] = useState<string | null>(
     seedDef?.id ?? seedAddrs[0]?.id ?? null,
@@ -288,26 +289,31 @@ function AddressStep({
      If there are no saved addresses, the modal opens immediately as the
      first-time flow. If there are saved addresses, it opens on demand
      from the "+ Add New Address" button below the grid. */
+  // First-time checkout opens the address modal automatically. If the buyer
+  // decides not to enter one, the close/cancel actions take them back to the
+  // cart rather than trapping them on a half-complete checkout page.
+  const dismissNewAddress = () => {
+    setShowNew(false)
+    if (savedAddresses.length === 0) router.push("/cart")
+  }
   const newAddressModal = showNew && (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={(e) => {
-        if (e.target === e.currentTarget && savedAddresses.length > 0) setShowNew(false)
+        if (e.target === e.currentTarget) dismissNewAddress()
       }}
     >
       <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 className="text-lg font-bold text-foreground">Add New Address</h3>
-          {savedAddresses.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowNew(false)}
-              className="text-gray-400 hover:text-foreground transition-colors"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={dismissNewAddress}
+            className="text-gray-400 hover:text-foreground transition-colors"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -353,15 +359,13 @@ function AddressStep({
           </label>
         </div>
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 sticky bottom-0">
-          {savedAddresses.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowNew(false)}
-              className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
-            >
-              Cancel
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={dismissNewAddress}
+            className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             disabled={!form.fullName || !form.line1 || !form.city || !form.zip || saving}

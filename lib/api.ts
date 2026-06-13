@@ -823,6 +823,7 @@ export interface AdminSellerDetail {
   rejectionReason: string | null
   suspensionReason: string | null
   suspendedAt: string | null
+  testAccount: boolean | null
   // Stripe Connect lifecycle snapshot — populated by the seller-service
   // account.updated webhook handler. Surface in the admin UI so ops can see
   // *why* a Connect account is restricted without leaving the dashboard.
@@ -1746,6 +1747,17 @@ export function refreshSellerStripe(token: string, id: string) {
   return api<AdminSellerDetail>(`/api/v1/admin/sellers/${id}/refresh-stripe`, {
     method: "POST",
     token,
+  })
+}
+
+/** Toggle the test_account flag. Test accounts are skipped by the
+ *  subscription billing scheduler — used for team demo / smoke-test
+ *  sellers in prod that should never see a charge. */
+export function setSellerTestAccount(token: string, id: string, enabled: boolean) {
+  return api<SellerInfo>(`/api/v1/admin/sellers/${id}/test-account`, {
+    method: "POST",
+    token,
+    body: { enabled },
   })
 }
 
