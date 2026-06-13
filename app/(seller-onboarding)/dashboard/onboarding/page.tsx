@@ -712,15 +712,7 @@ export default function SellerOnboardingPage() {
   // ── Step 5: Payment Setup (Stripe Connect + Payment Method) ──
 
   async function saveStripe() {
-    // Only short-circuit when the seller is fully connected — both charges
-    // AND payouts enabled means Stripe has verified everything and there's
-    // nothing left to do on their hosted flow. For any partial state
-    // (account created but verification incomplete, or the seller bailed
-    // mid-Stripe-onboarding and came back), we MUST call the backend so it
-    // mints a fresh AccountLink and we can redirect them back to finish.
-    // The backend is idempotent on account creation (checks stripeAccountId
-    // before Account.create + uses a Stripe idempotency key), so re-calling
-    // here never produces a duplicate Connect account.
+    // Already fully connected — nothing to do, just confirm.
     if (
       progress?.stripe?.stripeAccountId &&
       progress.stripe.chargesEnabled &&
@@ -729,6 +721,20 @@ export default function SellerOnboardingPage() {
       toast.success("Stripe is already connected")
       return true
     }
+
+    // The /onboarding/start response we hydrated from already includes a
+    // fresh AccountLink (`onboardingUrl`) whenever a Stripe account exists.
+    // If we have it, jump straight to Stripe — no need to POST
+    // /onboarding/stripe again (which would also bump Stripe's risk
+    // signals for repeated account-creation calls).
+    if (progress?.stripe?.onboardingUrl) {
+      toast.info("Redirecting to Stripe to complete verification…")
+      window.location.href = progress.stripe.onboardingUrl
+      return true
+    }
+
+    // Brand-new seller, no Connect account yet — create it now and follow
+    // the link the backend returns.
     setSaving(true)
     try {
       const p = await withToken((t) => setupOnboardingStripe(t))
