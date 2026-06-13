@@ -823,6 +823,18 @@ export interface AdminSellerDetail {
   rejectionReason: string | null
   suspensionReason: string | null
   suspendedAt: string | null
+  // Stripe Connect lifecycle snapshot — populated by the seller-service
+  // account.updated webhook handler. Surface in the admin UI so ops can see
+  // *why* a Connect account is restricted without leaving the dashboard.
+  lifecycleStage: string | null
+  stripeRequirementsDue: boolean | null
+  stripeDisabledReason: string | null
+  currentlyDueItems: string[] | null
+  pastDueItems: string[] | null
+  eventuallyDueItems: string[] | null
+  pendingVerificationItems: string[] | null
+  currentDeadline: string | null
+  lastWebhookEventAt: string | null
   adminNotes: string | null
   createdAt: string
   submittedAt: string | null
@@ -1719,6 +1731,19 @@ export function suspendSeller(token: string, id: string, reason: string) {
 
 export function reinstateSeller(token: string, id: string) {
   return api<SellerInfo>(`/api/v1/admin/sellers/${id}/reinstate`, {
+    method: "POST",
+    token,
+  })
+}
+
+/**
+ * Pull the seller's live Connect Account from Stripe and re-run the same
+ * lifecycle handler the account.updated webhook uses. Use this when a
+ * webhook never delivered (misconfigured endpoint, signing-secret mismatch,
+ * etc.) and the admin UI is showing stale data.
+ */
+export function refreshSellerStripe(token: string, id: string) {
+  return api<AdminSellerDetail>(`/api/v1/admin/sellers/${id}/refresh-stripe`, {
     method: "POST",
     token,
   })
