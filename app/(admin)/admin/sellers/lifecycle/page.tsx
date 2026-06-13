@@ -173,7 +173,10 @@ export default function SellerLifecyclePage() {
       enableHiding: false,
       cell: (info) => {
         const s = info.row.original
-        const canNudge = s.lifecycleStage && s.lifecycleStage !== "ACTIVE"
+        // Nudge endpoint auto-refreshes from Stripe before deciding what to
+        // send, so we only need the seller to have a Connect account — not
+        // a populated lifecycle_stage on our side.
+        const canNudge = !!s.stripeAccountId
         const canRefresh = !!s.stripeAccountId
         return (
           <div className="inline-flex justify-end gap-1">
