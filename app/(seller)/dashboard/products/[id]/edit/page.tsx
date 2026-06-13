@@ -761,11 +761,12 @@ export default function EditProductPage() {
 
       // Bust customer-facing caches so price/deal changes reflect immediately
       try {
-        const { revalidateProduct, revalidateSearch, revalidateDeals, revalidateHomeData, revalidateSellerProductList, revalidateAllStorefronts } = await import("@/lib/revalidate-actions")
+        const { revalidateProduct, revalidateSearch, revalidateDeals, revalidateHomeData, revalidateHomepage, revalidateSellerProductList, revalidateAllStorefronts } = await import("@/lib/revalidate-actions")
         await revalidateProduct(product.slug)
         await revalidateSearch()
         await revalidateDeals()
         await revalidateHomeData()
+        await revalidateHomepage()
         await revalidateSellerProductList()
         await revalidateAllStorefronts()
       } catch {

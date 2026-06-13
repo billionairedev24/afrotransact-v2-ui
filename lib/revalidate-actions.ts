@@ -54,6 +54,15 @@ export async function revalidateHomeData(): Promise<void> {
 }
 
 /**
+ * Drops the homepage ISR snapshot. The seller-edit save handler now calls
+ * this so trending / new arrivals / today's deals rows reflect the new
+ * price on the next request instead of waiting up to 30 seconds.
+ */
+export async function revalidateHomepage(): Promise<void> {
+  revalidatePath("/")
+}
+
+/**
  * Revalidates the seller product list page in the dashboard.
  */
 export async function revalidateSellerProductList(): Promise<void> {
