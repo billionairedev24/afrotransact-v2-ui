@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { normalizeInt, normalizeDecimal } from "@/lib/inputs"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   getCurrentSeller,
   getSellerStores,
@@ -177,6 +178,7 @@ function flattenCategories(cats: CategoryRef[], depth = 0): { id: string; name: 
 export default function NewProductPage() {
   const { status: sessionStatus } = useSession()
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   const { startUpload: startImageUpload } = useUploadThing("productImage")
 
@@ -713,6 +715,9 @@ export default function NewProductPage() {
         }
       }
 
+      // Drop any cached products list so /dashboard/products shows the new
+      // row immediately instead of yesterday's snapshot.
+      queryClient.invalidateQueries({ queryKey: ["seller-products"] })
       router.push("/dashboard/products")
     } catch (e) {
       logError(e, "creating product")

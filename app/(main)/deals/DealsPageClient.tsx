@@ -36,6 +36,12 @@ function dealToCardItem(deal: DealData): BrandProductCardItem | null {
   const original =
     deal.originalPriceCents != null ? deal.originalPriceCents / 100 : null
   if (price == null) return null
+  // Defensive: backend now filters out zero-discount rows, but keep this
+  // guard so any leak (cache, legacy row) doesn't render as a fake "deal".
+  const hasRealDiscount =
+    (deal.discountPercent != null && deal.discountPercent > 0) ||
+    (original != null && price < original)
+  if (!hasRealDiscount) return null
   return {
     productId: deal.productId,
     storeId: deal.storeId,
