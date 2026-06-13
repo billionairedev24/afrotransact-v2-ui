@@ -712,15 +712,21 @@ export default function SellerOnboardingPage() {
   // ── Step 5: Payment Setup (Stripe Connect + Payment Method) ──
 
   async function saveStripe() {
-    // Skip the round-trip if a Connect account already exists. The backend is
-    // idempotent, but skipping avoids any chance of triggering Stripe's risk
-    // signals on retries and short-circuits the UX for already-connected sellers.
-    if (progress?.stripe?.stripeAccountId) {
-      if (progress.stripe.chargesEnabled && progress.stripe.payoutsEnabled) {
-        toast.success("Stripe is already connected")
-      } else {
-        toast.info("Stripe account exists. Click 'Continue Stripe Setup' to finish verification.")
-      }
+    // Only short-circuit when the seller is fully connected — both charges
+    // AND payouts enabled means Stripe has verified everything and there's
+    // nothing left to do on their hosted flow. For any partial state
+    // (account created but verification incomplete, or the seller bailed
+    // mid-Stripe-onboarding and came back), we MUST call the backend so it
+    // mints a fresh AccountLink and we can redirect them back to finish.
+    // The backend is idempotent on account creation (checks stripeAccountId
+    // before Account.create + uses a Stripe idempotency key), so re-calling
+    // here never produces a duplicate Connect account.
+    if (
+      progress?.stripe?.stripeAccountId &&
+      progress.stripe.chargesEnabled &&
+      progress.stripe.payoutsEnabled
+    ) {
+      toast.success("Stripe is already connected")
       return true
     }
     setSaving(true)
@@ -735,7 +741,7 @@ export default function SellerOnboardingPage() {
           window.location.href = p.stripe.onboardingUrl
           return true
         } else if (p.stripe?.stripeAccountId) {
-          toast.info("Stripe account created. Click 'Continue Stripe Setup' to complete verification.")
+          toast.error("Couldn't get a Stripe verification link. Try again in a moment.")
         }
       }
       return true
