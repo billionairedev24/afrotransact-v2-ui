@@ -216,13 +216,28 @@ function FilterSidebar({
         {facets.price_ranges.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {facets.price_ranges.map((f) => {
-              const [min, max] = f.key.split("-")
+              // Buckets come from the backend in two shapes:
+              //   "10-25"  → min=10, max=25
+              //   "100+"   → min=100, max="" (open-ended upper bound)
+              // The "+" is presentational only; the search API expects a
+              // plain number for min_price/max_price, so we must strip it
+              // before sending or 422.
+              let min: string
+              let max: string
+              if (f.key.endsWith("+")) {
+                min = f.key.slice(0, -1)
+                max = ""
+              } else {
+                const [lo, hi] = f.key.split("-")
+                min = lo
+                max = hi ?? ""
+              }
               const isActive = minPrice === min && (max ? maxPrice === max : !maxPrice)
               return (
                 <button
                   key={f.key}
                   onClick={() =>
-                    isActive ? onPriceChange("", "") : onPriceChange(min, max || "")
+                    isActive ? onPriceChange("", "") : onPriceChange(min, max)
                   }
                   className={cn(
                     "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all",
