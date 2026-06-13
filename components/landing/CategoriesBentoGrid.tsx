@@ -79,21 +79,35 @@ function CategoryCard({
   let body: React.ReactNode = null
   switch (slug) {
     case "food-grocery": {
-      // Avoid orphan tiles in a 2-col grid: only render the grid when we have
-      // an even count (2 or 4). With a single product, fall back to one big
-      // square so the card never shows an awkward 1/3-tile layout.
-      const usable = Math.min(withImages.length, 4)
-      const even = usable - (usable % 2)
-      if (even >= 2) {
+      // Show whatever we have, nicely. 4 → 2x2, 3 → one wide hero + two below,
+      // 2 → 2x1, 1 → single big square. Never drop products to "look even".
+      const items = withImages.slice(0, 4)
+      if (items.length === 4) {
         body = (
           <div className="grid grid-cols-2 gap-2 mb-4">
-            {withImages.slice(0, even).map((p) => (
+            {items.map((p) => (
               <Thumb key={p.product_id} product={p} className="aspect-square" />
             ))}
           </div>
         )
-      } else if (withImages[0]) {
-        body = <Thumb product={withImages[0]} className="aspect-square mb-4" />
+      } else if (items.length === 3) {
+        body = (
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <Thumb product={items[0]} className="row-span-2 aspect-[1/2.05]" />
+            <Thumb product={items[1]} className="aspect-square" />
+            <Thumb product={items[2]} className="aspect-square" />
+          </div>
+        )
+      } else if (items.length === 2) {
+        body = (
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {items.map((p) => (
+              <Thumb key={p.product_id} product={p} className="aspect-square" />
+            ))}
+          </div>
+        )
+      } else if (items[0]) {
+        body = <Thumb product={items[0]} className="aspect-square mb-4" />
       }
       break
     }

@@ -33,6 +33,7 @@ import {
   RefreshCw,
   AlertTriangle,
 } from "lucide-react"
+import { revalidateStorefronts } from "@/lib/revalidate-actions"
 import {
   getAdminProducts,
   approveProduct,
@@ -169,6 +170,10 @@ export default function AdminProductsPage() {
     setActionLoading(product.id)
     try {
       await approveProduct(token, product.id)
+      // Best-effort ISR bust so the seller's storefront drops its cached
+      // snapshot immediately. Failure is silently ignored — the 30s ISR
+      // window is the worst-case fallback.
+      void revalidateStorefronts().catch(() => {})
       toast.success(`"${product.title}" has been approved`)
       if (viewProduct?.id === product.id) setViewProduct(null)
       // Filtered view: approved item leaves the current list. For "all", just refresh status locally next load.

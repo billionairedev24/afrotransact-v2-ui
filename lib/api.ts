@@ -1693,6 +1693,7 @@ export function approveProduct(token: string, productId: string) {
   return api<void>(`/api/v1/products/${productId}/approve`, { method: "PUT", token })
 }
 
+
 export function rejectProduct(token: string, productId: string, reason: string) {
   return api<void>(`/api/v1/products/${productId}/reject`, { method: "PUT", body: { reason }, token })
 }

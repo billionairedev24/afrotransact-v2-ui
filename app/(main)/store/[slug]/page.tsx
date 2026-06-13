@@ -2,9 +2,11 @@ import type { Metadata } from "next"
 import { getStoreBySlug } from "@/lib/api"
 import StorePageClient from "./StorePageClient"
 
-// Storefront profile changes infrequently (name, logo, location). 3-minute
-// ISR keeps crawlers and shoppers on a fast, mostly-cached page.
-export const revalidate = 180
+// Storefront profile changes infrequently (name, logo, location), but
+// freshly-approved products need to surface fast — 30s ISR is the sweet
+// spot for "smooth in prod without a 3-minute stale window after admin
+// approval". Products themselves load client-side and are uncached.
+export const revalidate = 30
 
 type Params = { slug: string }
 

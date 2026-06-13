@@ -42,6 +42,7 @@ import {
   type SellerInfo,
   type AdminSellerDetail,
 } from "@/lib/api"
+import { revalidateStorefronts } from "@/lib/revalidate-actions"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
 import { Dialog, DialogHeader, DialogBody, DialogFooter } from "@/components/ui/Dialog"
 import { cn } from "@/lib/utils"
@@ -100,6 +101,7 @@ export default function WorkQueuePage() {
     setActionLoading(product.id)
     try {
       await approveProduct(token, product.id)
+      void revalidateStorefronts().catch(() => {})
       toast.success(`"${product.title}" approved`)
       if (selectedProduct?.id === product.id) setSelectedProduct(null)
       invalidateQueue()
