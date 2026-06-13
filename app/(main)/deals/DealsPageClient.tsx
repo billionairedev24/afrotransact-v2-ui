@@ -32,16 +32,24 @@ const DISCOUNT_TIERS = [10, 25, 50, 70] as const
 
 function dealToCardItem(deal: DealData): BrandProductCardItem | null {
   if (!deal.productId) return null
+  if (deal.enabled === false) return null
+  if (deal.active === false) return null
+  const now = new Date()
+  if (deal.startAt && new Date(deal.startAt) > now) return null
+  if (deal.endAt && new Date(deal.endAt) < now) return null
+
   const price = deal.dealPriceCents != null ? deal.dealPriceCents / 100 : null
   const original =
     deal.originalPriceCents != null ? deal.originalPriceCents / 100 : null
   if (price == null) return null
-  // Defensive: backend now filters out zero-discount rows, but keep this
-  // guard so any leak (cache, legacy row) doesn't render as a fake "deal".
+
   const hasRealDiscount =
     (deal.discountPercent != null && deal.discountPercent > 0) ||
     (original != null && price < original)
   if (!hasRealDiscount) return null
+  // Extra guard: if original price exists and "deal price" is >= original, skip
+  if (original != null && price >= original) return null
+
   return {
     productId: deal.productId,
     storeId: deal.storeId,

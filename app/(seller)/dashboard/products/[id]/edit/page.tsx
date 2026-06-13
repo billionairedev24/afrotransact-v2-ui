@@ -758,6 +758,18 @@ export default function EditProductPage() {
       setSubmitted(false)
       setNewImages([])
       await loadData()
+
+      // Bust customer-facing caches so price/deal changes reflect immediately
+      try {
+        const { revalidateProduct, revalidateSearch, revalidateDeals, revalidateHomeData, revalidateSellerProductList } = await import("@/lib/revalidate-actions")
+        await revalidateProduct(product.slug)
+        await revalidateSearch()
+        await revalidateDeals()
+        await revalidateHomeData()
+        await revalidateSellerProductList()
+      } catch {
+        // best-effort
+      }
     } catch (e) {
       logError(e, "updating product")
       setGlobalError("Failed to update product")

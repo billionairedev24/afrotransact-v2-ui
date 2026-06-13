@@ -28,7 +28,7 @@ import {
 
 // Home is public, catalog-driven content: revalidate often enough to feel fresh,
 // long enough to dedupe bursts from spiders/warm navigations.
-export const revalidate = 60
+export const revalidate = 30
 
 async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
   try {

@@ -70,8 +70,11 @@ export async function GET() {
         heroSlides,
       },
       {
+        // Reduced from s-maxage=60,s-w-r=300 to 30/60 so home page reflects
+        // seller product/deal updates faster. Revalidation server actions
+        // in lib/revalidate-actions.ts also bust this explicitly.
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
         },
       },
     )
