@@ -1,156 +1,137 @@
 import Image from "next/image"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
-import type { CategoryRef, SearchResult } from "@/lib/api"
+import type { CategoryRef } from "@/lib/api"
 
 /**
- * Categories grid — faithful port of public/ux-designs/code.html lines 205-264.
+ * Amazon-style category cards — each root category renders as a card
+ * containing up to 4 sub-category tiles. Each tile shows a representative
+ * product image with the sub-category label underneath, NOT a bare product
+ * thumbnail. Clicking a tile goes to the sub-category page; clicking the
+ * card footer link goes to the root category page.
  *
- * Layout: 4 EQUAL columns on md+ (md:grid-cols-4). Each card has its own
- * internal composition based on slug — this matches the mockup which uses
- * different visual treatments per category (NOT a bento with one card bigger).
+ * Empty tile (image=null) is dropped entirely — we never render a flat
+ * gradient placeholder. Card collapses to title + CTA when nothing is
+ * indexed yet.
  *
- *   • food-grocery → 2×2 product thumbnail grid (4 thumbs)
- *   • electronics  → 1 tall aspect-[4/5] thumbnail
- *   • fashion      → 2 square thumbnails + description copy
- *   • home-garden  → 1 square thumbnail
- *   • (any other)  → fallback to 1 square thumbnail
- *
- * Empty cells render as a soft brand-tint gradient. NEVER broken images or
- * placeholder icons. `CategoryRef` has no imageUrl field, so imagery comes
- * entirely from productsByCategoryId (server-computed in app/page.tsx).
+ * Tile data is precomputed server-side in app/page.tsx so this stays a
+ * pure server component with zero client JS.
  */
 
-const TINT = "bg-gradient-to-br from-amber-50 to-orange-100"
+const TILE_BG = "bg-gradient-to-br from-amber-50 to-orange-100"
+
+export type BentoTile = {
+  label: string
+  categorySlug: string
+  image: string | null
+  productSlug?: string
+}
 
 interface CategoriesBentoGridProps {
   categories: CategoryRef[]
-  productsByCategoryId: Record<string, SearchResult[]>
+  tilesByRoot: Record<string, BentoTile[]>
 }
 
-function Thumb({
-  product,
-  className,
-}: {
-  product: SearchResult
-  className: string
-}) {
-  const href = `/product/${product.slug || product.product_id}`
+function Tile({ tile }: { tile: BentoTile }) {
+  if (!tile.image) return null
+  // Click goes to the product PDP when we have a slug, otherwise the root
+  // category page. No label rendered — each card's title already names the
+  // category; the tile is a pure product thumbnail.
+  const href = tile.productSlug
+    ? `/product/${tile.productSlug}`
+    : `/category/${tile.categorySlug}`
   return (
     <Link
       href={href}
-      title={product.title}
-      className={`block relative overflow-hidden rounded ${TINT} ${className} hover:ring-2 hover:ring-brand-gold transition-shadow`}
+      className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold rounded"
+      aria-label={tile.label}
+      title={tile.label}
     >
-      <Image
-        src={product.image_url!}
-        alt={product.title}
-        fill
-        sizes="(max-width: 768px) 50vw, 25vw"
-        className="object-cover transition-transform hover:scale-[1.04]"
-      />
+      <div
+        className={`relative aspect-square rounded overflow-hidden ${TILE_BG} hover:ring-2 hover:ring-brand-gold transition-shadow`}
+      >
+        <Image
+          src={tile.image}
+          alt={tile.label}
+          fill
+          sizes="(max-width: 768px) 50vw, 25vw"
+          className="object-cover transition-transform group-hover:scale-[1.03]"
+        />
+      </div>
     </Link>
   )
 }
 
 function CategoryCard({
   category,
-  products,
+  tiles,
 }: {
   category: CategoryRef
-  products: SearchResult[]
+  tiles: BentoTile[]
 }) {
-  const slug = category.slug
-  const href = `/category/${slug}`
+  const href = `/category/${category.slug}`
   const ctaLabel =
-    slug === "electronics"
+    category.slug === "electronics"
       ? "Shop all gadgets"
-      : slug === "fashion"
+      : category.slug === "fashion"
         ? "Explore styles"
-        : slug === "home-garden"
+        : category.slug === "home-garden"
           ? "View collection"
           : "See more"
 
-  // Only render slots that actually have a product image. An empty slot
-  // would just be a flat gradient tile that says nothing — better to let the
-  // card collapse to title + CTA when the catalog is sparse.
-  const withImages = products.filter((p) => p?.image_url)
+  const usable = tiles.filter((t) => t.image).slice(0, 4)
 
-  let body: React.ReactNode = null
-  switch (slug) {
-    case "food-grocery": {
-      // Show whatever we have, nicely. 4 → 2x2, 3 → one wide hero + two below,
-      // 2 → 2x1, 1 → single big square. Never drop products to "look even".
-      const items = withImages.slice(0, 4)
-      if (items.length === 4) {
-        body = (
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {items.map((p) => (
-              <Thumb key={p.product_id} product={p} className="aspect-square" />
-            ))}
-          </div>
-        )
-      } else if (items.length === 3) {
-        body = (
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            <Thumb product={items[0]} className="row-span-2 aspect-[1/2.05]" />
-            <Thumb product={items[1]} className="aspect-square" />
-            <Thumb product={items[2]} className="aspect-square" />
-          </div>
-        )
-      } else if (items.length === 2) {
-        body = (
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {items.map((p) => (
-              <Thumb key={p.product_id} product={p} className="aspect-square" />
-            ))}
-          </div>
-        )
-      } else if (items[0]) {
-        body = <Thumb product={items[0]} className="aspect-square mb-4" />
-      }
-      break
-    }
-    case "electronics": {
-      if (withImages[0]) {
-        body = <Thumb product={withImages[0]} className="aspect-[4/5] mb-4" />
-      }
-      break
-    }
-    case "fashion": {
-      const items = withImages.slice(0, 2)
-      body = (
-        <>
-          {items.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {items.map((p) => (
-                <Thumb key={p.product_id} product={p} className="aspect-square" />
-              ))}
-            </div>
-          )}
-          <p className="text-sm text-muted-foreground mb-4">
-            Discover curated cultural attire and modern essentials.
-          </p>
-        </>
-      )
-      break
-    }
-    case "home-garden":
-    default:
-      if (withImages[0]) {
-        body = <Thumb product={withImages[0]} className="aspect-square mb-4" />
-      }
+  // Layout: 4 → 2x2, 3 → 2x1 plus a single below, 2 → 2x1, 1 → single big.
+  // Never drop tiles to "look even" — sellers add a 3rd product, we show 3.
+  let grid: React.ReactNode = null
+  if (usable.length >= 4) {
+    grid = (
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {usable.slice(0, 4).map((t, i) => (
+          <Tile key={`${t.categorySlug}-${i}`} tile={t} />
+        ))}
+      </div>
+    )
+  } else if (usable.length === 3) {
+    grid = (
+      <div className="space-y-3 mb-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Tile tile={usable[0]} />
+          <Tile tile={usable[1]} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Tile tile={usable[2]} />
+        </div>
+      </div>
+    )
+  } else if (usable.length === 2) {
+    grid = (
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {usable.map((t, i) => (
+          <Tile key={`${t.categorySlug}-${i}`} tile={t} />
+        ))}
+      </div>
+    )
+  } else if (usable.length === 1) {
+    grid = (
+      <div className="mb-4">
+        <Tile tile={usable[0]} />
+      </div>
+    )
   }
 
   return (
-    <div className="bg-card p-6 border border-border flex flex-col rounded-md hover:shadow-md transition-shadow">
-      <Link href={href} className="text-xl font-bold mb-4 text-foreground hover:text-foreground transition-colors">
-        <h3>{category.name}</h3>
-      </Link>
-      {body}
+    <div className="bg-card p-5 border border-border flex flex-col rounded-md hover:shadow-md transition-shadow">
       <Link
         href={href}
-        className="text-foreground font-bold mt-auto flex items-center gap-1 hover:underline"
+        className="text-lg font-bold mb-4 text-foreground hover:text-foreground transition-colors"
+      >
+        <h3>{category.name}</h3>
+      </Link>
+      {grid}
+      <Link
+        href={href}
+        className="text-foreground font-bold mt-auto flex items-center gap-1 text-sm hover:underline"
       >
         {ctaLabel} <ChevronRight className="h-4 w-4" />
       </Link>
@@ -160,21 +141,24 @@ function CategoryCard({
 
 export function CategoriesBentoGrid({
   categories,
-  productsByCategoryId,
+  tilesByRoot,
 }: CategoriesBentoGridProps) {
-  // Filter out services (defensive — backend V13 already removes it, and
-  // app/page.tsx also filters at the source).
   const roots = categories.filter((c) => c.slug !== "services").slice(0, 4)
   if (roots.length === 0) return null
 
+  // Hide the entire row if no root has any tile to show. Beats rendering a
+  // grid of empty cards on a cold catalog.
+  const totalTiles = roots.reduce((n, c) => n + (tilesByRoot[c.id]?.length ?? 0), 0)
+  if (totalTiles === 0) return null
+
   return (
     <section className="max-w-[1440px] mx-auto px-4 sm:px-5 relative z-20 mt-8">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {roots.map((category) => (
           <CategoryCard
             key={category.id}
             category={category}
-            products={productsByCategoryId[category.id] || []}
+            tiles={tilesByRoot[category.id] ?? []}
           />
         ))}
       </div>

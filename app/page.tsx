@@ -161,13 +161,36 @@ export default async function HomePage() {
     }
     return tokens
   }
-  const productsByCategoryId: Record<string, SearchResult[]> = {}
+  // Up to 4 product images per root card — pulled from any descendant of
+  // the root, no sub-category labels. Pure product tiles: image only,
+  // click goes to the product. Shuffled per request so a sparse catalog
+  // doesn't look frozen.
+  type BentoTile = {
+    label: string
+    categorySlug: string
+    image: string | null
+    productSlug?: string
+  }
+  function shuffled<T>(arr: T[]): T[] {
+    const a = arr.slice()
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[a[i], a[j]] = [a[j], a[i]]
+    }
+    return a
+  }
+  const tilesByRoot: Record<string, BentoTile[]> = {}
   for (const cat of roots) {
     const tokens = collectDescendantTokens(cat.id, cat.name, cat.slug)
-    productsByCategoryId[cat.id] = featuredRating.results
+    const pool = featuredRating.results
       .filter((p) => p.image_url)
       .filter((p) => p.categories?.some((c) => tokens.has(c.toLowerCase())))
-      .slice(0, 4)
+    tilesByRoot[cat.id] = shuffled(pool).slice(0, 4).map((p) => ({
+      label: p.title,
+      categorySlug: cat.slug,
+      image: p.image_url,
+      productSlug: p.slug,
+    }))
   }
 
   return (
@@ -181,7 +204,7 @@ export default async function HomePage() {
         {/* 2. Categories Bento Grid */}
         <CategoriesBentoGrid
           categories={roots}
-          productsByCategoryId={productsByCategoryId}
+          tilesByRoot={tilesByRoot}
         />
 
         {/* 3. Today's Deals */}

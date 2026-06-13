@@ -424,8 +424,6 @@ export default function ProductPageClient() {
             )}
           </div>
 
-          <hr className="border-gray-200" />
-
           {/* Variant selectors — show the picker as soon as the seller defined
               real variants. A product with a single synthetic "Default"
               variant is hidden (the seller didn't add any options), but a
@@ -436,6 +434,8 @@ export default function ProductPageClient() {
             const showPicker = named.length >= 1 && variant
             if (!showPicker) return null
             return (
+            <>
+            <hr className="border-gray-200" />
             <div className="space-y-3">
               <p className="text-sm">
                 <span className="text-gray-500">Option:</span>{" "}
@@ -465,6 +465,7 @@ export default function ProductPageClient() {
                 })}
               </div>
             </div>
+            </>
             )
           })()}
 
@@ -748,10 +749,19 @@ function RatingSummary({ productId }: { productId: string }) {
     return <div className="mt-3 h-5 w-40 rounded bg-gray-100 animate-pulse" />
   }
   if (count === 0) {
-    // No CTA — reviews are only solicited from verified buyers via their
-    // order history. Render nothing so we don't tease shoppers with a link
-    // that can't actually accept their review.
-    return null
+    // Show empty stars + "No reviews yet" as static text — NOT a link.
+    // Reviews are only solicited from verified buyers via order history,
+    // so we deliberately avoid a clickable CTA here.
+    return (
+      <div className="mt-3 inline-flex items-center gap-2 text-xs text-gray-500">
+        <span className="flex" aria-hidden>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Star key={i} className="h-4 w-4 fill-gray-200 text-gray-200" />
+          ))}
+        </span>
+        <span>No reviews yet</span>
+      </div>
+    )
   }
   const filled = Math.round(avg ?? 0)
   return (
