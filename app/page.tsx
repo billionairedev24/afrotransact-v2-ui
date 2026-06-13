@@ -56,7 +56,10 @@ export default async function HomePage() {
     safe<PlatformDealData[]>(getPublicPlatformDeals(undefined, { revalidate: 60 }), []),
     safe(getPublicHeroSlides({ revalidate: 60 }), []),
     safe(
-      searchProducts({ size: "96", sort_by: "rating" }, { revalidate: 300 }),
+      // Powers the category bento grid. 30s matches the page-level ISR so
+      // an ES re-index lands on the next request instead of staying stale
+      // for 5 minutes after a seller updates a product.
+      searchProducts({ size: "96", sort_by: "rating" }, { revalidate: 30 }),
       emptySearch,
     ),
     safe(
