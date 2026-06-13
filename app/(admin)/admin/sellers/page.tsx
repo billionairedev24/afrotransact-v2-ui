@@ -16,6 +16,7 @@ import {
   suspendSeller,
   reinstateSeller,
   refreshSellerStripe,
+  setSellerTestAccount,
   triggerOnboardingReminders,
   sendSellerReminder,
   API_BASE,
@@ -205,6 +206,19 @@ export default function AdminSellersPage() {
     } catch (e) {
       logError(e, "reinstating seller")
       toast.error("Failed to reinstate seller")
+    }
+  }
+
+  async function handleToggleTestAccount(sellerId: string, currentlyTest: boolean) {
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      await setSellerTestAccount(token, sellerId, !currentlyTest)
+      toast.success(currentlyTest ? "Removed test-account flag — billing resumes" : "Marked as test — billing skipped")
+      invalidateSellers()
+    } catch (e) {
+      logError(e, "toggling test-account flag")
+      toast.error("Failed to update test-account flag")
     }
   }
 
@@ -445,6 +459,7 @@ export default function AdminSellersPage() {
         onSuspend={handleSuspend}
         onReinstate={handleReinstate}
         onRefreshStripe={handleRefreshStripe}
+        onToggleTestAccount={handleToggleTestAccount}
       />
       <InviteSellerModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
@@ -646,6 +661,7 @@ function DetailPanel({
   onSuspend,
   onReinstate,
   onRefreshStripe,
+  onToggleTestAccount,
 }: {
   open: boolean
   detail: AdminSellerDetail | null
@@ -656,6 +672,7 @@ function DetailPanel({
   onSuspend: (id: string, reason: string) => Promise<void>
   onReinstate: (id: string) => Promise<void>
   onRefreshStripe: (id: string) => Promise<void>
+  onToggleTestAccount: (id: string, currentlyTest: boolean) => Promise<void>
 }) {
   const [refreshing, setRefreshing] = useState(false)
   async function doRefresh() {
@@ -903,12 +920,27 @@ function DetailPanel({
                   <InfoTable>
                     <div className="flex items-center justify-between px-4 py-3">
                       <span className="text-sm text-gray-500">Current Status</span>
-                      <StatusBadge status={detail.onboardingStatus} />
+                      <div className="flex items-center gap-2">
+                        {detail.testAccount && (
+                          <span className="inline-flex items-center rounded-md border border-purple-300 bg-purple-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-800" title="Subscription billing is skipped for this seller">
+                            TEST
+                          </span>
+                        )}
+                        <StatusBadge status={detail.onboardingStatus} />
+                      </div>
                     </div>
                     <InfoRow label="Created" value={fmtDate(detail.createdAt)} />
                     <InfoRow label="Submitted" value={fmtDate(detail.submittedAt)} />
                     <InfoRow label="Approved" value={fmtDate(detail.approvedAt)} />
                   </InfoTable>
+                  <button
+                    onClick={() => onToggleTestAccount(detail.id, !!detail.testAccount)}
+                    className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    {detail.testAccount
+                      ? "Remove test-account flag (resume billing)"
+                      : "Mark as test account (skip billing)"}
+                  </button>
                   {detail.rejectionReason && (
                     <div className="mt-3 rounded-xl border border-red-200 px-4 py-3 bg-white">
                       <p className="text-xs text-red-600 mb-1">Rejection Reason</p>
