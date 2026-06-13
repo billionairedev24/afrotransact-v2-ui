@@ -161,13 +161,58 @@ export default async function HomePage() {
     }
     return tokens
   }
-  const productsByCategoryId: Record<string, SearchResult[]> = {}
+  // Amazon-style sub-category tiles per root: for each child of a root, pick
+  // a representative product image so the tile reads as "Beans" / "Spices" /
+  // "Grains", not as four random product images. Falls back to root-pool
+  // products when a child has no indexed product yet.
+  type BentoTile = {
+    label: string
+    categorySlug: string
+    image: string | null
+    productSlug?: string
+  }
+  const tilesByRoot: Record<string, BentoTile[]> = {}
   for (const cat of roots) {
-    const tokens = collectDescendantTokens(cat.id, cat.name, cat.slug)
-    productsByCategoryId[cat.id] = featuredRating.results
+    const children = categories.filter((c) => c.parentId === cat.id)
+    const rootTokens = collectDescendantTokens(cat.id, cat.name, cat.slug)
+    const rootPool = featuredRating.results
       .filter((p) => p.image_url)
-      .filter((p) => p.categories?.some((c) => tokens.has(c.toLowerCase())))
-      .slice(0, 4)
+      .filter((p) => p.categories?.some((c) => rootTokens.has(c.toLowerCase())))
+
+    const tiles: BentoTile[] = []
+    const used = new Set<string>()
+
+    for (const child of children.slice(0, 4)) {
+      const childTokens = new Set<string>([child.name.toLowerCase(), child.slug.toLowerCase()])
+      const match = rootPool.find(
+        (p) => !used.has(p.product_id)
+          && p.categories?.some((c) => childTokens.has(c.toLowerCase())),
+      )
+      if (match) used.add(match.product_id)
+      tiles.push({
+        label: child.name,
+        categorySlug: child.slug,
+        image: match?.image_url ?? null,
+        productSlug: match?.slug,
+      })
+    }
+
+    // Pad with root-pool products (labeled with root name) when there aren't
+    // enough children or the children had no images yet — never render empty.
+    let poolIdx = 0
+    while (tiles.length < 4 && poolIdx < rootPool.length) {
+      const p = rootPool[poolIdx++]
+      if (used.has(p.product_id)) continue
+      used.add(p.product_id)
+      tiles.push({
+        label: cat.name,
+        categorySlug: cat.slug,
+        image: p.image_url,
+        productSlug: p.slug,
+      })
+    }
+
+    tilesByRoot[cat.id] = tiles.filter((t) => t.image)
   }
 
   return (
@@ -181,7 +226,7 @@ export default async function HomePage() {
         {/* 2. Categories Bento Grid */}
         <CategoriesBentoGrid
           categories={roots}
-          productsByCategoryId={productsByCategoryId}
+          tilesByRoot={tilesByRoot}
         />
 
         {/* 3. Today's Deals */}
