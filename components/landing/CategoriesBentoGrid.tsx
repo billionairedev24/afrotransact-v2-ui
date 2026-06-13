@@ -34,11 +34,18 @@ interface CategoriesBentoGridProps {
 
 function Tile({ tile }: { tile: BentoTile }) {
   if (!tile.image) return null
+  // Click goes to the product PDP when we have a slug, otherwise the root
+  // category page. No label rendered — each card's title already names the
+  // category; the tile is a pure product thumbnail.
+  const href = tile.productSlug
+    ? `/product/${tile.productSlug}`
+    : `/category/${tile.categorySlug}`
   return (
     <Link
-      href={`/category/${tile.categorySlug}`}
+      href={href}
       className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold rounded"
       aria-label={tile.label}
+      title={tile.label}
     >
       <div
         className={`relative aspect-square rounded overflow-hidden ${TILE_BG} hover:ring-2 hover:ring-brand-gold transition-shadow`}
@@ -48,12 +55,9 @@ function Tile({ tile }: { tile: BentoTile }) {
           alt={tile.label}
           fill
           sizes="(max-width: 768px) 50vw, 25vw"
-          className="object-contain p-2 transition-transform group-hover:scale-[1.03]"
+          className="object-cover transition-transform group-hover:scale-[1.03]"
         />
       </div>
-      <p className="mt-1.5 text-xs text-gray-700 leading-snug line-clamp-2 group-hover:text-foreground">
-        {tile.label}
-      </p>
     </Link>
   )
 }

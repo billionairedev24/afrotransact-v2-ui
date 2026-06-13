@@ -161,58 +161,36 @@ export default async function HomePage() {
     }
     return tokens
   }
-  // Amazon-style sub-category tiles per root: for each child of a root, pick
-  // a representative product image so the tile reads as "Beans" / "Spices" /
-  // "Grains", not as four random product images. Falls back to root-pool
-  // products when a child has no indexed product yet.
+  // Up to 4 product images per root card — pulled from any descendant of
+  // the root, no sub-category labels. Pure product tiles: image only,
+  // click goes to the product. Shuffled per request so a sparse catalog
+  // doesn't look frozen.
   type BentoTile = {
     label: string
     categorySlug: string
     image: string | null
     productSlug?: string
   }
+  function shuffled<T>(arr: T[]): T[] {
+    const a = arr.slice()
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[a[i], a[j]] = [a[j], a[i]]
+    }
+    return a
+  }
   const tilesByRoot: Record<string, BentoTile[]> = {}
   for (const cat of roots) {
-    const children = categories.filter((c) => c.parentId === cat.id)
-    const rootTokens = collectDescendantTokens(cat.id, cat.name, cat.slug)
-    const rootPool = featuredRating.results
+    const tokens = collectDescendantTokens(cat.id, cat.name, cat.slug)
+    const pool = featuredRating.results
       .filter((p) => p.image_url)
-      .filter((p) => p.categories?.some((c) => rootTokens.has(c.toLowerCase())))
-
-    const tiles: BentoTile[] = []
-    const used = new Set<string>()
-
-    for (const child of children.slice(0, 4)) {
-      const childTokens = new Set<string>([child.name.toLowerCase(), child.slug.toLowerCase()])
-      const match = rootPool.find(
-        (p) => !used.has(p.product_id)
-          && p.categories?.some((c) => childTokens.has(c.toLowerCase())),
-      )
-      if (match) used.add(match.product_id)
-      tiles.push({
-        label: child.name,
-        categorySlug: child.slug,
-        image: match?.image_url ?? null,
-        productSlug: match?.slug,
-      })
-    }
-
-    // Pad with root-pool products (labeled with root name) when there aren't
-    // enough children or the children had no images yet — never render empty.
-    let poolIdx = 0
-    while (tiles.length < 4 && poolIdx < rootPool.length) {
-      const p = rootPool[poolIdx++]
-      if (used.has(p.product_id)) continue
-      used.add(p.product_id)
-      tiles.push({
-        label: cat.name,
-        categorySlug: cat.slug,
-        image: p.image_url,
-        productSlug: p.slug,
-      })
-    }
-
-    tilesByRoot[cat.id] = tiles.filter((t) => t.image)
+      .filter((p) => p.categories?.some((c) => tokens.has(c.toLowerCase())))
+    tilesByRoot[cat.id] = shuffled(pool).slice(0, 4).map((p) => ({
+      label: p.title,
+      categorySlug: cat.slug,
+      image: p.image_url,
+      productSlug: p.slug,
+    }))
   }
 
   return (
