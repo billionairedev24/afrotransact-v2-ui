@@ -2171,6 +2171,11 @@ export interface DealData {
   /** Slugs of the linked product's categories — populated by the backend
       enrichWithProduct step so /deals can filter by department. */
   categorySlugs?: string[] | null
+  /** Denormalized review aggregate from the linked product. Populated by
+      enrichWithProduct so the Customer Rating filter doesn't need a separate
+      fan-out fetch. */
+  avgRating?: number | null
+  reviewCount?: number | null
 }
 
 export interface PlatformDealDto {

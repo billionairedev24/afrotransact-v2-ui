@@ -124,7 +124,11 @@ export default function DealsPageClient() {
         if (!slugs.some((s) => selectedCategorySlugs.has(s))) return false
       }
       if (ratingMin != null) {
-        const r = d.productId ? ratings[d.productId] : undefined
+        // Prefer the denormalized avgRating that ships on DealData (set by
+        // the backend's enrichWithProduct). Fall back to the separate
+        // ratings map until the deploy carrying the denormalized field is
+        // live everywhere.
+        const r = d.avgRating ?? (d.productId ? ratings[d.productId] : undefined)
         if (r == null || r < ratingMin) return false
       }
       return true
