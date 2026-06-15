@@ -5,6 +5,7 @@ import { useSession, signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { toast } from "sonner"
+import { PhoneInput, isValidE164 } from "@/components/ui/PhoneInput"
 import { logError } from "@/lib/errors"
 import {
   Building2,
@@ -505,7 +506,7 @@ export default function SellerOnboardingPage() {
     if (!businessName.trim()) errs.businessName = "Business name is required"
     if (!entityType) errs.entityType = "Entity type is required"
     if (!contactPhone.trim()) errs.contactPhone = "Contact phone is required"
-    else if (!/^[\d\s()+-]{7,20}$/.test(contactPhone)) errs.contactPhone = "Enter a valid phone number"
+    else if (!isValidE164(contactPhone)) errs.contactPhone = "Enter a valid phone number"
     if (!contactEmail.trim()) errs.contactEmail = "Contact email is required"
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) errs.contactEmail = "Enter a valid email address"
     if (website && !/^https?:\/\/.+/.test(website)) errs.website = "Must start with http:// or https://"
@@ -1255,7 +1256,11 @@ function BusinessStep({
         </div>
         <div>
           <label className={labelCls}>Contact Phone<RequiredDot /></label>
-          <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={errors.contactPhone ? inputErrCls : inputCls} placeholder="(555) 123-4567" type="tel" />
+          <PhoneInput
+            value={contactPhone}
+            onChange={setContactPhone}
+            ariaInvalid={!!errors.contactPhone}
+          />
           <FieldError error={errors.contactPhone} />
         </div>
         <div>

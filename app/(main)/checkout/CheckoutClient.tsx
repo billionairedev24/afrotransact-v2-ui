@@ -49,6 +49,7 @@ const PaymentStep = dynamic(() => import("./_stripe-payment"), {
 })
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
+import { PhoneInput } from "@/components/ui/PhoneInput"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 import { logError } from "@/lib/errors"
@@ -318,7 +319,13 @@ function AddressStep({
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             {field("Full name", "fullName", "Jane Doe")}
-            {field("Phone", "phone", "+1 (555) 000-0000", "tel")}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
+              <PhoneInput
+                value={form.phone}
+                onChange={(e164) => setForm({ ...form, phone: e164 })}
+              />
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
