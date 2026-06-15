@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
@@ -413,6 +414,12 @@ export default function StoreSettingsPage() {
               : "Create your store to start selling"}
           </p>
         </div>
+        <Link
+          href="/dashboard/store/business-type"
+          className="text-sm text-foreground hover:underline whitespace-nowrap"
+        >
+          Change what you sell →
+        </Link>
       </div>
 
       {(error || validationErrors.length > 0) && (

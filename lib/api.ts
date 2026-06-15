@@ -716,6 +716,59 @@ export function startOnboarding(token: string) {
   return api<OnboardingProgress>("/api/v1/seller/onboarding/start", { method: "POST", token })
 }
 
+// ── Business-type change requests (post-submit revalidation) ─────────────────
+
+export interface BusinessTypeChangeRequestDto {
+  id: string
+  sellerId: string
+  currentBusinessType: string
+  newBusinessType: string
+  currentEntityType?: string | null
+  newEntityType?: string | null
+  justification: string
+  documentRefs: string[]
+  status: "pending" | "needs_more_info" | "approved" | "rejected" | "withdrawn"
+  adminNotes?: string | null
+  infoRequest?: string | null
+  submittedAt: string
+  resolvedAt?: string | null
+  resolvedByAdminId?: string | null
+}
+
+export function submitBusinessTypeChange(
+  token: string,
+  data: {
+    newBusinessType: string
+    newEntityType?: string
+    justification: string
+    documentRefs?: string[]
+  },
+) {
+  return api<BusinessTypeChangeRequestDto>("/api/v1/sellers/me/business-type-change", {
+    method: "POST",
+    body: data,
+    token,
+  })
+}
+
+/** Returns the current open request, or `null` if none. The backend returns
+ *  `{}` for "no open request" — we normalize that to null here so callers
+ *  don't have to special-case the empty-object shape. */
+export async function getOpenBusinessTypeChange(token: string): Promise<BusinessTypeChangeRequestDto | null> {
+  const r = await api<BusinessTypeChangeRequestDto | Record<string, never>>(
+    "/api/v1/sellers/me/business-type-change/open",
+    { token },
+  )
+  return r && "id" in r ? (r as BusinessTypeChangeRequestDto) : null
+}
+
+export function withdrawBusinessTypeChange(token: string, requestId: string) {
+  return api<BusinessTypeChangeRequestDto>(
+    `/api/v1/sellers/me/business-type-change/${requestId}/withdraw`,
+    { method: "POST", token },
+  )
+}
+
 export function getOnboardingProgress(token: string) {
   return api<OnboardingProgress>("/api/v1/seller/onboarding", { token })
 }
