@@ -769,6 +769,42 @@ export function withdrawBusinessTypeChange(token: string, requestId: string) {
   )
 }
 
+// ── Admin: business-type change requests ─────────────────────────────────────
+
+export interface PagedBusinessTypeChangeRequests {
+  content: BusinessTypeChangeRequestDto[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export function adminListBusinessTypeChangeRequests(
+  token: string,
+  opts: { status?: string[]; page?: number; size?: number } = {},
+) {
+  const params = new URLSearchParams()
+  if (opts.status?.length) opts.status.forEach((s) => params.append("status", s))
+  if (opts.page != null) params.set("page", String(opts.page))
+  if (opts.size != null) params.set("size", String(opts.size))
+  const qs = params.toString()
+  return api<PagedBusinessTypeChangeRequests>(
+    `/api/v1/admin/business-type-change-requests${qs ? `?${qs}` : ""}`,
+    { token },
+  )
+}
+
+export function adminResolveBusinessTypeChange(
+  token: string,
+  requestId: string,
+  body: { decision: "approved" | "rejected" | "needs_more_info"; adminNotes?: string; infoRequest?: string },
+) {
+  return api<BusinessTypeChangeRequestDto>(
+    `/api/v1/admin/business-type-change-requests/${requestId}/resolve`,
+    { method: "POST", body, token },
+  )
+}
+
 export function getOnboardingProgress(token: string) {
   return api<OnboardingProgress>("/api/v1/seller/onboarding", { token })
 }

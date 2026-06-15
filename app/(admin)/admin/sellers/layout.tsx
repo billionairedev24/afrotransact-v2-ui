@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Users, Mail, AlertTriangle } from "lucide-react"
+import { Users, Mail, AlertTriangle, FileText } from "lucide-react"
 
 type Tab = { href: string; label: string; icon: typeof Users; match: (p: string) => boolean }
 
@@ -13,6 +13,8 @@ const TABS: Tab[] = [
     match: (p) => p.startsWith("/admin/sellers/invites") },
   { href: "/admin/sellers/lifecycle", label: "Lifecycle",   icon: AlertTriangle,
     match: (p) => p.startsWith("/admin/sellers/lifecycle") },
+  { href: "/admin/sellers/change-requests", label: "Change Requests", icon: FileText,
+    match: (p) => p.startsWith("/admin/sellers/change-requests") },
 ]
 
 export default function SellersLayout({ children }: { children: React.ReactNode }) {
