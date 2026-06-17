@@ -805,6 +805,129 @@ export function adminResolveBusinessTypeChange(
   )
 }
 
+// ── Admin: Accounting / Ledger ───────────────────────────────────────────────
+// Accounting service runs on 8093 and is not (yet) routed through the gateway.
+// Browser → service direct in dev; in prod, drop the env-aware base and let
+// the gateway proxy /api/v1/admin/ledger/* once that route is added.
+
+const ACCOUNTING_BASE =
+  process.env.NEXT_PUBLIC_ACCOUNTING_URL ?? "http://localhost:8093"
+
+async function accounting<T>(path: string, opts: RequestInit & { token?: string } = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((opts.headers as Record<string, string>) ?? {}),
+  }
+  if (opts.token) headers["Authorization"] = `Bearer ${opts.token}`
+  const res = await fetch(`${ACCOUNTING_BASE}${path}`, { ...opts, headers })
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
+  return res.json() as Promise<T>
+}
+
+export interface AccountBalanceDto {
+  code: string
+  type: string
+  balanceCents: number
+  currency: string
+  asOf: string | null
+}
+
+export interface SellerLedgerBalanceDto {
+  sellerId: string
+  payableCents: number
+  owedToPlatformCents: number
+  netOwedToSellerCents: number
+  asOf: string | null
+}
+
+/** Pre-seeded chart of accounts — see V2__seed_platform_accounts.sql. */
+export const ACCOUNTING_ACCOUNTS: { code: string; label: string }[] = [
+  { code: "stripe.platform_balance",        label: "Stripe platform balance" },
+  { code: "stripe.in_transit",              label: "Stripe in-transit" },
+  { code: "bank.operating",                 label: "Operating bank account" },
+  { code: "refund_liability",               label: "Refund liability" },
+  { code: "chargeback_reserve",             label: "Chargeback reserve" },
+  { code: "platform.commission_revenue",    label: "Commission revenue" },
+  { code: "platform.subscription_revenue",  label: "Subscription revenue" },
+  { code: "platform.fee_revenue",           label: "Fee revenue" },
+  { code: "platform.refund_expense",        label: "Refund expense" },
+  { code: "platform.stripe_fees",           label: "Stripe fees" },
+  { code: "platform.bad_debt",              label: "Bad debt" },
+]
+
+export function adminLedgerAccountBalance(code: string) {
+  return accounting<AccountBalanceDto>(
+    `/api/v1/admin/ledger/accounts/${encodeURIComponent(code)}/balance`,
+  )
+}
+
+export function adminLedgerSellerBalance(sellerId: string) {
+  return accounting<SellerLedgerBalanceDto>(`/api/v1/admin/ledger/seller/${sellerId}/balance`)
+}
+
+export interface LedgerAdjustmentLine {
+  accountCode: string
+  direction: "DR" | "CR"
+  amountCents: number
+  currency?: string
+  sellerId?: string
+  orderId?: string
+  refundId?: string
+}
+
+export function adminLedgerAdjust(
+  adminId: string,
+  body: { idempotencyKey: string; reason: string; lines: LedgerAdjustmentLine[] },
+) {
+  return accounting(`/api/v1/admin/ledger/adjustments`, {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: { "X-User-Id": adminId },
+  })
+}
+
+// ── Admin: Refunds ───────────────────────────────────────────────────────────
+// Payment service is routed through the gateway under /api/v1/admin/refunds
+// — uses the standard api() client.
+
+export interface RefundDto {
+  id: string
+  paymentId: string
+  orderId: string
+  subOrderId: string | null
+  amountCents: number
+  currency: string
+  stripeRefundId: string | null
+  status: "pending" | "succeeded" | "failed" | "cancelled"
+  reason: string
+  initiatedBy: "buyer" | "seller" | "admin" | "system"
+  initiatedByUserId: string | null
+  reverseTransfer: boolean
+  failureMessage: string | null
+  createdAt: string
+  succeededAt: string | null
+  failedAt: string | null
+}
+
+export function adminCreateRefund(
+  token: string,
+  body: {
+    orderId: string
+    subOrderId?: string
+    amountCents: number
+    reason: string
+    idempotencyKey: string
+    reverseTransfer?: boolean
+    notes?: string
+  },
+) {
+  return api<RefundDto>(`/api/v1/admin/refunds`, { method: "POST", body, token })
+}
+
+export function adminListRefundsByOrder(token: string, orderId: string) {
+  return api<RefundDto[]>(`/api/v1/admin/refunds/by-order/${orderId}`, { token })
+}
+
 export function getOnboardingProgress(token: string) {
   return api<OnboardingProgress>("/api/v1/seller/onboarding", { token })
 }
