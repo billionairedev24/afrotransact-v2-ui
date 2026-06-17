@@ -201,7 +201,7 @@ function RefundQueueView({
               <div className="text-xs text-muted-foreground">
                 {o.recipientName ?? "Unknown recipient"} ·{" "}
                 {o.shipCity ? `${o.shipCity}, ${o.shipStateRegion ?? ""}` : "no shipping address"} ·{" "}
-                {new Date(o.placedAt ?? o.createdAt).toLocaleString()}
+                {o.placedAt || o.createdAt ? new Date(o.placedAt ?? o.createdAt).toLocaleString() : "—"}
               </div>
             </div>
             <div className="text-right flex items-center gap-3 shrink-0">
@@ -256,7 +256,7 @@ function OrderDetailView({
             </div>
             <div className="text-xs text-muted-foreground">
               Placed {new Date(order.placedAt ?? order.createdAt).toLocaleString()} · Buyer{" "}
-              <code>{order.buyerId.slice(0, 8)}</code>
+              <code>{(order.buyerId ?? "").slice(0, 8)}</code>
             </div>
           </div>
           <div className="text-right">

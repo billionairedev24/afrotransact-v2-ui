@@ -839,6 +839,29 @@ export const ACCOUNTING_ACCOUNTS: { code: string; label: string }[] = [
   { code: "platform.bad_debt",              label: "Bad debt" },
 ]
 
+export interface LedgerSummaryDto {
+  platformBalanceCents: number
+  commissionRevenueCents: number
+  totalSellerPayableCents: number
+  totalSellerOwedToPlatformCents: number
+  journalEntryCount: number
+  topSellers: Array<{ seller_id: string; payable_cents: number }>
+  error?: string
+}
+
+export function adminLedgerSummary(token: string) {
+  return api<LedgerSummaryDto>(`/api/v1/admin/ledger/summary`, { token })
+}
+
+export function adminLedgerBackfill(token: string) {
+  return api<{
+    paymentsPosted: number
+    paymentsSkipped: number
+    refundsPosted: number
+    refundsSkipped: number
+  }>(`/api/v1/admin/ledger/backfill`, { method: "POST", token })
+}
+
 export function adminLedgerAccountBalance(token: string, code: string) {
   return api<AccountBalanceDto>(
     `/api/v1/admin/ledger/accounts/${encodeURIComponent(code)}/balance`,
