@@ -952,7 +952,6 @@ export interface AdminOrderLookup {
   currency: string
   recipientName?: string | null
   shipLine1?: string | null
-  shipLine2?: string | null
   shipCity?: string | null
   shipStateRegion?: string | null
   shipPostalCode?: string | null
