@@ -2,10 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react"
 import {
-  BookOpen, RefreshCcw, AlertTriangle, Search, Download, TrendingUp,
-  Wallet, ArrowUpRight, ArrowDownRight, Users,
+  RefreshCcw, AlertTriangle, Search, Download, TrendingUp,
+  Wallet, ArrowUpRight, ArrowDownRight, ChevronRight,
 } from "lucide-react"
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/Skeleton"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   ACCOUNTING_ACCOUNTS,
@@ -21,12 +25,19 @@ import {
 const fmt = (cents: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: 2 }).format(cents / 100)
 
-const ACCOUNT_TYPE_BADGE: Record<string, string> = {
-  asset:      "bg-emerald-50 text-emerald-700 border-emerald-200",
-  liability:  "bg-amber-50  text-amber-700  border-amber-200",
-  revenue:    "bg-blue-50   text-blue-700   border-blue-200",
-  expense:    "bg-red-50    text-red-700    border-red-200",
-  receivable: "bg-violet-50 text-violet-700 border-violet-200",
+const fmtCompact = (cents: number) => {
+  const d = cents / 100
+  if (Math.abs(d) >= 1_000_000) return `$${(d / 1_000_000).toFixed(1)}M`
+  if (Math.abs(d) >= 10_000) return `$${(d / 1_000).toFixed(1)}k`
+  return fmt(cents)
+}
+
+const ACCOUNT_TYPE_TONE: Record<string, string> = {
+  asset:      "text-emerald-700 dark:text-emerald-400",
+  liability:  "text-amber-700 dark:text-amber-400",
+  revenue:    "text-blue-700 dark:text-blue-400",
+  expense:    "text-red-700 dark:text-red-400",
+  receivable: "text-violet-700 dark:text-violet-400",
 }
 
 export default function AdminAccountingPage() {
@@ -48,13 +59,8 @@ export default function AdminAccountingPage() {
     try {
       const token = await getAccessToken()
       if (!token) { setError("Not signed in"); setLoading(false); return }
-
-      // Summary (single call, fast)
-      try { setSummary(await adminLedgerSummary(token)) } catch (e) {
-        setError(e instanceof Error ? e.message : "summary load failed")
-      }
-
-      // Per-account balances (parallel)
+      try { setSummary(await adminLedgerSummary(token)) }
+      catch (e) { setError(e instanceof Error ? e.message : "summary load failed") }
       const next: Record<string, AccountBalanceDto | { error: string }> = {}
       await Promise.all(
         ACCOUNTING_ACCOUNTS.map(async ({ code }) => {
@@ -78,8 +84,7 @@ export default function AdminAccountingPage() {
       if (!token) throw new Error("Not signed in")
       const r = await adminLedgerBackfill(token)
       setBackfillResult(
-        `Posted ${r.paymentsPosted} payments (${r.paymentsSkipped} already on ledger), ` +
-        `${r.refundsPosted} refunds (${r.refundsSkipped} already on ledger).`,
+        `Posted ${r.paymentsPosted} payments (${r.paymentsSkipped} skipped) · ${r.refundsPosted} refunds (${r.refundsSkipped} skipped)`,
       )
       await loadAll()
     } catch (e) {
@@ -108,217 +113,271 @@ export default function AdminAccountingPage() {
   const empty = summary?.journalEntryCount === 0
 
   return (
-    <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8">
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <BookOpen className="h-6 w-6" /> Accounting
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Double-entry ledger. Postings flow in automatically from payment
-            events; if the dashboard is empty, run the one-time backfill to
-            replay existing Stripe charges into the ledger.
+    <div className="max-w-[1400px] mx-auto px-6 lg:px-8 py-8 space-y-8">
+      {/* Header */}
+      <header className="flex flex-wrap items-end justify-between gap-4 pb-4 border-b border-border">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Accounting</h1>
+          <p className="text-sm text-muted-foreground max-w-2xl">
+            Double-entry ledger. Postings flow in automatically from payment events. The headline numbers below are the truth-of-record for finance reconciliation.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={runBackfill}
-            disabled={backfillRunning}
-            className="inline-flex items-center gap-1 text-sm border border-border rounded px-3 py-1.5 hover:bg-muted/50 disabled:opacity-50"
-          >
+          <Button variant="outline" size="sm" onClick={runBackfill} disabled={backfillRunning}>
             <Download className="h-4 w-4" />
-            {backfillRunning ? "Backfilling…" : empty ? "Run initial backfill" : "Re-run backfill"}
-          </button>
-          <button onClick={() => void loadAll()} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+            {backfillRunning ? "Backfilling…" : empty ? "Run backfill" : "Re-run backfill"}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => void loadAll()}>
             <RefreshCcw className="h-4 w-4" /> Refresh
-          </button>
+          </Button>
         </div>
-      </div>
+      </header>
 
       {backfillResult && (
-        <div className="mb-4 text-sm border rounded p-3 bg-emerald-50 border-emerald-200 text-emerald-900">
+        <div className="text-sm border rounded-md p-3 bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-900 dark:text-emerald-200">
           {backfillResult}
         </div>
       )}
       {error && (
-        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">{error}</div>
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3 dark:bg-red-950/40 dark:border-red-900">
+          {error}
+        </div>
       )}
-
-      {/* Headline cards */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <HeroCard
-          label="Cash held in Stripe"
-          icon={Wallet}
-          value={summary ? fmt(summary.platformBalanceCents) : "—"}
-          hint="stripe.platform_balance"
-          good={(summary?.platformBalanceCents ?? 0) >= 0}
-        />
-        <HeroCard
-          label="Commission revenue"
-          icon={TrendingUp}
-          value={summary ? fmt(summary.commissionRevenueCents) : "—"}
-          hint="Lifetime"
-          good
-        />
-        <HeroCard
-          label="We owe sellers"
-          icon={ArrowUpRight}
-          value={summary ? fmt(summary.totalSellerPayableCents) : "—"}
-          hint="seller_payable across all sellers"
-          good={false}
-        />
-        <HeroCard
-          label="Sellers owe us"
-          icon={ArrowDownRight}
-          value={summary ? fmt(summary.totalSellerOwedToPlatformCents) : "—"}
-          hint="post-settlement clawbacks"
-          good={false}
-        />
-      </section>
 
       {empty && !loading && (
-        <div className="mb-8 border border-amber-200 bg-amber-50 rounded p-4 flex items-start gap-3 text-sm">
-          <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-          <div>
-            <div className="font-medium text-amber-900">No ledger entries yet.</div>
-            <div className="text-amber-800">
-              The accounting consumer was added recently — it only sees payment
-              events from now on. Click <strong>Run initial backfill</strong>{" "}
-              above to replay every existing payment + refund from the database
-              into the ledger.
+        <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-900/50">
+          <CardContent className="flex items-start gap-3 p-5 text-sm">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-medium text-amber-900 dark:text-amber-200">No ledger entries yet</p>
+              <p className="text-amber-800 dark:text-amber-300/80">
+                The accounting consumer was added recently and only sees events from now on. Run the one-time backfill to replay every payment + refund from the database.
+              </p>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Top sellers */}
-      {summary?.topSellers && summary.topSellers.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-            <Users className="h-4 w-4" /> Top sellers by payable
-          </h2>
-          <ul className="border border-border rounded-md bg-card divide-y divide-border">
-            {summary.topSellers.map((s) => (
-              <li key={s.seller_id} className="px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
-                <code className="text-xs">{s.seller_id}</code>
-                <span className="font-medium tabular-nums">{fmt(s.payable_cents)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* Headline KPIs */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi
+          label="Cash held in Stripe"
+          icon={Wallet}
+          value={summary ? fmt(summary.platformBalanceCents) : null}
+          loading={loading && !summary}
+          tone="default"
+          sublabel="stripe.platform_balance"
+        />
+        <Kpi
+          label="Commission revenue"
+          icon={TrendingUp}
+          value={summary ? fmt(summary.commissionRevenueCents) : null}
+          loading={loading && !summary}
+          tone="positive"
+          sublabel="lifetime"
+        />
+        <Kpi
+          label="We owe sellers"
+          icon={ArrowUpRight}
+          value={summary ? fmt(summary.totalSellerPayableCents) : null}
+          loading={loading && !summary}
+          tone="warn"
+          sublabel="across all sellers"
+        />
+        <Kpi
+          label="Sellers owe us"
+          icon={ArrowDownRight}
+          value={summary ? fmt(summary.totalSellerOwedToPlatformCents) : null}
+          loading={loading && !summary}
+          tone="danger"
+          sublabel="post-settlement clawbacks"
+        />
+      </section>
 
-      {/* Per-seller lookup */}
-      <section className="mb-8">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Per-seller balance lookup
-        </h2>
-        <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            placeholder="Seller UUID"
-            value={sellerId}
-            onChange={(e) => setSellerId(e.target.value)}
-            className="flex-1 border border-border rounded px-3 py-2 bg-background text-sm font-mono"
-            onKeyDown={(e) => e.key === "Enter" && lookupSeller()}
-          />
-          <button
-            onClick={lookupSeller}
-            disabled={sellerLooking || !sellerId.trim()}
-            className="inline-flex items-center gap-1 bg-foreground text-background px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
-          >
-            <Search className="h-4 w-4" /> {sellerLooking ? "Looking…" : "Look up"}
-          </button>
-        </div>
-        {sellerLookupErr && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3 mb-3">{sellerLookupErr}</div>
-        )}
-        {sellerBalance && (
-          <div className="border border-border rounded-md p-5 bg-card">
-            <code className="text-xs text-muted-foreground">{sellerBalance.sellerId}</code>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
-              <SellerStat label="We owe seller" cents={sellerBalance.payableCents} positiveGood />
-              <SellerStat label="Seller owes us" cents={sellerBalance.owedToPlatformCents} positiveGood={false} />
-              <SellerStat label="Net (positive = we owe)" cents={sellerBalance.netOwedToSellerCents} positiveGood />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Top sellers */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base">Top sellers by payable</CardTitle>
+              <Badge variant="outline" className="font-normal">
+                {summary?.topSellers?.length ?? 0} of {summary?.topSellers?.length ?? 0}
+              </Badge>
             </div>
-          </div>
-        )}
-      </section>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="space-y-2 p-4">
+                {[1,2,3].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+              </div>
+            ) : !summary?.topSellers?.length ? (
+              <div className="text-sm text-muted-foreground p-6 text-center">
+                No seller payables yet.
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-y border-border bg-muted/30 text-xs text-muted-foreground">
+                    <th className="text-left font-medium px-4 py-2">Seller</th>
+                    <th className="text-right font-medium px-4 py-2">Payable</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.topSellers.map((s) => (
+                    <tr
+                      key={s.seller_id}
+                      className="border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer"
+                      onClick={() => { setSellerId(s.seller_id); void lookupSeller() }}
+                    >
+                      <td className="px-4 py-2.5 font-mono text-xs">{s.seller_id}</td>
+                      <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{fmt(s.payable_cents)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Full chart of accounts */}
-      <section>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Chart of accounts
-        </h2>
-        {loading ? (
-          <div className="text-sm text-muted-foreground">Loading…</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {ACCOUNTING_ACCOUNTS.map(({ code, label }) => {
-              const v = balances[code]
-              const isErr = v && "error" in v
-              const balance = !isErr && v ? v.balanceCents : 0
-              const type = !isErr && v ? v.type : "asset"
-              const currency = !isErr && v ? v.currency : "USD"
-              return (
-                <div key={code} className="border border-border rounded-md p-4 bg-card">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-foreground">{label}</div>
-                      <code className="text-xs text-muted-foreground truncate block">{code}</code>
-                    </div>
-                    <span className={`text-[10px] font-medium border rounded px-1.5 py-0.5 whitespace-nowrap ${ACCOUNT_TYPE_BADGE[type] ?? ""}`}>
-                      {type}
-                    </span>
-                  </div>
-                  {isErr ? (
-                    <div className="text-xs text-red-600 flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" /> {(v as { error: string }).error}
-                    </div>
-                  ) : (
-                    <div className={`text-lg font-semibold tabular-nums ${balance < 0 ? "text-red-600" : ""}`}>
-                      {fmt(balance, currency)}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </section>
-    </main>
-  )
-}
-
-function HeroCard({ label, icon: Icon, value, hint, good }: {
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-  value: string
-  hint: string
-  good: boolean
-}) {
-  return (
-    <div className="border border-border rounded-md p-5 bg-card">
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</span>
-        <Icon className={`h-4 w-4 ${good ? "text-emerald-600" : "text-amber-600"}`} />
+        {/* Per-seller lookup */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Per-seller lookup</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Seller UUID"
+                value={sellerId}
+                onChange={(e) => setSellerId(e.target.value)}
+                className="flex-1 border border-border rounded-md px-3 py-2 bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+                onKeyDown={(e) => e.key === "Enter" && lookupSeller()}
+              />
+              <Button size="sm" onClick={lookupSeller} disabled={sellerLooking || !sellerId.trim()}>
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+            {sellerLookupErr && (
+              <p className="text-xs text-red-600">{sellerLookupErr}</p>
+            )}
+            {sellerBalance && (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <SellerRow label="We owe" cents={sellerBalance.payableCents} tone="positive" />
+                <SellerRow label="Owes us" cents={sellerBalance.owedToPlatformCents} tone="danger" />
+                <SellerRow label="Net" cents={sellerBalance.netOwedToSellerCents} tone="default" bold />
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-      <div className="text-2xl font-semibold tabular-nums">{value}</div>
-      <div className="text-xs text-muted-foreground mt-1">{hint}</div>
+
+      {/* Chart of accounts */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Chart of accounts
+          </h2>
+          <span className="text-xs text-muted-foreground">
+            {summary?.journalEntryCount ?? 0} journal entries
+          </span>
+        </div>
+        <Card className="p-0 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30 text-xs text-muted-foreground">
+                <th className="text-left font-medium px-4 py-2.5">Account</th>
+                <th className="text-left font-medium px-4 py-2.5">Type</th>
+                <th className="text-right font-medium px-4 py-2.5">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ACCOUNTING_ACCOUNTS.map(({ code, label }) => {
+                const v = balances[code]
+                const isErr = v && "error" in v
+                const balance = !isErr && v ? v.balanceCents : 0
+                const type = !isErr && v ? v.type : "asset"
+                const currency = !isErr && v ? v.currency : "USD"
+                return (
+                  <tr key={code} className="border-b border-border last:border-0 hover:bg-muted/30">
+                    <td className="px-4 py-2.5">
+                      <div className="font-medium">{label}</div>
+                      <code className="text-[11px] text-muted-foreground">{code}</code>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-xs font-medium ${ACCOUNT_TYPE_TONE[type] ?? ""}`}>
+                        {type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right tabular-nums">
+                      {isErr ? (
+                        <span className="text-xs text-red-600 inline-flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" /> {(v as { error: string }).error}
+                        </span>
+                      ) : loading ? (
+                        <Skeleton className="h-4 w-20 ml-auto" />
+                      ) : (
+                        <span className={`font-semibold ${balance < 0 ? "text-red-600" : ""}`}>
+                          {fmt(balance, currency)}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </Card>
+      </section>
     </div>
   )
 }
 
-function SellerStat({ label, cents, positiveGood }: { label: string; cents: number; positiveGood: boolean }) {
-  const color = cents === 0
-    ? "text-muted-foreground"
-    : (cents > 0) === positiveGood
-      ? "text-emerald-700"
-      : "text-red-700"
+function Kpi({
+  label, icon: Icon, value, sublabel, tone, loading,
+}: {
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  value: string | null
+  sublabel: string
+  tone: "default" | "positive" | "warn" | "danger"
+  loading?: boolean
+}) {
+  const iconColor =
+    tone === "positive" ? "text-emerald-600"
+    : tone === "warn" ? "text-amber-600"
+    : tone === "danger" ? "text-red-600"
+    : "text-muted-foreground"
   return (
-    <div>
-      <div className="text-xs text-muted-foreground mb-1">{label}</div>
-      <div className={`text-xl font-semibold tabular-nums ${color}`}>{fmt(cents)}</div>
+    <Card className="overflow-hidden">
+      <CardContent className="p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+          <Icon className={`h-4 w-4 ${iconColor}`} />
+        </div>
+        {loading ? (
+          <Skeleton className="h-8 w-32" />
+        ) : (
+          <p className="text-3xl font-semibold tabular-nums">{value ?? "—"}</p>
+        )}
+        <p className="text-xs text-muted-foreground">{sublabel}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SellerRow({ label, cents, tone, bold }: {
+  label: string; cents: number; tone: "default" | "positive" | "danger"; bold?: boolean
+}) {
+  const color =
+    cents === 0 ? "text-muted-foreground"
+    : tone === "positive" ? "text-emerald-700"
+    : tone === "danger" ? "text-red-700"
+    : ""
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`tabular-nums ${color} ${bold ? "font-semibold" : ""}`}>{fmt(cents)}</span>
     </div>
   )
 }
