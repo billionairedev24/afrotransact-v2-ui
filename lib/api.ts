@@ -806,23 +806,7 @@ export function adminResolveBusinessTypeChange(
 }
 
 // ── Admin: Accounting / Ledger ───────────────────────────────────────────────
-// Accounting service runs on 8093 and is not (yet) routed through the gateway.
-// Browser → service direct in dev; in prod, drop the env-aware base and let
-// the gateway proxy /api/v1/admin/ledger/* once that route is added.
-
-const ACCOUNTING_BASE =
-  process.env.NEXT_PUBLIC_ACCOUNTING_URL ?? "http://localhost:8093"
-
-async function accounting<T>(path: string, opts: RequestInit & { token?: string } = {}): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...((opts.headers as Record<string, string>) ?? {}),
-  }
-  if (opts.token) headers["Authorization"] = `Bearer ${opts.token}`
-  const res = await fetch(`${ACCOUNTING_BASE}${path}`, { ...opts, headers })
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
-  return res.json() as Promise<T>
-}
+// Routes through the gateway via /api/v1/admin/ledger → accounting service.
 
 export interface AccountBalanceDto {
   code: string
@@ -855,14 +839,15 @@ export const ACCOUNTING_ACCOUNTS: { code: string; label: string }[] = [
   { code: "platform.bad_debt",              label: "Bad debt" },
 ]
 
-export function adminLedgerAccountBalance(code: string) {
-  return accounting<AccountBalanceDto>(
+export function adminLedgerAccountBalance(token: string, code: string) {
+  return api<AccountBalanceDto>(
     `/api/v1/admin/ledger/accounts/${encodeURIComponent(code)}/balance`,
+    { token },
   )
 }
 
-export function adminLedgerSellerBalance(sellerId: string) {
-  return accounting<SellerLedgerBalanceDto>(`/api/v1/admin/ledger/seller/${sellerId}/balance`)
+export function adminLedgerSellerBalance(token: string, sellerId: string) {
+  return api<SellerLedgerBalanceDto>(`/api/v1/admin/ledger/seller/${sellerId}/balance`, { token })
 }
 
 export interface LedgerAdjustmentLine {
@@ -876,14 +861,10 @@ export interface LedgerAdjustmentLine {
 }
 
 export function adminLedgerAdjust(
-  adminId: string,
+  token: string,
   body: { idempotencyKey: string; reason: string; lines: LedgerAdjustmentLine[] },
 ) {
-  return accounting(`/api/v1/admin/ledger/adjustments`, {
-    method: "POST",
-    body: JSON.stringify(body),
-    headers: { "X-User-Id": adminId },
-  })
+  return api(`/api/v1/admin/ledger/adjustments`, { method: "POST", body, token })
 }
 
 // ── Admin: Refunds ───────────────────────────────────────────────────────────

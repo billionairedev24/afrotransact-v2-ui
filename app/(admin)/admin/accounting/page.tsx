@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { BookOpen, RefreshCcw, AlertTriangle, Search } from "lucide-react"
 
+import { getAccessToken } from "@/lib/auth-helpers"
 import {
   ACCOUNTING_ACCOUNTS,
   adminLedgerAccountBalance,
@@ -38,11 +39,17 @@ export default function AdminAccountingPage() {
   async function loadAll() {
     setLoading(true)
     setError(null)
+    const token = await getAccessToken()
+    if (!token) {
+      setError("Not signed in")
+      setLoading(false)
+      return
+    }
     const next: Record<string, AccountBalanceDto | { error: string }> = {}
     await Promise.all(
       ACCOUNTING_ACCOUNTS.map(async ({ code }) => {
         try {
-          next[code] = await adminLedgerAccountBalance(code)
+          next[code] = await adminLedgerAccountBalance(token, code)
         } catch (e) {
           next[code] = { error: e instanceof Error ? e.message : "failed" }
         }
@@ -61,7 +68,9 @@ export default function AdminAccountingPage() {
     if (!id) return
     setSellerLooking(true)
     try {
-      setSellerBalance(await adminLedgerSellerBalance(id))
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not signed in")
+      setSellerBalance(await adminLedgerSellerBalance(token, id))
     } catch (e) {
       setSellerLookupError(e instanceof Error ? e.message : "lookup failed")
     } finally {
