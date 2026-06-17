@@ -88,7 +88,14 @@ export default function AdminRefundsPage() {
       setRefunds(rs)
       setView("order")
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "lookup failed")
+      // Show a friendly message for the common "not found" case instead of
+      // the raw "API ... returned 400" string.
+      const raw = e instanceof Error ? e.message : String(e)
+      if (/Order not found|404|400/i.test(raw)) {
+        setErr(`No order matches "${n}". Make sure you're using the order number (e.g. ORD-…), not a buyer or seller UUID.`)
+      } else {
+        setErr(raw)
+      }
     } finally {
       setLoading(false)
     }
