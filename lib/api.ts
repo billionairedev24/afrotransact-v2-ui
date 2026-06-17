@@ -912,7 +912,8 @@ export interface RefundDto {
 export function adminCreateRefund(
   token: string,
   body: {
-    orderId: string
+    orderId?: string
+    orderNumber?: string
     subOrderId?: string
     amountCents: number
     reason: string
@@ -926,6 +927,56 @@ export function adminCreateRefund(
 
 export function adminListRefundsByOrder(token: string, orderId: string) {
   return api<RefundDto[]>(`/api/v1/admin/refunds/by-order/${orderId}`, { token })
+}
+
+export function adminListRefundsByOrderNumber(token: string, orderNumber: string) {
+  return api<RefundDto[]>(`/api/v1/admin/refunds/by-order-number/${orderNumber}`, { token })
+}
+
+// ── Admin: Order lookup + refund queue ───────────────────────────────────────
+
+export interface AdminOrderLookup {
+  id: string
+  orderNumber: string
+  status: string
+  buyerId: string
+  totalCents: number
+  subtotalCents: number
+  taxCents: number
+  shippingCostCents: number
+  discountCents: number
+  currency: string
+  recipientName?: string | null
+  shipLine1?: string | null
+  shipCity?: string | null
+  shipStateRegion?: string | null
+  shipPostalCode?: string | null
+  shipCountryCode?: string | null
+  shipPhone?: string | null
+  placedAt: string | null
+  createdAt: string
+  subOrders?: Array<{
+    id: string
+    storeId: string
+    fulfillmentStatus?: string | null
+    subtotalCents: number
+  }>
+}
+
+export function adminGetOrderByNumber(token: string, orderNumber: string) {
+  return api<AdminOrderLookup>(`/api/v1/orders/admin/by-number/${orderNumber}`, { token })
+}
+
+export interface PagedAdminOrders {
+  content: AdminOrderLookup[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export function adminGetRefundQueue(token: string, page = 0, size = 20) {
+  return api<PagedAdminOrders>(`/api/v1/orders/admin/refund-queue?page=${page}&size=${size}`, { token })
 }
 
 export function getOnboardingProgress(token: string) {
