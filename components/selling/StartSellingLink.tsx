@@ -12,7 +12,7 @@ const variantClass: Record<Variant, string> = {
     "flex items-center gap-1 px-3 h-full text-[13px] text-emerald-600 font-medium whitespace-nowrap hover:text-emerald-700 hover:bg-emerald-50 transition-colors",
   "header-inline":
     "inline-flex items-center gap-1.5 text-white text-[14px] font-semibold hover:text-brand-gold transition-colors whitespace-nowrap",
-  footer: "text-[13px] text-muted-foreground hover:text-foreground transition-colors",
+  footer: "inline-flex items-center gap-1.5 text-[13px] text-white/70 hover:text-brand-gold transition-colors",
   button:
     "inline-flex h-12 items-center gap-2 rounded-xl bg-brand-gold px-8 text-[15px] font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-all shadow-lg shadow-primary/20",
   inline: "inline-flex items-center gap-2 rounded-xl bg-brand-gold px-8 text-[15px] font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-all",
