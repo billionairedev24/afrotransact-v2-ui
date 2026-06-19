@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
+import { StoreSwitcher } from "@/components/seller/StoreSwitcher"
 import { StripeActionBanner } from "@/components/seller/StripeActionBanner"
 import type { SellerInfo } from "@/lib/api"
 import { useSellerAnalyticsNavVisible } from "@/hooks/use-analytics-settings"
@@ -258,6 +259,14 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
 
         {/* Main content */}
         <main className="min-w-0 flex-1 lg:pl-72">
+          {/* Slim top bar for desktop with store switcher. Mobile keeps the
+              sticky header above, and we mirror the switcher there too. */}
+          <div className="hidden lg:flex sticky top-0 z-30 bg-white border-b border-gray-200 px-6 lg:px-8 h-14 items-center">
+            <StoreSwitcher />
+          </div>
+          <div className="lg:hidden border-b border-gray-200 bg-white px-4 py-2">
+            <StoreSwitcher />
+          </div>
           <div className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             {seller && <StripeActionBanner seller={seller} />}
             {children}

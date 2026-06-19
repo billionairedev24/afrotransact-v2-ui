@@ -1287,6 +1287,19 @@ export function getSellerStores(token: string, sellerId: string) {
   return api<StoreDetail[]>(`/api/v1/stores/seller/${sellerId}`, { token })
 }
 
+export interface SellerStoresWithQuota {
+  stores: StoreDetail[]
+  used: number
+  /** null = unlimited */
+  quota: number | null
+  planSlug: string | null
+  canAddStore: boolean
+}
+
+export function getSellerStoresWithQuota(token: string, sellerId: string) {
+  return api<SellerStoresWithQuota>(`/api/v1/stores/seller/${sellerId}/with-quota`, { token })
+}
+
 export function createStore(token: string, data: Record<string, unknown>) {
   return api<StoreDetail>("/api/v1/stores", { method: "POST", body: data, token })
 }

@@ -6,8 +6,6 @@ import { RotateCcw, AlertTriangle, CheckCircle2, Clock, XCircle, Package, Chevro
 
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
-  getCurrentSeller,
-  getSellerStores,
   sellerListReturns,
   sellerDecideReturn,
   sellerMarkReturnReceived,
@@ -15,7 +13,7 @@ import {
   type ReturnDto,
   type ReturnStatus,
 } from "@/lib/api"
-import { pickPrimarySellerStoreId } from "@/lib/seller-store"
+import { useSelectedStoreId } from "@/hooks/useSelectedStoreId"
 
 const fmt = (cents: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100)
@@ -39,27 +37,12 @@ const OPEN_STATUSES: ReturnStatus[] = ["requested", "approved", "approved_partia
 
 export default function SellerReturnsPage() {
   const { status } = useSession()
-  const [storeId, setStoreId] = useState<string | null>(null)
+  const { storeId } = useSelectedStoreId()
   const [returns, setReturns] = useState<ReturnDto[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
   const [selected, setSelected] = useState<ReturnDto | null>(null)
   const [tab, setTab] = useState<"open" | "all">("open")
-
-  async function loadStore() {
-    try {
-      const token = await getAccessToken()
-      if (!token) throw new Error("Not signed in")
-      const seller = await getCurrentSeller(token)
-      const stores = await getSellerStores(token, seller.id)
-      const sid = pickPrimarySellerStoreId(stores)
-      setStoreId(sid)
-      return sid
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Could not load store")
-      return null
-    }
-  }
 
   async function loadReturns(sid: string) {
     setLoading(true)
@@ -76,15 +59,9 @@ export default function SellerReturnsPage() {
   }
 
   useEffect(() => {
-    if (status !== "authenticated") return
-    void loadStore().then((sid) => {
-      if (sid) void loadReturns(sid)
-    })
-  }, [status])
-
-  useEffect(() => {
-    if (storeId) void loadReturns(storeId)
-  }, [tab])
+    if (status !== "authenticated" || !storeId) return
+    void loadReturns(storeId)
+  }, [status, storeId, tab])
 
   async function refresh() {
     if (storeId) await loadReturns(storeId)

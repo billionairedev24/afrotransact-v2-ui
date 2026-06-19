@@ -20,7 +20,7 @@ import {
   type SubOrderDto,
   type Page as ApiPage,
 } from "@/lib/api"
-import { pickPrimarySellerStoreId } from "@/lib/seller-store"
+import { useSelectedStoreId } from "@/hooks/useSelectedStoreId"
 import { formatShippingAddressLines } from "@/lib/format-address"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -112,21 +112,11 @@ export default function SellerOrdersPage() {
   const [pageSize, setPageSize] = useState(50)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
-  // Resolve the seller's primary store once. Cached across pages thanks to TanStack.
-  const storeQuery = useQuery({
-    queryKey: [SELLER_STORE_KEY],
-    queryFn: async () => {
-      const token = await getAccessToken()
-      if (!token) throw new Error("Not authenticated")
-      const seller = await getCurrentSeller(token)
-      const stores = await getSellerStores(token, seller.id)
-      return pickPrimarySellerStoreId(stores)
-    },
-    enabled: status === "authenticated",
-    staleTime: 10 * 60 * 1000, // store rarely changes
-  })
-
-  const storeId = storeQuery.data ?? null
+  // Resolve the seller's selected store from the StoreSwitcher (falls back to
+  // their primary store when no explicit selection exists).
+  const selectedStore = useSelectedStoreId()
+  const storeQuery = { isLoading: selectedStore.isLoading, isFetched: !selectedStore.isLoading, data: selectedStore.storeId, error: selectedStore.isError ? new Error("store load failed") : null }
+  const storeId = selectedStore.storeId
 
   const ordersQuery = useQuery<ApiPage<OrderDto>>({
     queryKey: [SELLER_ORDERS_KEY, storeId, pageIndex, pageSize],
