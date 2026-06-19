@@ -1894,6 +1894,18 @@ export async function getMarketplaceConfig(regionId: string): Promise<Marketplac
   }
 }
 
+// ── Public: Seller marketing stats ────────────────────────────────────────
+
+export interface PublicSellerStats {
+  activeSellers: number
+}
+
+export async function getPublicSellerStats(opts?: { revalidate?: number }): Promise<PublicSellerStats> {
+  return api<PublicSellerStats>("/api/v1/sellers/public/stats", {
+    next: opts?.revalidate ? { revalidate: opts.revalidate } : undefined,
+  })
+}
+
 // ── Public: Region Config (features & payments) ──
 
 export interface RegionPaymentMethod {

@@ -14,6 +14,7 @@ import { CategoriesBentoGrid } from "@/components/landing/CategoriesBentoGrid"
 import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
 import { ProductRow } from "@/components/landing/ProductRow"
 import { SellOnAfrotransactBand } from "@/components/landing/SellOnAfrotransactBand"
+import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 import { fetchCategoryTiles } from "@/lib/category-tiles"
 import {
   getCategories,
@@ -216,6 +217,9 @@ export default async function HomePage() {
           viewAllHref="/search?is_deal=true"
           viewAllLabel="See all deals"
         />
+
+        {/* 3.5 Slim mid-page seller CTA */}
+        <SellOnAfrotransactStrip />
 
         {/* 4. Trust & Mission Band */}
         <TrustMissionBand />
