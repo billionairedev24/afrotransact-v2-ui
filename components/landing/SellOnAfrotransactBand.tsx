@@ -1,5 +1,6 @@
 "use client"
 
+import { useSession } from "next-auth/react"
 import { Store, ArrowRight } from "lucide-react"
 
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
@@ -15,6 +16,11 @@ import { StartSellingLink } from "@/components/selling/StartSellingLink"
  * shell anyway.
  */
 export function SellOnAfrotransactBand() {
+  const { data: session, status } = useSession()
+  if (status === "loading") return null
+  const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
+  if (roles.includes("admin") || roles.includes("seller")) return null
+
   return (
     <section className="max-w-[1440px] mx-auto px-4 sm:px-5 mt-12">
       <div className="rounded-2xl border border-border bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 p-6 sm:p-10 overflow-hidden relative">
