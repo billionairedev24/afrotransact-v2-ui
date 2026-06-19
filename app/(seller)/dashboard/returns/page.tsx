@@ -272,10 +272,17 @@ function ReturnDetailModal({
     }
   }
 
+  const [damageUsd, setDamageUsd] = useState("")
+
   async function inspect(rejectOnInspection: boolean) {
     setErr(null)
     if (rejectOnInspection && !reason.trim()) {
       setErr("Rejection reason is required.")
+      return
+    }
+    const damageCents = damageUsd.trim() ? Math.round(parseFloat(damageUsd) * 100) : 0
+    if (damageCents > 0 && !reason.trim()) {
+      setErr("Reason is required when applying a damage reduction.")
       return
     }
     setSubmitting(true)
@@ -285,6 +292,7 @@ function ReturnDetailModal({
       await sellerInspectReturn(token, storeId, ret.id, {
         rejectOnInspection,
         reason: reason.trim() || undefined,
+        damageReductionCents: damageCents > 0 ? damageCents : undefined,
       })
       onChange()
     } catch (e) {
@@ -409,10 +417,26 @@ function ReturnDetailModal({
             <div className="border-t border-gray-200 pt-5 space-y-3">
               <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Inspection</p>
               <p className="text-xs text-gray-600">
-                Complete to fire the refund pipeline. Reject only if the parcel arrived damaged or empty.
+                Complete to fire the refund pipeline. If the item arrived worse than described,
+                reduce the refund by the damage amount. Reject only if the parcel arrived empty
+                or completely unusable.
               </p>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Rejection reason (only if rejecting)</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Damage reduction (USD, optional)
+                </label>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={damageUsd}
+                  onChange={(e) => setDamageUsd(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Reason <span className="font-medium text-gray-500 normal-case">(required when reducing or rejecting)</span>
+                </label>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
@@ -420,7 +444,7 @@ function ReturnDetailModal({
                   className="w-full border border-gray-300 rounded-md px-3 py-2 min-h-[60px] text-sm"
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => inspect(false)}
                   disabled={submitting}

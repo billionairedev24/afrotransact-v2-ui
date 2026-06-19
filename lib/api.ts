@@ -1053,7 +1053,7 @@ export function sellerInspectReturn(
   token: string,
   storeId: string,
   returnId: string,
-  body: { rejectOnInspection?: boolean; reason?: string },
+  body: { rejectOnInspection?: boolean; reason?: string; damageReductionCents?: number },
 ) {
   return api<ReturnDto>(`/api/v1/returns/${returnId}/inspect`, {
     method: "POST",

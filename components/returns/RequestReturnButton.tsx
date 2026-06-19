@@ -63,8 +63,20 @@ function ReturnRequestModal({
   const [reason, setReason] = useState<ReturnReason>("damaged")
   const [buyerNotes, setBuyerNotes] = useState("")
   const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [photoUrls, setPhotoUrls] = useState<string[]>([])
+  const [photoInput, setPhotoInput] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+
+  function addPhoto() {
+    const u = photoInput.trim()
+    if (!u) return
+    try { new URL(u) } catch { setErr("Photo URL must be a valid http(s) link"); return }
+    if (photoUrls.length >= 10) { setErr("Up to 10 photos"); return }
+    setPhotoUrls((prev) => [...prev, u])
+    setPhotoInput("")
+    setErr(null)
+  }
   const [done, setDone] = useState(false)
 
   const selectedReason = REASONS.find((r) => r.value === reason)
@@ -89,6 +101,7 @@ function ReturnRequestModal({
         subOrderId: sub.id,
         reason,
         buyerNotes: buyerNotes.trim() || undefined,
+        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
         items,
       })
       setDone(true)
@@ -181,7 +194,7 @@ function ReturnRequestModal({
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-                  Notes for the seller {selectedReason?.needsPhotos && <span className="text-amber-600 normal-case font-medium">(photos help — upload coming soon)</span>}
+                  Notes for the seller
                 </label>
                 <textarea
                   value={buyerNotes}
@@ -191,6 +204,46 @@ function ReturnRequestModal({
                   className="w-full border border-gray-300 rounded-md px-3 py-2 min-h-[100px] text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/20"
                 />
               </div>
+
+              {selectedReason?.needsPhotos && (
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                    Photos <span className="normal-case font-medium text-gray-500">(strongly recommended for {selectedReason.label.toLowerCase()})</span>
+                  </label>
+                  <div className="flex items-stretch gap-2">
+                    <input
+                      type="url"
+                      value={photoInput}
+                      onChange={(e) => setPhotoInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPhoto() } }}
+                      placeholder="Paste an image URL (e.g. iCloud / Google Drive shared link)"
+                      className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    />
+                    <button type="button" onClick={addPhoto} disabled={!photoInput.trim()} className="px-3 py-2 rounded-md bg-gray-900 text-white text-xs font-bold disabled:opacity-40">
+                      Add
+                    </button>
+                  </div>
+                  {photoUrls.length > 0 && (
+                    <ul className="mt-2 space-y-1">
+                      {photoUrls.map((u, i) => (
+                        <li key={i} className="flex items-center gap-2 text-xs">
+                          <span className="truncate flex-1 text-gray-700">{u}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPhotoUrls((prev) => prev.filter((_, j) => j !== i))}
+                            className="text-red-600 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Native upload widget is rolling out next; for now please paste image links.
+                  </p>
+                </div>
+              )}
 
               {err && (
                 <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3 flex items-start gap-2">
