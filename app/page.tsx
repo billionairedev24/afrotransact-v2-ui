@@ -13,8 +13,8 @@ import { HeroCarousel } from "@/components/landing/HeroCarousel"
 import { CategoriesBentoGrid } from "@/components/landing/CategoriesBentoGrid"
 import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
 import { ProductRow } from "@/components/landing/ProductRow"
-import { SellOnAfrotransactBand } from "@/components/landing/SellOnAfrotransactBand"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
+import { SellOnAfrotransactModal } from "@/components/landing/SellOnAfrotransactModal"
 import { fetchCategoryTiles } from "@/lib/category-tiles"
 import {
   getCategories,
@@ -239,11 +239,12 @@ export default async function HomePage() {
           viewAllHref="/search?region_code=us-tx-austin&sort=popularity"
         />
 
-        {/* 7. Sell on AfroTransact — hidden for admins + existing sellers
-            via StartSellingLink's role check; renders for guests + buyers. */}
-        <SellOnAfrotransactBand />
-
       </main>
+
+      {/* Auto-pops once per visitor after engagement signals (delay + scroll).
+          Hidden for admins + existing sellers; respects a "dismissed" flag in
+          localStorage so it never nags. */}
+      <SellOnAfrotransactModal />
 
       <Footer />
     </div>

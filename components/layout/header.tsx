@@ -482,6 +482,7 @@ export function Header() {
                 >
                   Help
                 </Link>
+                <StartSellingLink variant="header-inline" />
               </nav>
 
               {/* ── Account — single button → dropdown whose content depends on auth state ── */}

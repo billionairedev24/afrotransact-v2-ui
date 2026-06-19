@@ -28,7 +28,7 @@ export function SellOnAfrotransactStrip() {
                 Are you a maker, importer, or shop owner?
               </p>
               <p className="text-xs sm:text-sm text-gray-600 truncate">
-                Open your storefront on AfroTransact in minutes — no monthly fees.
+                Open your storefront on AfroTransact in minutes. Plans start free.
               </p>
             </div>
           </div>
