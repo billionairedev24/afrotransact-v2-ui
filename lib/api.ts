@@ -937,6 +937,132 @@ export function adminListRefundsByOrderNumber(token: string, orderNumber: string
   return api<RefundDto[]>(`/api/v1/admin/refunds/by-order-number/${orderNumber}`, { token })
 }
 
+// ── Returns (buyer + seller) ─────────────────────────────────────────────────
+
+export type ReturnStatus =
+  | "requested" | "approved" | "approved_partial" | "denied"
+  | "label_issued" | "in_transit" | "received" | "inspected"
+  | "completed" | "rejected_on_inspection" | "cancelled" | "expired"
+
+export type ReturnReason =
+  | "damaged" | "wrong_item" | "not_as_described" | "no_longer_wanted" | "other"
+
+export interface ReturnDto {
+  id: string
+  orderId: string
+  orderNumber: string
+  subOrderId: string
+  storeId: string
+  requestedByUserId: string
+  status: ReturnStatus
+  reason: ReturnReason
+  buyerNotes?: string | null
+  sellerNotes?: string | null
+  decisionReason?: string | null
+  photoUrls: string[]
+  refundAmountCents?: number | null
+  restockingFeeCents: number
+  restockingFeeBps?: number | null
+  returnLabelUrl?: string | null
+  returnTrackingNumber?: string | null
+  returnLabelCarrier?: string | null
+  sellerResponseDueAt: string
+  sellerRespondedAt?: string | null
+  receivedAt?: string | null
+  completedAt?: string | null
+  refundId?: string | null
+  refundStatus?: string | null
+  createdAt: string
+  items: Array<{
+    id: string
+    orderItemId: string
+    productId?: string | null
+    variantId?: string | null
+    quantity: number
+    refundAmountCents: number
+  }>
+}
+
+export interface CreateReturnRequest {
+  orderNumber: string
+  subOrderId: string
+  reason: ReturnReason
+  buyerNotes?: string
+  photoUrls?: string[]
+  items: Array<{ orderItemId: string; quantity: number }>
+}
+
+export function requestReturn(token: string, body: CreateReturnRequest) {
+  return api<ReturnDto>(`/api/v1/returns`, { method: "POST", body, token })
+}
+
+export interface PagedReturns {
+  content: ReturnDto[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export function listMyReturns(token: string, page = 0, size = 20) {
+  return api<PagedReturns>(`/api/v1/returns/me?page=${page}&size=${size}`, { token })
+}
+
+export function cancelReturn(token: string, returnId: string) {
+  return api<ReturnDto>(`/api/v1/returns/${returnId}/cancel`, { method: "POST", token })
+}
+
+export function sellerListReturns(token: string, storeId: string, status?: ReturnStatus[], page = 0, size = 20) {
+  const params = new URLSearchParams()
+  params.set("page", String(page))
+  params.set("size", String(size))
+  if (status?.length) status.forEach((s) => params.append("status", s))
+  return api<PagedReturns>(`/api/v1/returns/store/${storeId}?${params}`, { token })
+}
+
+export function sellerDecideReturn(
+  token: string,
+  storeId: string,
+  returnId: string,
+  body: {
+    decision: "approve" | "approve_partial" | "deny"
+    refundAmountCents?: number
+    restockingFeeBps?: number
+    reason?: string
+    sellerNotes?: string
+    provideLabel?: boolean
+  },
+) {
+  return api<ReturnDto>(`/api/v1/returns/${returnId}/decide`, {
+    method: "POST",
+    body,
+    token,
+    headers: { "X-Store-Id": storeId },
+  })
+}
+
+export function sellerMarkReturnReceived(token: string, storeId: string, returnId: string) {
+  return api<ReturnDto>(`/api/v1/returns/${returnId}/received`, {
+    method: "POST",
+    token,
+    headers: { "X-Store-Id": storeId },
+  })
+}
+
+export function sellerInspectReturn(
+  token: string,
+  storeId: string,
+  returnId: string,
+  body: { rejectOnInspection?: boolean; reason?: string },
+) {
+  return api<ReturnDto>(`/api/v1/returns/${returnId}/inspect`, {
+    method: "POST",
+    body,
+    token,
+    headers: { "X-Store-Id": storeId },
+  })
+}
+
 // ── Admin: Order lookup + refund queue ───────────────────────────────────────
 
 export interface AdminOrderLookup {

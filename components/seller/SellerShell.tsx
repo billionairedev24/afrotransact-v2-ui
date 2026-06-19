@@ -20,6 +20,7 @@ import {
   Tag,
   BarChart2,
   ShieldAlert,
+  RotateCcw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/analytics",   label: "Analytics",      icon: BarChart2       },
   { href: "/dashboard/products",     label: "Products",       icon: Package         },
   { href: "/dashboard/orders",       label: "Orders",        icon: ShoppingCart    },
+  { href: "/dashboard/returns",      label: "Returns",        icon: RotateCcw       },
   { href: "/dashboard/upload",       label: "Media Library",  icon: Upload         },
   { href: "/dashboard/reviews",      label: "Reviews",        icon: Star            },
   { href: "/dashboard/coupons",      label: "Coupons",        icon: Ticket          },
