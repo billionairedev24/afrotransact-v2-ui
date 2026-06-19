@@ -33,13 +33,9 @@ export function StartSellingLink({
 }) {
   const { data: session, status } = useSession()
 
-  // During closed beta, seller signup is INVITE-ONLY (admin-initiated).
-  // No self-service "Start Selling" path exists, so the CTA is hidden for
-  // everyone — guests, customers, sellers, admins alike. The button reappears
-  // once self-service is enabled (set NEXT_PUBLIC_SELLER_SIGNUP_ENABLED=true).
-  const selfServiceEnabled = process.env.NEXT_PUBLIC_SELLER_SIGNUP_ENABLED === "true"
-  if (!selfServiceEnabled) return null
-
+  // Self-service seller signup is open. The CTA is hidden for admins
+  // and existing sellers — they have their own dashboards — but visible
+  // to guests and buyers.
   const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
   const isAdmin = roles.includes("admin")
   const isSeller = roles.includes("seller")
@@ -63,11 +59,15 @@ export function StartSellingLink({
     )
   }
 
-  // Seller onboarding is invite-only. Admins and existing sellers should not see this CTA.
+  // Admins and existing sellers don't need a "Start Selling" CTA on the buyer
+  // surfaces. Guests + buyers see it.
   if (isAdmin || isSeller) return null
 
-  // Everyone else (guests + logged-in customers) goes to the public /sell marketing page.
-  const href = "/sell"
+  // Guests go through the seller-flavoured registration; signed-in buyers
+  // skip straight to onboarding. Keycloak handles the upgrade-role step.
+  const href = session
+    ? "/dashboard/onboarding"
+    : "/auth/register?role=seller&callbackUrl=/dashboard/onboarding"
 
   const defaultLabel =
     variant === "header" ? (
