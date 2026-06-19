@@ -27,11 +27,11 @@ export async function SellOnAfrotransactBand() {
     <SellBandClientGate>
       <section className="max-w-[1440px] mx-auto px-4 sm:px-5 mt-12">
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-          {/* Top trust strip */}
+          {/* Top trust strip — real numbers only */}
           <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-gray-200 divide-y sm:divide-y-0 sm:divide-x divide-gray-200 bg-gray-50">
             <Stat
-              number={activeSellers > 0 ? `${activeSellers}+` : "New"}
-              label={activeSellers > 0 ? "Active sellers today" : "Marketplace just launched"}
+              number={String(activeSellers)}
+              label={activeSellers === 1 ? "Active seller" : "Active sellers"}
             />
             <Stat number="$0" label="Cost to open a store" />
             <Stat number="Minutes" label="To list your first product" />

@@ -26,6 +26,7 @@ import {
 } from "@/lib/api"
 import { BrandProductCard, BrandProductRow, type BrandProductCardItem } from "@/components/products/BrandProductCard"
 import { Pagination } from "@/components/products/Pagination"
+import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 
 const PAGE_SIZE = 24
 const DISCOUNT_TIERS = [10, 25, 50, 70] as const
@@ -341,6 +342,12 @@ export default function DealsPageClient() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Sell CTA — deal-hunters often know what's underpriced in a category
+          and could sell it themselves. Auto-hidden for admin + sellers. */}
+      <div className="mt-10">
+        <SellOnAfrotransactStrip />
       </div>
     </main>
   )

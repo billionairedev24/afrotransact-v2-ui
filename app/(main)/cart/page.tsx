@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X, Sparkles, Tag, Zap, AlertCircle } from "lucide-react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
+import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 import { clearServerCart, prefetchCheckoutShippingContext } from "@/lib/api"
 import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -129,6 +130,13 @@ export default function CartPage() {
               {label}
             </Link>
           ))}
+        </div>
+
+        {/* Sell CTA — empty-cart visitors have low purchase intent right
+            now but high alternative-action intent. Auto-hidden for admin
+            + sellers. */}
+        <div className="w-full max-w-2xl mt-12">
+          <SellOnAfrotransactStrip />
         </div>
       </main>
     )

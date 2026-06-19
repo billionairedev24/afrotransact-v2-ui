@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import ProductReviews from "@/components/reviews/ProductReviews"
+import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 import { useCartStore } from "@/stores/cart-store"
 import { useWishlistStore } from "@/stores/wishlist-store"
 import { useWishlist } from "@/hooks/use-wishlist"
@@ -719,6 +720,12 @@ export default function ProductPageClient() {
           <ProductReviews productId={product.id} />
         </div>
       )}
+
+      {/* Sell CTA — visitors looking at a specific product often think
+          "I make these too." Auto-hides for admin + sellers. */}
+      <div className="mt-16">
+        <SellOnAfrotransactStrip />
+      </div>
     </div>
   )
 }

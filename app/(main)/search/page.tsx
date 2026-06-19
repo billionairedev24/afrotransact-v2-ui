@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 import {
   Grid3X3,
   LayoutList,
@@ -1290,6 +1291,12 @@ function SearchContent() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Sell CTA — strategic placement: high-intent shoppers are also
+          potential sellers. Auto-hides for admin + seller via the gate. */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+        <SellOnAfrotransactStrip />
       </div>
     </div>
   )

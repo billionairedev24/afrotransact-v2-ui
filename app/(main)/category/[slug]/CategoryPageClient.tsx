@@ -8,6 +8,7 @@ import { ChevronRight, Star, MapPin, Leaf, Loader2, ShoppingCart, Sparkles } fro
 import { searchProducts, getCategories, getProductById, type SearchResult, type CategoryRef, type Product } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
+import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 
 function productToSearchResult(p: Product): SearchResult {
   const variant = p.variants?.[0]
@@ -398,6 +399,11 @@ export default function CategoryPageClient() {
           )}
         </>
       )}
+
+      {/* Sell CTA — category browsers are prime sellers in that category. */}
+      <div className="mt-10">
+        <SellOnAfrotransactStrip />
+      </div>
     </main>
   )
 }
