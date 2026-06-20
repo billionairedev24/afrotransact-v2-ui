@@ -68,6 +68,7 @@ export default function ProductPageClient() {
 
   const [product, setProduct] = useState<Product | null>(null)
   const [storeName, setStoreName] = useState<string>("")
+  const [storeSlug, setStoreSlug] = useState<string>("")
   const [storeReturnsSupported, setStoreReturnsSupported] = useState<boolean>(false)
   const [storeReturnWindowDays, setStoreReturnWindowDays] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -117,6 +118,7 @@ export default function ProductPageClient() {
           .then((store) => {
             if (cancelled) return
             setStoreName(store.name)
+            setStoreSlug(store.slug ?? "")
             setStoreReturnsSupported(store.returnsSupported === true)
             setStoreReturnWindowDays(
               typeof store.returnWindowDays === "number" ? store.returnWindowDays : null,
@@ -648,12 +650,16 @@ export default function ProductPageClient() {
               <span className="text-gray-500">Ships from</span>
               <span className="text-foreground font-medium">AfroTransact</span>
               <span className="text-gray-500">Sold by</span>
-              <Link
-                href={`/store/${product.storeId}`}
-                className="text-foreground font-medium hover:text-brand-gold-hover underline underline-offset-2 truncate"
-              >
-                {storeName || "Store"}
-              </Link>
+              {storeSlug ? (
+                <Link
+                  href={`/store/${storeSlug}`}
+                  className="text-foreground font-medium hover:text-brand-gold-hover underline underline-offset-2 truncate"
+                >
+                  {storeName || "Store"}
+                </Link>
+              ) : (
+                <span className="text-foreground font-medium truncate">{storeName || "Store"}</span>
+              )}
               <span className="text-gray-500">Delivery</span>
               <span className="text-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3 text-gray-400" /> United States
