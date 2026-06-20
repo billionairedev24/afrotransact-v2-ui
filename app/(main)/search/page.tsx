@@ -31,6 +31,7 @@ import {
 } from "@/lib/api"
 import { features } from "@/lib/features"
 import { useCartStore } from "@/stores/cart-store"
+import { useBuyerLocation } from "@/stores/buyer-location"
 import { toast } from "sonner"
 import { RemoteImage } from "@/components/ui/remote-image"
 import { BrandProductCard, type BrandProductCardItem } from "@/components/products/BrandProductCard"
@@ -51,6 +52,7 @@ function searchResultToCard(item: SearchResult): BrandProductCardItem {
     avgRating: item.avg_rating,
     reviewCount: item.review_count,
     inStock: item.in_stock,
+    distanceMiles: item.distance_miles,
   }
 }
 
@@ -787,6 +789,29 @@ function SearchContent() {
   const minRating = searchParams.get("min_rating") || ""
   const page = parseInt(searchParams.get("page") || "1", 10)
 
+  // Buyer Deliver-to location → geo-filtered + distance-decorated results.
+  // The store is client-only (zustand+localStorage); we surface it via two
+  // URL params (lat, lon) plus a `radius` selector below. URL params win
+  // over the store when both are present so a shared link stays reproducible.
+  const buyerLocation = useBuyerLocation((s) => s.location)
+  const urlLat = searchParams.get("lat")
+  const urlLon = searchParams.get("lon")
+  const urlRadius = searchParams.get("radius")
+  // "any" disables geo filtering entirely (no lat/lon/radius sent).
+  const radiusDisabled = urlRadius === "any"
+  const effectiveLat =
+    urlLat != null ? parseFloat(urlLat) : (buyerLocation?.lat ?? null)
+  const effectiveLon =
+    urlLon != null ? parseFloat(urlLon) : (buyerLocation?.lng ?? null)
+  const hasGeo =
+    !radiusDisabled &&
+    typeof effectiveLat === "number" &&
+    !Number.isNaN(effectiveLat) &&
+    typeof effectiveLon === "number" &&
+    !Number.isNaN(effectiveLon)
+  // Default radius matches backend (25 mi).
+  const radius = !radiusDisabled && urlRadius ? urlRadius : "25"
+
   const hasActiveFilters = !!(category || minPrice || maxPrice || minRating)
 
   useEffect(() => {
@@ -836,6 +861,12 @@ function SearchContent() {
     if (minPrice) params.min_price = minPrice
     if (maxPrice) params.max_price = maxPrice
     if (minRating) params.min_rating = minRating
+    if (hasGeo) {
+      // ES service uses `lon` (not `lng`); buyer-location store uses `lng`.
+      params.lat = String(effectiveLat)
+      params.lon = String(effectiveLon)
+      params.radius = radius
+    }
 
     searchProducts(params)
       .then((res) => {
@@ -866,7 +897,7 @@ function SearchContent() {
     return () => {
       cancelled = true
     }
-  }, [query, category, sortBy, minPrice, maxPrice, minRating, page, flagsLoaded, marketplaceEnabled, categoryList])
+  }, [query, category, sortBy, minPrice, maxPrice, minRating, page, flagsLoaded, marketplaceEnabled, categoryList, hasGeo, effectiveLat, effectiveLon, radius])
 
   const results = data?.results ?? []
   const totalResults = data?.total ?? 0
@@ -1010,6 +1041,42 @@ function SearchContent() {
                 </span>
               )}
             </button>
+          )}
+
+          {/* Distance radius — only when buyer has a location. Persists via
+              URL params (?radius=...); "any" strips lat/lon/radius so the
+              server returns global results. */}
+          {(buyerLocation?.lat != null && buyerLocation?.lng != null) && (
+            <div className="relative flex items-center gap-2">
+              <label htmlFor="radius-select" className="text-xs font-semibold uppercase tracking-wider text-gray-500 hidden sm:inline">
+                Within:
+              </label>
+              <select
+                id="radius-select"
+                value={radiusDisabled ? "any" : radius}
+                onChange={(e) => {
+                  const v = e.target.value
+                  const params = new URLSearchParams(searchParams.toString())
+                  if (v === "any") {
+                    params.set("radius", "any")
+                    params.delete("lat")
+                    params.delete("lon")
+                  } else {
+                    params.set("radius", v)
+                    params.delete("page")
+                  }
+                  router.push(`${pathname}?${params.toString()}`)
+                }}
+                className="appearance-none rounded-lg border border-gray-200 bg-white px-3 py-1.5 pr-7 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-gold focus:border-brand-gold"
+              >
+                <option value="10">10 mi</option>
+                <option value="25">25 mi</option>
+                <option value="50">50 mi</option>
+                <option value="100">100 mi</option>
+                <option value="250">250 mi</option>
+                <option value="any">Any distance</option>
+              </select>
+            </div>
           )}
 
           {/* Sort */}
