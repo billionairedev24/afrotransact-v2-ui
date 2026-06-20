@@ -78,6 +78,7 @@ import {
   getRegionConfig,
   getStoreById,
   listSavedPaymentMethods,
+  pollOrderUntilExists,
   type SavedPaymentMethod,
 } from "@/lib/api"
 import { resolveDefaultRegion } from "@/lib/regions"
@@ -1341,6 +1342,29 @@ export default function CheckoutClient({
   }
 
   const handlePaymentComplete = useCallback(async () => {
+    // Phase 3 of cart/checkout rewrite: the order row doesn't exist yet at
+    // this point — payment-service's webhook to order-service materializes it
+    // via Kafka payment.completed. Poll /orders/by-id/{id} until it appears
+    // (typically <2s) so the success screen can show the real order number.
+    const orderId = checkoutResult?.orderId
+    if (orderId) {
+      try {
+        const token = await getAccessToken()
+        if (token) {
+          const materialized = await pollOrderUntilExists(token, orderId)
+          if (materialized?.orderNumber) {
+            // Patch the displayed orderNumber from the materialized row in
+            // case checkoutResult's placeholder differs.
+            setCheckoutResult((prev) => prev ? { ...prev, orderNumber: materialized.orderNumber } : prev)
+          }
+          // If null (timeout), success screen still renders with whatever
+          // orderNumber the checkout response carried — the buyer's payment
+          // succeeded; the order will appear in /orders once webhook lands.
+        }
+      } catch (e) {
+        logError(e, "poll order after payment")
+      }
+    }
     try {
       const token = await getAccessToken()
       if (token) {
@@ -1356,7 +1380,7 @@ export default function CheckoutClient({
       // sessionStorage/localStorage may be unavailable — non-fatal
     }
     setStep("success")
-  }, [clearCart])
+  }, [clearCart, checkoutResult])
 
   const currentIdx = STEPS.findIndex((s) => s.id === step)
 
