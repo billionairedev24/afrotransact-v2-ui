@@ -1279,6 +1279,11 @@ export interface StoreDetail {
   allowedCarriers?: string[] | null
   returnsSupported?: boolean
   returnWindowDays?: number | null
+  shippingMode?: "unlimited" | "radius" | "regions" | null
+  shippingRadiusMeters?: number | null
+  shippingRegions?: Array<{ countryCode: string; stateCode?: string | null }> | null
+  originLat?: number | null
+  originLng?: number | null
   createdAt: string
   updatedAt: string
 }
@@ -1977,6 +1982,44 @@ export interface MarketplaceConfig {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function getMarketplaceConfig(_regionId: string): Promise<MarketplaceConfig> {
   return { maxProductImages: 8, maxProductTags: 10 }
+}
+
+// ── Public: Shipping eligibility ──────────────────────────────────────────
+
+export interface ShippingEligibility {
+  result: "eligible" | "not_eligible" | "unknown"
+  reason?: string
+  distanceMeters?: number
+}
+
+export async function checkShippingEligibility(args: {
+  storeId: string
+  lat?: number | null
+  lng?: number | null
+  country?: string
+  state?: string | null
+  postalCode?: string
+}): Promise<ShippingEligibility> {
+  const params = new URLSearchParams({ storeId: args.storeId })
+  if (args.lat != null) params.set("lat", String(args.lat))
+  if (args.lng != null) params.set("lng", String(args.lng))
+  if (args.country) params.set("country", args.country)
+  if (args.state) params.set("state", args.state)
+  if (args.postalCode) params.set("postalCode", args.postalCode)
+  return api<ShippingEligibility>(`/api/v1/sellers/public/shipping/eligibility?${params}`)
+}
+
+export interface GeocodeResult {
+  ok: boolean
+  lat?: number
+  lng?: number
+  postalCode?: string
+  country?: string
+}
+
+export async function geocodePostalCode(postalCode: string, country = "US"): Promise<GeocodeResult> {
+  const params = new URLSearchParams({ postalCode, country })
+  return api<GeocodeResult>(`/api/v1/sellers/public/shipping/geocode?${params}`)
 }
 
 // ── Public: Seller marketing stats ────────────────────────────────────────

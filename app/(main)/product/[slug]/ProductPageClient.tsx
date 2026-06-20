@@ -45,6 +45,7 @@ import {
 } from "@/lib/api"
 import { features } from "@/lib/features"
 import { logError } from "@/lib/errors"
+import { ShippingEligibilityBadge } from "@/components/buyer/ShippingEligibilityBadge"
 import { resolveDefaultRegion } from "@/lib/regions"
 
 /** Parse a product description into bullet list + leftover paragraphs. */
@@ -634,6 +635,7 @@ export default function ProductPageClient() {
                   <Trash2 className="h-3 w-3" /> Remove from cart
                 </button>
               )}
+              {product && <ShippingEligibilityBadge storeId={product.storeId} />}
             </div>
 
             <div className="flex items-center gap-2 text-xs text-gray-500">

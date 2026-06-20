@@ -17,6 +17,9 @@ import {
   AlertCircle,
   Upload,
   X,
+  Plus,
+  Trash2,
+  Globe,
 } from "lucide-react"
 import {
   getCurrentSeller,
@@ -57,7 +60,12 @@ type FormData = {
   bannerUrl: string
   returnsSupported: boolean
   returnWindowDays: string
+  shippingMode: "unlimited" | "radius" | "regions"
+  shippingReachRadiusMiles: string
+  shippingRegions: Array<{ countryCode: string; stateCode: string }>
 }
+
+const METERS_PER_MILE = 1609.34
 
 function storeToForm(store: any): FormData {
   if (!store) {
@@ -81,6 +89,9 @@ function storeToForm(store: any): FormData {
       bannerUrl: "",
       returnsSupported: false,
       returnWindowDays: "30",
+      shippingMode: "unlimited",
+      shippingReachRadiusMiles: "25",
+      shippingRegions: [],
     }
   }
   return {
@@ -103,6 +114,17 @@ function storeToForm(store: any): FormData {
     bannerUrl: store.bannerUrl ?? "",
     returnsSupported: store.returnsSupported ?? false,
     returnWindowDays: String(store.returnWindowDays ?? 30),
+    shippingMode: (store.shippingMode ?? "unlimited") as "unlimited" | "radius" | "regions",
+    shippingReachRadiusMiles:
+      store.shippingRadiusMeters != null
+        ? String(Math.round(Number(store.shippingRadiusMeters) / METERS_PER_MILE))
+        : "25",
+    shippingRegions: Array.isArray(store.shippingRegions)
+      ? store.shippingRegions.map((r: any) => ({
+          countryCode: String(r.countryCode ?? "US").toUpperCase(),
+          stateCode: r.stateCode ? String(r.stateCode).toUpperCase() : "",
+        }))
+      : [],
   }
 }
 
@@ -304,6 +326,20 @@ export default function StoreSettingsPage() {
     setValidationErrors([])
     try {
       const radius = parseInt(form.deliveryRadiusMiles, 10) || 10
+      const shippingReachMiles = parseInt(form.shippingReachRadiusMiles, 10)
+      const shippingRadiusMeters =
+        form.shippingMode === "radius" && !isNaN(shippingReachMiles)
+          ? Math.round(shippingReachMiles * METERS_PER_MILE)
+          : null
+      const shippingRegionsPayload =
+        form.shippingMode === "regions"
+          ? form.shippingRegions
+              .filter((r) => r.countryCode.trim())
+              .map((r) => ({
+                countryCode: r.countryCode.trim().toUpperCase(),
+                stateCode: r.stateCode.trim() ? r.stateCode.trim().toUpperCase() : null,
+              }))
+          : []
       if (store) {
         const payload = {
           name: form.name.trim(),
@@ -327,6 +363,9 @@ export default function StoreSettingsPage() {
           returnWindowDays: form.returnsSupported
             ? parseInt(form.returnWindowDays, 10) || 30
             : null,
+          shippingMode: form.shippingMode,
+          shippingRadiusMeters,
+          shippingRegions: shippingRegionsPayload,
         }
         const updated = await updateStore(token, store.id, payload)
         setForm(storeToForm(updated))
@@ -348,6 +387,9 @@ export default function StoreSettingsPage() {
           shipFromZip: form.shipFromSameAsBusiness ? null : form.shipFromZip.trim() || null,
           shipFromCountry: form.shipFromSameAsBusiness ? "US" : form.shipFromCountry.trim() || "US",
           allowedCarriers: form.allowedCarriers,
+          shippingMode: form.shippingMode,
+          shippingRadiusMeters,
+          shippingRegions: shippingRegionsPayload,
         }
         const created = await createStore(token, createPayload)
         if (form.logoUrl.trim() || form.bannerUrl.trim() || form.returnsSupported) {
@@ -666,6 +708,162 @@ export default function StoreSettingsPage() {
                 Customers within this radius will see your store in proximity searches
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* Shipping Reach */}
+        <section className="rounded-lg border border-border bg-card p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-secondary/10">
+              <Globe className="h-4 w-4 text-secondary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Shipping Reach</h2>
+              <p className="text-sm text-muted-foreground">Where do you ship to?</p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <div className="grid gap-2 sm:grid-cols-3">
+              {([
+                { value: "unlimited", label: "Unlimited", hint: "Ship anywhere" },
+                { value: "radius", label: "By radius", hint: "Within X miles of origin" },
+                { value: "regions", label: "By region", hint: "Specific countries / states" },
+              ] as const).map((opt) => {
+                const checked = form.shippingMode === opt.value
+                return (
+                  <label
+                    key={opt.value}
+                    className={`flex cursor-pointer flex-col rounded-md border p-3 text-sm transition-colors ${
+                      checked
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-foreground/30"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="shippingMode"
+                        value={opt.value}
+                        checked={checked}
+                        onChange={() => update("shippingMode", opt.value)}
+                        className="h-4 w-4"
+                      />
+                      <span className="font-medium text-foreground">{opt.label}</span>
+                    </div>
+                    <span className="mt-1 pl-6 text-xs text-muted-foreground">{opt.hint}</span>
+                  </label>
+                )
+              })}
+            </div>
+
+            {form.shippingMode === "radius" && (
+              <div className="max-w-xs">
+                <label
+                  htmlFor="shippingReachRadiusMiles"
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Reach radius (miles)
+                </label>
+                <div className="relative">
+                  <input
+                    id="shippingReachRadiusMiles"
+                    type="number"
+                    min={1}
+                    max={3000}
+                    value={form.shippingReachRadiusMiles}
+                    onChange={(e) => update("shippingReachRadiusMiles", e.target.value)}
+                    className={inputClass}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    mi
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Buyers within this distance of your store origin can place orders.
+                </p>
+              </div>
+            )}
+
+            {form.shippingMode === "regions" && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Add each country (and optional state/province) you ship to. Leave the state blank to ship to the entire country.
+                </p>
+                {form.shippingRegions.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">
+                    No regions yet — add at least one below.
+                  </p>
+                )}
+                <div className="space-y-2">
+                  {form.shippingRegions.map((region, idx) => (
+                    <div key={idx} className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                          Country
+                        </label>
+                        <select
+                          value={region.countryCode || "US"}
+                          onChange={(e) => {
+                            const next = [...form.shippingRegions]
+                            next[idx] = { ...next[idx], countryCode: e.target.value }
+                            update("shippingRegions", next)
+                          }}
+                          className={inputClass}
+                        >
+                          <option value="US">United States (US)</option>
+                          <option value="CA">Canada (CA)</option>
+                          <option value="GB">United Kingdom (GB)</option>
+                          <option value="NG">Nigeria (NG)</option>
+                          <option value="MX">Mexico (MX)</option>
+                        </select>
+                      </div>
+                      <div className="w-28">
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                          State (opt.)
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={3}
+                          value={region.stateCode}
+                          onChange={(e) => {
+                            const next = [...form.shippingRegions]
+                            next[idx] = { ...next[idx], stateCode: e.target.value.toUpperCase() }
+                            update("shippingRegions", next)
+                          }}
+                          placeholder="NY"
+                          className={inputClass}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = form.shippingRegions.filter((_, i) => i !== idx)
+                          update("shippingRegions", next)
+                        }}
+                        className="flex h-10 w-10 items-center justify-center rounded-md border border-border text-muted-foreground hover:border-destructive hover:text-destructive transition-colors"
+                        aria-label="Remove region"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    update("shippingRegions", [
+                      ...form.shippingRegions,
+                      { countryCode: "US", stateCode: "" },
+                    ])
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add region
+                </button>
+              </div>
+            )}
           </div>
         </section>
 

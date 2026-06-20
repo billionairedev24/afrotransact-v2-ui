@@ -38,6 +38,7 @@ import { useCartStore } from "@/stores/cart-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useSignOut } from "@/hooks/useSignOut"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
+import { DeliverToPicker } from "@/components/buyer/DeliverToPicker"
 import { AiNavButton } from "@/components/ai/AiWidget"
 import { searchSuggest, getCategories, type SearchSuggestion, type CategoryRef } from "@/lib/api"
 
@@ -476,6 +477,7 @@ export function Header() {
                 >
                   New Arrivals
                 </Link>
+                <DeliverToPicker />
                 <Link
                   href="/help"
                   className="text-white text-[14px] hover:text-brand-gold transition-colors"
