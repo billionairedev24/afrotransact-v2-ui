@@ -93,13 +93,10 @@ const NAV_GROUPS: NavGroup[] = [
     title: "Settings",
     items: [
       { href: "/admin/regions",              label: "Regions",         icon: MapPin },
-      { href: "/admin/commission",           label: "Commission",      icon: ShieldCheck },
-      { href: "/admin/shipping-settings",    label: "Shipping",        icon: Settings },
       { href: "/admin/subscription",         label: "Plans",           icon: ShieldCheck },
       { href: "/admin/email-templates",      label: "Email Templates", icon: Mail },
       { href: "/admin/notification-routing", label: "Alert Routing",   icon: Bell },
-      { href: "/admin/payment-settings",     label: "Payment Settings", icon: Settings },
-      { href: "/admin/settings",             label: "General",         icon: Settings },
+      { href: "/admin/settings",             label: "Settings",        icon: Settings },
     ],
   },
 ]

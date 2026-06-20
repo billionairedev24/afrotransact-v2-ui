@@ -80,6 +80,7 @@ function Section({
   subtitle,
   badge,
   defaultOpen = false,
+  anchorId,
   children,
 }: {
   icon: React.ComponentType<{ className?: string }>
@@ -87,11 +88,21 @@ function Section({
   subtitle?: string
   badge?: ReactNode
   defaultOpen?: boolean
+  anchorId?: string
   children: ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
+  useEffect(() => {
+    if (!anchorId || typeof window === "undefined") return
+    if (window.location.hash === `#${anchorId}`) {
+      setOpen(true)
+      requestAnimationFrame(() => {
+        document.getElementById(anchorId)?.scrollIntoView({ behavior: "smooth", block: "start" })
+      })
+    }
+  }, [anchorId])
   return (
-    <div className="rounded-2xl border border-input bg-white overflow-hidden transition-shadow hover:shadow-sm">
+    <div id={anchorId} className="rounded-2xl border border-input bg-white overflow-hidden transition-shadow hover:shadow-sm scroll-mt-20">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -452,6 +463,7 @@ export default function SettingsPage() {
           title="Commission & Platform Controls"
           subtitle="Base commission percentage and global payout freeze switch."
           defaultOpen
+          anchorId="commission"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
@@ -479,6 +491,7 @@ export default function SettingsPage() {
 
         <Section
           icon={Truck}
+          anchorId="shipping"
           title="Shipping"
           subtitle={
             realtimeShippingOn
@@ -600,8 +613,9 @@ export default function SettingsPage() {
 
         <Section
           icon={Banknote}
+          anchorId="payment"
           title="Payout Limits"
-          subtitle="Settlement window and per-payout amount caps."
+          subtitle="Settlement window and per-payout amount caps. For Stripe gateway configuration, see Payment Settings."
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
