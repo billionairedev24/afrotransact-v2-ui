@@ -17,6 +17,8 @@ export interface BuyerLocation {
   postalCode?: string
   country: string
   state?: string | null
+  /** City name from reverse-geocode (used in the pill when no ZIP). */
+  city?: string | null
   lat?: number | null
   lng?: number | null
 }

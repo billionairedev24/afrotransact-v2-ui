@@ -4,7 +4,15 @@ import { useEffect, useRef, useState } from "react"
 import { MapPin, X, Loader2 } from "lucide-react"
 
 import { geocodePostalCode, reverseGeocode } from "@/lib/api"
-import { useBuyerLocation } from "@/stores/buyer-location"
+import { useBuyerLocation, type BuyerLocation } from "@/stores/buyer-location"
+
+function locationLabel(loc: BuyerLocation): string {
+  if (loc.postalCode) return loc.postalCode
+  if (loc.city && loc.state) return `${loc.city}, ${loc.state}`
+  if (loc.city) return loc.city
+  if (loc.state) return loc.state
+  return "Near you"
+}
 import { cn } from "@/lib/utils"
 
 /**
@@ -47,34 +55,44 @@ export function DeliverToPicker() {
         async (pos) => {
           window.clearTimeout(fallback)
           if (cancelled) return
-          // Save coords immediately so geo-filtered search + PDP eligibility
-          // work regardless of whether reverse-geocode succeeds. We then try
-          // to enrich with a postal code; failure is silent — the user keeps
-          // the click-to-change pill, which now shows "Near you".
-          const baseLoc = {
-            postalCode: undefined as string | undefined,
-            country: "US",
-            state: null as string | null,
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          }
+          // First try our seller-side endpoint (Google Maps if configured),
+          // then fall back to BigDataCloud's key-free client endpoint so we
+          // can still resolve city/state when Google isn't wired up. Whatever
+          // succeeds gets saved with city/state; if both fail we save the
+          // raw coords so geo-filtered search still works.
+          const { latitude: lat, longitude: lng } = pos.coords
+          let resolved: { postalCode?: string; country?: string; state?: string | null; city?: string | null } | null = null
           try {
-            const r = await reverseGeocode(pos.coords.latitude, pos.coords.longitude)
-            if (cancelled) return
+            const r = await reverseGeocode(lat, lng)
             if (r.ok && r.postalCode) {
-              setLocation({
-                postalCode: r.postalCode,
-                country: r.country ?? "US",
-                state: r.state ?? null,
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
-              })
-              return
+              resolved = { postalCode: r.postalCode, country: r.country, state: r.state }
             }
-          } catch {
-            // fall through to coord-only save
+          } catch { /* ignore, try BDC */ }
+          if (!resolved) {
+            try {
+              const bdc = await fetch(
+                `https://api-bdc.io/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+              ).then((r) => r.json() as Promise<{ postcode?: string; countryCode?: string; principalSubdivisionCode?: string; city?: string; locality?: string }>)
+              if (bdc) {
+                resolved = {
+                  postalCode: bdc.postcode || undefined,
+                  country: bdc.countryCode || "US",
+                  // BDC returns "US-TX" — strip prefix to match our shape.
+                  state: bdc.principalSubdivisionCode?.split("-").pop() || null,
+                  city: bdc.city || bdc.locality || null,
+                }
+              }
+            } catch { /* fall through to coord-only */ }
           }
-          if (!cancelled) setLocation(baseLoc)
+          if (cancelled) return
+          setLocation({
+            postalCode: resolved?.postalCode,
+            country: resolved?.country ?? "US",
+            state: resolved?.state ?? null,
+            city: resolved?.city ?? null,
+            lat,
+            lng,
+          })
         },
         () => {
           window.clearTimeout(fallback)
@@ -103,7 +121,7 @@ export function DeliverToPicker() {
         <span className="flex flex-col items-start leading-tight">
           <span className="text-[10px] text-white/60">Deliver to</span>
           <span className="font-semibold text-white">
-            {location ? (location.postalCode || "Near you") : "Select"}
+            {location ? (locationLabel(location)) : "Select"}
           </span>
         </span>
       </button>
