@@ -12,6 +12,8 @@ import { clearServerCart, prefetchCheckoutShippingContext } from "@/lib/api"
 import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useDefaultRegionCommerceGates } from "@/hooks/use-default-region-commerce-gates"
+import { useCartEligibility } from "@/components/buyer/useCartEligibility"
+import { useBuyerLocation } from "@/stores/buyer-location"
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -52,6 +54,10 @@ export default function CartPage() {
   }, [])
 
   const byStoreEntries = mounted ? Array.from(getItemsByStore().entries()) : []
+  const storeIds = byStoreEntries.map(([id]) => id)
+  const { decisions: eligibilityByStore, hasBlocker: eligibilityBlocked, locationSet } =
+    useCartEligibility(storeIds)
+  const buyerPostalCode = useBuyerLocation((s) => s.location?.postalCode ?? "")
   const subtotal = mounted ? getSubtotal() : 0
   const totalQty = mounted ? getItemCount() : 0
   const estimatedTax = Math.round(subtotal * 0.0825) // 8.25% TX
@@ -161,11 +167,23 @@ export default function CartPage() {
         {/* ── Cart items column ── */}
         <div className="flex-1 space-y-5">
           {byStoreEntries.map(([storeId, groupItems]) => {
+            const eligibility = eligibilityByStore.get(storeId)
+            const blocked = eligibility?.result === "not_eligible"
             return (
               <section
                 key={storeId}
                 className="rounded-2xl border border-gray-200 bg-white overflow-hidden"
               >
+                {blocked && (
+                  <div className="flex gap-2 items-start px-4 py-2.5 bg-red-50 border-b border-red-100 text-xs text-red-800">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+                    <span>
+                      This seller doesn't ship to{" "}
+                      <span className="font-semibold">{buyerPostalCode || "your area"}</span>.
+                      Remove these items or change your delivery location to continue.
+                    </span>
+                  </div>
+                )}
                 <div className="divide-y divide-gray-100">
                   {groupItems.map((item) => (
                     <div key={item.variantId} className="flex gap-3 sm:gap-4 p-4 sm:p-5">
@@ -275,6 +293,18 @@ export default function CartPage() {
               <span>{formatCents(total)}</span>
             </div>
 
+            {mounted && eligibilityBlocked && (
+              <div className="mt-4 flex gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-900">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-600" aria-hidden />
+                <span>One or more items don't ship to your delivery location. Remove them or change the location to check out.</span>
+              </div>
+            )}
+            {mounted && !eligibilityBlocked && !locationSet && storeIds.length > 0 && (
+              <div className="mt-4 flex gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs text-gray-700">
+                <AlertCircle className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
+                <span>Set a delivery location (top of page) to confirm these items ship to you.</span>
+              </div>
+            )}
             {mounted && !commerceGatesLoading && !marketplaceEnabled && (
               <div className="mt-4 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-950">
                 <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
@@ -298,10 +328,10 @@ export default function CartPage() {
                 }
               }}
               disabled={
-                !mounted || commerceGatesLoading || !canEnterCheckoutFlow
+                !mounted || commerceGatesLoading || !canEnterCheckoutFlow || eligibilityBlocked
               }
               className={`mt-5 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-colors ${
-                !mounted || commerceGatesLoading || !canEnterCheckoutFlow
+                !mounted || commerceGatesLoading || !canEnterCheckoutFlow || eligibilityBlocked
                   ? "cursor-not-allowed bg-gray-200 text-gray-500"
                   : "bg-brand-gold text-[#0f0f10] hover:bg-brand-gold/90"
               }`}
