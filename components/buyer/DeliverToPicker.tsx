@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { MapPin, X, Loader2 } from "lucide-react"
 
-import { geocodePostalCode } from "@/lib/api"
+import { geocodePostalCode, reverseGeocode } from "@/lib/api"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { cn } from "@/lib/utils"
 
@@ -29,15 +29,57 @@ export function DeliverToPicker() {
 
   const [open, setOpen] = useState(false)
 
-  // First-visit prompt: pops 1.5s after mount so the page paints first.
+  // First-visit auto-detect: ask the browser for GPS, reverse-geocode to a
+  // postal code, and save silently. If the user denies or it fails, fall
+  // back to popping the picker modal so they can type a ZIP. Either way
+  // they can click the header pill to change later.
   const popped = useRef(false)
   useEffect(() => {
     if (popped.current) return
     if (prompted || location) return
     popped.current = true
-    const t = window.setTimeout(() => setOpen(true), 1500)
-    return () => window.clearTimeout(t)
-  }, [prompted, location])
+    let cancelled = false
+    const fallback = window.setTimeout(() => {
+      if (!cancelled) setOpen(true)
+    }, 4000)
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          window.clearTimeout(fallback)
+          if (cancelled) return
+          try {
+            const r = await reverseGeocode(pos.coords.latitude, pos.coords.longitude)
+            if (cancelled) return
+            if (r.ok && r.postalCode) {
+              setLocation({
+                postalCode: r.postalCode,
+                country: r.country ?? "US",
+                state: r.state ?? null,
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+              })
+              return
+            }
+          } catch {
+            // fall through to manual modal
+          }
+          if (!cancelled) setOpen(true)
+        },
+        () => {
+          window.clearTimeout(fallback)
+          if (!cancelled) setOpen(true)
+        },
+        { timeout: 3500, maximumAge: 60_000 },
+      )
+    } else {
+      window.clearTimeout(fallback)
+      setOpen(true)
+    }
+    return () => {
+      cancelled = true
+      window.clearTimeout(fallback)
+    }
+  }, [prompted, location, setLocation])
 
   return (
     <>

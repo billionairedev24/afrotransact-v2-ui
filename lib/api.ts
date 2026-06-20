@@ -2050,6 +2050,18 @@ export async function geocodePostalCode(postalCode: string, country = "US"): Pro
   return api<GeocodeResult>(`/api/v1/sellers/public/shipping/geocode?${params}`)
 }
 
+export interface ReverseGeocodeResult {
+  ok: boolean
+  postalCode?: string
+  country?: string
+  state?: string | null
+}
+
+export async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult> {
+  const params = new URLSearchParams({ lat: String(lat), lng: String(lng) })
+  return api<ReverseGeocodeResult>(`/api/v1/sellers/public/shipping/reverse-geocode?${params}`)
+}
+
 // ── Public: Seller marketing stats ────────────────────────────────────────
 
 export interface PublicSellerStats {
