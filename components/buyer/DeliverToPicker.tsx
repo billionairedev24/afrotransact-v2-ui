@@ -6,6 +6,57 @@ import { MapPin, X, Loader2 } from "lucide-react"
 import { geocodePostalCode, reverseGeocode } from "@/lib/api"
 import { useBuyerLocation, type BuyerLocation } from "@/stores/buyer-location"
 
+const GOOGLE_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
+
+type Resolved = { postalCode?: string; country?: string; state?: string | null; city?: string | null }
+
+function pickComponent(comps: Array<{ types: string[]; short_name: string; long_name: string }>, type: string, useLong = false): string | undefined {
+  const m = comps.find((c) => c.types.includes(type))
+  return m ? (useLong ? m.long_name : m.short_name) : undefined
+}
+
+/** Reverse geocode (lat,lng → address) using Google directly. Returns null on failure. */
+async function googleReverseGeocode(lat: number, lng: number): Promise<Resolved | null> {
+  if (!GOOGLE_KEY) return null
+  try {
+    const r = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&result_type=postal_code&key=${GOOGLE_KEY}`,
+    ).then((res) => res.json() as Promise<{ status: string; results: Array<{ address_components: Array<{ types: string[]; short_name: string; long_name: string }> }> }>)
+    if (r.status !== "OK" || !r.results.length) return null
+    const comps = r.results[0].address_components
+    return {
+      postalCode: pickComponent(comps, "postal_code"),
+      country: pickComponent(comps, "country"),
+      state: pickComponent(comps, "administrative_area_level_1") ?? null,
+      city: pickComponent(comps, "locality", true) ?? pickComponent(comps, "postal_town", true) ?? null,
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Forward geocode (postal+country → coords + city/state) using Google directly. */
+async function googleForwardGeocode(postalCode: string, country: string): Promise<{ lat: number; lng: number; state: string | null; city: string | null } | null> {
+  if (!GOOGLE_KEY) return null
+  try {
+    const components = `postal_code:${postalCode}|country:${country}`
+    const r = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?components=${encodeURIComponent(components)}&key=${GOOGLE_KEY}`,
+    ).then((res) => res.json() as Promise<{ status: string; results: Array<{ geometry: { location: { lat: number; lng: number } }; address_components: Array<{ types: string[]; short_name: string; long_name: string }> }> }>)
+    if (r.status !== "OK" || !r.results.length) return null
+    const top = r.results[0]
+    const comps = top.address_components
+    return {
+      lat: top.geometry.location.lat,
+      lng: top.geometry.location.lng,
+      state: pickComponent(comps, "administrative_area_level_1") ?? null,
+      city: pickComponent(comps, "locality", true) ?? pickComponent(comps, "postal_town", true) ?? null,
+    }
+  } catch {
+    return null
+  }
+}
+
 function locationLabel(loc: BuyerLocation): string {
   if (loc.postalCode) return loc.postalCode
   if (loc.city && loc.state) return `${loc.city}, ${loc.state}`
@@ -61,13 +112,19 @@ export function DeliverToPicker() {
           // succeeds gets saved with city/state; if both fail we save the
           // raw coords so geo-filtered search still works.
           const { latitude: lat, longitude: lng } = pos.coords
-          let resolved: { postalCode?: string; country?: string; state?: string | null; city?: string | null } | null = null
-          try {
-            const r = await reverseGeocode(lat, lng)
-            if (r.ok && r.postalCode) {
-              resolved = { postalCode: r.postalCode, country: r.country, state: r.state }
-            }
-          } catch { /* ignore, try BDC */ }
+          let resolved: Resolved | null = null
+          // 1. Google directly (uses NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
+          resolved = await googleReverseGeocode(lat, lng)
+          // 2. Seller-side endpoint (Google via server, if configured)
+          if (!resolved) {
+            try {
+              const r = await reverseGeocode(lat, lng)
+              if (r.ok && r.postalCode) {
+                resolved = { postalCode: r.postalCode, country: r.country, state: r.state }
+              }
+            } catch { /* try BDC */ }
+          }
+          // 3. BigDataCloud key-free
           if (!resolved) {
             try {
               const bdc = await fetch(
@@ -172,16 +229,25 @@ function DeliverToModal({
       let city: string | null = null
       let resolvedState: string | null = state.trim() || null
 
-      // Primary: our seller-side Google geocoder.
-      try {
-        const geo = await geocodePostalCode(code, country)
-        if (geo.ok) {
-          lat = geo.lat ?? null
-          lng = geo.lng ?? null
-        }
-      } catch { /* try fallback */ }
-
-      // Fallback for US ZIPs: Zippopotam.us, key-free.
+      // 1. Google directly with the NEXT_PUBLIC_ key.
+      const g = await googleForwardGeocode(code, country)
+      if (g) {
+        lat = g.lat
+        lng = g.lng
+        city = g.city
+        if (!resolvedState) resolvedState = g.state
+      }
+      // 2. Seller-side endpoint (also Google, server-side).
+      if (lat == null) {
+        try {
+          const geo = await geocodePostalCode(code, country)
+          if (geo.ok) {
+            lat = geo.lat ?? null
+            lng = geo.lng ?? null
+          }
+        } catch { /* try fallback */ }
+      }
+      // 3. Zippopotam.us for US ZIPs (key-free).
       if (lat == null && country === "US") {
         try {
           const z = await fetch(`https://api.zippopotam.us/us/${encodeURIComponent(code)}`).then((r) => r.ok ? r.json() : null) as
@@ -222,13 +288,15 @@ function DeliverToModal({
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords
-        let resolved: { postalCode?: string; country?: string; state?: string | null; city?: string | null } | null = null
-        try {
-          const r = await reverseGeocode(lat, lng)
-          if (r.ok && r.postalCode) {
-            resolved = { postalCode: r.postalCode, country: r.country, state: r.state }
-          }
-        } catch { /* try BDC */ }
+        let resolved: Resolved | null = await googleReverseGeocode(lat, lng)
+        if (!resolved) {
+          try {
+            const r = await reverseGeocode(lat, lng)
+            if (r.ok && r.postalCode) {
+              resolved = { postalCode: r.postalCode, country: r.country, state: r.state }
+            }
+          } catch { /* try BDC */ }
+        }
         if (!resolved) {
           try {
             const bdc = await fetch(
