@@ -42,6 +42,7 @@ type PlanFormData = {
   billingCount: number
   maxProducts: number
   maxStores: number
+  analyticsTier: string
   commissionRateOverride: string
   stripePriceId: string
   active: boolean
@@ -60,6 +61,7 @@ function planToFormData(plan?: SubscriptionPlan | null): PlanFormData {
       billingCount: 1,
       maxProducts: 50,
       maxStores: 1,
+      analyticsTier: "basic",
       commissionRateOverride: "",
       stripePriceId: "",
       active: true,
@@ -76,6 +78,7 @@ function planToFormData(plan?: SubscriptionPlan | null): PlanFormData {
     billingCount: plan.billingCount || 1,
     maxProducts: plan.maxProducts,
     maxStores: plan.maxStores,
+    analyticsTier: plan.analyticsTier ?? "basic",
     commissionRateOverride: plan.commissionRateOverride != null ? String(plan.commissionRateOverride) : "",
     stripePriceId: plan.stripePriceId ?? "",
     active: plan.active,
@@ -94,6 +97,7 @@ function formDataToApiPayload(form: PlanFormData): Partial<SubscriptionPlan> {
     billingCount: form.billingCount,
     maxProducts: form.maxProducts,
     maxStores: form.maxStores,
+    analyticsTier: form.analyticsTier as "basic" | "medium" | "comprehensive",
     commissionRateOverride: form.commissionRateOverride ? Number(form.commissionRateOverride) : null,
     stripePriceId: form.stripePriceId || null,
     active: form.active,
@@ -287,6 +291,18 @@ function PlanModal({
           {field("Total Price (cents)", "priceCentsPerMonth", "number")}
           {field("Max Products (-1 = unlimited)", "maxProducts", "number")}
           {field("Max Stores", "maxStores", "number")}
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-muted-foreground">Analytics Tier</label>
+            <select
+              value={form.analyticsTier}
+              onChange={(e) => setForm({ ...form, analyticsTier: e.target.value })}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="basic">Basic — 30 days, top products</option>
+              <option value="medium">Medium — 12 months, comparison + funnel</option>
+              <option value="comprehensive">Comprehensive — full history, cohorts, CSV export</option>
+            </select>
+          </div>
           {field("Commission Override (%)", "commissionRateOverride", "text", "Leave empty for default")}
           {field("Stripe Price ID", "stripePriceId", "text", "Optional")}
           {field("Display Order", "displayOrder", "number")}

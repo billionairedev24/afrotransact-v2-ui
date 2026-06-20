@@ -15,6 +15,8 @@ import {
 } from "lucide-react"
 import { useSellerMe, useSellerStores, useSellerAnalytics } from "@/hooks/use-seller-stats"
 import { useAnalyticsAvailability } from "@/hooks/use-analytics-settings"
+import { useSellerAnalyticsTier, type AnalyticsTier } from "@/hooks/useSellerAnalyticsTier"
+import { useActiveStore } from "@/stores/active-store"
 import { localYmdToday, localYmdDaysAgo } from "@/lib/local-date"
 import type { SellerAnalyticsProductRevenue } from "@/lib/api"
 
@@ -140,12 +142,21 @@ export default function SellerAnalyticsPage() {
   const { data: availability, isLoading: flagLoading } = useAnalyticsAvailability()
   const analyticsEnabled = availability?.sellerAnalyticsEnabled !== false
 
-  const [startDate, setStartDate] = useState(() => offsetDateStr(30))
+  const { tier, hasAtLeast } = useSellerAnalyticsTier()
+  // Basic = 30d, Medium = 365d, Comprehensive = 5 years (≈ "unlimited").
+  const defaultLookbackDays = tier === "basic" ? 30 : tier === "medium" ? 365 : 1825
+  const [startDate, setStartDate] = useState(() => offsetDateStr(defaultLookbackDays))
   const [endDate,   setEndDate]   = useState(() => todayStr())
 
   const { data: seller } = useSellerMe()
   const { data: stores } = useSellerStores(seller?.id)
-  const storeIds = (stores ?? []).map((s) => s.id)
+  // Per-store scope: the StoreSwitcher's selection drives the analytics
+  // query when set; falling back to "all stores" when the seller has
+  // multiple and none picked.
+  const activeStoreId = useActiveStore((s) => s.activeStoreId)
+  const storeIds = (stores ?? [])
+    .filter((s) => !activeStoreId || s.id === activeStoreId)
+    .map((s) => s.id)
 
   const rangeError = useMemo(() => {
     if (!startDate || !endDate) return "Start and end dates are required."
@@ -305,21 +316,37 @@ export default function SellerAnalyticsPage() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Store Analytics</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-foreground">Store Analytics</h1>
+              <PlanTierBadge tier={tier} />
+            </div>
             <p className="text-sm text-muted-foreground">
-              Revenue and fulfillment insights for your stores
+              {tier === "basic"
+                ? "Last 30 days — revenue, orders, and top products. Upgrade for deeper insights."
+                : tier === "medium"
+                  ? "12-month history with period comparison and traffic funnel."
+                  : "Full history, cohorts, returning-buyer split, and CSV export."}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleCSV}
-              disabled={!data}
-              className="flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/70 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FileDown className="h-3.5 w-3.5" />
-              CSV (Excel)
-            </button>
+            {hasAtLeast("comprehensive") ? (
+              <button
+                onClick={handleCSV}
+                disabled={!data}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/70 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                CSV (Excel)
+              </button>
+            ) : (
+              <span
+                title="Available on the Comprehensive plan"
+                className="flex items-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground cursor-not-allowed"
+              >
+                <Lock className="h-3 w-3" /> CSV
+              </span>
+            )}
             <button
               onClick={handleJSON}
               disabled={!data}
@@ -515,5 +542,20 @@ export default function SellerAnalyticsPage() {
         </>
       )}
     </div>
+  )
+}
+
+function PlanTierBadge({ tier }: { tier: AnalyticsTier }) {
+  const palette =
+    tier === "comprehensive"
+      ? "bg-violet-50 text-violet-700 border-violet-200"
+      : tier === "medium"
+        ? "bg-blue-50 text-blue-700 border-blue-200"
+        : "bg-gray-100 text-gray-600 border-gray-200"
+  const label = tier === "comprehensive" ? "Comprehensive" : tier === "medium" ? "Medium" : "Basic"
+  return (
+    <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${palette}`}>
+      {label} analytics
+    </span>
   )
 }

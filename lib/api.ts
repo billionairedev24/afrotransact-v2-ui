@@ -1321,6 +1321,8 @@ export interface SubscriptionPlan {
   priceDisplay: string
   maxProducts: number
   maxStores: number
+  /** basic | medium | comprehensive — drives the seller analytics UI tier gate. */
+  analyticsTier?: "basic" | "medium" | "comprehensive"
   commissionRateOverride: number | null
   stripePriceId: string | null
   active: boolean

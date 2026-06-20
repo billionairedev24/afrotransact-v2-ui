@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { useActiveStore } from "@/stores/active-store"
 import {
   Store,
   Save,
@@ -217,6 +218,8 @@ export default function StoreSettingsPage() {
   const { status: sessionStatus } = useSession()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const searchParams = useSearchParams()
+  const createMode = searchParams.get("new") === "1"
 
   useEffect(() => {
     if (sessionStatus === "unauthenticated") {
@@ -225,7 +228,13 @@ export default function StoreSettingsPage() {
   }, [sessionStatus, router])
   const { data: seller, isLoading: sellerLoading } = useSellerMe()
   const { data: stores = [], isLoading: storesLoading } = useSellerStores(seller?.id)
-  const store = stores[0]
+  const { activeStoreId } = useActiveStore.getState()
+  // Multi-store sellers pick which store to edit via the store-switcher's
+  // active selection; ?new=1 (from the switcher's "Open another store"
+  // affordance) forces a blank create form.
+  const store = createMode
+    ? undefined
+    : stores.find((s) => s.id === activeStoreId) ?? stores[0]
 
   const loading = sellerLoading || storesLoading
   const [saving, setSaving] = useState(false)
