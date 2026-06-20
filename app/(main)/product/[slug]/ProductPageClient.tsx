@@ -37,14 +37,13 @@ import {
   getProductById,
   getStoreById,
   getRegions,
-  getRegionFeatures,
   type Product,
   type ProductVariant,
-  type FeatureFlag,
   getActiveDeals,
   type DealData,
   trackEvent,
 } from "@/lib/api"
+import { features } from "@/lib/features"
 import { logError } from "@/lib/errors"
 import { resolveDefaultRegion } from "@/lib/regions"
 
@@ -93,7 +92,6 @@ export default function ProductPageClient() {
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeItem = useCartStore((s) => s.removeItem)
 
-  const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [productDeal, setProductDeal] = useState<DealData | null>(null)
 
   useEffect(() => {
@@ -126,21 +124,17 @@ export default function ProductPageClient() {
           .catch(() => { if (!cancelled) setStoreName(data.storeId) })
 
         try {
+          // Region call still kicks off so future region-aware logic
+          // (currency, taxes, etc.) has the result; deals are scoped here.
           const regions = await getRegions("", true).catch(() => [])
-          const r = resolveDefaultRegion(regions)
-          if (r && !cancelled) {
-            const [f, deals] = await Promise.all([
-              getRegionFeatures(r.id).catch(() => []),
-              getActiveDeals().catch(() => []),
-            ])
-            if (!cancelled) {
-              setFlags(f)
-              const deal = deals.find((d) => d.productId === data.id)
-              setProductDeal(deal || null)
-            }
+          resolveDefaultRegion(regions)
+          const deals = await getActiveDeals().catch(() => [])
+          if (!cancelled) {
+            const deal = deals.find((d) => d.productId === data.id)
+            setProductDeal(deal || null)
           }
         } catch (secondaryError) {
-          console.warn("Secondary data fetch failed (flags/deals):", secondaryError)
+          console.warn("Secondary data fetch failed (deals):", secondaryError)
         }
       } catch (e) {
         logError(e, "loading product")
@@ -153,8 +147,8 @@ export default function ProductPageClient() {
     return () => { cancelled = true }
   }, [slug])
 
-  const reviewsEnabled = flags.find((f) => f.key === "reviews_enabled")?.enabled ?? true
-  const marketplaceEnabled = flags.find((f) => f.key === "marketplace_enabled")?.enabled ?? true
+  const reviewsEnabled = features.reviewsEnabled()
+  const marketplaceEnabled = features.marketplaceEnabled()
 
   const variant = selectedVariant ?? product?.variants[0] ?? null
   const inStock = variant ? variant.stockQuantity > 0 : false

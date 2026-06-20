@@ -53,6 +53,7 @@ import { PhoneInput } from "@/components/ui/PhoneInput"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 import { logError } from "@/lib/errors"
+import { features } from "@/lib/features"
 import {
   checkout as apiCheckout,
   mergeCart,
@@ -69,8 +70,6 @@ import {
   type ValidateCouponResponse,
   type Region,
   type UserAddress,
-  type FeatureFlag,
-  getRegionFeatures,
   getActiveDeals,
   type DealData,
   type RegionPaymentMethod,
@@ -1013,7 +1012,6 @@ export default function CheckoutClient({
 
   const [availableRegions, setAvailableRegions] = useState<Region[]>([])
   const [region, setRegion] = useState<Region | null>(null)
-  const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
   const [savedCards, setSavedCards] = useState<SavedPaymentMethod[]>([])
   const [selectedSavedCardId, setSelectedSavedCardId] = useState<string | null>(null)
@@ -1088,9 +1086,7 @@ export default function CheckoutClient({
   const availableDeals = allDeals.filter(d => cartItems.some(i => i.productId === d.productId))
 
   const couponsEnabled = configFeatures["coupons_enabled"] === true
-  const stripeFeatureEnabled =
-    flags.find((f) => f.key === "stripe_enabled" || f.key === "stripe")?.enabled ?? true
-  const marketplaceFromFlags = flags.find((f) => f.key === "marketplace_enabled")?.enabled
+  const stripeFeatureEnabled = features.stripeEnabled()
   const marketplaceFromConfig =
     "marketplace_enabled" in configFeatures ? configFeatures["marketplace_enabled"] === true : undefined
   const marketplacePurchasingAllowed =
@@ -1098,7 +1094,7 @@ export default function CheckoutClient({
       ? true
       : marketplaceFromConfig !== undefined
         ? marketplaceFromConfig
-        : (marketplaceFromFlags ?? true)
+        : features.marketplaceEnabled()
   const stripeRow = paymentMethods.find((m) => m.provider.toLowerCase() === "stripe")
   const stripeMethodEnabled = stripeRow ? stripeRow.enabled : paymentMethods.length === 0
   const stripeAvailable = stripeFeatureEnabled && stripeMethodEnabled
@@ -1195,12 +1191,8 @@ export default function CheckoutClient({
     setGatesReady(false)
     async function loadRegionConfig() {
       try {
-        const [f, cfg] = await Promise.all([
-          getRegionFeatures(currentRegion.id).catch((): FeatureFlag[] => []),
-          getRegionConfig(currentRegion.code).catch(() => null),
-        ])
+        const cfg = await getRegionConfig(currentRegion.code).catch(() => null)
         if (cancelled) return
-        setFlags(f)
         if (cfg) {
           setPaymentMethods(cfg.paymentMethods || [])
           setConfigFeatures(cfg.features || {})

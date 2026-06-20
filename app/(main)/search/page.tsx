@@ -24,19 +24,15 @@ import { cn } from "@/lib/utils"
 import {
   searchProducts,
   getProductById,
-  getRegions,
-  getRegionFeatures,
   getCategories,
   type SearchResponse,
   type SearchResult,
-  type Region,
-  type FeatureFlag,
   type CategoryRef,
 } from "@/lib/api"
+import { features } from "@/lib/features"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
 import { RemoteImage } from "@/components/ui/remote-image"
-import { resolveDefaultRegion } from "@/lib/regions"
 import { BrandProductCard, type BrandProductCardItem } from "@/components/products/BrandProductCard"
 import { Pagination } from "@/components/products/Pagination"
 
@@ -777,11 +773,10 @@ function SearchContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<SearchResponse | null>(null)
-  const [flags, setFlags] = useState<FeatureFlag[]>([])
-  const [flagsLoaded, setFlagsLoaded] = useState(false)
   const [categoryList, setCategoryList] = useState<CategoryRef[]>([])
 
-  const marketplaceEnabled = flags.find((f) => f.key === "marketplace_enabled")?.enabled ?? true
+  const marketplaceEnabled = features.marketplaceEnabled()
+  const flagsLoaded = true
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   const query = searchParams.get("q") || ""
@@ -795,18 +790,9 @@ function SearchContent() {
   const hasActiveFilters = !!(category || minPrice || maxPrice || minRating)
 
   useEffect(() => {
+    // No-op kept so the dependency chain below doesn't gain a region race.
+    // Feature flags now come from build-time NEXT_PUBLIC_FEATURE_* env vars.
     let cancelled = false
-    ;(async () => {
-      try {
-        const regions = await getRegions("", true).catch(() => [])
-        const r: Region | undefined = resolveDefaultRegion(regions)
-        if (!r || cancelled) return
-        const f = await getRegionFeatures(r.id).catch(() => [])
-        if (!cancelled) setFlags(f)
-      } finally {
-        if (!cancelled) setFlagsLoaded(true)
-      }
-    })()
     return () => { cancelled = true }
   }, [])
 

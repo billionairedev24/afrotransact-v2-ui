@@ -7,7 +7,6 @@ import { useSession } from "next-auth/react"
 import {
   LayoutDashboard,
   MapPin,
-  ToggleLeft,
   Users,
   Menu,
   X,
@@ -44,28 +43,65 @@ interface NavItem {
   badge?: number
 }
 
-const BASE_NAV_ITEMS: NavItem[] = [
-  { href: "/admin",               label: "Overview",      icon: LayoutDashboard, exact: true },
-  { href: "/admin/analytics",    label: "Analytics",     icon: BarChart2        },
-  { href: "/admin/work-queue",    label: "Work Queue",    icon: ClipboardList    },
-  { href: "/admin/categories",    label: "Categories",    icon: FolderTree       },
-  { href: "/admin/sellers",       label: "Sellers",       icon: Store            },
-  { href: "/admin/products",      label: "Products",      icon: Package          },
-  { href: "/admin/orders",        label: "Orders",        icon: ShoppingCart     },
-  { href: "/admin/regions",       label: "Regions",       icon: MapPin           },
-  { href: "/admin/feature-flags", label: "Feature Flags", icon: ToggleLeft       },
-  { href: "/admin/subscription",     label: "Subscriptions",    icon: ShieldCheck   },
-  { href: "/admin/reviews",          label: "Reviews",          icon: Star          },
-  { href: "/admin/payouts",          label: "Payouts",          icon: Banknote      },
-  { href: "/admin/refunds",          label: "Refunds",          icon: Banknote      },
-  { href: "/admin/accounting",       label: "Accounting",       icon: BookOpen      },
-  { href: "/admin/settings",         label: "Settings",         icon: Settings      },
-  { href: "/admin/coupons",       label: "Coupons",       icon: Ticket           },
-  { href: "/admin/deals",         label: "Deals",         icon: Sparkles         },
-  { href: "/admin/hero-carousel", label: "Hero Carousel", icon: Sparkles         },
-  { href: "/admin/email-templates", label: "Email Templates", icon: Mail          },
-  { href: "/admin/notification-routing", label: "Alert Routing", icon: Bell     },
-  { href: "/admin/users",         label: "Users",         icon: Users            },
+interface NavGroup {
+  title: string | null   // null = top-level (no group header)
+  items: NavItem[]
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    title: null,
+    items: [
+      { href: "/admin",            label: "Overview",   icon: LayoutDashboard, exact: true },
+      { href: "/admin/analytics",  label: "Analytics",  icon: BarChart2 },
+      { href: "/admin/work-queue", label: "Work Queue", icon: ClipboardList },
+    ],
+  },
+  {
+    title: "Catalog",
+    items: [
+      { href: "/admin/products",      label: "Products",      icon: Package },
+      { href: "/admin/categories",    label: "Categories",    icon: FolderTree },
+      { href: "/admin/deals",         label: "Deals",         icon: Sparkles },
+      { href: "/admin/coupons",       label: "Coupons",       icon: Ticket },
+      { href: "/admin/hero-carousel", label: "Hero Carousel", icon: Sparkles },
+    ],
+  },
+  {
+    title: "Commerce",
+    items: [
+      { href: "/admin/orders",     label: "Orders",     icon: ShoppingCart },
+      { href: "/admin/refunds",    label: "Refunds",    icon: Banknote },
+      { href: "/admin/payouts",    label: "Payouts",    icon: Banknote },
+      { href: "/admin/accounting", label: "Accounting", icon: BookOpen },
+      { href: "/admin/reviews",    label: "Reviews",    icon: Star },
+    ],
+  },
+  {
+    title: "Sellers",
+    items: [
+      { href: "/admin/sellers", label: "Sellers", icon: Store },
+    ],
+  },
+  {
+    title: "People",
+    items: [
+      { href: "/admin/users", label: "Users", icon: Users },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
+      { href: "/admin/regions",              label: "Regions",         icon: MapPin },
+      { href: "/admin/commission",           label: "Commission",      icon: ShieldCheck },
+      { href: "/admin/shipping-settings",    label: "Shipping",        icon: Settings },
+      { href: "/admin/subscription",         label: "Plans",           icon: ShieldCheck },
+      { href: "/admin/email-templates",      label: "Email Templates", icon: Mail },
+      { href: "/admin/notification-routing", label: "Alert Routing",   icon: Bell },
+      { href: "/admin/payment-settings",     label: "Payment Settings", icon: Settings },
+      { href: "/admin/settings",             label: "General",         icon: Settings },
+    ],
+  },
 ]
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -77,11 +113,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const signOut = useSignOut()
   const showAdminAnalytics = useAdminAnalyticsNavVisible()
 
-  const navItems: NavItem[] = BASE_NAV_ITEMS.filter(
-    (item) => showAdminAnalytics || item.href !== "/admin/analytics",
-  ).map((item) =>
-    item.href === "/admin/work-queue" ? { ...item, badge: queueCount } : item,
-  )
+  const navGroups: NavGroup[] = NAV_GROUPS.map((g) => ({
+    title: g.title,
+    items: g.items
+      .filter((item) => showAdminAnalytics || item.href !== "/admin/analytics")
+      .map((item) =>
+        item.href === "/admin/work-queue" ? { ...item, badge: queueCount } : item,
+      ),
+  })).filter((g) => g.items.length > 0)
 
   const navLink = (item: NavItem, onClick?: () => void) => {
     const Icon = item.icon
@@ -126,7 +165,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         )}
       </div>
       <nav className="flex-1 flex flex-col gap-1 overflow-y-auto scrollbar-hide">
-        {navItems.map((item) => navLink(item, onClose))}
+        {navGroups.map((group, gi) => (
+          <div key={group.title ?? `g-${gi}`} className={cn(gi > 0 && "mt-4")}>
+            {group.title && (
+              <p className="px-4 mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
+                {group.title}
+              </p>
+            )}
+            <div className="flex flex-col gap-0.5">
+              {group.items.map((item) => navLink(item, onClose))}
+            </div>
+          </div>
+        ))}
       </nav>
       <div className="mt-auto pt-6 border-t border-white/10 flex flex-col gap-2">
         <Link

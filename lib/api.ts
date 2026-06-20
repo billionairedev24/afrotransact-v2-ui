@@ -1956,81 +1956,25 @@ export function deleteRegion(token: string, id: string) {
   return api<void>(`/api/v1/admin/regions/${id}`, { method: "DELETE", token })
 }
 
-// ── Admin: Feature Flags (Config service) ──
-
-export interface FeatureFlag {
-  id: string
-  key: string
-  enabled: boolean
-  regionId: string
-  config?: Record<string, unknown>
-}
-
-interface RawFeature {
-  id: string
-  region_id: string
-  feature_key: string
-  enabled: boolean
-  config?: unknown
-}
-
-function mapFeature(f: RawFeature): FeatureFlag {
-  return {
-    id: f.id,
-    key: f.feature_key,
-    enabled: f.enabled,
-    regionId: f.region_id,
-    config: (f.config ?? {}) as Record<string, unknown>,
-  }
-}
-
-export async function getFeatureFlags(token: string, regionId: string): Promise<FeatureFlag[]> {
-  const res = await api<{ features: RawFeature[] }>(`/api/v1/admin/regions/${regionId}/features`, { token })
-  return (res.features ?? []).map(mapFeature)
-}
-
-/** Storefront-safe: GET /regions/{id}/features (no admin role required). */
-export async function getRegionFeatures(regionId: string): Promise<FeatureFlag[]> {
-  const res = await api<{ features: RawFeature[] }>(`/api/v1/regions/${regionId}/features`)
-  return (res.features ?? []).map(mapFeature)
-}
-
-export async function upsertFeatureFlag(
-  token: string,
-  regionId: string,
-  data: { key: string; enabled: boolean; config?: Record<string, unknown> | null }
-): Promise<FeatureFlag> {
-  const body: Record<string, unknown> = { feature_key: data.key, enabled: data.enabled }
-  if (data.config !== undefined) {
-    body.config = data.config
-  }
-  await api<{ status: string }>(`/api/v1/admin/regions/${regionId}/features`, {
-    method: "POST",
-    body,
-    token,
-  })
-  // Upsert returns { status: "ok" }, so re-fetch the list and find the flag
-  const all = await getFeatureFlags(token, regionId)
-  return all.find((f) => f.key === data.key) ?? { id: "", key: data.key, enabled: data.enabled, regionId }
-}
+// ── Marketplace config ──────────────────────────────────────────────────────
+// Feature flags previously lived here as a regional CRUD; they now live as
+// build-time NEXT_PUBLIC_FEATURE_* env vars via lib/features.ts. The handful
+// of flags that ever flipped were buyer-side kill-switches that don't
+// justify a backend table.
 
 export interface MarketplaceConfig {
   maxProductImages: number
   maxProductTags: number
 }
 
-export async function getMarketplaceConfig(regionId: string): Promise<MarketplaceConfig> {
-  try {
-    const res = await api<{ features: RawFeature[] }>(`/api/v1/regions/${regionId}/features`)
-    const marketplace = (res.features ?? []).find((f) => f.feature_key === "marketplace_enabled")
-    const cfg = (marketplace?.config ?? {}) as Record<string, unknown>
-    return {
-      maxProductImages: typeof cfg.max_product_images === "number" ? cfg.max_product_images : 8,
-      maxProductTags: typeof cfg.max_product_tags === "number" ? cfg.max_product_tags : 10,
-    }
-  } catch {
-    return { maxProductImages: 8, maxProductTags: 10 }
-  }
+/**
+ * Marketplace caps. Previously embedded in the marketplace_enabled feature
+ * flag's config blob; now hardcoded defaults until we have a real reason to
+ * make these region-aware. Kept as a function so callers don't shift.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function getMarketplaceConfig(_regionId: string): Promise<MarketplaceConfig> {
+  return { maxProductImages: 8, maxProductTags: 10 }
 }
 
 // ── Public: Seller marketing stats ────────────────────────────────────────
