@@ -13,7 +13,8 @@ import { persist } from "zustand/middleware"
  * so we don't nag them forever.
  */
 export interface BuyerLocation {
-  postalCode: string
+  /** Optional — auto-detect may save just coords if reverse-geocode fails. */
+  postalCode?: string
   country: string
   state?: string | null
   lat?: number | null

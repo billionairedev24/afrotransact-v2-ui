@@ -47,6 +47,17 @@ export function DeliverToPicker() {
         async (pos) => {
           window.clearTimeout(fallback)
           if (cancelled) return
+          // Save coords immediately so geo-filtered search + PDP eligibility
+          // work regardless of whether reverse-geocode succeeds. We then try
+          // to enrich with a postal code; failure is silent — the user keeps
+          // the click-to-change pill, which now shows "Near you".
+          const baseLoc = {
+            postalCode: undefined as string | undefined,
+            country: "US",
+            state: null as string | null,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          }
           try {
             const r = await reverseGeocode(pos.coords.latitude, pos.coords.longitude)
             if (cancelled) return
@@ -61,9 +72,9 @@ export function DeliverToPicker() {
               return
             }
           } catch {
-            // fall through to manual modal
+            // fall through to coord-only save
           }
-          if (!cancelled) setOpen(true)
+          if (!cancelled) setLocation(baseLoc)
         },
         () => {
           window.clearTimeout(fallback)
@@ -92,7 +103,7 @@ export function DeliverToPicker() {
         <span className="flex flex-col items-start leading-tight">
           <span className="text-[10px] text-white/60">Deliver to</span>
           <span className="font-semibold text-white">
-            {location ? `${location.postalCode}` : "Select"}
+            {location ? (location.postalCode || "Near you") : "Select"}
           </span>
         </span>
       </button>
