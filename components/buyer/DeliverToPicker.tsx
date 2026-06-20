@@ -160,35 +160,107 @@ function DeliverToModal({
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setErr(null)
-    if (!postalCode.trim()) {
+    const code = postalCode.trim()
+    if (!code) {
       setErr("Postal code is required.")
       return
     }
     setSubmitting(true)
     try {
-      const geo = await geocodePostalCode(postalCode.trim(), country)
-      if (!geo.ok) {
-        // Save without coords — eligibility falls back to "unknown" but
-        // still lets the buyer shop. Country/state region matching works.
-        onSave({
-          postalCode: postalCode.trim(),
-          country,
-          state: state.trim() || null,
-        })
-        return
+      let lat: number | null = null
+      let lng: number | null = null
+      let city: string | null = null
+      let resolvedState: string | null = state.trim() || null
+
+      // Primary: our seller-side Google geocoder.
+      try {
+        const geo = await geocodePostalCode(code, country)
+        if (geo.ok) {
+          lat = geo.lat ?? null
+          lng = geo.lng ?? null
+        }
+      } catch { /* try fallback */ }
+
+      // Fallback for US ZIPs: Zippopotam.us, key-free.
+      if (lat == null && country === "US") {
+        try {
+          const z = await fetch(`https://api.zippopotam.us/us/${encodeURIComponent(code)}`).then((r) => r.ok ? r.json() : null) as
+            | { places?: Array<{ latitude: string; longitude: string; "place name": string; "state abbreviation": string }> }
+            | null
+          const place = z?.places?.[0]
+          if (place) {
+            lat = parseFloat(place.latitude)
+            lng = parseFloat(place.longitude)
+            city = place["place name"]
+            if (!resolvedState) resolvedState = place["state abbreviation"]
+          }
+        } catch { /* keep going */ }
       }
+
       onSave({
-        postalCode: postalCode.trim(),
+        postalCode: code,
         country,
-        state: state.trim() || null,
-        lat: geo.lat ?? null,
-        lng: geo.lng ?? null,
+        state: resolvedState,
+        city,
+        lat,
+        lng,
       })
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not save location.")
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function useCurrentLocation() {
+    setErr(null)
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setErr("Your browser doesn't support geolocation.")
+      return
+    }
+    setSubmitting(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords
+        let resolved: { postalCode?: string; country?: string; state?: string | null; city?: string | null } | null = null
+        try {
+          const r = await reverseGeocode(lat, lng)
+          if (r.ok && r.postalCode) {
+            resolved = { postalCode: r.postalCode, country: r.country, state: r.state }
+          }
+        } catch { /* try BDC */ }
+        if (!resolved) {
+          try {
+            const bdc = await fetch(
+              `https://api-bdc.io/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+            ).then((r) => r.json() as Promise<{ postcode?: string; countryCode?: string; principalSubdivisionCode?: string; city?: string; locality?: string }>)
+            if (bdc) {
+              resolved = {
+                postalCode: bdc.postcode || undefined,
+                country: bdc.countryCode || "US",
+                state: bdc.principalSubdivisionCode?.split("-").pop() || null,
+                city: bdc.city || bdc.locality || null,
+              }
+            }
+          } catch { /* nothing */ }
+        }
+        onSave({
+          postalCode: resolved?.postalCode,
+          country: resolved?.country ?? "US",
+          state: resolved?.state ?? null,
+          city: resolved?.city ?? null,
+          lat,
+          lng,
+        })
+      },
+      (err) => {
+        setSubmitting(false)
+        setErr(err.code === err.PERMISSION_DENIED
+          ? "Location permission denied. Enable it in your browser settings or enter a ZIP."
+          : "Couldn't read your location. Try entering a ZIP instead.")
+      },
+      { timeout: 6000, maximumAge: 60_000, enableHighAccuracy: false },
+    )
   }
 
   return (
@@ -220,6 +292,16 @@ function DeliverToModal({
         </header>
 
         <div className="px-6 py-5 space-y-4">
+          <button
+            type="button"
+            onClick={useCurrentLocation}
+            disabled={submitting}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
+            Use my current location
+          </button>
+          <div className="text-center text-[11px] uppercase tracking-wider text-gray-400">or enter a ZIP</div>
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Country</label>
             <select
