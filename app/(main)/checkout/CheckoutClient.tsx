@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -100,6 +100,151 @@ const STEPS: { id: Step; label: string; icon: typeof MapPin }[] = [
   { id: "review",  label: "Review",    icon: Package    },
   { id: "payment", label: "Payment",   icon: CreditCard },
 ]
+
+/* ── ShippingRatePicker ─────────────────────────────────────────────
+   Amazon-style: a single flat list sorted by Cheapest or Fastest with
+   inline badges on the relevant rows + carrier name on each. Auto-
+   selects the cheapest option once quotes land so the buyer can hit
+   Continue without thinking. */
+function ShippingRatePicker({
+  quoteData,
+  selectedQuoteId,
+  onSelectQuote,
+}: {
+  quoteData: ShippingQuoteResponse
+  selectedQuoteId: string | null
+  onSelectQuote: (id: string) => void
+}) {
+  const [sortBy, setSortBy] = useState<"cheapest" | "fastest">("cheapest")
+
+  const allOptions = useMemo(() => {
+    const flat: Array<ShippingQuoteOption & { carrier: string }> = []
+    for (const g of quoteData.groups ?? []) {
+      for (const o of g.options) flat.push({ ...o, carrier: g.carrier })
+    }
+    return flat
+  }, [quoteData])
+
+  const cheapestId = useMemo(() => {
+    let id: string | null = null
+    let best = Number.POSITIVE_INFINITY
+    for (const o of allOptions) {
+      if (o.amountCents < best) { best = o.amountCents; id = o.quoteId }
+    }
+    return id
+  }, [allOptions])
+
+  const fastestId = useMemo(() => {
+    let id: string | null = null
+    let best = Number.POSITIVE_INFINITY
+    for (const o of allOptions) {
+      if (o.estimatedDays != null && o.estimatedDays < best) { best = o.estimatedDays; id = o.quoteId }
+    }
+    return id
+  }, [allOptions])
+
+  const sorted = useMemo(() => {
+    const copy = [...allOptions]
+    if (sortBy === "cheapest") {
+      copy.sort((a, b) => a.amountCents - b.amountCents || (a.estimatedDays ?? 99) - (b.estimatedDays ?? 99))
+    } else {
+      copy.sort((a, b) => (a.estimatedDays ?? 99) - (b.estimatedDays ?? 99) || a.amountCents - b.amountCents)
+    }
+    return copy
+  }, [allOptions, sortBy])
+
+  // Default-select the cheapest if the buyer hasn't picked anything.
+  useEffect(() => {
+    if (!selectedQuoteId && cheapestId) onSelectQuote(cheapestId)
+  }, [selectedQuoteId, cheapestId, onSelectQuote])
+
+  if (allOptions.length === 0) return null
+
+  return (
+    <div className="mb-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-gray-900">Choose delivery speed</p>
+        <div className="flex items-center gap-3">
+          {quoteData.packageCount && quoteData.packageCount > 1 && (
+            <span className="text-xs text-gray-500">{quoteData.packageCount} packages</span>
+          )}
+          <div className="flex items-center rounded-full border border-gray-200 p-0.5 text-xs">
+            {(["cheapest", "fastest"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSortBy(s)}
+                className={cn(
+                  "px-3 py-1 rounded-full font-semibold capitalize transition-colors",
+                  sortBy === s ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100",
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100 overflow-hidden">
+        {sorted.map((opt) => {
+          const isSelected = selectedQuoteId === opt.quoteId
+          const isCheapest = opt.quoteId === cheapestId
+          const isFastest = opt.quoteId === fastestId
+          return (
+            <label
+              key={opt.quoteId}
+              className={cn(
+                "relative flex cursor-pointer items-center gap-4 px-4 py-3 transition-colors",
+                isSelected ? "bg-amber-50/50" : "hover:bg-gray-50",
+              )}
+            >
+              <input
+                type="radio"
+                name="shipping-quote"
+                checked={isSelected}
+                onChange={() => onSelectQuote(opt.quoteId)}
+                className="sr-only"
+              />
+              <div className={cn(
+                "shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center",
+                isSelected ? "border-brand-gold" : "border-gray-300",
+              )}>
+                {isSelected && <div className="h-2.5 w-2.5 rounded-full bg-brand-gold" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-900 truncate">{opt.serviceName}</span>
+                  {isCheapest && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
+                      Cheapest
+                    </span>
+                  )}
+                  {isFastest && !isCheapest && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide bg-violet-100 text-violet-800 px-1.5 py-0.5 rounded">
+                      Fastest
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {opt.carrier}
+                  {opt.estimatedDays != null && ` · ${opt.estimatedDays} day${opt.estimatedDays !== 1 ? "s" : ""}`}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                {opt.amountCents === 0 ? (
+                  <span className="text-sm font-bold text-green-600">FREE</span>
+                ) : (
+                  <span className="text-sm font-bold text-gray-900">{formatCents(opt.amountCents)}</span>
+                )}
+              </div>
+            </label>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -803,60 +948,11 @@ function ReviewStep({
         )}
 
         {!freeShippingApplies && quoteData?.realtimeEnabled && quoteData.eligibleByGeo && (quoteData.groups?.length ?? 0) > 0 && (
-          <div className="mb-4 space-y-2">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-semibold text-gray-900">Choose delivery speed</p>
-              {quoteData.packageCount && quoteData.packageCount > 1 && (
-                <span className="text-xs text-gray-500">{quoteData.packageCount} packages</span>
-              )}
-            </div>
-            {(quoteData.groups ?? []).flatMap((group) =>
-              group.options.map((opt) => {
-                const isSelected = selectedQuoteId === opt.quoteId
-                const isFastest = opt.tier === "express" || opt.tier === "overnight"
-                const isStandard = opt.tier === "standard" || opt.tier === "ground"
-                const TierIcon = isFastest ? Zap : isStandard ? Truck : Clock
-                return (
-                  <label
-                    key={opt.quoteId}
-                    className={`flex cursor-pointer items-center gap-4 rounded-2xl border-2 p-4 transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      checked={isSelected}
-                      onChange={() => onSelectQuote(opt.quoteId)}
-                      className="sr-only"
-                    />
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                      isSelected ? "bg-primary/20" : "bg-gray-100"
-                    }`}>
-                      <TierIcon className={`h-5 w-5 ${isSelected ? "text-foreground" : "text-gray-500"}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{opt.serviceName}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{group.carrier} · {opt.estimatedDays} day{opt.estimatedDays !== 1 ? "s" : ""}</p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      {opt.amountCents === 0 ? (
-                        <span className="text-sm font-bold text-green-600">FREE</span>
-                      ) : (
-                        <span className="text-sm font-bold text-gray-900">{formatCents(opt.amountCents)}</span>
-                      )}
-                    </div>
-                    <div className={`shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                      isSelected ? "border-primary bg-primary" : "border-gray-300"
-                    }`}>
-                      {isSelected && <div className="h-2 w-2 rounded-full bg-brand-gold-foreground" />}
-                    </div>
-                  </label>
-                )
-              })
-            )}
-          </div>
+          <ShippingRatePicker
+            quoteData={quoteData}
+            selectedQuoteId={selectedQuoteId}
+            onSelectQuote={onSelectQuote}
+          />
         )}
 
         {!freeShippingApplies && quoteData?.realtimeEnabled && quoteData.eligibleByGeo && quoteData.message && (quoteData.groups?.length ?? 0) === 0 && (
