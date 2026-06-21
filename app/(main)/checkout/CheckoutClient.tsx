@@ -62,6 +62,7 @@ import {
   loadCheckoutShippingContext,
   createAddress,
   updateAddress,
+  setDefaultAddress,
   getUserProfile,
   validateCoupon,
   getShippingQuotes,
@@ -230,7 +231,11 @@ function AddressStep({
     try {
       try {
         await getUserProfile(token)
-        const payload = {
+        // UpdateAddressRequest on the backend has no isDefault field — sending
+        // it on PUT yields a 400. Strip it for updates; set-default flips via
+        // a separate endpoint (handled below when the user ticks the box on
+        // an existing address).
+        const basePayload = {
           label: "shipping",
           line1: form.line1.trim(),
           line2: form.line2?.trim() || undefined,
@@ -238,11 +243,16 @@ function AddressStep({
           state: form.state?.trim() || "",
           postalCode: form.zip.trim(),
           countryCode: "US",
-          isDefault: makeDefault || savedAddresses.length === 0,
         }
         const saved = editingId
-          ? await updateAddress(token, editingId, payload)
-          : await createAddress(token, payload)
+          ? await updateAddress(token, editingId, basePayload)
+          : await createAddress(token, {
+              ...basePayload,
+              isDefault: makeDefault || savedAddresses.length === 0,
+            })
+        if (editingId && makeDefault) {
+          try { await setDefaultAddress(token, editingId) } catch { /* non-fatal */ }
+        }
         setEditingId(null)
         onNext({
           shippingAddressId: saved.id,
