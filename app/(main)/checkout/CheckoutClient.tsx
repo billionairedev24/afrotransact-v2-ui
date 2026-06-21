@@ -584,12 +584,18 @@ function AddressStep({
                   <p className="text-sm font-bold text-foreground">
                     {form.fullName || sessionName || "Saved address"}
                   </p>
-                  <p className="text-sm text-gray-600 leading-relaxed mt-1">
-                    {addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}
-                    <br />
-                    {addr.city}, {addr.state} {addr.postalCode}
-                    <br />
-                    {addr.countryCode || "United States"}
+                  <p className="text-sm text-gray-600 truncate mt-0.5" title={[
+                    addr.line1,
+                    addr.line2,
+                    `${addr.city}, ${addr.state} ${addr.postalCode}`,
+                    addr.countryCode || "US",
+                  ].filter(Boolean).join(" · ")}>
+                    {[
+                      addr.line1,
+                      addr.line2,
+                      `${addr.city}, ${addr.state} ${addr.postalCode}`,
+                      addr.countryCode || "US",
+                    ].filter(Boolean).join(" · ")}
                   </p>
                   <button
                     type="button"
@@ -1563,10 +1569,11 @@ export default function CheckoutClient({
         const first = q.groups?.[0]?.options?.[0]?.quoteId
         setSelectedQuoteId((prev) => prev ?? first ?? null)
       } catch {
-        if (!cancelled) {
-          setShippingQuotes(null)
-          setSelectedQuoteId(null)
-        }
+        // Don't blow away an already-good quote response on a transient
+        // refetch failure (network blip, rate-limit on the second StrictMode
+        // mount). The buyer was seeing rates flash in then vanish back to
+        // the platform tile. Keep the last-good list visible until the
+        // address materially changes; the next successful fetch overwrites.
       }
     })()
     return () => {
