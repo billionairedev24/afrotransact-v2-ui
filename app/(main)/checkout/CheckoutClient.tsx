@@ -774,6 +774,7 @@ function DeliveryOptions({
   onConfirm,
   placing,
   quoteData,
+  quotesLoading,
   selectedQuoteId,
   onSelectQuote,
   freeShippingApplies,
@@ -782,10 +783,25 @@ function DeliveryOptions({
   onConfirm: () => void
   placing: boolean
   quoteData: ShippingQuoteResponse | null
+  quotesLoading: boolean
   selectedQuoteId: string | null
   onSelectQuote: (id: string) => void
   freeShippingApplies: boolean
 }) {
+  // Loading skeleton while quotes are in flight. Critical: WITHOUT this we
+  // briefly show the platform Standard-delivery tile before rates land, and
+  // a click here would lock the buyer into weight-based pricing.
+  if (quotesLoading && !freeShippingApplies) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-gray-500">Fetching live carrier rates…</p>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse" />
+        ))}
+      </div>
+    )
+  }
+
   const hasCarrierRates =
     !freeShippingApplies
     && quoteData?.realtimeEnabled
@@ -812,39 +828,50 @@ function DeliveryOptions({
     )
   }
 
+  // Platform fallback. Only reachable when carrier mode is off, the address
+  // isn't eligible (geo allowlist), or Shippo returned no rates. Surface
+  // why so the buyer doesn't think they're being shortchanged.
+  const fallbackReason =
+    quoteData?.realtimeEnabled === false ? "Carrier rating is currently disabled by the platform."
+    : quoteData?.eligibleByGeo === false ? "Live carrier rates aren't available for this address yet."
+    : (quoteData?.groups?.length ?? 0) === 0 && quoteData?.message ? quoteData.message
+    : (quoteData?.groups?.length ?? 0) === 0 ? "No carrier returned a rate for this shipment — using platform standard."
+    : null
   return (
-    <div className="flex flex-col gap-3">
-      <label className="relative cursor-pointer block">
-        <input
-          type="radio"
-          name="delivery"
-          checked
-          onChange={onConfirm}
-          disabled={placing}
-          className="sr-only"
-        />
-        <div
-          onClick={onConfirm}
-          className="flex items-center justify-between p-4 border-2 border-brand-gold rounded-lg bg-white"
-        >
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-5 h-5 shrink-0 rounded-full border-2 border-brand-gold flex items-center justify-center">
-              <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">Standard delivery</p>
-              <p className="text-xs text-gray-500 mt-0.5">Delivery in 3-5 business days</p>
-            </div>
+    <div className="space-y-3">
+      {fallbackReason && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          {fallbackReason}
+        </p>
+      )}
+      <div
+        className="flex items-center justify-between p-4 border-2 border-brand-gold rounded-lg bg-white"
+      >
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-5 h-5 shrink-0 rounded-full border-2 border-brand-gold flex items-center justify-center">
+            <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />
           </div>
-          <span className="text-sm font-semibold whitespace-nowrap ml-3">
-            {shippingCents === 0 ? (
-              <span className="text-brand-gold">Free</span>
-            ) : (
-              <span className="text-foreground">${(shippingCents / 100).toFixed(2)}</span>
-            )}
-          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Standard delivery</p>
+            <p className="text-xs text-gray-500 mt-0.5">Delivery in 3-5 business days</p>
+          </div>
         </div>
-      </label>
+        <span className="text-sm font-semibold whitespace-nowrap ml-3">
+          {shippingCents === 0 ? (
+            <span className="text-brand-gold">Free</span>
+          ) : (
+            <span className="text-foreground">${(shippingCents / 100).toFixed(2)}</span>
+          )}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={placing}
+        className="w-full rounded-full bg-brand-gold px-6 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
+      >
+        Continue to payment
+      </button>
     </div>
   )
 }
@@ -1155,6 +1182,12 @@ export default function CheckoutClient({
   // call sees `true` immediately and bails.
   const placingRef = useRef(false)
   const [shippingQuotes, setShippingQuotes] = useState<ShippingQuoteResponse | null>(null)
+  // True while a quote fetch is in flight after entering the review step.
+  // Used to suppress the "Standard delivery" fallback tile and the Place
+  // Order CTA before we know whether carrier rates are available — without
+  // this, the buyer could (and did) auto-advance to payment with the
+  // platform weight-based price before Shippo even answered.
+  const [quotesLoading, setQuotesLoading] = useState(false)
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null)
   const [couponCode, setCouponCode] = useState("")
   const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
@@ -1557,6 +1590,7 @@ export default function CheckoutClient({
     }
     if (!address.state && !address.city) return
     let cancelled = false
+    setQuotesLoading(true)
     ;(async () => {
       try {
         const q = await getShippingQuotes(authToken, {
@@ -1569,14 +1603,13 @@ export default function CheckoutClient({
         })
         if (cancelled) return
         setShippingQuotes(q)
-        const first = q.groups?.[0]?.options?.[0]?.quoteId
-        setSelectedQuoteId((prev) => prev ?? first ?? null)
+        // Leave selection to the picker (it auto-picks the cheapest). Don't
+        // force-pick the first option here — the picker's logic takes
+        // precedence and a stale "first" can mis-select the priciest tier.
       } catch {
-        // Don't blow away an already-good quote response on a transient
-        // refetch failure (network blip, rate-limit on the second StrictMode
-        // mount). The buyer was seeing rates flash in then vanish back to
-        // the platform tile. Keep the last-good list visible until the
-        // address materially changes; the next successful fetch overwrites.
+        // Keep last-good list visible on a transient refetch failure.
+      } finally {
+        if (!cancelled) setQuotesLoading(false)
       }
     })()
     return () => {
@@ -1644,8 +1677,21 @@ export default function CheckoutClient({
   //   - on the payment step Stripe's own confirm flow runs (we don't fire
   //     it from here to keep the iframe-driven flow untouched); the user
   //     uses the inline Pay button rendered by PaymentStep.
+  // Right-side "Place your order" CTA. We gate it carefully on the review
+  // step: if carrier rates are loading, or rates are available but the
+  // buyer hasn't picked one, the button stays disabled. Otherwise the
+  // buyer could click it before Shippo answered and the backend would
+  // silently default to weight-based pricing.
+  const carrierRatesPending =
+    step === "review"
+    && !freeShippingApplies
+    && (quotesLoading
+        || (shippingQuotes?.realtimeEnabled
+            && shippingQuotes.eligibleByGeo
+            && (shippingQuotes.groups?.length ?? 0) > 0
+            && !selectedQuoteId))
   const placeOrderHandler = () => {
-    if (step === "review") syncCartAndCheckout()
+    if (step === "review" && !carrierRatesPending) syncCartAndCheckout()
   }
 
   if (step === "success") {
@@ -1837,6 +1883,7 @@ export default function CheckoutClient({
                   onConfirm={syncCartAndCheckout}
                   placing={placing}
                   quoteData={shippingQuotes}
+                  quotesLoading={quotesLoading}
                   selectedQuoteId={selectedQuoteId}
                   onSelectQuote={setSelectedQuoteId}
                   freeShippingApplies={freeShippingApplies}
@@ -1928,6 +1975,7 @@ export default function CheckoutClient({
                   Boolean(gatesReady && !marketplacePurchasingAllowed) ||
                   placing ||
                   step === "address" ||
+                  carrierRatesPending ||
                   (step === "payment" && !stripeAvailable)
                 }
                 className="w-full rounded-full bg-brand-gold py-3.5 text-base font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
