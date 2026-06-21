@@ -2256,6 +2256,7 @@ export interface UserAddress {
   postalCode: string
   countryCode: string
   isDefault: boolean
+  phone?: string | null
   createdAt: string
   updatedAt: string
 }

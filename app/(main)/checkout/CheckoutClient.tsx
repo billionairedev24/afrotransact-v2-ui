@@ -357,7 +357,7 @@ function AddressStep({
       city: usingRecipientAddr ? recipientAddress.city : addr.city,
       state: usingRecipientAddr ? recipientAddress.state : addr.state || "",
       zip: usingRecipientAddr ? recipientAddress.zip : addr.postalCode || "",
-      phone: shipToOther ? recipientPhone.trim() : form.phone || "",
+      phone: shipToOther ? recipientPhone.trim() : (addr.phone || form.phone || ""),
     })
   }
 
@@ -388,6 +388,7 @@ function AddressStep({
           state: form.state?.trim() || "",
           postalCode: form.zip.trim(),
           countryCode: "US",
+          phone: form.phone?.trim() || undefined,
         }
         const saved = editingId
           ? await updateAddress(token, editingId, basePayload)
@@ -603,6 +604,7 @@ function AddressStep({
                         city: addr.city,
                         state: addr.state || "",
                         zip: addr.postalCode || "",
+                        phone: addr.phone || prev.phone,
                       }))
                       setAddressQuery(addr.line1)
                       setShowNew(true)
