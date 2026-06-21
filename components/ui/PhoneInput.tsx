@@ -130,14 +130,16 @@ export function PhoneInput({
     <div className={`flex gap-2 ${className}`}>
       <select
         aria-label="Country code"
-        className="border border-border rounded px-2 py-2 bg-background text-sm shrink-0 max-w-[12rem]"
+        className="border border-border rounded px-2 py-2 bg-background text-sm shrink-0 w-[7rem] min-w-0"
         value={country}
         onChange={(e) => handleCountry(e.target.value as CountryCode)}
         disabled={disabled}
       >
         {COUNTRY_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>
-            {o.label} ({callingCodeFor(o.value)})
+            {/* Compact label: emoji flag + calling code only — full country
+                name overflows in tight columns like the checkout address modal. */}
+            {o.label.slice(0, 4)} {callingCodeFor(o.value)}
           </option>
         ))}
       </select>

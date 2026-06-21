@@ -317,15 +317,14 @@ function AddressStep({
           </button>
         </div>
         <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            {field("Full name", "fullName", "Jane Doe")}
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
-              <PhoneInput
-                value={form.phone}
-                onChange={(e164) => setForm({ ...form, phone: e164 })}
-              />
-            </div>
+          {field("Full name", "fullName", "Jane Doe")}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
+            <PhoneInput
+              value={form.phone}
+              onChange={(e164) => setForm({ ...form, phone: e164 })}
+              className="w-full"
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
