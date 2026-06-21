@@ -757,19 +757,55 @@ function AddressStep({
  * actual shipping cost server-side and returns it in `displayShipping`
  * (see CheckoutClient's Order Summary). No client-side calculation.
  */
+/**
+ * Delivery picker. When the carrier-quote response contains live rates
+ * we hand off to ShippingRatePicker so the buyer sees every option
+ * (Cheapest/Fastest badges, sort toggle). Otherwise we fall back to the
+ * platform per-weight standard tile.
+ */
 function DeliveryOptions({
   shippingCents,
   onConfirm,
   placing,
+  quoteData,
+  selectedQuoteId,
+  onSelectQuote,
+  freeShippingApplies,
 }: {
   shippingCents: number
   onConfirm: () => void
-  /** True while the parent is placing/syncing the order. */
   placing: boolean
+  quoteData: ShippingQuoteResponse | null
+  selectedQuoteId: string | null
+  onSelectQuote: (id: string) => void
+  freeShippingApplies: boolean
 }) {
-  // Single tile while carrier-rated shipping is disabled. Selecting it (or
-  // re-clicking it) advances to Payment via the same handler the Order
-  // Summary CTA uses — no extra button needed.
+  const hasCarrierRates =
+    !freeShippingApplies
+    && quoteData?.realtimeEnabled
+    && quoteData.eligibleByGeo
+    && (quoteData.groups?.length ?? 0) > 0
+
+  if (hasCarrierRates) {
+    return (
+      <div className="space-y-4">
+        <ShippingRatePicker
+          quoteData={quoteData!}
+          selectedQuoteId={selectedQuoteId}
+          onSelectQuote={onSelectQuote}
+        />
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={placing || !selectedQuoteId}
+          className="w-full rounded-full bg-brand-gold px-6 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
+        >
+          Continue to payment
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <label className="relative cursor-pointer block">
@@ -1777,6 +1813,10 @@ export default function CheckoutClient({
                   shippingCents={displayShipping}
                   onConfirm={syncCartAndCheckout}
                   placing={placing}
+                  quoteData={shippingQuotes}
+                  selectedQuoteId={selectedQuoteId}
+                  onSelectQuote={setSelectedQuoteId}
+                  freeShippingApplies={freeShippingApplies}
                 />
               ) : (
                 <div className="flex items-start justify-between gap-4">
