@@ -1237,6 +1237,9 @@ export default function CheckoutClient({
           ? appliedDeal.originalPriceCents - appliedDeal.dealPriceCents
           : 0)
     : 0
+  // `shipping` is the platform weight-based fallback. Compute effective
+  // shipping here so total / order-summary / Place-order all agree before
+  // checkoutResult comes back from the backend.
   const total = subtotal + tax + shipping - discount - dealDiscount
 
   const availableDeals = allDeals.filter(d => cartItems.some(i => i.productId === d.productId))
@@ -1608,10 +1611,23 @@ export default function CheckoutClient({
     )
   }
 
-  const displayTotal = checkoutResult?.totalCents ?? total
+  // When realtime carrier quotes are showing and the buyer has picked one,
+  // its amount IS the shipping cost — not the platform weight-based fallback.
+  // Order summary, the collapsed Delivery card, and the total all need to
+  // reflect the carrier rate immediately so what the buyer sees matches what
+  // they're charged. The backend echoes the same amount back via
+  // checkoutResult.shippingCostCents after place-order, which wins once it
+  // lands (handles edge cases like rate expiry / re-quote on the server).
+  const selectedQuoteCents = shippingQuotes?.groups
+    ?.flatMap((g) => g.options)
+    .find((o) => o.quoteId === selectedQuoteId)?.amountCents
+  const effectiveShipping = freeShippingApplies ? 0 : (selectedQuoteCents ?? shipping)
+  const displayTotal = checkoutResult?.totalCents
+    ?? (subtotal + tax + effectiveShipping - discount - dealDiscount)
   const displaySubtotal = checkoutResult?.subtotalCents ?? subtotal
   const displayTax = checkoutResult?.taxCents ?? tax
-  const displayShipping = checkoutResult?.shippingCostCents ?? shipping
+  const displayShipping = checkoutResult?.shippingCostCents
+    ?? (freeShippingApplies ? 0 : selectedQuoteCents ?? shipping)
   const totalDiscount = discount + dealDiscount
 
   // currentIdx still drives section completion state (silences unused-var lint via this reference)
