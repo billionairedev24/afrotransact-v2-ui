@@ -61,6 +61,7 @@ import {
   getRegions,
   loadCheckoutShippingContext,
   createAddress,
+  updateAddress,
   getUserProfile,
   validateCoupon,
   getShippingQuotes,
@@ -131,6 +132,9 @@ function AddressStep({
     seedDef?.id ?? seedAddrs[0]?.id ?? null,
   )
   const [showNew, setShowNew] = useState(initialContext ? seedAddrs.length === 0 : false)
+  // When set, the address modal updates this saved address instead of
+  // creating a new one. Cleared whenever the modal closes.
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [shipToOther, setShipToOther] = useState(false)
   // Separate recipient override — never mutates the profile-sourced form fields
   const [recipientName, setRecipientName] = useState("")
@@ -226,7 +230,7 @@ function AddressStep({
     try {
       try {
         await getUserProfile(token)
-        const created = await createAddress(token, {
+        const payload = {
           label: "shipping",
           line1: form.line1.trim(),
           line2: form.line2?.trim() || undefined,
@@ -235,9 +239,13 @@ function AddressStep({
           postalCode: form.zip.trim(),
           countryCode: "US",
           isDefault: makeDefault || savedAddresses.length === 0,
-        })
+        }
+        const saved = editingId
+          ? await updateAddress(token, editingId, payload)
+          : await createAddress(token, payload)
+        setEditingId(null)
         onNext({
-          shippingAddressId: created.id,
+          shippingAddressId: saved.id,
           ...inline,
         })
         return
@@ -295,6 +303,7 @@ function AddressStep({
   // cart rather than trapping them on a half-complete checkout page.
   const dismissNewAddress = () => {
     setShowNew(false)
+    setEditingId(null)
     if (savedAddresses.length === 0) router.push("/cart")
   }
   const newAddressModal = showNew && (
@@ -306,7 +315,7 @@ function AddressStep({
     >
       <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h3 className="text-lg font-bold text-foreground">Add New Address</h3>
+          <h3 className="text-lg font-bold text-foreground">{editingId ? "Edit Address" : "Add New Address"}</h3>
           <button
             type="button"
             onClick={dismissNewAddress}
@@ -390,13 +399,16 @@ function AddressStep({
     <div className="space-y-6">
       {newAddressModal}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100 overflow-hidden">
         {savedAddresses.map((addr) => {
           const isSelected = selectedId === addr.id
           return (
             <label
               key={addr.id}
-              className="relative cursor-pointer group"
+              className={cn(
+                "relative cursor-pointer flex items-start gap-4 px-4 py-4 transition-colors",
+                isSelected ? "bg-amber-50/40" : "bg-white hover:bg-gray-50",
+              )}
             >
               <input
                 type="radio"
@@ -406,20 +418,13 @@ function AddressStep({
                 className="sr-only"
               />
               <div className={cn(
-                "relative h-full rounded-lg border-2 p-4 transition-all",
-                isSelected
-                  ? "border-brand-gold bg-white"
-                  : "border-gray-200 bg-white group-hover:border-gray-300",
+                "mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                isSelected ? "border-brand-gold" : "border-gray-300",
               )}>
-                <div className="absolute top-4 right-4">
-                  <div className={cn(
-                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
-                    isSelected ? "border-brand-gold" : "border-gray-300",
-                  )}>
-                    {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />}
-                  </div>
-                </div>
-                <div className="pr-8">
+                {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div>
                   <p className="text-sm font-bold text-foreground">
                     {form.fullName || sessionName || "Saved address"}
                   </p>
@@ -434,7 +439,8 @@ function AddressStep({
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
-                      // Pre-fill the new-address form with this entry then open modal.
+                      // Editing an existing saved address — update on save instead of creating a duplicate.
+                      setEditingId(addr.id)
                       setForm((prev) => ({
                         ...prev,
                         line1: addr.line1,
@@ -446,7 +452,7 @@ function AddressStep({
                       setAddressQuery(addr.line1)
                       setShowNew(true)
                     }}
-                    className="mt-3 text-xs font-bold uppercase tracking-wider text-brand-gold-foreground/80 hover:text-brand-gold-foreground transition-colors"
+                    className="mt-2 text-xs font-bold uppercase tracking-wider text-brand-gold-foreground/80 hover:text-brand-gold-foreground transition-colors"
                   >
                     Edit
                   </button>
