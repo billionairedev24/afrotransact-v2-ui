@@ -29,17 +29,24 @@ import {
   X,
   ArrowLeft,
   Truck as TruckIcon,
-  CornerDownLeft,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 // Stripe (~80KB of @stripe/react-stripe-js + @stripe/stripe-js) only loads when
 // the shopper actually reaches the payment step. Earlier steps (address, review)
 // get a lighter initial bundle.
-// Statically import so React refs forward into the Stripe form (next/dynamic
-// strips refs by default). Stripe.js itself is still lazy-loaded via getStripe()
-// the first time the Elements provider renders.
-import PaymentStep, { type PaymentSubmitHandle } from "./_stripe-payment"
-void dynamic // retain dynamic import in case other code starts using it
+const PaymentStep = dynamic(() => import("./_stripe-payment"), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-4">
+      <div className="h-6 w-40 rounded bg-muted animate-pulse" />
+      <div className="h-48 w-full rounded-2xl bg-muted animate-pulse" />
+      <div className="flex gap-3">
+        <div className="h-12 flex-1 rounded-xl bg-muted animate-pulse" />
+        <div className="h-12 flex-1 rounded-xl bg-muted animate-pulse" />
+      </div>
+    </div>
+  ),
+})
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import { PhoneInput } from "@/components/ui/PhoneInput"
@@ -291,21 +298,6 @@ function AddressStep({
   })
   const [addressQuery, setAddressQuery] = useState("")
 
-  // Fast path: server pre-seeded the addresses. Commit the default once on
-  // mount so the parent's address state populates without the buyer having
-  // to re-click their already-checked radio.
-  const seedCommittedRef = useRef(false)
-  useEffect(() => {
-    if (!initialContext) return
-    if (seedCommittedRef.current) return
-    const def = seedAddrs.find((a) => a.isDefault) ?? seedAddrs[0]
-    if (def) {
-      seedCommittedRef.current = true
-      commitAddress(def)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialContext])
-
   useEffect(() => {
     // Fast path: the server already gave us the addresses; don't refetch.
     if (initialContext) return
@@ -334,13 +326,9 @@ function AddressStep({
           phone: profile.phone || prev.phone,
         }))
         setSavedAddresses(addrs)
-        const def = addrs.find((a) => a.isDefault) ?? addrs[0]
-        if (def) {
-          setSelectedId(def.id)
-          // Commit the default automatically so the buyer doesn't have to
-          // click their own already-checked radio to advance.
-          commitAddress(def)
-        }
+        const def = addrs.find((a) => a.isDefault)
+        if (def) setSelectedId(def.id)
+        else if (addrs.length > 0) setSelectedId(addrs[0].id)
         setShowNew(addrs.length === 0)
       } catch {
         if (!cancelled) {
@@ -356,12 +344,12 @@ function AddressStep({
     }
   }, [token, initialContext, sessionName])
 
-  // Accepts an explicit address so the radio's onChange path doesn't have
-  // to wait for selectedId state to settle. The old "Use this address"
-  // button is gone — selection IS the action.
-  const commitAddress = (addr: UserAddress) => {
+  const handleUseSaved = () => {
+    const addr = savedAddresses.find((a) => a.id === selectedId)
+    if (!addr) return
     const usingRecipientAddr = shipToOther && recipientAddress.line1.trim()
     onNext({
+      // Only pass shippingAddressId if using the saved address (not an override address)
       ...(usingRecipientAddr ? {} : { shippingAddressId: addr.id }),
       fullName: shipToOther && recipientName.trim() ? recipientName.trim() : form.fullName,
       line1: usingRecipientAddr ? recipientAddress.line1 : addr.line1,
@@ -371,10 +359,6 @@ function AddressStep({
       zip: usingRecipientAddr ? recipientAddress.zip : addr.postalCode || "",
       phone: shipToOther ? recipientPhone.trim() : (addr.phone || form.phone || ""),
     })
-  }
-  const handleUseSaved = () => {
-    const addr = savedAddresses.find((a) => a.id === selectedId)
-    if (addr) commitAddress(addr)
   }
 
   const handleSaveNew = async () => {
@@ -571,7 +555,7 @@ function AddressStep({
     <div className="space-y-6">
       {newAddressModal}
 
-      <div className="rounded-lg border border-gray-200 bg-white divide-y divide-gray-200 overflow-hidden">
+      <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100 overflow-hidden">
         {savedAddresses.map((addr) => {
           const isSelected = selectedId === addr.id
           return (
@@ -586,10 +570,7 @@ function AddressStep({
                 type="radio"
                 name="address"
                 checked={isSelected}
-                onChange={() => {
-                  setSelectedId(addr.id)
-                  commitAddress(addr)
-                }}
+                onChange={() => setSelectedId(addr.id)}
                 className="sr-only"
               />
               <div className={cn(
@@ -603,9 +584,6 @@ function AddressStep({
                   <p className="text-sm font-bold text-foreground">
                     {form.fullName || sessionName || "Saved address"}
                   </p>
-                  {isSelected && (
-                    <Check className="absolute right-4 top-4 h-4 w-4 text-brand-gold" aria-hidden />
-                  )}
                   <p className="text-sm text-gray-600 truncate mt-0.5" title={[
                     addr.line1,
                     addr.line2,
@@ -637,7 +615,7 @@ function AddressStep({
                       setAddressQuery(addr.line1)
                       setShowNew(true)
                     }}
-                    className="mt-2 text-xs font-semibold uppercase tracking-wider text-foreground hover:underline transition-colors"
+                    className="mt-2 text-xs font-bold uppercase tracking-wider text-brand-gold-foreground/80 hover:text-brand-gold-foreground transition-colors"
                   >
                     Edit
                   </button>
@@ -648,14 +626,23 @@ function AddressStep({
         })}
       </div>
 
-      <div className="flex items-center">
+      {/* Footer row: + Add new address (left) · USE THIS ADDRESS (right) */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <button
           type="button"
           onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 text-sm font-semibold text-foreground hover:underline transition-colors"
+          className="flex items-center gap-2 text-sm font-bold text-brand-gold-foreground/80 hover:text-brand-gold-foreground transition-colors"
         >
           <Plus className="h-4 w-4" />
           Add a new address
+        </button>
+        <button
+          type="button"
+          disabled={!selectedId}
+          onClick={handleUseSaved}
+          className="px-6 py-2.5 rounded-full bg-brand-gold text-xs font-bold uppercase tracking-wider text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
+        >
+          Use this address
         </button>
       </div>
 
@@ -829,8 +816,14 @@ function DeliveryOptions({
           selectedQuoteId={selectedQuoteId}
           onSelectQuote={onSelectQuote}
         />
-        {/* No "Continue to payment" button — the single Place Order CTA
-            on the right summary is the only forward action. */}
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={placing || !selectedQuoteId}
+          className="w-full rounded-full bg-brand-gold px-6 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
+        >
+          Continue to payment
+        </button>
       </div>
     )
   }
@@ -871,7 +864,14 @@ function DeliveryOptions({
           )}
         </span>
       </div>
-      {/* Same here — Place Order on the right summary is the one CTA. */}
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={placing}
+        className="w-full rounded-full bg-brand-gold px-6 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
+      >
+        Continue to payment
+      </button>
     </div>
   )
 }
@@ -1165,24 +1165,6 @@ export default function CheckoutClient({
   // Idempotency-Key reused across retries of the same logical placement so
   // a network blip can't create a second order. Reset when the user goes back.
   const idempotencyKeyRef = useRef<string | null>(null)
-  // Declared up here (before any conditional early-return) so React hook
-  // ordering is stable across renders.
-  const paymentRef = useRef<PaymentSubmitHandle | null>(null)
-  // Hoisted up here so the useState + useEffect ordering stays stable across
-  // the if(!mounted) early-return below. placeError and checkoutResult are
-  // declared above paymentRef so they're in scope.
-  const [submitRequested, setSubmitRequested] = useState(false)
-  useEffect(() => {
-    if (!submitRequested) return
-    if (!checkoutResult?.paymentClientSecret) return
-    setSubmitRequested(false)
-    requestAnimationFrame(() => {
-      paymentRef.current?.submit().catch((e) => {
-        logError(e, "Stripe confirm")
-        setPlaceError("Could not confirm payment. Please try again.")
-      })
-    })
-  }, [submitRequested, checkoutResult?.paymentClientSecret])
 
   // Helper — fully drop the current placement attempt. Used by every
   // back-navigation handler in the review/payment steps. Without clearing
@@ -1330,33 +1312,20 @@ export default function CheckoutClient({
   // backend checkout sync (which mints the Stripe payment intent), so the
   // Payment section becomes interactable without any extra click.
   // The ref guards against double-firing.
-  // Auto-sync on entering review used to fire instantly and race the
-  // shipping-quote fetch. It would call /orders/checkout with no
-  // selectedShippingQuoteId, the backend defaulted to weight-based, set
-  // checkoutResult, and the success path inside syncCartAndCheckout
-  // setStep("payment") — so the buyer never even saw the carrier picker.
-  // Now we only auto-sync when no buyer decision is required: free shipping
-  // (no carrier picker shown at all) OR the carrier path returned no rates
-  // and we're showing the platform fallback tile. Otherwise the buyer
-  // explicitly clicks "Continue to payment" after picking a rate.
   const autoSyncedRef = useRef(false)
   useEffect(() => {
     if (step !== "review") {
+      // Reset the guard if the user goes back to address so a re-edit
+      // re-syncs once they return to review.
       if (step === "address") autoSyncedRef.current = false
       return
     }
     if (autoSyncedRef.current) return
     if (gatesReady && !marketplacePurchasingAllowed) return
-    // Wait for the quote fetch to finish before deciding.
-    if (quotesLoading) return
-    const realtimeOn = shippingQuotes?.realtimeEnabled
-      && shippingQuotes.eligibleByGeo
-      && (shippingQuotes.groups?.length ?? 0) > 0
-    if (!freeShippingApplies && realtimeOn) return // wait for explicit click
     autoSyncedRef.current = true
     void syncCartAndCheckout()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, gatesReady, marketplacePurchasingAllowed, quotesLoading, shippingQuotes, freeShippingApplies])
+  }, [step, gatesReady, marketplacePurchasingAllowed])
 
   useEffect(() => {
     if (!mounted) return
@@ -1461,11 +1430,11 @@ export default function CheckoutClient({
     setCouponError("")
   }
 
-  async function syncCartAndCheckout(): Promise<CheckoutResponse | null> {
+  async function syncCartAndCheckout() {
     // Synchronous re-entry guard — protects against double-click, React 18
     // StrictMode double-invokes, and any other path that fires this twice
     // within the same tick before `placing` propagates to disable the button.
-    if (placingRef.current) return null
+    if (placingRef.current) return
     placingRef.current = true
     setPlacing(true)
     setPlaceError(null)
@@ -1474,7 +1443,7 @@ export default function CheckoutClient({
       const token = await getAccessToken()
       if (!token) {
         router.push("/auth/login?callbackUrl=/checkout")
-        return null
+        return
       }
 
       const items = cartItems.map((item) => ({
@@ -1498,14 +1467,14 @@ export default function CheckoutClient({
         setPlaceError("Unable to load region configuration. Please refresh and try again.")
         placingRef.current = false
         setPlacing(false)
-        return null
+        return
       }
 
       if (gatesReady && !marketplacePurchasingAllowed) {
         setPlaceError("Purchasing is temporarily unavailable right now. Please try again soon.")
         placingRef.current = false
         setPlacing(false)
-        return null
+        return
       }
 
       const codes: string[] = []
@@ -1546,11 +1515,10 @@ export default function CheckoutClient({
 
       setCheckoutResult(result)
       setStep("payment")
-      return result
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         router.push("/auth/login?callbackUrl=/checkout")
-        return null
+        return
       }
       logError(e, "checkout")
       setPlaceError(
@@ -1562,7 +1530,6 @@ export default function CheckoutClient({
       placingRef.current = false
       setPlacing(false)
     }
-    return null
   }
 
   const handlePaymentComplete = useCallback(async () => {
@@ -1609,9 +1576,7 @@ export default function CheckoutClient({
   const currentIdx = STEPS.findIndex((s) => s.id === step)
 
   useEffect(() => {
-    // Single-page flow: fetch quotes as soon as we have an address, not when
-    // a step machine flips to "review". Without this the fetch never fires.
-    if (!address.line1 || !address.zip) return
+    if (step !== "review") return
     if (!authToken || !region) return
     if (gatesReady && !marketplacePurchasingAllowed) {
       setShippingQuotes(null)
@@ -1712,39 +1677,21 @@ export default function CheckoutClient({
   //   - on the payment step Stripe's own confirm flow runs (we don't fire
   //     it from here to keep the iframe-driven flow untouched); the user
   //     uses the inline Pay button rendered by PaymentStep.
-  // paymentRef is declared near the top of the component to keep hook
-  // ordering stable across the if(!mounted) early-return.
+  // Right-side "Place your order" CTA. We gate it carefully on the review
+  // step: if carrier rates are loading, or rates are available but the
+  // buyer hasn't picked one, the button stays disabled. Otherwise the
+  // buyer could click it before Shippo answered and the backend would
+  // silently default to weight-based pricing.
   const carrierRatesPending =
-    !freeShippingApplies
+    step === "review"
+    && !freeShippingApplies
     && (quotesLoading
         || (shippingQuotes?.realtimeEnabled
             && shippingQuotes.eligibleByGeo
             && (shippingQuotes.groups?.length ?? 0) > 0
             && !selectedQuoteId))
-
-  const canPlaceOrder =
-    !placing
-    && !!address.line1
-    && !carrierRatesPending
-    && stripeAvailable
-    && !(gatesReady && !marketplacePurchasingAllowed)
-
-  // submitRequested useState is hoisted above for hook-order stability.
-
-  const placeOrderHandler = async () => {
-    if (!canPlaceOrder) return
-    if (checkoutResult?.paymentClientSecret) {
-      // Already have a PaymentIntent — submit directly.
-      paymentRef.current?.submit().catch((e) => {
-        logError(e, "Stripe confirm")
-        setPlaceError("Could not confirm payment. Please try again.")
-      })
-      return
-    }
-    // Need to mint the PaymentIntent first; flag and let the effect fire
-    // submit once clientSecret lands.
-    setSubmitRequested(true)
-    await syncCartAndCheckout()
+  const placeOrderHandler = () => {
+    if (step === "review" && !carrierRatesPending) syncCartAndCheckout()
   }
 
   if (step === "success") {
@@ -1757,27 +1704,50 @@ export default function CheckoutClient({
     )
   }
 
-  const StepHeading = ({
+  const SectionHeader = ({
     n,
     title,
+    open,
     active,
+    onToggle,
   }: {
     n: number
     title: string
+    open: boolean
     /** True when this is the section the buyer is currently in. */
     active: boolean
+    onToggle: () => void
   }) => (
-    <div className="flex items-center gap-3 mb-4">
-      <div
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className={cn(
+        "flex w-full items-center justify-between gap-3 px-6 py-5 text-left transition-colors",
+        // Bottom border only when expanded — acts as the section separator.
+        open && "border-b border-gray-200",
+      )}
+    >
+      <h2 className="flex items-center gap-3 text-lg font-bold">
+        <span
+          className={cn(
+            "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors",
+            active
+              ? "bg-brand-gold text-brand-gold-foreground"
+              : "border-2 border-brand-gold/40 text-brand-gold/70 bg-white",
+          )}
+        >
+          {n}
+        </span>
+        <span className={cn(active ? "text-foreground" : "text-foreground/50")}>{title}</span>
+      </h2>
+      <ChevronDown
         className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold",
-          active ? "bg-amber-50 text-amber-900" : "bg-gray-100 text-gray-900",
+          "h-5 w-5 text-foreground/40 transition-transform",
+          open ? "rotate-180" : "rotate-0",
         )}
-      >
-        {n}
-      </div>
-      <h2 className="text-lg font-bold text-foreground">{title}</h2>
-    </div>
+      />
+    </button>
   )
 
   return (
@@ -1833,39 +1803,84 @@ export default function CheckoutClient({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
         {/* Left column: section cards */}
-        <div className="lg:col-span-8 w-full flex flex-col gap-6">
-          {/* Step 1: Shipping Address — always editable */}
-          <section className="rounded-lg border border-gray-200 bg-white p-4">
-            <StepHeading n={1} title="Shipping address" active={!address.line1} />
-            <div className="ml-11">
-              <AddressStep
-                token={authToken}
-                sessionName={session?.data?.user?.name ?? ""}
-                initialContext={initialContext}
-                onNext={(addr) => { setAddress(addr); resetCheckoutSession() }}
-              />
+        <div className="flex-1 w-full flex flex-col gap-6">
+          {/* Step 1: Shipping Address */}
+          <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <SectionHeader
+              n={1}
+              title="Shipping address"
+              active={step === "address"}
+              open={expanded.address}
+              onToggle={() => toggle("address")}
+            />
+            {expanded.address && (
+            <div className="p-6">
+              {step === "address" ? (
+                <AddressStep
+                  token={authToken}
+                  sessionName={session?.data?.user?.name ?? ""}
+                  initialContext={initialContext}
+                  onNext={(addr) => { setAddress(addr); setStep("review") }}
+                />
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{address.fullName}</p>
+                      <p className="text-sm text-gray-600 leading-snug mt-0.5">
+                        {address.line1}{address.line2 ? `, ${address.line2}` : ""}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {address.city}, {address.state} {address.zip}
+                      </p>
+                      {address.phone && (
+                        <p className="text-xs text-gray-500 mt-1">{address.phone}</p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setStep("address"); resetCheckoutSession() }}
+                    disabled={placing}
+                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" /> Edit
+                  </button>
+                </div>
+              )}
             </div>
+            )}
           </section>
 
-          {/* Step 2: Delivery — always rendered, gated visually on having an address */}
+          {/* Step 2: Delivery Method & Review */}
           <section
             className={cn(
-              "rounded-lg border border-gray-200 bg-white p-4 transition-opacity",
-              !address.line1 && "opacity-60",
+              "overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-opacity",
+              step === "address" && "opacity-60",
             )}
           >
-            <StepHeading n={2} title="Delivery options" active={!!address.line1 && !selectedQuoteId} />
-            <div className="ml-11">
-              {!address.line1 ? (
+            <SectionHeader
+              n={2}
+              title="Delivery options"
+              active={step === "review"}
+              open={expanded.delivery}
+              onToggle={() => toggle("delivery")}
+            />
+            {expanded.delivery && (
+            <div className="p-6">
+              {step === "address" ? (
                 <p className="text-sm text-gray-500">
                   Select a shipping address above to see delivery options.
                 </p>
-              ) : (
+              ) : step === "review" ? (
                 <DeliveryOptions
                   shippingCents={displayShipping}
-                  onConfirm={() => { /* picking is the action; orchestration via Place Order */ }}
+                  onConfirm={syncCartAndCheckout}
                   placing={placing}
                   quoteData={shippingQuotes}
                   quotesLoading={quotesLoading}
@@ -1873,48 +1888,96 @@ export default function CheckoutClient({
                   onSelectQuote={setSelectedQuoteId}
                   freeShippingApplies={freeShippingApplies}
                 />
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100">
+                      <Truck className="h-4 w-4 text-gray-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {freeShippingApplies ? "Standard Shipping" : "Selected shipping method"}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        {displayShipping === 0 ? (
+                          <span className="text-brand-gold font-medium">Free</span>
+                        ) : (
+                          formatCents(displayShipping)
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setStep("review"); resetCheckoutSession() }}
+                    disabled={placing}
+                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" /> Edit
+                  </button>
+                </div>
               )}
             </div>
+            )}
           </section>
 
-          {/* Step 3: Payment — always rendered with hidden inline Pay; the
-              single right-side Place Order CTA fires Stripe via paymentRef. */}
+          {/* Step 3: Payment */}
           <section
             className={cn(
-              "rounded-lg border border-gray-200 bg-white p-4 transition-opacity",
-              (!address.line1 || carrierRatesPending) && "opacity-60",
+              "overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-opacity",
+              step !== "payment" && !paymentComplete && "opacity-60",
             )}
           >
-            <StepHeading n={3} title="Payment method" active={!!address.line1 && !carrierRatesPending} />
-            <div className="ml-11">
-              <PaymentStep
-                ref={paymentRef}
-                onBackAction={() => { /* no-op: single-page flow */ }}
-                onCompleteAction={handlePaymentComplete}
-                total={displayTotal}
-                clientSecret={checkoutResult?.paymentClientSecret ?? null}
-                stripeAvailable={stripeAvailable}
-                paymentMethods={paymentMethods}
-                saveCard={saveCard}
-                onSaveCardChangeAction={(next) => { setSaveCard(next) }}
-                savedCards={savedCards}
-                selectedSavedCardId={selectedSavedCardId}
-                onSelectedSavedCardChangeAction={setSelectedSavedCardId}
-                hideInlinePayButton
-              />
+            <SectionHeader
+              n={3}
+              title="Payment method"
+              active={step === "payment"}
+              open={expanded.payment}
+              onToggle={() => toggle("payment")}
+            />
+            {expanded.payment && (
+            <div className="p-6">
+              {step === "payment" ? (
+                <PaymentStep
+                  onBackAction={() => setStep("review")}
+                  onCompleteAction={handlePaymentComplete}
+                  total={displayTotal}
+                  clientSecret={checkoutResult?.paymentClientSecret ?? null}
+                  stripeAvailable={stripeAvailable}
+                  paymentMethods={paymentMethods}
+                  saveCard={saveCard}
+                  onSaveCardChangeAction={(next) => {
+                    setSaveCard(next)
+                  }}
+                  savedCards={savedCards}
+                  selectedSavedCardId={selectedSavedCardId}
+                  onSelectedSavedCardChangeAction={setSelectedSavedCardId}
+                />
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Confirm your delivery method to enter payment details.
+                </p>
+              )}
             </div>
+            )}
           </section>
         </div>
 
         {/* Right column: Order Summary — image-faithful */}
-        <aside className="lg:col-span-4 w-full shrink-0 lg:sticky lg:top-24 space-y-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-6 space-y-5">
+        <aside className="w-full lg:w-[380px] xl:w-[400px] shrink-0 lg:sticky lg:top-24 space-y-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-5">
             {/* Place order CTA at the top */}
             <div className="space-y-2">
               <button
                 type="button"
                 onClick={placeOrderHandler}
-                disabled={!canPlaceOrder}
+                disabled={
+                  Boolean(gatesReady && !marketplacePurchasingAllowed) ||
+                  placing ||
+                  step === "address" ||
+                  carrierRatesPending ||
+                  (step === "payment" && !stripeAvailable)
+                }
                 className="w-full rounded-full bg-brand-gold py-3.5 text-base font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {placing ? (
@@ -2023,55 +2086,16 @@ export default function CheckoutClient({
                 </div>
               )
             )}
-
-            {/* Item list — compact rows with scroll cap so 10+ items don't
-                blow up the right column. Thumbnails kept small. */}
-            {cartItems.length > 0 && (
-              <div className="border-t border-gray-200 pt-3">
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  {cartItems.length} item{cartItems.length === 1 ? "" : "s"}
-                </div>
-                <ul className="max-h-72 overflow-y-auto pr-1 divide-y divide-gray-100">
-                  {cartItems.map((item) => (
-                    <li key={item.variantId} className="flex gap-3 items-center py-2.5">
-                      {item.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={item.imageUrl}
-                          alt={item.title}
-                          className="w-10 h-10 object-cover rounded border border-gray-200 bg-white shrink-0"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded border border-gray-200 bg-gray-50 shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground line-clamp-1 leading-snug">
-                          {item.title}
-                        </p>
-                        <p className="text-[11px] text-gray-500">Qty {item.quantity}</p>
-                      </div>
-                      <span className="text-xs font-semibold text-foreground shrink-0 tabular-nums">
-                        {formatCents(item.price * item.quantity)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
 
           {/* Trust microcopy — outside the card per image */}
           <div className="space-y-2 px-2">
             <div className="flex items-start gap-2 text-xs text-foreground/70">
-              <Lock className="h-4 w-4 shrink-0 mt-0.5" />
+              <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
               <p>
                 <span className="font-semibold text-foreground">Secure transaction.</span>{" "}
-                Your data is encrypted.
+                Your information is encrypted and protected.
               </p>
-            </div>
-            <div className="flex items-start gap-2 text-xs text-foreground/70">
-              <CornerDownLeft className="h-4 w-4 shrink-0 mt-0.5" />
-              <p>Eligible for return, refund or replacement.</p>
             </div>
             {/* Per-store return policy. Each store's exact policy is shown — no aggregation. */}
             {(() => {
