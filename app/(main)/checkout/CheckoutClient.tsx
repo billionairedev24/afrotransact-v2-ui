@@ -291,6 +291,21 @@ function AddressStep({
   })
   const [addressQuery, setAddressQuery] = useState("")
 
+  // Fast path: server pre-seeded the addresses. Commit the default once on
+  // mount so the parent's address state populates without the buyer having
+  // to re-click their already-checked radio.
+  const seedCommittedRef = useRef(false)
+  useEffect(() => {
+    if (!initialContext) return
+    if (seedCommittedRef.current) return
+    const def = seedAddrs.find((a) => a.isDefault) ?? seedAddrs[0]
+    if (def) {
+      seedCommittedRef.current = true
+      commitAddress(def)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialContext])
+
   useEffect(() => {
     // Fast path: the server already gave us the addresses; don't refetch.
     if (initialContext) return
@@ -1927,8 +1942,8 @@ export default function CheckoutClient({
             <div className="border-t border-gray-200" />
 
             <div className="flex items-end justify-between">
-              <p className="text-lg font-bold text-red-700">Order total:</p>
-              <p className="text-2xl font-bold text-red-700">{formatCents(displayTotal)}</p>
+              <p className="text-lg font-bold text-foreground">Order total:</p>
+              <p className="text-2xl font-bold text-foreground">{formatCents(displayTotal)}</p>
             </div>
 
             <div className="border-t border-gray-200" />
@@ -1990,32 +2005,38 @@ export default function CheckoutClient({
               )
             )}
 
-            {/* Item list preview — thumbnails + qty + price. */}
+            {/* Item list — compact rows with scroll cap so 10+ items don't
+                blow up the right column. Thumbnails kept small. */}
             {cartItems.length > 0 && (
-              <div className="border-t border-gray-200 pt-4 flex flex-col gap-4">
-                {cartItems.map((item) => (
-                  <div key={item.variantId} className="flex gap-3 items-start">
-                    {item.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="w-16 h-16 object-cover rounded border border-gray-200 bg-white shrink-0"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded border border-gray-200 bg-gray-50 shrink-0" />
-                    )}
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-medium text-foreground line-clamp-2 leading-snug">
-                        {item.title}
+              <div className="border-t border-gray-200 pt-3">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  {cartItems.length} item{cartItems.length === 1 ? "" : "s"}
+                </div>
+                <ul className="max-h-72 overflow-y-auto pr-1 divide-y divide-gray-100">
+                  {cartItems.map((item) => (
+                    <li key={item.variantId} className="flex gap-3 items-center py-2.5">
+                      {item.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.imageUrl}
+                          alt={item.title}
+                          className="w-10 h-10 object-cover rounded border border-gray-200 bg-white shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded border border-gray-200 bg-gray-50 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground line-clamp-1 leading-snug">
+                          {item.title}
+                        </p>
+                        <p className="text-[11px] text-gray-500">Qty {item.quantity}</p>
+                      </div>
+                      <span className="text-xs font-semibold text-foreground shrink-0 tabular-nums">
+                        {formatCents(item.price * item.quantity)}
                       </span>
-                      <span className="text-sm font-bold text-red-700 mt-1">
-                        {formatCents(item.price)}
-                      </span>
-                      <span className="text-[11px] text-gray-500">Qty: {item.quantity}</span>
-                    </div>
-                  </div>
-                ))}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
