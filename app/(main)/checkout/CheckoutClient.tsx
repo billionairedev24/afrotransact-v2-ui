@@ -1560,13 +1560,13 @@ export default function CheckoutClient({
     if (step !== "review") return
     if (!authToken || !region) return
     if (gatesReady && !marketplacePurchasingAllowed) {
-      setShippingQuotes(null)
-      setSelectedQuoteId(null)
+      // Don't blow away an already-loaded quote on a gates re-check.
       return
     }
     if (freeShippingApplies) {
-      setShippingQuotes(null)
-      setSelectedQuoteId(null)
+      // Don't clear quotes — the Shipping & handling row hides naturally
+      // when freeShippingApplies is true elsewhere. Clearing here causes
+      // the picker to vanish if the threshold flips during a re-render.
       return
     }
     if (!address.state && !address.city) return
@@ -1583,6 +1583,16 @@ export default function CheckoutClient({
           destinationCountry: "US",
         })
         if (cancelled) return
+        // If the new fetch returned no groups but we previously had carrier
+        // rates loaded, keep the old rates visible — Shippo occasionally
+        // returns an empty list on transient hiccups and we don't want to
+        // collapse a working list back to the platform tile.
+        const incomingHasRates = (q.groups?.length ?? 0) > 0
+        const incomingRealtime = q.realtimeEnabled && q.eligibleByGeo
+        if (!incomingHasRates && incomingRealtime) {
+          // Skip the update — keep last-good shippingQuotes.
+          return
+        }
         setShippingQuotes(q)
         // Leave selection to the picker (it auto-picks the cheapest). Don't
         // force-pick the first option here — the picker's logic takes

@@ -103,7 +103,12 @@ export default function ProductPageClient() {
 
     const fetchData = async () => {
       try {
-        const data = await getProductBySlug(slug).catch(() => getProductById(slug))
+        // If the URL segment looks like a UUID, skip the slug endpoint
+        // (which would 404) and go straight to getProductById.
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)
+        const data = isUuid
+          ? await getProductById(slug)
+          : await getProductBySlug(slug).catch(() => getProductById(slug))
         if (cancelled) return
         setProduct(data)
         setSelectedVariant(data.variants[0] ?? null)
