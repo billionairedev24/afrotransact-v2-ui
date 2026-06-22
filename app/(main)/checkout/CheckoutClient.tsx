@@ -1150,6 +1150,9 @@ export default function CheckoutClient({
   // Idempotency-Key reused across retries of the same logical placement so
   // a network blip can't create a second order. Reset when the user goes back.
   const idempotencyKeyRef = useRef<string | null>(null)
+  // Declared up here (before any conditional early-return) so React hook
+  // ordering is stable across renders.
+  const paymentRef = useRef<PaymentSubmitHandle | null>(null)
 
   // Helper — fully drop the current placement attempt. Used by every
   // back-navigation handler in the review/payment steps. Without clearing
@@ -1677,12 +1680,8 @@ export default function CheckoutClient({
   //   - on the payment step Stripe's own confirm flow runs (we don't fire
   //     it from here to keep the iframe-driven flow untouched); the user
   //     uses the inline Pay button rendered by PaymentStep.
-  // Stripe element exposes a submit handler via ref. The single Place Order
-  // CTA on the right orchestrates the whole flow: ensure /orders/checkout has
-  // run (gives us a PaymentIntent clientSecret), then trigger Stripe confirm
-  // via the ref. No intermediate Continue buttons, no step-machine pinball.
-  const paymentRef = useRef<PaymentSubmitHandle | null>(null)
-
+  // paymentRef is declared near the top of the component to keep hook
+  // ordering stable across the if(!mounted) early-return.
   const carrierRatesPending =
     !freeShippingApplies
     && (quotesLoading
