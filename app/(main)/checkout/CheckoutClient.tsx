@@ -1957,33 +1957,39 @@ export default function CheckoutClient({
         {/* Right column: Order Summary — image-faithful */}
         <aside className="w-full lg:w-[380px] xl:w-[400px] shrink-0 lg:sticky lg:top-24 space-y-4">
           <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-5">
-            {/* Place order CTA at the top */}
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={placeOrderHandler}
-                disabled={
-                  Boolean(gatesReady && !marketplacePurchasingAllowed) ||
-                  placing ||
-                  step === "address" ||
-                  carrierRatesPending ||
-                  (step === "payment" && !stripeAvailable)
-                }
-                className="w-full rounded-full bg-brand-gold py-3.5 text-base font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {placing ? (
-                  <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Placing…</span>
-                ) : (
-                  "Place your order"
-                )}
-              </button>
-              <p className="text-center text-[11px] text-gray-500">
-                By placing your order, you agree to our{" "}
-                <Link href="/terms" className="underline hover:text-foreground">terms</Link>.
-              </p>
-            </div>
+            {/* Right-side CTA. Only renders on address/review steps. On
+                the payment step the Stripe element's inline Pay button is
+                the single final action — two buttons there would be a
+                confusing dual-CTA. */}
+            {step !== "payment" && (
+              <>
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={placeOrderHandler}
+                    disabled={
+                      Boolean(gatesReady && !marketplacePurchasingAllowed) ||
+                      placing ||
+                      step === "address" ||
+                      carrierRatesPending
+                    }
+                    className="w-full rounded-full bg-brand-gold py-3.5 text-base font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {placing ? (
+                      <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Placing…</span>
+                    ) : (
+                      "Place your order"
+                    )}
+                  </button>
+                  <p className="text-center text-[11px] text-gray-500">
+                    By placing your order, you agree to our{" "}
+                    <Link href="/terms" className="underline hover:text-foreground">terms</Link>.
+                  </p>
+                </div>
 
-            <div className="border-t border-gray-200" />
+                <div className="border-t border-gray-200" />
+              </>
+            )}
 
             <h2 className="text-lg font-bold text-foreground">Order Summary</h2>
 
