@@ -637,7 +637,7 @@ function AddressStep({
                       setAddressQuery(addr.line1)
                       setShowNew(true)
                     }}
-                    className="mt-2 text-xs font-bold uppercase tracking-wider text-brand-gold-foreground/80 hover:text-brand-gold-foreground transition-colors"
+                    className="mt-2 text-xs font-semibold uppercase tracking-wider text-foreground hover:underline transition-colors"
                   >
                     Edit
                   </button>
@@ -652,7 +652,7 @@ function AddressStep({
         <button
           type="button"
           onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 text-sm font-bold text-brand-gold-foreground/80 hover:text-brand-gold-foreground transition-colors"
+          className="flex items-center gap-2 text-sm font-semibold text-foreground hover:underline transition-colors"
         >
           <Plus className="h-4 w-4" />
           Add a new address
@@ -1594,7 +1594,9 @@ export default function CheckoutClient({
   const currentIdx = STEPS.findIndex((s) => s.id === step)
 
   useEffect(() => {
-    if (step !== "review") return
+    // Single-page flow: fetch quotes as soon as we have an address, not when
+    // a step machine flips to "review". Without this the fetch never fires.
+    if (!address.line1 || !address.zip) return
     if (!authToken || !region) return
     if (gatesReady && !marketplacePurchasingAllowed) {
       setShippingQuotes(null)
