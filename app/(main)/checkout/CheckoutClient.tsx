@@ -29,6 +29,7 @@ import {
   X,
   ArrowLeft,
   Truck as TruckIcon,
+  CornerDownLeft,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 // Stripe (~80KB of @stripe/react-stripe-js + @stripe/stripe-js) only loads when
@@ -555,7 +556,7 @@ function AddressStep({
     <div className="space-y-6">
       {newAddressModal}
 
-      <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100 overflow-hidden">
+      <div className="rounded-lg border border-gray-200 bg-white divide-y divide-gray-200 overflow-hidden">
         {savedAddresses.map((addr) => {
           const isSelected = selectedId === addr.id
           return (
@@ -584,6 +585,9 @@ function AddressStep({
                   <p className="text-sm font-bold text-foreground">
                     {form.fullName || sessionName || "Saved address"}
                   </p>
+                  {isSelected && (
+                    <Check className="absolute right-4 top-4 h-4 w-4 text-brand-gold" aria-hidden />
+                  )}
                   <p className="text-sm text-gray-600 truncate mt-0.5" title={[
                     addr.line1,
                     addr.line2,
@@ -1717,50 +1721,27 @@ export default function CheckoutClient({
     )
   }
 
-  const SectionHeader = ({
+  const StepHeading = ({
     n,
     title,
-    open,
     active,
-    onToggle,
   }: {
     n: number
     title: string
-    open: boolean
     /** True when this is the section the buyer is currently in. */
     active: boolean
-    onToggle: () => void
   }) => (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={open}
-      className={cn(
-        "flex w-full items-center justify-between gap-3 px-6 py-5 text-left transition-colors",
-        // Bottom border only when expanded — acts as the section separator.
-        open && "border-b border-gray-200",
-      )}
-    >
-      <h2 className="flex items-center gap-3 text-lg font-bold">
-        <span
-          className={cn(
-            "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors",
-            active
-              ? "bg-brand-gold text-brand-gold-foreground"
-              : "border-2 border-brand-gold/40 text-brand-gold/70 bg-white",
-          )}
-        >
-          {n}
-        </span>
-        <span className={cn(active ? "text-foreground" : "text-foreground/50")}>{title}</span>
-      </h2>
-      <ChevronDown
+    <div className="flex items-center gap-3 mb-4">
+      <div
         className={cn(
-          "h-5 w-5 text-foreground/40 transition-transform",
-          open ? "rotate-180" : "rotate-0",
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+          active ? "bg-amber-50 text-amber-900" : "bg-gray-100 text-gray-900",
         )}
-      />
-    </button>
+      >
+        {n}
+      </div>
+      <h2 className="text-lg font-bold text-foreground">{title}</h2>
+    </div>
   )
 
   return (
@@ -1816,20 +1797,13 @@ export default function CheckoutClient({
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left column: section cards */}
-        <div className="flex-1 w-full flex flex-col gap-6">
+        <div className="lg:col-span-8 w-full flex flex-col gap-6">
           {/* Step 1: Shipping Address */}
-          <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <SectionHeader
-              n={1}
-              title="Shipping address"
-              active={step === "address"}
-              open={expanded.address}
-              onToggle={() => toggle("address")}
-            />
-            {expanded.address && (
-            <div className="p-6">
+          <section className="rounded-lg border border-gray-200 bg-white p-4">
+            <StepHeading n={1} title="Shipping address" active={step === "address"} />
+            <div className="ml-11">
               {step === "address" ? (
                 <AddressStep
                   token={authToken}
@@ -1867,25 +1841,17 @@ export default function CheckoutClient({
                 </div>
               )}
             </div>
-            )}
           </section>
 
           {/* Step 2: Delivery Method & Review */}
           <section
             className={cn(
-              "overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-opacity",
+              "rounded-lg border border-gray-200 bg-white p-4 transition-opacity",
               step === "address" && "opacity-60",
             )}
           >
-            <SectionHeader
-              n={2}
-              title="Delivery options"
-              active={step === "review"}
-              open={expanded.delivery}
-              onToggle={() => toggle("delivery")}
-            />
-            {expanded.delivery && (
-            <div className="p-6">
+            <StepHeading n={2} title="Delivery options" active={step === "review"} />
+            <div className="ml-11">
               {step === "address" ? (
                 <p className="text-sm text-gray-500">
                   Select a shipping address above to see delivery options.
@@ -1931,25 +1897,17 @@ export default function CheckoutClient({
                 </div>
               )}
             </div>
-            )}
           </section>
 
           {/* Step 3: Payment */}
           <section
             className={cn(
-              "overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-opacity",
+              "rounded-lg border border-gray-200 bg-white p-4 transition-opacity",
               step !== "payment" && !paymentComplete && "opacity-60",
             )}
           >
-            <SectionHeader
-              n={3}
-              title="Payment method"
-              active={step === "payment"}
-              open={expanded.payment}
-              onToggle={() => toggle("payment")}
-            />
-            {expanded.payment && (
-            <div className="p-6">
+            <StepHeading n={3} title="Payment method" active={step === "payment"} />
+            <div className="ml-11">
               {step === "payment" ? (
                 <PaymentStep
                   onBackAction={() => setStep("review")}
@@ -1972,13 +1930,12 @@ export default function CheckoutClient({
                 </p>
               )}
             </div>
-            )}
           </section>
         </div>
 
         {/* Right column: Order Summary — image-faithful */}
-        <aside className="w-full lg:w-[380px] xl:w-[400px] shrink-0 lg:sticky lg:top-24 space-y-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-5">
+        <aside className="lg:col-span-4 w-full shrink-0 lg:sticky lg:top-24 space-y-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 space-y-5">
             {/* Place order CTA at the top */}
             <div className="space-y-2">
               <button
@@ -2099,16 +2056,49 @@ export default function CheckoutClient({
                 </div>
               )
             )}
+
+            {/* Item list preview — thumbnails + qty + price. */}
+            {cartItems.length > 0 && (
+              <div className="border-t border-gray-200 pt-4 flex flex-col gap-4">
+                {cartItems.map((item) => (
+                  <div key={item.variantId} className="flex gap-3 items-start">
+                    {item.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="w-16 h-16 object-cover rounded border border-gray-200 bg-white shrink-0"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded border border-gray-200 bg-gray-50 shrink-0" />
+                    )}
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-medium text-foreground line-clamp-2 leading-snug">
+                        {item.title}
+                      </span>
+                      <span className="text-sm font-bold text-red-700 mt-1">
+                        {formatCents(item.price)}
+                      </span>
+                      <span className="text-[11px] text-gray-500">Qty: {item.quantity}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Trust microcopy — outside the card per image */}
           <div className="space-y-2 px-2">
             <div className="flex items-start gap-2 text-xs text-foreground/70">
-              <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+              <Lock className="h-4 w-4 shrink-0 mt-0.5" />
               <p>
                 <span className="font-semibold text-foreground">Secure transaction.</span>{" "}
-                Your information is encrypted and protected.
+                Your data is encrypted.
               </p>
+            </div>
+            <div className="flex items-start gap-2 text-xs text-foreground/70">
+              <CornerDownLeft className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>Eligible for return, refund or replacement.</p>
             </div>
             {/* Per-store return policy. Each store's exact policy is shown — no aggregation. */}
             {(() => {
