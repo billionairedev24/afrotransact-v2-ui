@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react"
 import { MapPin, X, Loader2 } from "lucide-react"
 
-import { geocodePostalCode, reverseGeocode } from "@/lib/api"
+/* Geocoding now happens entirely client-side via Google Maps (NEXT_PUBLIC
+   key) with BigDataCloud/Zippopotam.us as key-free fallbacks. No backend
+   round-trip needed. */
 import { useBuyerLocation, type BuyerLocation } from "@/stores/buyer-location"
 
 const GOOGLE_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
@@ -115,16 +117,7 @@ export function DeliverToPicker() {
           let resolved: Resolved | null = null
           // 1. Google directly (uses NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
           resolved = await googleReverseGeocode(lat, lng)
-          // 2. Seller-side endpoint (Google via server, if configured)
-          if (!resolved) {
-            try {
-              const r = await reverseGeocode(lat, lng)
-              if (r.ok && r.postalCode) {
-                resolved = { postalCode: r.postalCode, country: r.country, state: r.state }
-              }
-            } catch { /* try BDC */ }
-          }
-          // 3. BigDataCloud key-free
+          // 2. BigDataCloud key-free fallback
           if (!resolved) {
             try {
               const bdc = await fetch(
@@ -237,17 +230,7 @@ function DeliverToModal({
         city = g.city
         if (!resolvedState) resolvedState = g.state
       }
-      // 2. Seller-side endpoint (also Google, server-side).
-      if (lat == null) {
-        try {
-          const geo = await geocodePostalCode(code, country)
-          if (geo.ok) {
-            lat = geo.lat ?? null
-            lng = geo.lng ?? null
-          }
-        } catch { /* try fallback */ }
-      }
-      // 3. Zippopotam.us for US ZIPs (key-free).
+      // 2. Zippopotam.us for US ZIPs (key-free fallback).
       if (lat == null && country === "US") {
         try {
           const z = await fetch(`https://api.zippopotam.us/us/${encodeURIComponent(code)}`).then((r) => r.ok ? r.json() : null) as
@@ -289,14 +272,6 @@ function DeliverToModal({
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords
         let resolved: Resolved | null = await googleReverseGeocode(lat, lng)
-        if (!resolved) {
-          try {
-            const r = await reverseGeocode(lat, lng)
-            if (r.ok && r.postalCode) {
-              resolved = { postalCode: r.postalCode, country: r.country, state: r.state }
-            }
-          } catch { /* try BDC */ }
-        }
         if (!resolved) {
           try {
             const bdc = await fetch(

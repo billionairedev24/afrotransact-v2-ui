@@ -2037,30 +2037,10 @@ export async function checkShippingEligibility(args: {
   return api<ShippingEligibility>(`/api/v1/sellers/public/shipping/eligibility?${params}`)
 }
 
-export interface GeocodeResult {
-  ok: boolean
-  lat?: number
-  lng?: number
-  postalCode?: string
-  country?: string
-}
-
-export async function geocodePostalCode(postalCode: string, country = "US"): Promise<GeocodeResult> {
-  const params = new URLSearchParams({ postalCode, country })
-  return api<GeocodeResult>(`/api/v1/sellers/public/shipping/geocode?${params}`)
-}
-
-export interface ReverseGeocodeResult {
-  ok: boolean
-  postalCode?: string
-  country?: string
-  state?: string | null
-}
-
-export async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult> {
-  const params = new URLSearchParams({ lat: String(lat), lng: String(lng) })
-  return api<ReverseGeocodeResult>(`/api/v1/sellers/public/shipping/reverse-geocode?${params}`)
-}
+// Geocoding moved fully client-side (DeliverToPicker calls Google Maps
+// directly with NEXT_PUBLIC_GOOGLE_MAPS_API_KEY and falls back to
+// BigDataCloud / Zippopotam.us). The seller-side endpoints that used
+// to live here were removed.
 
 // ── Public: Seller marketing stats ────────────────────────────────────────
 
