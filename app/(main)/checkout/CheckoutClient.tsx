@@ -571,7 +571,16 @@ function AddressStep({
                 type="radio"
                 name="address"
                 checked={isSelected}
-                onChange={() => setSelectedId(addr.id)}
+                // Selecting the radio is the action. No separate "Use this
+                // address" button — picking commits the address and advances
+                // to delivery. Removes a click and removes the auto-advance
+                // race we shipped earlier.
+                onChange={() => {
+                  setSelectedId(addr.id)
+                  // Defer one tick so React applies setSelectedId before
+                  // handleUseSaved reads it.
+                  requestAnimationFrame(() => handleUseSaved())
+                }}
                 className="sr-only"
               />
               <div className={cn(
@@ -630,8 +639,7 @@ function AddressStep({
         })}
       </div>
 
-      {/* Footer row: + Add new address (left) · USE THIS ADDRESS (right) */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-center">
         <button
           type="button"
           onClick={() => setShowNew(true)}
@@ -639,14 +647,6 @@ function AddressStep({
         >
           <Plus className="h-4 w-4" />
           Add a new address
-        </button>
-        <button
-          type="button"
-          disabled={!selectedId}
-          onClick={handleUseSaved}
-          className="px-6 py-2.5 rounded-full bg-brand-gold text-xs font-bold uppercase tracking-wider text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
-        >
-          Use this address
         </button>
       </div>
 
@@ -820,14 +820,8 @@ function DeliveryOptions({
           selectedQuoteId={selectedQuoteId}
           onSelectQuote={onSelectQuote}
         />
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={placing || !selectedQuoteId}
-          className="w-full rounded-full bg-brand-gold px-6 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
-        >
-          Continue to payment
-        </button>
+        {/* No "Continue to payment" button — the single Place Order CTA
+            on the right summary is the only forward action. */}
       </div>
     )
   }
@@ -868,14 +862,7 @@ function DeliveryOptions({
           )}
         </span>
       </div>
-      <button
-        type="button"
-        onClick={onConfirm}
-        disabled={placing}
-        className="w-full rounded-full bg-brand-gold px-6 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
-      >
-        Continue to payment
-      </button>
+      {/* Same here — Place Order on the right summary is the one CTA. */}
     </div>
   )
 }
