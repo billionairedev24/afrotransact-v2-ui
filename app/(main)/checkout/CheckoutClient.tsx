@@ -1168,6 +1168,21 @@ export default function CheckoutClient({
   // Declared up here (before any conditional early-return) so React hook
   // ordering is stable across renders.
   const paymentRef = useRef<PaymentSubmitHandle | null>(null)
+  // Hoisted up here so the useState + useEffect ordering stays stable across
+  // the if(!mounted) early-return below. placeError and checkoutResult are
+  // declared above paymentRef so they're in scope.
+  const [submitRequested, setSubmitRequested] = useState(false)
+  useEffect(() => {
+    if (!submitRequested) return
+    if (!checkoutResult?.paymentClientSecret) return
+    setSubmitRequested(false)
+    requestAnimationFrame(() => {
+      paymentRef.current?.submit().catch((e) => {
+        logError(e, "Stripe confirm")
+        setPlaceError("Could not confirm payment. Please try again.")
+      })
+    })
+  }, [submitRequested, checkoutResult?.paymentClientSecret])
 
   // Helper — fully drop the current placement attempt. Used by every
   // back-navigation handler in the review/payment steps. Without clearing
@@ -1714,24 +1729,7 @@ export default function CheckoutClient({
     && stripeAvailable
     && !(gatesReady && !marketplacePurchasingAllowed)
 
-  // Pending-submit flag flips on when the buyer clicks Place Order before the
-  // PaymentIntent exists. The useEffect below waits for clientSecret to
-  // propagate (Elements remounts on key change → new ref → submit fires).
-  const [submitRequested, setSubmitRequested] = useState(false)
-  useEffect(() => {
-    if (!submitRequested) return
-    if (!checkoutResult?.paymentClientSecret) return
-    setSubmitRequested(false)
-    // Defer one microtask so Elements has remounted and paymentRef is
-    // pointing at the new form whose handlePay closure has the new
-    // clientSecret.
-    requestAnimationFrame(() => {
-      paymentRef.current?.submit().catch((e) => {
-        logError(e, "Stripe confirm")
-        setPlaceError("Could not confirm payment. Please try again.")
-      })
-    })
-  }, [submitRequested, checkoutResult?.paymentClientSecret])
+  // submitRequested useState is hoisted above for hook-order stability.
 
   const placeOrderHandler = async () => {
     if (!canPlaceOrder) return
