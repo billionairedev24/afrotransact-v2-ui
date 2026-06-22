@@ -1533,29 +1533,10 @@ export default function CheckoutClient({
   }
 
   const handlePaymentComplete = useCallback(async () => {
-    // Phase 3 of cart/checkout rewrite: the order row doesn't exist yet at
-    // this point — payment-service's webhook to order-service materializes it
-    // via Kafka payment.completed. Poll /orders/by-id/{id} until it appears
-    // (typically <2s) so the success screen can show the real order number.
-    const orderId = checkoutResult?.orderId
-    if (orderId) {
-      try {
-        const token = await getAccessToken()
-        if (token) {
-          const materialized = await pollOrderUntilExists(token, orderId)
-          if (materialized?.orderNumber) {
-            // Patch the displayed orderNumber from the materialized row in
-            // case checkoutResult's placeholder differs.
-            setCheckoutResult((prev) => prev ? { ...prev, orderNumber: materialized.orderNumber } : prev)
-          }
-          // If null (timeout), success screen still renders with whatever
-          // orderNumber the checkout response carried — the buyer's payment
-          // succeeded; the order will appear in /orders once webhook lands.
-        }
-      } catch (e) {
-        logError(e, "poll order after payment")
-      }
-    }
+    // Order row was created at /orders/checkout (cart/checkout reverted to
+    // pre-rewrite). No materialization polling needed — the order is already
+    // in /orders with status=pending and will flip to confirmed when the
+    // payment webhook lands.
     try {
       const token = await getAccessToken()
       if (token) {
