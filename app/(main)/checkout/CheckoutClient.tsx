@@ -35,19 +35,11 @@ import { cn } from "@/lib/utils"
 // Stripe (~80KB of @stripe/react-stripe-js + @stripe/stripe-js) only loads when
 // the shopper actually reaches the payment step. Earlier steps (address, review)
 // get a lighter initial bundle.
-const PaymentStep = dynamic(() => import("./_stripe-payment"), {
-  ssr: false,
-  loading: () => (
-    <div className="space-y-4">
-      <div className="h-6 w-40 rounded bg-muted animate-pulse" />
-      <div className="h-48 w-full rounded-2xl bg-muted animate-pulse" />
-      <div className="flex gap-3">
-        <div className="h-12 flex-1 rounded-xl bg-muted animate-pulse" />
-        <div className="h-12 flex-1 rounded-xl bg-muted animate-pulse" />
-      </div>
-    </div>
-  ),
-})
+// Statically import so React refs forward into the Stripe form (next/dynamic
+// strips refs by default). Stripe.js itself is still lazy-loaded via getStripe()
+// the first time the Elements provider renders.
+import PaymentStep, { type PaymentSubmitHandle } from "./_stripe-payment"
+void dynamic // retain dynamic import in case other code starts using it
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import { PhoneInput } from "@/components/ui/PhoneInput"
@@ -1436,11 +1428,11 @@ export default function CheckoutClient({
     setCouponError("")
   }
 
-  async function syncCartAndCheckout() {
+  async function syncCartAndCheckout(): Promise<CheckoutResponse | null> {
     // Synchronous re-entry guard — protects against double-click, React 18
     // StrictMode double-invokes, and any other path that fires this twice
     // within the same tick before `placing` propagates to disable the button.
-    if (placingRef.current) return
+    if (placingRef.current) return null
     placingRef.current = true
     setPlacing(true)
     setPlaceError(null)
@@ -1449,7 +1441,7 @@ export default function CheckoutClient({
       const token = await getAccessToken()
       if (!token) {
         router.push("/auth/login?callbackUrl=/checkout")
-        return
+        return null
       }
 
       const items = cartItems.map((item) => ({
@@ -1473,14 +1465,14 @@ export default function CheckoutClient({
         setPlaceError("Unable to load region configuration. Please refresh and try again.")
         placingRef.current = false
         setPlacing(false)
-        return
+        return null
       }
 
       if (gatesReady && !marketplacePurchasingAllowed) {
         setPlaceError("Purchasing is temporarily unavailable right now. Please try again soon.")
         placingRef.current = false
         setPlacing(false)
-        return
+        return null
       }
 
       const codes: string[] = []
@@ -1521,10 +1513,11 @@ export default function CheckoutClient({
 
       setCheckoutResult(result)
       setStep("payment")
+      return result
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         router.push("/auth/login?callbackUrl=/checkout")
-        return
+        return null
       }
       logError(e, "checkout")
       setPlaceError(
@@ -1536,6 +1529,7 @@ export default function CheckoutClient({
       placingRef.current = false
       setPlacing(false)
     }
+    return null
   }
 
   const handlePaymentComplete = useCallback(async () => {
@@ -1683,21 +1677,41 @@ export default function CheckoutClient({
   //   - on the payment step Stripe's own confirm flow runs (we don't fire
   //     it from here to keep the iframe-driven flow untouched); the user
   //     uses the inline Pay button rendered by PaymentStep.
-  // Right-side "Place your order" CTA. We gate it carefully on the review
-  // step: if carrier rates are loading, or rates are available but the
-  // buyer hasn't picked one, the button stays disabled. Otherwise the
-  // buyer could click it before Shippo answered and the backend would
-  // silently default to weight-based pricing.
+  // Stripe element exposes a submit handler via ref. The single Place Order
+  // CTA on the right orchestrates the whole flow: ensure /orders/checkout has
+  // run (gives us a PaymentIntent clientSecret), then trigger Stripe confirm
+  // via the ref. No intermediate Continue buttons, no step-machine pinball.
+  const paymentRef = useRef<PaymentSubmitHandle | null>(null)
+
   const carrierRatesPending =
-    step === "review"
-    && !freeShippingApplies
+    !freeShippingApplies
     && (quotesLoading
         || (shippingQuotes?.realtimeEnabled
             && shippingQuotes.eligibleByGeo
             && (shippingQuotes.groups?.length ?? 0) > 0
             && !selectedQuoteId))
-  const placeOrderHandler = () => {
-    if (step === "review" && !carrierRatesPending) syncCartAndCheckout()
+
+  const canPlaceOrder =
+    !placing
+    && !!address.line1
+    && !carrierRatesPending
+    && stripeAvailable
+    && !(gatesReady && !marketplacePurchasingAllowed)
+
+  const placeOrderHandler = async () => {
+    if (!canPlaceOrder) return
+    let cs = checkoutResult?.paymentClientSecret ?? null
+    if (!cs) {
+      const result = await syncCartAndCheckout()
+      cs = result?.paymentClientSecret ?? null
+    }
+    if (!cs) {
+      // syncCartAndCheckout already populated placeError.
+      return
+    }
+    if (paymentRef.current) {
+      await paymentRef.current.submit()
+    }
   }
 
   if (step === "success") {
@@ -1789,66 +1803,36 @@ export default function CheckoutClient({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left column: section cards */}
         <div className="lg:col-span-8 w-full flex flex-col gap-6">
-          {/* Step 1: Shipping Address */}
+          {/* Step 1: Shipping Address — always editable */}
           <section className="rounded-lg border border-gray-200 bg-white p-4">
-            <StepHeading n={1} title="Shipping address" active={step === "address"} />
+            <StepHeading n={1} title="Shipping address" active={!address.line1} />
             <div className="ml-11">
-              {step === "address" ? (
-                <AddressStep
-                  token={authToken}
-                  sessionName={session?.data?.user?.name ?? ""}
-                  initialContext={initialContext}
-                  onNext={(addr) => { setAddress(addr); setStep("review") }}
-                />
-              ) : (
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{address.fullName}</p>
-                      <p className="text-sm text-gray-600 leading-snug mt-0.5">
-                        {address.line1}{address.line2 ? `, ${address.line2}` : ""}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {address.city}, {address.state} {address.zip}
-                      </p>
-                      {address.phone && (
-                        <p className="text-xs text-gray-500 mt-1">{address.phone}</p>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => { setStep("address"); resetCheckoutSession() }}
-                    disabled={placing}
-                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" /> Edit
-                  </button>
-                </div>
-              )}
+              <AddressStep
+                token={authToken}
+                sessionName={session?.data?.user?.name ?? ""}
+                initialContext={initialContext}
+                onNext={(addr) => { setAddress(addr); resetCheckoutSession() }}
+              />
             </div>
           </section>
 
-          {/* Step 2: Delivery Method & Review */}
+          {/* Step 2: Delivery — always rendered, gated visually on having an address */}
           <section
             className={cn(
               "rounded-lg border border-gray-200 bg-white p-4 transition-opacity",
-              step === "address" && "opacity-60",
+              !address.line1 && "opacity-60",
             )}
           >
-            <StepHeading n={2} title="Delivery options" active={step === "review"} />
+            <StepHeading n={2} title="Delivery options" active={!!address.line1 && !selectedQuoteId} />
             <div className="ml-11">
-              {step === "address" ? (
+              {!address.line1 ? (
                 <p className="text-sm text-gray-500">
                   Select a shipping address above to see delivery options.
                 </p>
-              ) : step === "review" ? (
+              ) : (
                 <DeliveryOptions
                   shippingCents={displayShipping}
-                  onConfirm={syncCartAndCheckout}
+                  onConfirm={() => { /* picking is the action; orchestration via Place Order */ }}
                   placing={placing}
                   quoteData={shippingQuotes}
                   quotesLoading={quotesLoading}
@@ -1856,68 +1840,35 @@ export default function CheckoutClient({
                   onSelectQuote={setSelectedQuoteId}
                   freeShippingApplies={freeShippingApplies}
                 />
-              ) : (
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100">
-                      <Truck className="h-4 w-4 text-gray-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {freeShippingApplies ? "Standard Shipping" : "Selected shipping method"}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-0.5">
-                        {displayShipping === 0 ? (
-                          <span className="text-brand-gold font-medium">Free</span>
-                        ) : (
-                          formatCents(displayShipping)
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => { setStep("review"); resetCheckoutSession() }}
-                    disabled={placing}
-                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" /> Edit
-                  </button>
-                </div>
               )}
             </div>
           </section>
 
-          {/* Step 3: Payment */}
+          {/* Step 3: Payment — always rendered with hidden inline Pay; the
+              single right-side Place Order CTA fires Stripe via paymentRef. */}
           <section
             className={cn(
               "rounded-lg border border-gray-200 bg-white p-4 transition-opacity",
-              step !== "payment" && !paymentComplete && "opacity-60",
+              (!address.line1 || carrierRatesPending) && "opacity-60",
             )}
           >
-            <StepHeading n={3} title="Payment method" active={step === "payment"} />
+            <StepHeading n={3} title="Payment method" active={!!address.line1 && !carrierRatesPending} />
             <div className="ml-11">
-              {step === "payment" ? (
-                <PaymentStep
-                  onBackAction={() => setStep("review")}
-                  onCompleteAction={handlePaymentComplete}
-                  total={displayTotal}
-                  clientSecret={checkoutResult?.paymentClientSecret ?? null}
-                  stripeAvailable={stripeAvailable}
-                  paymentMethods={paymentMethods}
-                  saveCard={saveCard}
-                  onSaveCardChangeAction={(next) => {
-                    setSaveCard(next)
-                  }}
-                  savedCards={savedCards}
-                  selectedSavedCardId={selectedSavedCardId}
-                  onSelectedSavedCardChangeAction={setSelectedSavedCardId}
-                />
-              ) : (
-                <p className="text-sm text-gray-500">
-                  Confirm your delivery method to enter payment details.
-                </p>
-              )}
+              <PaymentStep
+                ref={paymentRef}
+                onBackAction={() => { /* no-op: single-page flow */ }}
+                onCompleteAction={handlePaymentComplete}
+                total={displayTotal}
+                clientSecret={checkoutResult?.paymentClientSecret ?? null}
+                stripeAvailable={stripeAvailable}
+                paymentMethods={paymentMethods}
+                saveCard={saveCard}
+                onSaveCardChangeAction={(next) => { setSaveCard(next) }}
+                savedCards={savedCards}
+                selectedSavedCardId={selectedSavedCardId}
+                onSelectedSavedCardChangeAction={setSelectedSavedCardId}
+                hideInlinePayButton
+              />
             </div>
           </section>
         </div>
@@ -1930,13 +1881,7 @@ export default function CheckoutClient({
               <button
                 type="button"
                 onClick={placeOrderHandler}
-                disabled={
-                  Boolean(gatesReady && !marketplacePurchasingAllowed) ||
-                  placing ||
-                  step === "address" ||
-                  carrierRatesPending ||
-                  (step === "payment" && !stripeAvailable)
-                }
+                disabled={!canPlaceOrder}
                 className="w-full rounded-full bg-brand-gold py-3.5 text-base font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {placing ? (

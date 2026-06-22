@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { forwardRef, useCallback, useImperativeHandle, useState, type Ref } from "react"
 import {
   Elements,
   PaymentElement,
@@ -59,7 +59,12 @@ function formatCents(v: number) {
   return `$${(v / 100).toFixed(2)}`
 }
 
-function StripePaymentForm({
+export interface PaymentSubmitHandle {
+  submit: () => Promise<void>
+  hasError: () => string | null
+}
+
+const StripePaymentForm = forwardRef(function StripePaymentForm({
   onBack,
   onComplete,
   totalCents,
@@ -71,6 +76,7 @@ function StripePaymentForm({
   savedCards,
   selectedSavedCardId,
   onSelectedSavedCardChange,
+  hideInlinePayButton,
 }: {
   onBack: () => void
   onComplete: () => void
@@ -83,7 +89,8 @@ function StripePaymentForm({
   savedCards: SavedPaymentMethod[]
   selectedSavedCardId: string | null
   onSelectedSavedCardChange: (id: string | null) => void
-}) {
+  hideInlinePayButton?: boolean
+}, ref: Ref<PaymentSubmitHandle>) {
   const stripe = useStripe()
   const elements = useElements()
   const [error, setError] = useState<string | null>(null)
@@ -148,6 +155,11 @@ function StripePaymentForm({
       onComplete()
     }
   }, [stripe, elements, clientSecret, onComplete, usingSaved, selectedSavedCardId])
+
+  useImperativeHandle(ref, () => ({
+    submit: handlePay,
+    hasError: () => error,
+  }), [handlePay, error])
 
   return (
     <div className="space-y-5">
@@ -308,31 +320,33 @@ function StripePaymentForm({
         </div>
       )}
 
-      <div className="flex gap-3">
-        <button
-          onClick={onBack}
-          disabled={processing}
-          className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
-        >
-          Back
-        </button>
-        <button
-          onClick={handlePay}
-          disabled={processing || !stripe || !stripeAvailable}
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-gold py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-        >
-          {processing ? (
-            <span className="flex items-center gap-2">
-              <span className="h-4 w-4 border-2 border-brand-gold-foreground/30 border-t-brand-gold-foreground rounded-full animate-spin" />
-              Processing…
-            </span>
-          ) : (
-            <>
-              <Lock className="h-3.5 w-3.5" /> Pay {formatCents(totalCents)}
-            </>
-          )}
-        </button>
-      </div>
+      {!hideInlinePayButton && (
+        <div className="flex gap-3">
+          <button
+            onClick={onBack}
+            disabled={processing}
+            className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
+          >
+            Back
+          </button>
+          <button
+            onClick={handlePay}
+            disabled={processing || !stripe || !stripeAvailable}
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-gold py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {processing ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 border-2 border-brand-gold-foreground/30 border-t-brand-gold-foreground rounded-full animate-spin" />
+                Processing…
+              </span>
+            ) : (
+              <>
+                <Lock className="h-3.5 w-3.5" /> Pay {formatCents(totalCents)}
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       <p className="text-center text-[11px] text-gray-600">
         By completing payment you agree to our{" "}
@@ -347,9 +361,9 @@ function StripePaymentForm({
       </p>
     </div>
   )
-}
+})
 
-export default function PaymentStep({
+const PaymentStep = forwardRef(function PaymentStep({
   onBackAction,
   onCompleteAction,
   total,
@@ -361,6 +375,7 @@ export default function PaymentStep({
   savedCards,
   selectedSavedCardId,
   onSelectedSavedCardChangeAction,
+  hideInlinePayButton,
 }: {
   onBackAction: () => void
   onCompleteAction: () => void
@@ -373,7 +388,8 @@ export default function PaymentStep({
   savedCards: SavedPaymentMethod[]
   selectedSavedCardId: string | null
   onSelectedSavedCardChangeAction: (id: string | null) => void
-}) {
+  hideInlinePayButton?: boolean
+}, ref: Ref<PaymentSubmitHandle>) {
   return (
     // `key` forces a full remount when the PaymentIntent changes (e.g. after
     // a save-card toggle re-mints the PI). Without this, Stripe Elements
@@ -401,6 +417,7 @@ export default function PaymentStep({
       }}
     >
       <StripePaymentForm
+        ref={ref}
         onBack={onBackAction}
         onComplete={onCompleteAction}
         totalCents={total}
@@ -412,7 +429,10 @@ export default function PaymentStep({
         savedCards={savedCards}
         selectedSavedCardId={selectedSavedCardId}
         onSelectedSavedCardChange={onSelectedSavedCardChangeAction}
+        hideInlinePayButton={hideInlinePayButton}
       />
     </Elements>
   )
-}
+})
+
+export default PaymentStep
