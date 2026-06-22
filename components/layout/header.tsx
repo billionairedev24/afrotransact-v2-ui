@@ -315,13 +315,11 @@ export function Header() {
                 <Menu className="h-6 w-6" strokeWidth={2} />
               </button>
 
-              {/* Logo — full lockup (mark + wordmark) on sm+, mark-only on
-                  xs so it stays legible at narrow widths. SVG so it scales
-                  cleanly at any DPR. The header bg is dark, so the
-                  on-black variants are the right pick here. */}
+              {/* Logo — black-silhouette wordmark + yellow bag accent.
+                  Full lockup on sm+, mark-only on xs. */}
               <Link href="/" className="flex items-center shrink-0 mr-1" aria-label="AfroTransact home">
                 <Image
-                  src="/brand/logo-mark-dark.svg"
+                  src="/brand/logo-mark.svg"
                   alt="AfroTransact"
                   width={28}
                   height={32}
@@ -329,7 +327,7 @@ export function Header() {
                   priority
                 />
                 <Image
-                  src="/brand/logo-full-dark.svg"
+                  src="/brand/logo-full.svg"
                   alt="AfroTransact"
                   width={150}
                   height={34}

@@ -150,19 +150,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const sidebar = (onClose?: () => void) => (
     <div className="flex flex-col h-full p-4">
       <div className="flex items-center justify-between mb-6 px-2">
-        <div className="flex items-center gap-2">
-          <Image
-            src="/brand/logo-full-dark.svg"
-            alt="AfroTransact"
-            width={150}
-            height={34}
-            className="h-7 w-auto"
-            priority
-          />
-          <span className="rounded-sm bg-brand-gold px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-gold-foreground">
-            Admin
-          </span>
-        </div>
+        <Image
+          src="/brand/logo-full-dark.svg"
+          alt="AfroTransact"
+          width={150}
+          height={34}
+          className="h-7 w-auto"
+          priority
+        />
         {onClose && (
           <button onClick={onClose} className="text-white/60 hover:text-white transition-colors">
             <X className="h-5 w-5" />
@@ -210,18 +205,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-foreground transition-colors">
           <Menu className="h-5 w-5" />
         </button>
-        <span className="flex items-center gap-2">
-          <Image
-            src="/brand/logo-full.svg"
-            alt="AfroTransact"
-            width={130}
-            height={30}
-            className="h-6 w-auto"
-          />
-          <span className="rounded bg-brand-gold px-2 py-0.5 text-[10px] font-bold tracking-wide text-brand-gold-foreground">
-            Admin
-          </span>
-        </span>
+        <Image
+          src="/brand/logo-full.svg"
+          alt="AfroTransact"
+          width={130}
+          height={30}
+          className="h-6 w-auto"
+        />
         <div className="w-5" />
       </header>
 
