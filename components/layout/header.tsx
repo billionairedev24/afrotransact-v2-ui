@@ -315,10 +315,27 @@ export function Header() {
                 <Menu className="h-6 w-6" strokeWidth={2} />
               </button>
 
-              {/* Logo */}
-              <Link href="/" className="flex items-center gap-1.5 shrink-0 mr-1" aria-label="AfroTransact home">
-                <Image src="/logo.png" alt="" width={28} height={28} className="rounded-md" />
-                <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-brand-gold leading-none">AfroTransact</span>
+              {/* Logo — full lockup (mark + wordmark) on sm+, mark-only on
+                  xs so it stays legible at narrow widths. SVG so it scales
+                  cleanly at any DPR. The header bg is dark, so the
+                  on-black variants are the right pick here. */}
+              <Link href="/" className="flex items-center shrink-0 mr-1" aria-label="AfroTransact home">
+                <Image
+                  src="/brand/logo-mark-dark.svg"
+                  alt="AfroTransact"
+                  width={28}
+                  height={32}
+                  className="sm:hidden"
+                  priority
+                />
+                <Image
+                  src="/brand/logo-full-dark.svg"
+                  alt="AfroTransact"
+                  width={150}
+                  height={34}
+                  className="hidden sm:block h-8 w-auto"
+                  priority
+                />
               </Link>
 
               {/* "Ask Victory" pill — placed right after the logo per the
