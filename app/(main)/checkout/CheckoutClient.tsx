@@ -1714,20 +1714,39 @@ export default function CheckoutClient({
     && stripeAvailable
     && !(gatesReady && !marketplacePurchasingAllowed)
 
+  // Pending-submit flag flips on when the buyer clicks Place Order before the
+  // PaymentIntent exists. The useEffect below waits for clientSecret to
+  // propagate (Elements remounts on key change → new ref → submit fires).
+  const [submitRequested, setSubmitRequested] = useState(false)
+  useEffect(() => {
+    if (!submitRequested) return
+    if (!checkoutResult?.paymentClientSecret) return
+    setSubmitRequested(false)
+    // Defer one microtask so Elements has remounted and paymentRef is
+    // pointing at the new form whose handlePay closure has the new
+    // clientSecret.
+    requestAnimationFrame(() => {
+      paymentRef.current?.submit().catch((e) => {
+        logError(e, "Stripe confirm")
+        setPlaceError("Could not confirm payment. Please try again.")
+      })
+    })
+  }, [submitRequested, checkoutResult?.paymentClientSecret])
+
   const placeOrderHandler = async () => {
     if (!canPlaceOrder) return
-    let cs = checkoutResult?.paymentClientSecret ?? null
-    if (!cs) {
-      const result = await syncCartAndCheckout()
-      cs = result?.paymentClientSecret ?? null
-    }
-    if (!cs) {
-      // syncCartAndCheckout already populated placeError.
+    if (checkoutResult?.paymentClientSecret) {
+      // Already have a PaymentIntent — submit directly.
+      paymentRef.current?.submit().catch((e) => {
+        logError(e, "Stripe confirm")
+        setPlaceError("Could not confirm payment. Please try again.")
+      })
       return
     }
-    if (paymentRef.current) {
-      await paymentRef.current.submit()
-    }
+    // Need to mint the PaymentIntent first; flag and let the effect fire
+    // submit once clientSecret lands.
+    setSubmitRequested(true)
+    await syncCartAndCheckout()
   }
 
   if (step === "success") {
@@ -1944,8 +1963,8 @@ export default function CheckoutClient({
             <div className="border-t border-gray-200" />
 
             <div className="flex items-end justify-between">
-              <p className="text-lg font-bold text-foreground">Order total:</p>
-              <p className="text-2xl font-bold text-foreground">{formatCents(displayTotal)}</p>
+              <p className="text-lg font-bold text-red-700">Order total:</p>
+              <p className="text-2xl font-bold text-red-700">{formatCents(displayTotal)}</p>
             </div>
 
             <div className="border-t border-gray-200" />
