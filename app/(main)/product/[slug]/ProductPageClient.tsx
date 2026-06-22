@@ -794,3 +794,4 @@ function RatingSummary({ productId }: { productId: string }) {
     </a>
   )
 }
+
