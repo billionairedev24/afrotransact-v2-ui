@@ -327,9 +327,13 @@ function AddressStep({
           phone: profile.phone || prev.phone,
         }))
         setSavedAddresses(addrs)
-        const def = addrs.find((a) => a.isDefault)
-        if (def) setSelectedId(def.id)
-        else if (addrs.length > 0) setSelectedId(addrs[0].id)
+        const def = addrs.find((a) => a.isDefault) ?? addrs[0]
+        if (def) {
+          setSelectedId(def.id)
+          // Commit the default automatically so the buyer doesn't have to
+          // click their own already-checked radio to advance.
+          commitAddress(def)
+        }
         setShowNew(addrs.length === 0)
       } catch {
         if (!cancelled) {
@@ -345,12 +349,12 @@ function AddressStep({
     }
   }, [token, initialContext, sessionName])
 
-  const handleUseSaved = () => {
-    const addr = savedAddresses.find((a) => a.id === selectedId)
-    if (!addr) return
+  // Accepts an explicit address so the radio's onChange path doesn't have
+  // to wait for selectedId state to settle. The old "Use this address"
+  // button is gone — selection IS the action.
+  const commitAddress = (addr: UserAddress) => {
     const usingRecipientAddr = shipToOther && recipientAddress.line1.trim()
     onNext({
-      // Only pass shippingAddressId if using the saved address (not an override address)
       ...(usingRecipientAddr ? {} : { shippingAddressId: addr.id }),
       fullName: shipToOther && recipientName.trim() ? recipientName.trim() : form.fullName,
       line1: usingRecipientAddr ? recipientAddress.line1 : addr.line1,
@@ -360,6 +364,10 @@ function AddressStep({
       zip: usingRecipientAddr ? recipientAddress.zip : addr.postalCode || "",
       phone: shipToOther ? recipientPhone.trim() : (addr.phone || form.phone || ""),
     })
+  }
+  const handleUseSaved = () => {
+    const addr = savedAddresses.find((a) => a.id === selectedId)
+    if (addr) commitAddress(addr)
   }
 
   const handleSaveNew = async () => {
@@ -571,15 +579,9 @@ function AddressStep({
                 type="radio"
                 name="address"
                 checked={isSelected}
-                // Selecting the radio is the action. No separate "Use this
-                // address" button — picking commits the address and advances
-                // to delivery. Removes a click and removes the auto-advance
-                // race we shipped earlier.
                 onChange={() => {
                   setSelectedId(addr.id)
-                  // Defer one tick so React applies setSelectedId before
-                  // handleUseSaved reads it.
-                  requestAnimationFrame(() => handleUseSaved())
+                  commitAddress(addr)
                 }}
                 className="sr-only"
               />
