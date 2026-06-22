@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation"
 import { signIn, useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { RequestReturnButton } from "@/components/returns/RequestReturnButton"
 import {
   getOrderByNumber,
   checkReviewEligibility,
@@ -459,11 +460,12 @@ function OrderItem({
 /* ─────────────────────── Sub-order section ─────────────────────── */
 
 function SubOrderBlock({
-  sub, placedAt, single,
+  sub, placedAt, single, orderNumber,
 }: {
   sub: SubOrderDto
   placedAt: string
   single: boolean
+  orderNumber: string
 }) {
   const isDelivered = sub.fulfillmentStatus === "delivered" || sub.fulfillmentStatus === "completed"
   const headline = statusHeadline(sub.fulfillmentStatus, sub.trackingNumber)
@@ -501,9 +503,14 @@ function SubOrderBlock({
       </section>
 
       <section className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-lg font-bold text-foreground mb-6">
-          Items {single ? "in Order" : "in this Shipment"}
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-bold text-foreground">
+            Items {single ? "in Order" : "in this Shipment"}
+          </h2>
+          {isDelivered && (
+            <RequestReturnButton sub={sub} orderNumber={orderNumber} />
+          )}
+        </div>
         <div className="flex flex-col gap-6">
           {sub.items.map((item) => (
             <OrderItem key={item.id} item={item} sub={sub} isDelivered={isDelivered} />
@@ -621,7 +628,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
           {/* Left: tracking + items per shipment */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             {order.subOrders.map((sub) => (
-              <SubOrderBlock key={sub.id} sub={sub} placedAt={placedAt} single={single} />
+              <SubOrderBlock key={sub.id} sub={sub} placedAt={placedAt} single={single} orderNumber={orderNumber} />
             ))}
           </div>
 

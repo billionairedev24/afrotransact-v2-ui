@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -49,9 +49,11 @@ const PaymentStep = dynamic(() => import("./_stripe-payment"), {
 })
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
+import { PhoneInput } from "@/components/ui/PhoneInput"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 import { logError } from "@/lib/errors"
+import { features } from "@/lib/features"
 import {
   checkout as apiCheckout,
   mergeCart,
@@ -59,6 +61,8 @@ import {
   getRegions,
   loadCheckoutShippingContext,
   createAddress,
+  updateAddress,
+  setDefaultAddress,
   getUserProfile,
   validateCoupon,
   getShippingQuotes,
@@ -68,8 +72,6 @@ import {
   type ValidateCouponResponse,
   type Region,
   type UserAddress,
-  type FeatureFlag,
-  getRegionFeatures,
   getActiveDeals,
   type DealData,
   type RegionPaymentMethod,
@@ -78,6 +80,7 @@ import {
   getRegionConfig,
   getStoreById,
   listSavedPaymentMethods,
+  pollOrderUntilExists,
   type SavedPaymentMethod,
 } from "@/lib/api"
 import { resolveDefaultRegion } from "@/lib/regions"
@@ -97,6 +100,151 @@ const STEPS: { id: Step; label: string; icon: typeof MapPin }[] = [
   { id: "review",  label: "Review",    icon: Package    },
   { id: "payment", label: "Payment",   icon: CreditCard },
 ]
+
+/* ── ShippingRatePicker ─────────────────────────────────────────────
+   Amazon-style: a single flat list sorted by Cheapest or Fastest with
+   inline badges on the relevant rows + carrier name on each. Auto-
+   selects the cheapest option once quotes land so the buyer can hit
+   Continue without thinking. */
+function ShippingRatePicker({
+  quoteData,
+  selectedQuoteId,
+  onSelectQuote,
+}: {
+  quoteData: ShippingQuoteResponse
+  selectedQuoteId: string | null
+  onSelectQuote: (id: string) => void
+}) {
+  const [sortBy, setSortBy] = useState<"cheapest" | "fastest">("cheapest")
+
+  const allOptions = useMemo(() => {
+    const flat: Array<ShippingQuoteOption & { carrier: string }> = []
+    for (const g of quoteData.groups ?? []) {
+      for (const o of g.options) flat.push({ ...o, carrier: g.carrier })
+    }
+    return flat
+  }, [quoteData])
+
+  const cheapestId = useMemo(() => {
+    let id: string | null = null
+    let best = Number.POSITIVE_INFINITY
+    for (const o of allOptions) {
+      if (o.amountCents < best) { best = o.amountCents; id = o.quoteId }
+    }
+    return id
+  }, [allOptions])
+
+  const fastestId = useMemo(() => {
+    let id: string | null = null
+    let best = Number.POSITIVE_INFINITY
+    for (const o of allOptions) {
+      if (o.estimatedDays != null && o.estimatedDays < best) { best = o.estimatedDays; id = o.quoteId }
+    }
+    return id
+  }, [allOptions])
+
+  const sorted = useMemo(() => {
+    const copy = [...allOptions]
+    if (sortBy === "cheapest") {
+      copy.sort((a, b) => a.amountCents - b.amountCents || (a.estimatedDays ?? 99) - (b.estimatedDays ?? 99))
+    } else {
+      copy.sort((a, b) => (a.estimatedDays ?? 99) - (b.estimatedDays ?? 99) || a.amountCents - b.amountCents)
+    }
+    return copy
+  }, [allOptions, sortBy])
+
+  // Default-select the cheapest if the buyer hasn't picked anything.
+  useEffect(() => {
+    if (!selectedQuoteId && cheapestId) onSelectQuote(cheapestId)
+  }, [selectedQuoteId, cheapestId, onSelectQuote])
+
+  if (allOptions.length === 0) return null
+
+  return (
+    <div className="mb-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-gray-900">Choose delivery speed</p>
+        <div className="flex items-center gap-3">
+          {quoteData.packageCount && quoteData.packageCount > 1 && (
+            <span className="text-xs text-gray-500">{quoteData.packageCount} packages</span>
+          )}
+          <div className="flex items-center rounded-full border border-gray-200 p-0.5 text-xs">
+            {(["cheapest", "fastest"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSortBy(s)}
+                className={cn(
+                  "px-3 py-1 rounded-full font-semibold capitalize transition-colors",
+                  sortBy === s ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100",
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100 overflow-hidden">
+        {sorted.map((opt) => {
+          const isSelected = selectedQuoteId === opt.quoteId
+          const isCheapest = opt.quoteId === cheapestId
+          const isFastest = opt.quoteId === fastestId
+          return (
+            <label
+              key={opt.quoteId}
+              className={cn(
+                "relative flex cursor-pointer items-center gap-4 px-4 py-3 transition-colors",
+                isSelected ? "bg-amber-50/50" : "hover:bg-gray-50",
+              )}
+            >
+              <input
+                type="radio"
+                name="shipping-quote"
+                checked={isSelected}
+                onChange={() => onSelectQuote(opt.quoteId)}
+                className="sr-only"
+              />
+              <div className={cn(
+                "shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center",
+                isSelected ? "border-brand-gold" : "border-gray-300",
+              )}>
+                {isSelected && <div className="h-2.5 w-2.5 rounded-full bg-brand-gold" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-900 truncate">{opt.serviceName}</span>
+                  {isCheapest && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
+                      Cheapest
+                    </span>
+                  )}
+                  {isFastest && !isCheapest && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide bg-violet-100 text-violet-800 px-1.5 py-0.5 rounded">
+                      Fastest
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {opt.carrier}
+                  {opt.estimatedDays != null && ` · ${opt.estimatedDays} day${opt.estimatedDays !== 1 ? "s" : ""}`}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                {opt.amountCents === 0 ? (
+                  <span className="text-sm font-bold text-green-600">FREE</span>
+                ) : (
+                  <span className="text-sm font-bold text-gray-900">{formatCents(opt.amountCents)}</span>
+                )}
+              </div>
+            </label>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -130,6 +278,9 @@ function AddressStep({
     seedDef?.id ?? seedAddrs[0]?.id ?? null,
   )
   const [showNew, setShowNew] = useState(initialContext ? seedAddrs.length === 0 : false)
+  // When set, the address modal updates this saved address instead of
+  // creating a new one. Cleared whenever the modal closes.
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [shipToOther, setShipToOther] = useState(false)
   // Separate recipient override — never mutates the profile-sourced form fields
   const [recipientName, setRecipientName] = useState("")
@@ -206,7 +357,7 @@ function AddressStep({
       city: usingRecipientAddr ? recipientAddress.city : addr.city,
       state: usingRecipientAddr ? recipientAddress.state : addr.state || "",
       zip: usingRecipientAddr ? recipientAddress.zip : addr.postalCode || "",
-      phone: shipToOther ? recipientPhone.trim() : form.phone || "",
+      phone: shipToOther ? recipientPhone.trim() : (addr.phone || form.phone || ""),
     })
   }
 
@@ -225,7 +376,11 @@ function AddressStep({
     try {
       try {
         await getUserProfile(token)
-        const created = await createAddress(token, {
+        // UpdateAddressRequest on the backend has no isDefault field — sending
+        // it on PUT yields a 400. Strip it for updates; set-default flips via
+        // a separate endpoint (handled below when the user ticks the box on
+        // an existing address).
+        const basePayload = {
           label: "shipping",
           line1: form.line1.trim(),
           line2: form.line2?.trim() || undefined,
@@ -233,10 +388,20 @@ function AddressStep({
           state: form.state?.trim() || "",
           postalCode: form.zip.trim(),
           countryCode: "US",
-          isDefault: makeDefault || savedAddresses.length === 0,
-        })
+          phone: form.phone?.trim() || undefined,
+        }
+        const saved = editingId
+          ? await updateAddress(token, editingId, basePayload)
+          : await createAddress(token, {
+              ...basePayload,
+              isDefault: makeDefault || savedAddresses.length === 0,
+            })
+        if (editingId && makeDefault) {
+          try { await setDefaultAddress(token, editingId) } catch { /* non-fatal */ }
+        }
+        setEditingId(null)
         onNext({
-          shippingAddressId: created.id,
+          shippingAddressId: saved.id,
           ...inline,
         })
         return
@@ -294,6 +459,7 @@ function AddressStep({
   // cart rather than trapping them on a half-complete checkout page.
   const dismissNewAddress = () => {
     setShowNew(false)
+    setEditingId(null)
     if (savedAddresses.length === 0) router.push("/cart")
   }
   const newAddressModal = showNew && (
@@ -305,7 +471,7 @@ function AddressStep({
     >
       <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h3 className="text-lg font-bold text-foreground">Add New Address</h3>
+          <h3 className="text-lg font-bold text-foreground">{editingId ? "Edit Address" : "Add New Address"}</h3>
           <button
             type="button"
             onClick={dismissNewAddress}
@@ -316,9 +482,14 @@ function AddressStep({
           </button>
         </div>
         <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            {field("Full name", "fullName", "Jane Doe")}
-            {field("Phone", "phone", "+1 (555) 000-0000", "tel")}
+          {field("Full name", "fullName", "Jane Doe")}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
+            <PhoneInput
+              value={form.phone}
+              onChange={(e164) => setForm({ ...form, phone: e164 })}
+              className="w-full"
+            />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
@@ -384,13 +555,16 @@ function AddressStep({
     <div className="space-y-6">
       {newAddressModal}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100 overflow-hidden">
         {savedAddresses.map((addr) => {
           const isSelected = selectedId === addr.id
           return (
             <label
               key={addr.id}
-              className="relative cursor-pointer group"
+              className={cn(
+                "relative cursor-pointer flex items-start gap-4 px-4 py-4 transition-colors",
+                isSelected ? "bg-amber-50/40" : "bg-white hover:bg-gray-50",
+              )}
             >
               <input
                 type="radio"
@@ -400,35 +574,35 @@ function AddressStep({
                 className="sr-only"
               />
               <div className={cn(
-                "relative h-full rounded-lg border-2 p-4 transition-all",
-                isSelected
-                  ? "border-brand-gold bg-white"
-                  : "border-gray-200 bg-white group-hover:border-gray-300",
+                "mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                isSelected ? "border-brand-gold" : "border-gray-300",
               )}>
-                <div className="absolute top-4 right-4">
-                  <div className={cn(
-                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
-                    isSelected ? "border-brand-gold" : "border-gray-300",
-                  )}>
-                    {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />}
-                  </div>
-                </div>
-                <div className="pr-8">
+                {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div>
                   <p className="text-sm font-bold text-foreground">
                     {form.fullName || sessionName || "Saved address"}
                   </p>
-                  <p className="text-sm text-gray-600 leading-relaxed mt-1">
-                    {addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}
-                    <br />
-                    {addr.city}, {addr.state} {addr.postalCode}
-                    <br />
-                    {addr.countryCode || "United States"}
+                  <p className="text-sm text-gray-600 truncate mt-0.5" title={[
+                    addr.line1,
+                    addr.line2,
+                    `${addr.city}, ${addr.state} ${addr.postalCode}`,
+                    addr.countryCode || "US",
+                  ].filter(Boolean).join(" · ")}>
+                    {[
+                      addr.line1,
+                      addr.line2,
+                      `${addr.city}, ${addr.state} ${addr.postalCode}`,
+                      addr.countryCode || "US",
+                    ].filter(Boolean).join(" · ")}
                   </p>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
-                      // Pre-fill the new-address form with this entry then open modal.
+                      // Editing an existing saved address — update on save instead of creating a duplicate.
+                      setEditingId(addr.id)
                       setForm((prev) => ({
                         ...prev,
                         line1: addr.line1,
@@ -436,11 +610,12 @@ function AddressStep({
                         city: addr.city,
                         state: addr.state || "",
                         zip: addr.postalCode || "",
+                        phone: addr.phone || prev.phone,
                       }))
                       setAddressQuery(addr.line1)
                       setShowNew(true)
                     }}
-                    className="mt-3 text-xs font-bold uppercase tracking-wider text-brand-gold-foreground/80 hover:text-brand-gold-foreground transition-colors"
+                    className="mt-2 text-xs font-bold uppercase tracking-wider text-brand-gold-foreground/80 hover:text-brand-gold-foreground transition-colors"
                   >
                     Edit
                   </button>
@@ -588,52 +763,115 @@ function AddressStep({
  * actual shipping cost server-side and returns it in `displayShipping`
  * (see CheckoutClient's Order Summary). No client-side calculation.
  */
+/**
+ * Delivery picker. When the carrier-quote response contains live rates
+ * we hand off to ShippingRatePicker so the buyer sees every option
+ * (Cheapest/Fastest badges, sort toggle). Otherwise we fall back to the
+ * platform per-weight standard tile.
+ */
 function DeliveryOptions({
   shippingCents,
   onConfirm,
   placing,
+  quoteData,
+  quotesLoading,
+  selectedQuoteId,
+  onSelectQuote,
+  freeShippingApplies,
 }: {
   shippingCents: number
   onConfirm: () => void
-  /** True while the parent is placing/syncing the order. */
   placing: boolean
+  quoteData: ShippingQuoteResponse | null
+  quotesLoading: boolean
+  selectedQuoteId: string | null
+  onSelectQuote: (id: string) => void
+  freeShippingApplies: boolean
 }) {
-  // Single tile while carrier-rated shipping is disabled. Selecting it (or
-  // re-clicking it) advances to Payment via the same handler the Order
-  // Summary CTA uses — no extra button needed.
-  return (
-    <div className="flex flex-col gap-3">
-      <label className="relative cursor-pointer block">
-        <input
-          type="radio"
-          name="delivery"
-          checked
-          onChange={onConfirm}
-          disabled={placing}
-          className="sr-only"
+  // Loading skeleton while quotes are in flight. Critical: WITHOUT this we
+  // briefly show the platform Standard-delivery tile before rates land, and
+  // a click here would lock the buyer into weight-based pricing.
+  if (quotesLoading && !freeShippingApplies) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-gray-500">Fetching live carrier rates…</p>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse" />
+        ))}
+      </div>
+    )
+  }
+
+  const hasCarrierRates =
+    !freeShippingApplies
+    && quoteData?.realtimeEnabled
+    && quoteData.eligibleByGeo
+    && (quoteData.groups?.length ?? 0) > 0
+
+  if (hasCarrierRates) {
+    return (
+      <div className="space-y-4">
+        <ShippingRatePicker
+          quoteData={quoteData!}
+          selectedQuoteId={selectedQuoteId}
+          onSelectQuote={onSelectQuote}
         />
-        <div
+        <button
+          type="button"
           onClick={onConfirm}
-          className="flex items-center justify-between p-4 border-2 border-brand-gold rounded-lg bg-white"
+          disabled={placing || !selectedQuoteId}
+          className="w-full rounded-full bg-brand-gold px-6 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
         >
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-5 h-5 shrink-0 rounded-full border-2 border-brand-gold flex items-center justify-center">
-              <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">Standard delivery</p>
-              <p className="text-xs text-gray-500 mt-0.5">Delivery in 3-5 business days</p>
-            </div>
+          Continue to payment
+        </button>
+      </div>
+    )
+  }
+
+  // Platform fallback. Only reachable when carrier mode is off, the address
+  // isn't eligible (geo allowlist), or Shippo returned no rates. Surface
+  // why so the buyer doesn't think they're being shortchanged.
+  const fallbackReason =
+    quoteData?.realtimeEnabled === false ? "Carrier rating is currently disabled by the platform."
+    : quoteData?.eligibleByGeo === false ? "Live carrier rates aren't available for this address yet."
+    : (quoteData?.groups?.length ?? 0) === 0 && quoteData?.message ? quoteData.message
+    : (quoteData?.groups?.length ?? 0) === 0 ? "No carrier returned a rate for this shipment — using platform standard."
+    : null
+  return (
+    <div className="space-y-3">
+      {fallbackReason && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          {fallbackReason}
+        </p>
+      )}
+      <div
+        className="flex items-center justify-between p-4 border-2 border-brand-gold rounded-lg bg-white"
+      >
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-5 h-5 shrink-0 rounded-full border-2 border-brand-gold flex items-center justify-center">
+            <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />
           </div>
-          <span className="text-sm font-semibold whitespace-nowrap ml-3">
-            {shippingCents === 0 ? (
-              <span className="text-brand-gold">Free</span>
-            ) : (
-              <span className="text-foreground">${(shippingCents / 100).toFixed(2)}</span>
-            )}
-          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Standard delivery</p>
+            <p className="text-xs text-gray-500 mt-0.5">Delivery in 3-5 business days</p>
+          </div>
         </div>
-      </label>
+        <span className="text-sm font-semibold whitespace-nowrap ml-3">
+          {shippingCents === 0 ? (
+            <span className="text-brand-gold">Free</span>
+          ) : (
+            <span className="text-foreground">${(shippingCents / 100).toFixed(2)}</span>
+          )}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={placing}
+        className="w-full rounded-full bg-brand-gold px-6 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
+      >
+        Continue to payment
+      </button>
     </div>
   )
 }
@@ -781,60 +1019,11 @@ function ReviewStep({
         )}
 
         {!freeShippingApplies && quoteData?.realtimeEnabled && quoteData.eligibleByGeo && (quoteData.groups?.length ?? 0) > 0 && (
-          <div className="mb-4 space-y-2">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-semibold text-gray-900">Choose delivery speed</p>
-              {quoteData.packageCount && quoteData.packageCount > 1 && (
-                <span className="text-xs text-gray-500">{quoteData.packageCount} packages</span>
-              )}
-            </div>
-            {(quoteData.groups ?? []).flatMap((group) =>
-              group.options.map((opt) => {
-                const isSelected = selectedQuoteId === opt.quoteId
-                const isFastest = opt.tier === "express" || opt.tier === "overnight"
-                const isStandard = opt.tier === "standard" || opt.tier === "ground"
-                const TierIcon = isFastest ? Zap : isStandard ? Truck : Clock
-                return (
-                  <label
-                    key={opt.quoteId}
-                    className={`flex cursor-pointer items-center gap-4 rounded-2xl border-2 p-4 transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      checked={isSelected}
-                      onChange={() => onSelectQuote(opt.quoteId)}
-                      className="sr-only"
-                    />
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                      isSelected ? "bg-primary/20" : "bg-gray-100"
-                    }`}>
-                      <TierIcon className={`h-5 w-5 ${isSelected ? "text-foreground" : "text-gray-500"}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{opt.serviceName}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{group.carrier} · {opt.estimatedDays} day{opt.estimatedDays !== 1 ? "s" : ""}</p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      {opt.amountCents === 0 ? (
-                        <span className="text-sm font-bold text-green-600">FREE</span>
-                      ) : (
-                        <span className="text-sm font-bold text-gray-900">{formatCents(opt.amountCents)}</span>
-                      )}
-                    </div>
-                    <div className={`shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                      isSelected ? "border-primary bg-primary" : "border-gray-300"
-                    }`}>
-                      {isSelected && <div className="h-2 w-2 rounded-full bg-brand-gold-foreground" />}
-                    </div>
-                  </label>
-                )
-              })
-            )}
-          </div>
+          <ShippingRatePicker
+            quoteData={quoteData}
+            selectedQuoteId={selectedQuoteId}
+            onSelectQuote={onSelectQuote}
+          />
         )}
 
         {!freeShippingApplies && quoteData?.realtimeEnabled && quoteData.eligibleByGeo && quoteData.message && (quoteData.groups?.length ?? 0) === 0 && (
@@ -993,6 +1182,12 @@ export default function CheckoutClient({
   // call sees `true` immediately and bails.
   const placingRef = useRef(false)
   const [shippingQuotes, setShippingQuotes] = useState<ShippingQuoteResponse | null>(null)
+  // True while a quote fetch is in flight after entering the review step.
+  // Used to suppress the "Standard delivery" fallback tile and the Place
+  // Order CTA before we know whether carrier rates are available — without
+  // this, the buyer could (and did) auto-advance to payment with the
+  // platform weight-based price before Shippo even answered.
+  const [quotesLoading, setQuotesLoading] = useState(false)
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null)
   const [couponCode, setCouponCode] = useState("")
   const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
@@ -1006,7 +1201,6 @@ export default function CheckoutClient({
 
   const [availableRegions, setAvailableRegions] = useState<Region[]>([])
   const [region, setRegion] = useState<Region | null>(null)
-  const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
   const [savedCards, setSavedCards] = useState<SavedPaymentMethod[]>([])
   const [selectedSavedCardId, setSelectedSavedCardId] = useState<string | null>(null)
@@ -1076,14 +1270,15 @@ export default function CheckoutClient({
           ? appliedDeal.originalPriceCents - appliedDeal.dealPriceCents
           : 0)
     : 0
+  // `shipping` is the platform weight-based fallback. Compute effective
+  // shipping here so total / order-summary / Place-order all agree before
+  // checkoutResult comes back from the backend.
   const total = subtotal + tax + shipping - discount - dealDiscount
 
   const availableDeals = allDeals.filter(d => cartItems.some(i => i.productId === d.productId))
 
   const couponsEnabled = configFeatures["coupons_enabled"] === true
-  const stripeFeatureEnabled =
-    flags.find((f) => f.key === "stripe_enabled" || f.key === "stripe")?.enabled ?? true
-  const marketplaceFromFlags = flags.find((f) => f.key === "marketplace_enabled")?.enabled
+  const stripeFeatureEnabled = features.stripeEnabled()
   const marketplaceFromConfig =
     "marketplace_enabled" in configFeatures ? configFeatures["marketplace_enabled"] === true : undefined
   const marketplacePurchasingAllowed =
@@ -1091,7 +1286,7 @@ export default function CheckoutClient({
       ? true
       : marketplaceFromConfig !== undefined
         ? marketplaceFromConfig
-        : (marketplaceFromFlags ?? true)
+        : features.marketplaceEnabled()
   const stripeRow = paymentMethods.find((m) => m.provider.toLowerCase() === "stripe")
   const stripeMethodEnabled = stripeRow ? stripeRow.enabled : paymentMethods.length === 0
   const stripeAvailable = stripeFeatureEnabled && stripeMethodEnabled
@@ -1188,12 +1383,8 @@ export default function CheckoutClient({
     setGatesReady(false)
     async function loadRegionConfig() {
       try {
-        const [f, cfg] = await Promise.all([
-          getRegionFeatures(currentRegion.id).catch((): FeatureFlag[] => []),
-          getRegionConfig(currentRegion.code).catch(() => null),
-        ])
+        const cfg = await getRegionConfig(currentRegion.code).catch(() => null)
         if (cancelled) return
-        setFlags(f)
         if (cfg) {
           setPaymentMethods(cfg.paymentMethods || [])
           setConfigFeatures(cfg.features || {})
@@ -1342,6 +1533,10 @@ export default function CheckoutClient({
   }
 
   const handlePaymentComplete = useCallback(async () => {
+    // Order row was created at /orders/checkout (cart/checkout reverted to
+    // pre-rewrite). No materialization polling needed — the order is already
+    // in /orders with status=pending and will flip to confirmed when the
+    // payment webhook lands.
     try {
       const token = await getAccessToken()
       if (token) {
@@ -1357,7 +1552,7 @@ export default function CheckoutClient({
       // sessionStorage/localStorage may be unavailable — non-fatal
     }
     setStep("success")
-  }, [clearCart])
+  }, [clearCart, checkoutResult])
 
   const currentIdx = STEPS.findIndex((s) => s.id === step)
 
@@ -1365,17 +1560,18 @@ export default function CheckoutClient({
     if (step !== "review") return
     if (!authToken || !region) return
     if (gatesReady && !marketplacePurchasingAllowed) {
-      setShippingQuotes(null)
-      setSelectedQuoteId(null)
+      // Don't blow away an already-loaded quote on a gates re-check.
       return
     }
     if (freeShippingApplies) {
-      setShippingQuotes(null)
-      setSelectedQuoteId(null)
+      // Don't clear quotes — the Shipping & handling row hides naturally
+      // when freeShippingApplies is true elsewhere. Clearing here causes
+      // the picker to vanish if the threshold flips during a re-render.
       return
     }
     if (!address.state && !address.city) return
     let cancelled = false
+    setQuotesLoading(true)
     ;(async () => {
       try {
         const q = await getShippingQuotes(authToken, {
@@ -1387,14 +1583,24 @@ export default function CheckoutClient({
           destinationCountry: "US",
         })
         if (cancelled) return
-        setShippingQuotes(q)
-        const first = q.groups?.[0]?.options?.[0]?.quoteId
-        setSelectedQuoteId((prev) => prev ?? first ?? null)
-      } catch {
-        if (!cancelled) {
-          setShippingQuotes(null)
-          setSelectedQuoteId(null)
+        // If the new fetch returned no groups but we previously had carrier
+        // rates loaded, keep the old rates visible — Shippo occasionally
+        // returns an empty list on transient hiccups and we don't want to
+        // collapse a working list back to the platform tile.
+        const incomingHasRates = (q.groups?.length ?? 0) > 0
+        const incomingRealtime = q.realtimeEnabled && q.eligibleByGeo
+        if (!incomingHasRates && incomingRealtime) {
+          // Skip the update — keep last-good shippingQuotes.
+          return
         }
+        setShippingQuotes(q)
+        // Leave selection to the picker (it auto-picks the cheapest). Don't
+        // force-pick the first option here — the picker's logic takes
+        // precedence and a stale "first" can mis-select the priciest tier.
+      } catch {
+        // Keep last-good list visible on a transient refetch failure.
+      } finally {
+        if (!cancelled) setQuotesLoading(false)
       }
     })()
     return () => {
@@ -1429,10 +1635,23 @@ export default function CheckoutClient({
     )
   }
 
-  const displayTotal = checkoutResult?.totalCents ?? total
+  // When realtime carrier quotes are showing and the buyer has picked one,
+  // its amount IS the shipping cost — not the platform weight-based fallback.
+  // Order summary, the collapsed Delivery card, and the total all need to
+  // reflect the carrier rate immediately so what the buyer sees matches what
+  // they're charged. The backend echoes the same amount back via
+  // checkoutResult.shippingCostCents after place-order, which wins once it
+  // lands (handles edge cases like rate expiry / re-quote on the server).
+  const selectedQuoteCents = shippingQuotes?.groups
+    ?.flatMap((g) => g.options)
+    .find((o) => o.quoteId === selectedQuoteId)?.amountCents
+  const effectiveShipping = freeShippingApplies ? 0 : (selectedQuoteCents ?? shipping)
+  const displayTotal = checkoutResult?.totalCents
+    ?? (subtotal + tax + effectiveShipping - discount - dealDiscount)
   const displaySubtotal = checkoutResult?.subtotalCents ?? subtotal
   const displayTax = checkoutResult?.taxCents ?? tax
-  const displayShipping = checkoutResult?.shippingCostCents ?? shipping
+  const displayShipping = checkoutResult?.shippingCostCents
+    ?? (freeShippingApplies ? 0 : selectedQuoteCents ?? shipping)
   const totalDiscount = discount + dealDiscount
 
   // currentIdx still drives section completion state (silences unused-var lint via this reference)
@@ -1449,8 +1668,21 @@ export default function CheckoutClient({
   //   - on the payment step Stripe's own confirm flow runs (we don't fire
   //     it from here to keep the iframe-driven flow untouched); the user
   //     uses the inline Pay button rendered by PaymentStep.
+  // Right-side "Place your order" CTA. We gate it carefully on the review
+  // step: if carrier rates are loading, or rates are available but the
+  // buyer hasn't picked one, the button stays disabled. Otherwise the
+  // buyer could click it before Shippo answered and the backend would
+  // silently default to weight-based pricing.
+  const carrierRatesPending =
+    step === "review"
+    && !freeShippingApplies
+    && (quotesLoading
+        || (shippingQuotes?.realtimeEnabled
+            && shippingQuotes.eligibleByGeo
+            && (shippingQuotes.groups?.length ?? 0) > 0
+            && !selectedQuoteId))
   const placeOrderHandler = () => {
-    if (step === "review") syncCartAndCheckout()
+    if (step === "review" && !carrierRatesPending) syncCartAndCheckout()
   }
 
   if (step === "success") {
@@ -1641,6 +1873,11 @@ export default function CheckoutClient({
                   shippingCents={displayShipping}
                   onConfirm={syncCartAndCheckout}
                   placing={placing}
+                  quoteData={shippingQuotes}
+                  quotesLoading={quotesLoading}
+                  selectedQuoteId={selectedQuoteId}
+                  onSelectQuote={setSelectedQuoteId}
+                  freeShippingApplies={freeShippingApplies}
                 />
               ) : (
                 <div className="flex items-start justify-between gap-4">
@@ -1720,32 +1957,12 @@ export default function CheckoutClient({
         {/* Right column: Order Summary — image-faithful */}
         <aside className="w-full lg:w-[380px] xl:w-[400px] shrink-0 lg:sticky lg:top-24 space-y-4">
           <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-5">
-            {/* Place order CTA at the top */}
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={placeOrderHandler}
-                disabled={
-                  Boolean(gatesReady && !marketplacePurchasingAllowed) ||
-                  placing ||
-                  step === "address" ||
-                  (step === "payment" && !stripeAvailable)
-                }
-                className="w-full rounded-full bg-brand-gold py-3.5 text-base font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {placing ? (
-                  <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Placing…</span>
-                ) : (
-                  "Place your order"
-                )}
-              </button>
-              <p className="text-center text-[11px] text-gray-500">
-                By placing your order, you agree to our{" "}
-                <Link href="/terms" className="underline hover:text-foreground">terms</Link>.
-              </p>
-            </div>
-
-            <div className="border-t border-gray-200" />
+            {/* No right-side CTA. The inline advance buttons on each step
+                are the only forward actions:
+                  - Address step: "Use this address" (in AddressStep)
+                  - Review step: "Continue to payment" (in DeliveryOptions)
+                  - Payment step: Stripe's inline "Pay" button
+                The right summary stays focused on the order breakdown. */}
 
             <h2 className="text-lg font-bold text-foreground">Order Summary</h2>
 

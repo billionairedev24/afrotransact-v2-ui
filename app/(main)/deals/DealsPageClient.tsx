@@ -26,6 +26,7 @@ import {
 } from "@/lib/api"
 import { BrandProductCard, BrandProductRow, type BrandProductCardItem } from "@/components/products/BrandProductCard"
 import { Pagination } from "@/components/products/Pagination"
+import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 
 const PAGE_SIZE = 24
 const DISCOUNT_TIERS = [10, 25, 50, 70] as const
@@ -124,7 +125,11 @@ export default function DealsPageClient() {
         if (!slugs.some((s) => selectedCategorySlugs.has(s))) return false
       }
       if (ratingMin != null) {
-        const r = d.productId ? ratings[d.productId] : undefined
+        // Prefer the denormalized avgRating that ships on DealData (set by
+        // the backend's enrichWithProduct). Fall back to the separate
+        // ratings map until the deploy carrying the denormalized field is
+        // live everywhere.
+        const r = d.avgRating ?? (d.productId ? ratings[d.productId] : undefined)
         if (r == null || r < ratingMin) return false
       }
       return true
@@ -337,6 +342,12 @@ export default function DealsPageClient() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Sell CTA — deal-hunters often know what's underpriced in a category
+          and could sell it themselves. Auto-hidden for admin + sellers. */}
+      <div className="mt-10">
+        <SellOnAfrotransactStrip />
       </div>
     </main>
   )

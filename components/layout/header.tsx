@@ -38,6 +38,7 @@ import { useCartStore } from "@/stores/cart-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useSignOut } from "@/hooks/useSignOut"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
+import { DeliverToPicker } from "@/components/buyer/DeliverToPicker"
 import { AiNavButton } from "@/components/ai/AiWidget"
 import { searchSuggest, getCategories, type SearchSuggestion, type CategoryRef } from "@/lib/api"
 
@@ -72,11 +73,9 @@ function getInitials(name?: string | null): string {
 
 const isServicesCategory = (slug: string) => slug.toLowerCase().includes("service")
 
-// TODO(post-beta): set this to false to re-enable the "For Sellers" section
-// (Seller Dashboard link, "Sell on AfroTransact" CTA) in the mobile sidebar.
-// Currently hardcoded true so seller surfaces are hidden in the closed-beta
-// while seller signups are invite-only.
-const HIDE_SELLER_FOR_BETA = true
+// Self-service seller signup is open. Buyer-side surfaces show the
+// "Sell on AfroTransact" CTA to guests + buyers (StartSellingLink handles
+// the per-role hiding for admins + existing sellers).
 
 function MobileMenuSectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -478,12 +477,14 @@ export function Header() {
                 >
                   New Arrivals
                 </Link>
+                <DeliverToPicker />
                 <Link
                   href="/help"
                   className="text-white text-[14px] hover:text-brand-gold transition-colors"
                 >
                   Help
                 </Link>
+                <StartSellingLink variant="header-inline" />
               </nav>
 
               {/* ── Account — single button → dropdown whose content depends on auth state ── */}
@@ -817,31 +818,23 @@ export function Header() {
                 Settings
               </MobileMenuRow>
 
-              {/* ── For Sellers (public CTA gated off during beta) ── */}
-              {(isSeller || isAdmin || !HIDE_SELLER_FOR_BETA) && (
-                <>
-                  <div className="mx-5 my-2 border-t border-gray-200" />
-                  <MobileMenuSectionTitle>For Sellers</MobileMenuSectionTitle>
-                  {(isSeller || isAdmin) && (
-                    <MobileMenuRow
-                      href="/dashboard"
-                      onClick={closeMobileMenu}
-                      icon={LayoutGrid}
-                    >
-                      Seller Dashboard
-                    </MobileMenuRow>
-                  )}
-                  {!HIDE_SELLER_FOR_BETA && (
-                    <MobileMenuRow href="/sell" onClick={closeMobileMenu} icon={Store}>
-                      Sell on AfroTransact
-                    </MobileMenuRow>
-                  )}
-                  {isAdmin && (
-                    <MobileMenuRow href="/admin" onClick={closeMobileMenu} icon={ShieldCheck}>
-                      Admin Panel
-                    </MobileMenuRow>
-                  )}
-                </>
+              {/* ── For Sellers ── */}
+              <div className="mx-5 my-2 border-t border-gray-200" />
+              <MobileMenuSectionTitle>For Sellers</MobileMenuSectionTitle>
+              {(isSeller || isAdmin) && (
+                <MobileMenuRow href="/dashboard" onClick={closeMobileMenu} icon={LayoutGrid}>
+                  Seller Dashboard
+                </MobileMenuRow>
+              )}
+              {!isSeller && !isAdmin && (
+                <MobileMenuRow href="/sell" onClick={closeMobileMenu} icon={Store}>
+                  Sell on AfroTransact
+                </MobileMenuRow>
+              )}
+              {isAdmin && (
+                <MobileMenuRow href="/admin" onClick={closeMobileMenu} icon={ShieldCheck}>
+                  Admin Panel
+                </MobileMenuRow>
               )}
 
               <div className="flex-1" />

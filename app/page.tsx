@@ -13,6 +13,8 @@ import { HeroCarousel } from "@/components/landing/HeroCarousel"
 import { CategoriesBentoGrid } from "@/components/landing/CategoriesBentoGrid"
 import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
 import { ProductRow } from "@/components/landing/ProductRow"
+import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
+import { SellOnAfrotransactModal } from "@/components/landing/SellOnAfrotransactModal"
 import { fetchCategoryTiles } from "@/lib/category-tiles"
 import {
   getCategories,
@@ -216,6 +218,9 @@ export default async function HomePage() {
           viewAllLabel="See all deals"
         />
 
+        {/* 3.5 Slim mid-page seller CTA */}
+        <SellOnAfrotransactStrip />
+
         {/* 4. Trust & Mission Band */}
         <TrustMissionBand />
 
@@ -235,6 +240,11 @@ export default async function HomePage() {
         />
 
       </main>
+
+      {/* Auto-pops once per visitor after engagement signals (delay + scroll).
+          Hidden for admins + existing sellers; respects a "dismissed" flag in
+          localStorage so it never nags. */}
+      <SellOnAfrotransactModal />
 
       <Footer />
     </div>

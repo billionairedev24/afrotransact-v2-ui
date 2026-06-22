@@ -152,9 +152,7 @@ export function Footer() {
                 {section.links.map((link) => (
                   <li key={link.label}>
                     {link.isStartSelling ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <StartSellingLink variant="footer">{link.label}</StartSellingLink>
-                      </span>
+                      <StartSellingLink variant="footer">{link.label}</StartSellingLink>
                     ) : (
                       <Link
                         href={link.href}

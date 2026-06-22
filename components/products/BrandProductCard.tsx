@@ -15,7 +15,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Star, ShoppingCart, Loader2, Timer, Package } from "lucide-react"
+import { Star, ShoppingCart, Loader2, Timer, Package, MapPin } from "lucide-react"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -43,6 +43,12 @@ export interface BrandProductCardItem {
   dealOfTheDay?: boolean
   /** ISO end timestamp — renders a "Ends in HH:MM:SS" countdown above the title. */
   endsAt?: string | null
+  /**
+   * Distance in miles from the buyer's Deliver-to location to the store.
+   * Only populated by geo-aware search calls (lat/lon passed). Null/omitted
+   * from non-geo contexts (homepage strips), so the badge stays absent there.
+   */
+  distanceMiles?: number | null
 }
 
 /**
@@ -181,8 +187,18 @@ export function BrandProductCard({ item }: Props) {
           )}
         </div>
 
-        {item.storeName && (
-          <p className="text-xs text-gray-500 truncate">{item.storeName}</p>
+        {(item.storeName || (typeof item.distanceMiles === "number" && item.distanceMiles >= 0)) && (
+          <div className="flex items-center justify-between gap-1">
+            {item.storeName ? (
+              <p className="text-xs text-gray-500 truncate">{item.storeName}</p>
+            ) : <span />}
+            {typeof item.distanceMiles === "number" && item.distanceMiles >= 0 && (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 shrink-0">
+                <MapPin className="h-2.5 w-2.5" />
+                {item.distanceMiles.toFixed(1)} mi
+              </span>
+            )}
+          </div>
         )}
 
         <div className="pt-1">

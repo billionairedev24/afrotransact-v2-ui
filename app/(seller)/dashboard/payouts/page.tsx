@@ -31,7 +31,7 @@ import {
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
 import { createColumnHelper } from "@tanstack/react-table"
-import { pickPrimarySellerStoreId } from "@/lib/seller-store"
+import { useSelectedStoreId } from "@/hooks/useSelectedStoreId"
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -96,20 +96,9 @@ export default function PayoutsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("")
   const [selected, setSelected] = useState<TransferRecord | null>(null)
 
-  const storeQuery = useQuery({
-    queryKey: [SELLER_STORE_KEY],
-    queryFn: async () => {
-      const token = await getAccessToken()
-      if (!token) throw new Error("Not authenticated")
-      const s = await getCurrentSeller(token)
-      const stores = await getSellerStores(token, s.id)
-      return pickPrimarySellerStoreId(stores)
-    },
-    enabled: status === "authenticated",
-    staleTime: 10 * 60 * 1000,
-  })
-
-  const storeId = storeQuery.data ?? null
+  const selectedStore = useSelectedStoreId()
+  const storeQuery = { isLoading: selectedStore.isLoading, isFetched: !selectedStore.isLoading, data: selectedStore.storeId, error: selectedStore.isError ? new Error("store load failed") : null }
+  const storeId = selectedStore.storeId
 
   const summaryQuery = useQuery<PayoutSummary>({
     queryKey: [SELLER_PAYOUT_SUMMARY_KEY, storeId],

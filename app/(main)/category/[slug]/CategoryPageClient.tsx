@@ -7,7 +7,9 @@ import Image from "next/image"
 import { ChevronRight, Star, MapPin, Leaf, Loader2, ShoppingCart, Sparkles } from "lucide-react"
 import { searchProducts, getCategories, getProductById, type SearchResult, type CategoryRef, type Product } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
+import { useBuyerLocation } from "@/stores/buyer-location"
 import { toast } from "sonner"
+import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 
 function productToSearchResult(p: Product): SearchResult {
   const variant = p.variants?.[0]
@@ -215,6 +217,12 @@ export default function CategoryPageClient() {
   const [error, setError] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
 
+  // Buyer Deliver-to → geo-filtered category browse + distance badges.
+  // Default 25 mi radius to match backend. No URL plumbing here; category
+  // browsers don't need shareable radius links yet.
+  const buyerLocation = useBuyerLocation((s) => s.location)
+  const hasGeo = buyerLocation?.lat != null && buyerLocation?.lng != null
+
   useEffect(() => {
     getCategories()
       .then((cats) => {
@@ -246,7 +254,18 @@ export default function CategoryPageClient() {
 
     Promise.all([
       fetchFeatured,
-      searchProducts({ category: name, size: String(pageSize), page: String(page) }),
+      searchProducts({
+        category: name,
+        size: String(pageSize),
+        page: String(page),
+        ...(hasGeo
+          ? {
+              lat: String(buyerLocation!.lat),
+              lon: String(buyerLocation!.lng),
+              radius: "25",
+            }
+          : {}),
+      }),
     ])
       .then(([featured, res]) => {
         setFeaturedProduct(featured)
@@ -262,7 +281,7 @@ export default function CategoryPageClient() {
         if (err instanceof Error) setError(err.message)
       })
       .finally(() => setLoading(false))
-  }, [name, page, featuredId])
+  }, [name, page, featuredId, hasGeo, buyerLocation])
 
   function updatePage(nextPage: number) {
     const next = Math.max(1, nextPage)
@@ -398,6 +417,11 @@ export default function CategoryPageClient() {
           )}
         </>
       )}
+
+      {/* Sell CTA — category browsers are prime sellers in that category. */}
+      <div className="mt-10">
+        <SellOnAfrotransactStrip />
+      </div>
     </main>
   )
 }

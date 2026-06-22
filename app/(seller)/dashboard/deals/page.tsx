@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { useActiveStore } from "@/stores/active-store"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
 import {
   Loader2, Plus, Tag, MoreHorizontal, Pencil,
@@ -116,6 +117,12 @@ export default function SellerDealsPage() {
   const { status } = useSession()
   const [loading, setLoading] = useState(true)
   const [deals, setDeals] = useState<DealData[]>([])
+  const activeStoreId = useActiveStore((s) => s.activeStoreId)
+  // Per-store scope: hide deals from other stores. Store-wide deals
+  // (no storeId) stay visible across all stores.
+  const filteredDeals = activeStoreId
+    ? deals.filter((d) => !d.storeId || d.storeId === activeStoreId)
+    : deals
   const [products, setProducts] = useState<Product[]>([])
   const [stores, setStores] = useState<StoreDetail[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -147,7 +154,12 @@ export default function SellerDealsPage() {
 
   function openCreate() {
     setEditing(null)
-    const defaultStoreId = stores.length > 0 ? stores[0].id : ""
+    // Default to the seller's currently-selected store (via StoreSwitcher);
+    // they can still flip in the form picker for multi-store sellers.
+    const activeId = useActiveStore.getState().activeStoreId
+    const defaultStoreId = activeId && stores.some((s) => s.id === activeId)
+      ? activeId
+      : (stores[0]?.id ?? "")
     setForm({ ...EMPTY_FORM, storeId: defaultStoreId })
     setShowForm(true)
   }
@@ -313,7 +325,7 @@ export default function SellerDealsPage() {
               <span>Deal</span><span>Type</span><span>Product</span><span>Price</span><span>Status</span><span className="text-right">Ends</span><span />
             </div>
             <div className="divide-y divide-gray-100">
-              {deals.map((d) => {
+              {filteredDeals.map((d) => {
                 const isStoreWide = !d.productId
                 const typeBadge = isStoreWide ? (
                   <span className="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-700">

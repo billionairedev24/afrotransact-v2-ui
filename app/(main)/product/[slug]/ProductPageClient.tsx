@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import ProductReviews from "@/components/reviews/ProductReviews"
+import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 import { useCartStore } from "@/stores/cart-store"
 import { useWishlistStore } from "@/stores/wishlist-store"
 import { useWishlist } from "@/hooks/use-wishlist"
@@ -36,15 +37,15 @@ import {
   getProductById,
   getStoreById,
   getRegions,
-  getRegionFeatures,
   type Product,
   type ProductVariant,
-  type FeatureFlag,
   getActiveDeals,
   type DealData,
   trackEvent,
 } from "@/lib/api"
+import { features } from "@/lib/features"
 import { logError } from "@/lib/errors"
+import { ShippingEligibilityBadge } from "@/components/buyer/ShippingEligibilityBadge"
 import { resolveDefaultRegion } from "@/lib/regions"
 
 /** Parse a product description into bullet list + leftover paragraphs. */
@@ -67,6 +68,7 @@ export default function ProductPageClient() {
 
   const [product, setProduct] = useState<Product | null>(null)
   const [storeName, setStoreName] = useState<string>("")
+  const [storeSlug, setStoreSlug] = useState<string>("")
   const [storeReturnsSupported, setStoreReturnsSupported] = useState<boolean>(false)
   const [storeReturnWindowDays, setStoreReturnWindowDays] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -92,7 +94,6 @@ export default function ProductPageClient() {
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeItem = useCartStore((s) => s.removeItem)
 
-  const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [productDeal, setProductDeal] = useState<DealData | null>(null)
 
   useEffect(() => {
@@ -102,7 +103,12 @@ export default function ProductPageClient() {
 
     const fetchData = async () => {
       try {
-        const data = await getProductBySlug(slug).catch(() => getProductById(slug))
+        // If the URL segment looks like a UUID, skip the slug endpoint
+        // (which would 404) and go straight to getProductById.
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)
+        const data = isUuid
+          ? await getProductById(slug)
+          : await getProductBySlug(slug).catch(() => getProductById(slug))
         if (cancelled) return
         setProduct(data)
         setSelectedVariant(data.variants[0] ?? null)
@@ -117,6 +123,7 @@ export default function ProductPageClient() {
           .then((store) => {
             if (cancelled) return
             setStoreName(store.name)
+            setStoreSlug(store.slug ?? "")
             setStoreReturnsSupported(store.returnsSupported === true)
             setStoreReturnWindowDays(
               typeof store.returnWindowDays === "number" ? store.returnWindowDays : null,
@@ -125,21 +132,17 @@ export default function ProductPageClient() {
           .catch(() => { if (!cancelled) setStoreName(data.storeId) })
 
         try {
+          // Region call still kicks off so future region-aware logic
+          // (currency, taxes, etc.) has the result; deals are scoped here.
           const regions = await getRegions("", true).catch(() => [])
-          const r = resolveDefaultRegion(regions)
-          if (r && !cancelled) {
-            const [f, deals] = await Promise.all([
-              getRegionFeatures(r.id).catch(() => []),
-              getActiveDeals().catch(() => []),
-            ])
-            if (!cancelled) {
-              setFlags(f)
-              const deal = deals.find((d) => d.productId === data.id)
-              setProductDeal(deal || null)
-            }
+          resolveDefaultRegion(regions)
+          const deals = await getActiveDeals().catch(() => [])
+          if (!cancelled) {
+            const deal = deals.find((d) => d.productId === data.id)
+            setProductDeal(deal || null)
           }
         } catch (secondaryError) {
-          console.warn("Secondary data fetch failed (flags/deals):", secondaryError)
+          console.warn("Secondary data fetch failed (deals):", secondaryError)
         }
       } catch (e) {
         logError(e, "loading product")
@@ -152,8 +155,8 @@ export default function ProductPageClient() {
     return () => { cancelled = true }
   }, [slug])
 
-  const reviewsEnabled = flags.find((f) => f.key === "reviews_enabled")?.enabled ?? true
-  const marketplaceEnabled = flags.find((f) => f.key === "marketplace_enabled")?.enabled ?? true
+  const reviewsEnabled = features.reviewsEnabled()
+  const marketplaceEnabled = features.marketplaceEnabled()
 
   const variant = selectedVariant ?? product?.variants[0] ?? null
   const inStock = variant ? variant.stockQuantity > 0 : false
@@ -639,6 +642,7 @@ export default function ProductPageClient() {
                   <Trash2 className="h-3 w-3" /> Remove from cart
                 </button>
               )}
+              {product && <ShippingEligibilityBadge storeId={product.storeId} />}
             </div>
 
             <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -651,12 +655,16 @@ export default function ProductPageClient() {
               <span className="text-gray-500">Ships from</span>
               <span className="text-foreground font-medium">AfroTransact</span>
               <span className="text-gray-500">Sold by</span>
-              <Link
-                href={`/store/${product.storeId}`}
-                className="text-foreground font-medium hover:text-brand-gold-hover underline underline-offset-2 truncate"
-              >
-                {storeName || "Store"}
-              </Link>
+              {storeSlug ? (
+                <Link
+                  href={`/store/${storeSlug}`}
+                  className="text-foreground font-medium hover:text-brand-gold-hover underline underline-offset-2 truncate"
+                >
+                  {storeName || "Store"}
+                </Link>
+              ) : (
+                <span className="text-foreground font-medium truncate">{storeName || "Store"}</span>
+              )}
               <span className="text-gray-500">Delivery</span>
               <span className="text-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3 text-gray-400" /> United States
@@ -719,6 +727,12 @@ export default function ProductPageClient() {
           <ProductReviews productId={product.id} />
         </div>
       )}
+
+      {/* Sell CTA — visitors looking at a specific product often think
+          "I make these too." Auto-hides for admin + sellers. */}
+      <div className="mt-16">
+        <SellOnAfrotransactStrip />
+      </div>
     </div>
   )
 }

@@ -716,6 +716,399 @@ export function startOnboarding(token: string) {
   return api<OnboardingProgress>("/api/v1/seller/onboarding/start", { method: "POST", token })
 }
 
+// ── Business-type change requests (post-submit revalidation) ─────────────────
+
+export interface BusinessTypeChangeRequestDto {
+  id: string
+  sellerId: string
+  currentBusinessType: string
+  newBusinessType: string
+  currentEntityType?: string | null
+  newEntityType?: string | null
+  justification: string
+  documentRefs: string[]
+  status: "pending" | "needs_more_info" | "approved" | "rejected" | "withdrawn"
+  adminNotes?: string | null
+  infoRequest?: string | null
+  submittedAt: string
+  resolvedAt?: string | null
+  resolvedByAdminId?: string | null
+}
+
+export function submitBusinessTypeChange(
+  token: string,
+  data: {
+    newBusinessType: string
+    newEntityType?: string
+    justification: string
+    documentRefs?: string[]
+  },
+) {
+  return api<BusinessTypeChangeRequestDto>("/api/v1/sellers/me/business-type-change", {
+    method: "POST",
+    body: data,
+    token,
+  })
+}
+
+/** Returns the current open request, or `null` if none. The backend returns
+ *  `{}` for "no open request" — we normalize that to null here so callers
+ *  don't have to special-case the empty-object shape. */
+export async function getOpenBusinessTypeChange(token: string): Promise<BusinessTypeChangeRequestDto | null> {
+  const r = await api<BusinessTypeChangeRequestDto | Record<string, never>>(
+    "/api/v1/sellers/me/business-type-change/open",
+    { token },
+  )
+  return r && "id" in r ? (r as BusinessTypeChangeRequestDto) : null
+}
+
+export function withdrawBusinessTypeChange(token: string, requestId: string) {
+  return api<BusinessTypeChangeRequestDto>(
+    `/api/v1/sellers/me/business-type-change/${requestId}/withdraw`,
+    { method: "POST", token },
+  )
+}
+
+// ── Admin: business-type change requests ─────────────────────────────────────
+
+export interface PagedBusinessTypeChangeRequests {
+  content: BusinessTypeChangeRequestDto[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export function adminListBusinessTypeChangeRequests(
+  token: string,
+  opts: { status?: string[]; page?: number; size?: number } = {},
+) {
+  const params = new URLSearchParams()
+  if (opts.status?.length) opts.status.forEach((s) => params.append("status", s))
+  if (opts.page != null) params.set("page", String(opts.page))
+  if (opts.size != null) params.set("size", String(opts.size))
+  const qs = params.toString()
+  return api<PagedBusinessTypeChangeRequests>(
+    `/api/v1/admin/business-type-change-requests${qs ? `?${qs}` : ""}`,
+    { token },
+  )
+}
+
+export function adminResolveBusinessTypeChange(
+  token: string,
+  requestId: string,
+  body: { decision: "approved" | "rejected" | "needs_more_info"; adminNotes?: string; infoRequest?: string },
+) {
+  return api<BusinessTypeChangeRequestDto>(
+    `/api/v1/admin/business-type-change-requests/${requestId}/resolve`,
+    { method: "POST", body, token },
+  )
+}
+
+// ── Admin: Accounting / Ledger ───────────────────────────────────────────────
+// Routes through the gateway via /api/v1/admin/ledger → accounting service.
+
+export interface AccountBalanceDto {
+  code: string
+  type: string
+  balanceCents: number
+  currency: string
+  asOf: string | null
+}
+
+export interface SellerLedgerBalanceDto {
+  sellerId: string
+  payableCents: number
+  owedToPlatformCents: number
+  netOwedToSellerCents: number
+  asOf: string | null
+}
+
+/** Pre-seeded chart of accounts — see V2__seed_platform_accounts.sql. */
+export const ACCOUNTING_ACCOUNTS: { code: string; label: string }[] = [
+  { code: "stripe.platform_balance",        label: "Stripe platform balance" },
+  { code: "stripe.in_transit",              label: "Stripe in-transit" },
+  { code: "bank.operating",                 label: "Operating bank account" },
+  { code: "refund_liability",               label: "Refund liability" },
+  { code: "chargeback_reserve",             label: "Chargeback reserve" },
+  { code: "platform.commission_revenue",    label: "Commission revenue" },
+  { code: "platform.subscription_revenue",  label: "Subscription revenue" },
+  { code: "platform.fee_revenue",           label: "Fee revenue" },
+  { code: "platform.refund_expense",        label: "Refund expense" },
+  { code: "platform.stripe_fees",           label: "Stripe fees" },
+  { code: "platform.bad_debt",              label: "Bad debt" },
+]
+
+export interface LedgerSummaryDto {
+  platformBalanceCents: number
+  commissionRevenueCents: number
+  totalSellerPayableCents: number
+  totalSellerOwedToPlatformCents: number
+  journalEntryCount: number
+  topSellers: Array<{ seller_id: string; payable_cents: number }>
+  error?: string
+}
+
+export function adminLedgerSummary(token: string) {
+  return api<LedgerSummaryDto>(`/api/v1/admin/ledger/summary`, { token })
+}
+
+export function adminLedgerBackfill(token: string) {
+  return api<{
+    paymentsPosted: number
+    paymentsSkipped: number
+    refundsPosted: number
+    refundsSkipped: number
+  }>(`/api/v1/admin/ledger/backfill`, { method: "POST", token })
+}
+
+export function adminLedgerAccountBalance(token: string, code: string) {
+  return api<AccountBalanceDto>(
+    `/api/v1/admin/ledger/accounts/${encodeURIComponent(code)}/balance`,
+    { token },
+  )
+}
+
+export function adminLedgerSellerBalance(token: string, sellerId: string) {
+  return api<SellerLedgerBalanceDto>(`/api/v1/admin/ledger/seller/${sellerId}/balance`, { token })
+}
+
+export interface LedgerAdjustmentLine {
+  accountCode: string
+  direction: "DR" | "CR"
+  amountCents: number
+  currency?: string
+  sellerId?: string
+  orderId?: string
+  refundId?: string
+}
+
+export function adminLedgerAdjust(
+  token: string,
+  body: { idempotencyKey: string; reason: string; lines: LedgerAdjustmentLine[] },
+) {
+  return api(`/api/v1/admin/ledger/adjustments`, { method: "POST", body, token })
+}
+
+// ── Admin: Refunds ───────────────────────────────────────────────────────────
+// Payment service is routed through the gateway under /api/v1/admin/refunds
+// — uses the standard api() client.
+
+export interface RefundDto {
+  id: string
+  paymentId: string
+  orderId: string
+  subOrderId: string | null
+  amountCents: number
+  currency: string
+  stripeRefundId: string | null
+  status: "pending" | "succeeded" | "failed" | "cancelled"
+  reason: string
+  initiatedBy: "buyer" | "seller" | "admin" | "system"
+  initiatedByUserId: string | null
+  reverseTransfer: boolean
+  failureMessage: string | null
+  createdAt: string
+  succeededAt: string | null
+  failedAt: string | null
+}
+
+export function adminCreateRefund(
+  token: string,
+  body: {
+    orderId?: string
+    orderNumber?: string
+    subOrderId?: string
+    amountCents: number
+    reason: string
+    idempotencyKey: string
+    reverseTransfer?: boolean
+    notes?: string
+  },
+) {
+  return api<RefundDto>(`/api/v1/admin/refunds`, { method: "POST", body, token })
+}
+
+export function adminListRefundsByOrder(token: string, orderId: string) {
+  return api<RefundDto[]>(`/api/v1/admin/refunds/by-order/${orderId}`, { token })
+}
+
+export function adminListRefundsByOrderNumber(token: string, orderNumber: string) {
+  return api<RefundDto[]>(`/api/v1/admin/refunds/by-order-number/${orderNumber}`, { token })
+}
+
+// ── Returns (buyer + seller) ─────────────────────────────────────────────────
+
+export type ReturnStatus =
+  | "requested" | "approved" | "approved_partial" | "denied"
+  | "label_issued" | "in_transit" | "received" | "inspected"
+  | "completed" | "rejected_on_inspection" | "cancelled" | "expired"
+
+export type ReturnReason =
+  | "damaged" | "wrong_item" | "not_as_described" | "no_longer_wanted" | "other"
+
+export interface ReturnDto {
+  id: string
+  orderId: string
+  orderNumber: string
+  subOrderId: string
+  storeId: string
+  requestedByUserId: string
+  status: ReturnStatus
+  reason: ReturnReason
+  buyerNotes?: string | null
+  sellerNotes?: string | null
+  decisionReason?: string | null
+  photoUrls: string[]
+  refundAmountCents?: number | null
+  restockingFeeCents: number
+  restockingFeeBps?: number | null
+  returnLabelUrl?: string | null
+  returnTrackingNumber?: string | null
+  returnLabelCarrier?: string | null
+  sellerResponseDueAt: string
+  sellerRespondedAt?: string | null
+  receivedAt?: string | null
+  completedAt?: string | null
+  refundId?: string | null
+  refundStatus?: string | null
+  createdAt: string
+  items: Array<{
+    id: string
+    orderItemId: string
+    productId?: string | null
+    variantId?: string | null
+    quantity: number
+    refundAmountCents: number
+  }>
+}
+
+export interface CreateReturnRequest {
+  orderNumber: string
+  subOrderId: string
+  reason: ReturnReason
+  buyerNotes?: string
+  photoUrls?: string[]
+  items: Array<{ orderItemId: string; quantity: number }>
+}
+
+export function requestReturn(token: string, body: CreateReturnRequest) {
+  return api<ReturnDto>(`/api/v1/returns`, { method: "POST", body, token })
+}
+
+export interface PagedReturns {
+  content: ReturnDto[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export function listMyReturns(token: string, page = 0, size = 20) {
+  return api<PagedReturns>(`/api/v1/returns/me?page=${page}&size=${size}`, { token })
+}
+
+export function cancelReturn(token: string, returnId: string) {
+  return api<ReturnDto>(`/api/v1/returns/${returnId}/cancel`, { method: "POST", token })
+}
+
+export function sellerListReturns(token: string, storeId: string, status?: ReturnStatus[], page = 0, size = 20) {
+  const params = new URLSearchParams()
+  params.set("page", String(page))
+  params.set("size", String(size))
+  if (status?.length) status.forEach((s) => params.append("status", s))
+  return api<PagedReturns>(`/api/v1/returns/store/${storeId}?${params}`, { token })
+}
+
+export function sellerDecideReturn(
+  token: string,
+  storeId: string,
+  returnId: string,
+  body: {
+    decision: "approve" | "approve_partial" | "deny"
+    refundAmountCents?: number
+    restockingFeeBps?: number
+    reason?: string
+    sellerNotes?: string
+    provideLabel?: boolean
+  },
+) {
+  return api<ReturnDto>(`/api/v1/returns/${returnId}/decide`, {
+    method: "POST",
+    body,
+    token,
+    headers: { "X-Store-Id": storeId },
+  })
+}
+
+export function sellerMarkReturnReceived(token: string, storeId: string, returnId: string) {
+  return api<ReturnDto>(`/api/v1/returns/${returnId}/received`, {
+    method: "POST",
+    token,
+    headers: { "X-Store-Id": storeId },
+  })
+}
+
+export function sellerInspectReturn(
+  token: string,
+  storeId: string,
+  returnId: string,
+  body: { rejectOnInspection?: boolean; reason?: string; damageReductionCents?: number },
+) {
+  return api<ReturnDto>(`/api/v1/returns/${returnId}/inspect`, {
+    method: "POST",
+    body,
+    token,
+    headers: { "X-Store-Id": storeId },
+  })
+}
+
+// ── Admin: Order lookup + refund queue ───────────────────────────────────────
+
+export interface AdminOrderLookup {
+  id: string
+  orderNumber: string
+  status: string
+  buyerId: string
+  totalCents: number
+  subtotalCents: number
+  taxCents: number
+  shippingCostCents: number
+  discountCents: number
+  currency: string
+  recipientName?: string | null
+  shipLine1?: string | null
+  shipCity?: string | null
+  shipStateRegion?: string | null
+  shipPostalCode?: string | null
+  shipCountryCode?: string | null
+  shipPhone?: string | null
+  placedAt: string | null
+  createdAt: string
+  subOrders?: Array<{
+    id: string
+    storeId: string
+    fulfillmentStatus?: string | null
+    subtotalCents: number
+  }>
+}
+
+export function adminGetOrderByNumber(token: string, orderNumber: string) {
+  return api<AdminOrderLookup>(`/api/v1/orders/admin/by-number/${orderNumber}`, { token })
+}
+
+export interface PagedAdminOrders {
+  content: AdminOrderLookup[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export function adminGetRefundQueue(token: string, page = 0, size = 20) {
+  return api<PagedAdminOrders>(`/api/v1/orders/admin/refund-queue?page=${page}&size=${size}`, { token })
+}
+
 export function getOnboardingProgress(token: string) {
   return api<OnboardingProgress>("/api/v1/seller/onboarding", { token })
 }
@@ -886,12 +1279,30 @@ export interface StoreDetail {
   allowedCarriers?: string[] | null
   returnsSupported?: boolean
   returnWindowDays?: number | null
+  shippingMode?: "unlimited" | "radius" | "regions" | null
+  shippingRadiusMeters?: number | null
+  shippingRegions?: Array<{ countryCode: string; stateCode?: string | null }> | null
+  originLat?: number | null
+  originLng?: number | null
   createdAt: string
   updatedAt: string
 }
 
 export function getSellerStores(token: string, sellerId: string) {
   return api<StoreDetail[]>(`/api/v1/stores/seller/${sellerId}`, { token })
+}
+
+export interface SellerStoresWithQuota {
+  stores: StoreDetail[]
+  used: number
+  /** null = unlimited */
+  quota: number | null
+  planSlug: string | null
+  canAddStore: boolean
+}
+
+export function getSellerStoresWithQuota(token: string, sellerId: string) {
+  return api<SellerStoresWithQuota>(`/api/v1/stores/seller/${sellerId}/with-quota`, { token })
 }
 
 export function createStore(token: string, data: Record<string, unknown>) {
@@ -915,6 +1326,8 @@ export interface SubscriptionPlan {
   priceDisplay: string
   maxProducts: number
   maxStores: number
+  /** basic | medium | comprehensive — drives the seller analytics UI tier gate. */
+  analyticsTier?: "basic" | "medium" | "comprehensive"
   commissionRateOverride: number | null
   stripePriceId: string | null
   active: boolean
@@ -1379,6 +1792,34 @@ export function checkout(token: string, data: CheckoutRequest, idempotencyKey?: 
   })
 }
 
+/**
+ * Phase 3 of the cart/checkout rewrite: after stripe.confirmPayment succeeds,
+ * the order row doesn't exist yet — payment-service's webhook to order-service
+ * (Kafka payment.completed) materializes it. UI polls /orders/by-id/{id} until
+ * the row appears (typically <2s) or gives up after ~10s and shows a generic
+ * "payment received, your order will appear shortly" success state.
+ *
+ * Backoff: 500ms, 1s, 1.5s, 2s, 2.5s, 3s. Returns the OrderDto on success,
+ * null on timeout.
+ */
+export async function pollOrderUntilExists(
+  token: string,
+  orderId: string,
+): Promise<OrderDto | null> {
+  const delays = [500, 1000, 1500, 2000, 2500, 3000]
+  for (const ms of delays) {
+    await new Promise((r) => setTimeout(r, ms))
+    try {
+      const res = await api<OrderDto>(`/api/v1/orders/by-id/${orderId}`, { token })
+      if (res) return res
+    } catch (e: unknown) {
+      // 404 while the webhook is still in flight is expected; anything else
+      // we still want to retry — the polling window is bounded.
+    }
+  }
+  return null
+}
+
 // ── Saved payment methods (Backlog #40) ──
 
 export interface SavedPaymentMethod {
@@ -1550,81 +1991,87 @@ export function deleteRegion(token: string, id: string) {
   return api<void>(`/api/v1/admin/regions/${id}`, { method: "DELETE", token })
 }
 
-// ── Admin: Feature Flags (Config service) ──
-
-export interface FeatureFlag {
-  id: string
-  key: string
-  enabled: boolean
-  regionId: string
-  config?: Record<string, unknown>
-}
-
-interface RawFeature {
-  id: string
-  region_id: string
-  feature_key: string
-  enabled: boolean
-  config?: unknown
-}
-
-function mapFeature(f: RawFeature): FeatureFlag {
-  return {
-    id: f.id,
-    key: f.feature_key,
-    enabled: f.enabled,
-    regionId: f.region_id,
-    config: (f.config ?? {}) as Record<string, unknown>,
-  }
-}
-
-export async function getFeatureFlags(token: string, regionId: string): Promise<FeatureFlag[]> {
-  const res = await api<{ features: RawFeature[] }>(`/api/v1/admin/regions/${regionId}/features`, { token })
-  return (res.features ?? []).map(mapFeature)
-}
-
-/** Storefront-safe: GET /regions/{id}/features (no admin role required). */
-export async function getRegionFeatures(regionId: string): Promise<FeatureFlag[]> {
-  const res = await api<{ features: RawFeature[] }>(`/api/v1/regions/${regionId}/features`)
-  return (res.features ?? []).map(mapFeature)
-}
-
-export async function upsertFeatureFlag(
-  token: string,
-  regionId: string,
-  data: { key: string; enabled: boolean; config?: Record<string, unknown> | null }
-): Promise<FeatureFlag> {
-  const body: Record<string, unknown> = { feature_key: data.key, enabled: data.enabled }
-  if (data.config !== undefined) {
-    body.config = data.config
-  }
-  await api<{ status: string }>(`/api/v1/admin/regions/${regionId}/features`, {
-    method: "POST",
-    body,
-    token,
-  })
-  // Upsert returns { status: "ok" }, so re-fetch the list and find the flag
-  const all = await getFeatureFlags(token, regionId)
-  return all.find((f) => f.key === data.key) ?? { id: "", key: data.key, enabled: data.enabled, regionId }
-}
+// ── Marketplace config ──────────────────────────────────────────────────────
+// Feature flags previously lived here as a regional CRUD; they now live as
+// build-time NEXT_PUBLIC_FEATURE_* env vars via lib/features.ts. The handful
+// of flags that ever flipped were buyer-side kill-switches that don't
+// justify a backend table.
 
 export interface MarketplaceConfig {
   maxProductImages: number
   maxProductTags: number
 }
 
-export async function getMarketplaceConfig(regionId: string): Promise<MarketplaceConfig> {
-  try {
-    const res = await api<{ features: RawFeature[] }>(`/api/v1/regions/${regionId}/features`)
-    const marketplace = (res.features ?? []).find((f) => f.feature_key === "marketplace_enabled")
-    const cfg = (marketplace?.config ?? {}) as Record<string, unknown>
-    return {
-      maxProductImages: typeof cfg.max_product_images === "number" ? cfg.max_product_images : 8,
-      maxProductTags: typeof cfg.max_product_tags === "number" ? cfg.max_product_tags : 10,
-    }
-  } catch {
-    return { maxProductImages: 8, maxProductTags: 10 }
-  }
+/**
+ * Marketplace caps. Previously embedded in the marketplace_enabled feature
+ * flag's config blob; now hardcoded defaults until we have a real reason to
+ * make these region-aware. Kept as a function so callers don't shift.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function getMarketplaceConfig(_regionId: string): Promise<MarketplaceConfig> {
+  return { maxProductImages: 8, maxProductTags: 10 }
+}
+
+// ── Public: Shipping eligibility ──────────────────────────────────────────
+
+export interface ShippingEligibility {
+  result: "eligible" | "not_eligible" | "unknown"
+  reason?: string
+  distanceMeters?: number
+}
+
+export async function checkShippingEligibility(args: {
+  storeId: string
+  lat?: number | null
+  lng?: number | null
+  country?: string
+  state?: string | null
+  postalCode?: string
+}): Promise<ShippingEligibility> {
+  const params = new URLSearchParams({ storeId: args.storeId })
+  if (args.lat != null) params.set("lat", String(args.lat))
+  if (args.lng != null) params.set("lng", String(args.lng))
+  if (args.country) params.set("country", args.country)
+  if (args.state) params.set("state", args.state)
+  if (args.postalCode) params.set("postalCode", args.postalCode)
+  return api<ShippingEligibility>(`/api/v1/sellers/public/shipping/eligibility?${params}`)
+}
+
+export interface GeocodeResult {
+  ok: boolean
+  lat?: number
+  lng?: number
+  postalCode?: string
+  country?: string
+}
+
+export async function geocodePostalCode(postalCode: string, country = "US"): Promise<GeocodeResult> {
+  const params = new URLSearchParams({ postalCode, country })
+  return api<GeocodeResult>(`/api/v1/sellers/public/shipping/geocode?${params}`)
+}
+
+export interface ReverseGeocodeResult {
+  ok: boolean
+  postalCode?: string
+  country?: string
+  state?: string | null
+}
+
+export async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult> {
+  const params = new URLSearchParams({ lat: String(lat), lng: String(lng) })
+  return api<ReverseGeocodeResult>(`/api/v1/sellers/public/shipping/reverse-geocode?${params}`)
+}
+
+// ── Public: Seller marketing stats ────────────────────────────────────────
+
+export interface PublicSellerStats {
+  activeSellers: number
+}
+
+export async function getPublicSellerStats(opts?: { revalidate?: number }): Promise<PublicSellerStats> {
+  return api<PublicSellerStats>("/api/v1/sellers/public/stats", {
+    next: opts?.revalidate ? { revalidate: opts.revalidate } : undefined,
+  })
 }
 
 // ── Public: Region Config (features & payments) ──
@@ -1809,6 +2256,7 @@ export interface UserAddress {
   postalCode: string
   countryCode: string
   isDefault: boolean
+  phone?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -2171,6 +2619,11 @@ export interface DealData {
   /** Slugs of the linked product's categories — populated by the backend
       enrichWithProduct step so /deals can filter by department. */
   categorySlugs?: string[] | null
+  /** Denormalized review aggregate from the linked product. Populated by
+      enrichWithProduct so the Customer Rating filter doesn't need a separate
+      fan-out fetch. */
+  avgRating?: number | null
+  reviewCount?: number | null
 }
 
 export interface PlatformDealDto {

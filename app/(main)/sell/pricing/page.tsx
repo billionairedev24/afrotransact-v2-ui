@@ -165,7 +165,7 @@ function PlanCard({
             we cut a custom deal for a high-volume seller), not a public
             marketing fact. Surface products + stores instead so the buyer
             sees the catalog limits at a glance. */}
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
             <p className="text-xs text-gray-500">Products</p>
             <p className="text-sm font-bold text-gray-900">
@@ -176,6 +176,12 @@ function PlanCard({
             <p className="text-xs text-gray-500">Stores</p>
             <p className="text-sm font-bold text-gray-900">
               {plan.maxStores === -1 ? "Unlimited" : `${plan.maxStores}`}
+            </p>
+          </div>
+          <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
+            <p className="text-xs text-gray-500">Analytics</p>
+            <p className="text-sm font-bold text-gray-900 capitalize">
+              {plan.analyticsTier ?? "basic"}
             </p>
           </div>
         </div>

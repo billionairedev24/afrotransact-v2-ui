@@ -17,9 +17,8 @@ import { createColumnHelper } from "@tanstack/react-table"
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { logError } from "@/lib/errors"
+import { useSelectedStoreId } from "@/hooks/useSelectedStoreId"
 import {
-  getCurrentSeller,
-  getSellerStores,
   getStoreProducts,
   getProductById,
   getCategories,
@@ -71,20 +70,9 @@ export default function ProductsPage() {
   const [deleteTarget, setDeleteTarget] = useState<FlatProduct | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  const storeQuery = useQuery({
-    queryKey: [SELLER_STORE_KEY],
-    queryFn: async () => {
-      const token = await getAccessToken()
-      if (!token) throw new Error("Not authenticated")
-      const seller = await getCurrentSeller(token)
-      const stores = await getSellerStores(token, seller.id)
-      return stores[0]?.id ?? null
-    },
-    enabled: status === "authenticated",
-    staleTime: 10 * 60 * 1000,
-  })
-
-  const storeId = storeQuery.data ?? null
+  const selectedStore = useSelectedStoreId()
+  const storeQuery = { isLoading: selectedStore.isLoading, isFetched: !selectedStore.isLoading, data: selectedStore.storeId, error: selectedStore.isError ? new Error("store load failed") : null }
+  const storeId = selectedStore.storeId
 
   const productsQuery = useQuery<ApiPage<Product>>({
     queryKey: [SELLER_PRODUCTS_KEY, storeId, pageIndex, pageSize],
