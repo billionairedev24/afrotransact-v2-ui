@@ -315,23 +315,15 @@ export function Header() {
                 <Menu className="h-6 w-6" strokeWidth={2} />
               </button>
 
-              {/* Logo — black-silhouette wordmark + yellow bag accent.
-                  Full lockup on sm+, mark-only on xs. */}
+              {/* Logo — bag mark only (no wordmark text). Dark-bg variant
+                  so the yellow bag stands out on the brand-dark navbar. */}
               <Link href="/" className="flex items-center shrink-0 mr-1" aria-label="AfroTransact home">
                 <Image
-                  src="/brand/logo-mark.svg"
+                  src="/brand/logo-mark-dark.svg"
                   alt="AfroTransact"
-                  width={28}
-                  height={32}
-                  className="sm:hidden"
-                  priority
-                />
-                <Image
-                  src="/brand/logo-full.svg"
-                  alt="AfroTransact"
-                  width={150}
-                  height={34}
-                  className="hidden sm:block h-8 w-auto"
+                  width={32}
+                  height={37}
+                  className="h-9 w-auto"
                   priority
                 />
               </Link>

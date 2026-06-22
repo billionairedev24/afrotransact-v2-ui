@@ -87,11 +87,11 @@ export function Footer() {
           <div className="col-span-2 sm:col-span-3 md:col-span-1 space-y-4">
             <Link href="/" className="inline-flex items-center" aria-label="AfroTransact home">
               <Image
-                src="/brand/logo-full-dark.svg"
+                src="/brand/logo-mark-dark.svg"
                 alt="AfroTransact"
-                width={180}
-                height={40}
-                className="h-9 w-auto"
+                width={48}
+                height={56}
+                className="h-12 w-auto"
               />
             </Link>
 

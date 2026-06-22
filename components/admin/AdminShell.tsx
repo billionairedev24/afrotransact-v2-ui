@@ -151,11 +151,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-full p-4">
       <div className="flex items-center justify-between mb-6 px-2">
         <Image
-          src="/brand/logo-full-dark.svg"
+          src="/brand/logo-mark-dark.svg"
           alt="AfroTransact"
-          width={150}
-          height={34}
-          className="h-7 w-auto"
+          width={32}
+          height={37}
+          className="h-8 w-auto"
           priority
         />
         {onClose && (
@@ -206,11 +206,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <Menu className="h-5 w-5" />
         </button>
         <Image
-          src="/brand/logo-full.svg"
+          src="/brand/logo-mark.svg"
           alt="AfroTransact"
-          width={130}
-          height={30}
-          className="h-6 w-auto"
+          width={28}
+          height={32}
+          className="h-7 w-auto"
         />
         <div className="w-5" />
       </header>

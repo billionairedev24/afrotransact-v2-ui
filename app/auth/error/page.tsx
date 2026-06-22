@@ -46,7 +46,7 @@ function AuthErrorContent() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-8 text-center">
         <Link href="/" className="flex items-center justify-center">
-          <Image src="/brand/logo-full.svg" alt="AfroTransact" width={220} height={50} className="h-12 w-auto" />
+          <Image src="/brand/logo-mark.svg" alt="AfroTransact" width={56} height={64} className="h-14 w-auto" />
         </Link>
 
         <div className="rounded-xl border border-border bg-card p-8 shadow-xl shadow-black/20 space-y-6">

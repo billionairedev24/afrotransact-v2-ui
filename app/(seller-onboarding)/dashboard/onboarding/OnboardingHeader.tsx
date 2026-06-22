@@ -17,7 +17,7 @@ export function OnboardingHeader({ userName }: { userName: string }) {
     >
       <div className="mx-auto flex h-14 max-w-4xl items-center justify-between">
         <Link href="/" className="flex items-center">
-          <Image src="/brand/logo-full.svg" alt="AfroTransact" width={150} height={34} className="h-7 w-auto" />
+          <Image src="/brand/logo-mark.svg" alt="AfroTransact" width={28} height={32} className="h-7 w-auto" />
         </Link>
 
         <div className="flex items-center gap-3">
