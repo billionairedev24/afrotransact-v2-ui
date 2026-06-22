@@ -1312,20 +1312,33 @@ export default function CheckoutClient({
   // backend checkout sync (which mints the Stripe payment intent), so the
   // Payment section becomes interactable without any extra click.
   // The ref guards against double-firing.
+  // Auto-sync on entering review used to fire instantly and race the
+  // shipping-quote fetch. It would call /orders/checkout with no
+  // selectedShippingQuoteId, the backend defaulted to weight-based, set
+  // checkoutResult, and the success path inside syncCartAndCheckout
+  // setStep("payment") — so the buyer never even saw the carrier picker.
+  // Now we only auto-sync when no buyer decision is required: free shipping
+  // (no carrier picker shown at all) OR the carrier path returned no rates
+  // and we're showing the platform fallback tile. Otherwise the buyer
+  // explicitly clicks "Continue to payment" after picking a rate.
   const autoSyncedRef = useRef(false)
   useEffect(() => {
     if (step !== "review") {
-      // Reset the guard if the user goes back to address so a re-edit
-      // re-syncs once they return to review.
       if (step === "address") autoSyncedRef.current = false
       return
     }
     if (autoSyncedRef.current) return
     if (gatesReady && !marketplacePurchasingAllowed) return
+    // Wait for the quote fetch to finish before deciding.
+    if (quotesLoading) return
+    const realtimeOn = shippingQuotes?.realtimeEnabled
+      && shippingQuotes.eligibleByGeo
+      && (shippingQuotes.groups?.length ?? 0) > 0
+    if (!freeShippingApplies && realtimeOn) return // wait for explicit click
     autoSyncedRef.current = true
     void syncCartAndCheckout()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, gatesReady, marketplacePurchasingAllowed])
+  }, [step, gatesReady, marketplacePurchasingAllowed, quotesLoading, shippingQuotes, freeShippingApplies])
 
   useEffect(() => {
     if (!mounted) return
