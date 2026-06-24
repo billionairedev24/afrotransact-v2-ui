@@ -17,6 +17,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react"
+import { PromoSlot } from "@/components/marketing/PromoSlot"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -548,7 +549,8 @@ export default function ProductPageClient() {
         </div>
 
         {/* ── RIGHT: Buy box (col-span-3 on lg) ─────────────────────── */}
-        <aside className="lg:col-span-3">
+        <aside className="lg:col-span-3 space-y-4">
+          <PromoSlot placement="SIDEBAR" />
           <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm lg:sticky lg:top-20 space-y-4">
             <p className="text-2xl font-bold text-foreground">
               ${(displayPriceCents / 100).toFixed(2)}

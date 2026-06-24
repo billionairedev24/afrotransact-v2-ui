@@ -65,7 +65,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/categories",    label: "Categories",    icon: FolderTree },
       { href: "/admin/deals",         label: "Deals",         icon: Sparkles },
       { href: "/admin/coupons",       label: "Coupons",       icon: Ticket },
-      { href: "/admin/hero-carousel", label: "Hero Carousel", icon: Sparkles },
+      { href: "/admin/promotions", label: "Promotions", icon: Sparkles },
     ],
   },
   {

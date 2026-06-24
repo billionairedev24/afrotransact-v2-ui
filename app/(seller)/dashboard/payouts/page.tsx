@@ -269,22 +269,6 @@ export default function PayoutsPage() {
         })}
       </div>
 
-      {/* How payouts work — internal explainer, hidden in production. Set
-          NEXT_PUBLIC_APP_ENV=production in prod env to suppress. */}
-      {process.env.NEXT_PUBLIC_APP_ENV !== "production" && (
-        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-          <DollarSign className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm text-gray-900 font-medium">How payouts work</p>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              When a customer pays, Stripe deducts its processing fee (~2.9% + $0.30). The platform then deducts its
-              commission. Tax and shipping are collected and remitted separately. The remaining amount is your net payout,
-              transferred to your Stripe account after ~2 business days of settlement.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Status filter + table */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
@@ -323,10 +307,7 @@ export default function PayoutsPage() {
         />
       </div>
 
-      <p className="text-xs text-gray-400 text-center">
-        All amounts shown in USD. Stripe fees are estimates based on standard pricing (2.9% + $0.30).
-        Bank payouts follow your Stripe payout schedule.
-      </p>
+      <p className="text-xs text-gray-400 text-center">All amounts shown in USD.</p>
 
       {/* Transfer detail sheet */}
       <Sheet open={!!selected} onClose={() => setSelected(null)}>
@@ -386,12 +367,6 @@ export default function PayoutsPage() {
                         <span className="text-base font-bold text-gray-900">Your net payout</span>
                         <span className="text-base font-bold text-gray-900 font-mono tabular-nums">{formatCents(selected.amountCents)}</span>
                       </div>
-                      <p className="text-[11px] text-gray-400 pt-1">
-                        Reconciliation: {formatCents(selected.subtotalCents)}
-                        {discount > 0 && ` − ${formatCents(discount)} (coupon)`}
-                        {` − ${formatCents(selected.platformFeeCents)} (commission) − ${formatCents(selected.stripeFeeCents)} (Stripe)`}
-                        {` = ${formatCents(selected.subtotalCents - discount - selected.platformFeeCents - selected.stripeFeeCents)}`}
-                      </p>
                     </div>
                   </div>
                 )

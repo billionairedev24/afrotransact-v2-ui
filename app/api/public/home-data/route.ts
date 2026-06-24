@@ -31,35 +31,24 @@ export async function GET() {
   const dealsTtl = { next: { revalidate: 60 } as const }
 
   try {
-    const [catsRes, storesRes, dealsRes, platformRes, heroRes] = await Promise.all([
+    const [catsRes, storesRes, dealsRes, platformRes] = await Promise.all([
       fetch(`${base}/api/v1/categories`, long),
       fetch(`${base}/api/v1/stores`, long),
       fetch(`${base}/api/v1/deals/featured`, dealsTtl),
       fetch(`${base}/api/v1/platform-deals`, long),
-      fetch(`${base}/api/v1/config/hero-carousel`, long),
     ])
 
-    const [categoriesRaw, storesRaw, dealsRaw, platformRaw, heroRaw] = await Promise.all([
+    const [categoriesRaw, storesRaw, dealsRaw, platformRaw] = await Promise.all([
       safeJson(catsRes),
       safeJson(storesRes),
       safeJson(dealsRes),
       safeJson(platformRes),
-      safeJson(heroRes),
     ])
 
     const categories = Array.isArray(categoriesRaw) ? categoriesRaw : []
     const stores = Array.isArray(storesRaw) ? storesRaw : []
     const deals = Array.isArray(dealsRaw) ? dealsRaw : []
     const platformDeals = Array.isArray(platformRaw) ? platformRaw : []
-    const heroSlidesRaw =
-      heroRaw &&
-      typeof heroRaw === "object" &&
-      heroRaw !== null &&
-      "slides" in heroRaw &&
-      Array.isArray((heroRaw as { slides: unknown }).slides)
-        ? (heroRaw as { slides: unknown[] }).slides
-        : []
-    const heroSlides = heroSlidesRaw
 
     return NextResponse.json(
       {
@@ -67,7 +56,6 @@ export async function GET() {
         stores,
         deals,
         platformDeals,
-        heroSlides,
       },
       {
         // Reduced from s-maxage=60,s-w-r=300 to 30/60 so home page reflects
@@ -83,7 +71,7 @@ export async function GET() {
       console.error("[API] GET /api/public/home-data → network error", err)
     }
     return NextResponse.json(
-      { categories: [], stores: [], deals: [], platformDeals: [], heroSlides: [] },
+      { categories: [], stores: [], deals: [], platformDeals: [] },
       { status: 200 }
     )
   }
