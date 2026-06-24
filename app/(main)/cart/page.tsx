@@ -281,7 +281,7 @@ export default function CartPage() {
                 <span className="text-green-400">Calculated at checkout</span>
               </div>
               <div className="flex justify-between text-gray-600">
-                <span>Estimated tax (8.25%)</span>
+                <span>Estimated tax</span>
                 <span>{formatCents(estimatedTax)}</span>
               </div>
             </div>

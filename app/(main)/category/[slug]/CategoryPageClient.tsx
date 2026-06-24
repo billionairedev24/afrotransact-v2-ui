@@ -10,6 +10,7 @@ import { useCartStore } from "@/stores/cart-store"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { toast } from "sonner"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
+import { PromoSlot } from "@/components/marketing/PromoSlot"
 
 function productToSearchResult(p: Product): SearchResult {
   const variant = p.variants?.[0]
@@ -329,6 +330,9 @@ export default function CategoryPageClient() {
           </button>
         )}
       </div>
+
+      {/* Promotions strip (admin-managed) */}
+      <PromoSlot placement="STRIP_TOP" className="mb-6" />
 
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">

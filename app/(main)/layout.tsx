@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { PromoSlot } from "@/components/marketing/PromoSlot"
 
 // WhatsAppFab is mounted in the ROOT app/layout.tsx (not here) so it also
 // renders on app/page.tsx (homepage) which is outside this route group.
@@ -16,6 +17,7 @@ export default function MainLayout({
       <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0">
         {children}
       </main>
+      <PromoSlot placement="FOOTER" className="mx-4 md:mx-6 lg:mx-8 mb-6" />
       <Footer />
     </div>
   )

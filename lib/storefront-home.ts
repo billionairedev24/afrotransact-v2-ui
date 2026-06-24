@@ -1,15 +1,14 @@
-import type { CategoryRef, StoreInfo, DealData, HeroSlideConfig } from "@/lib/api"
+import type { CategoryRef, StoreInfo, DealData } from "@/lib/api"
 
 export interface StorefrontHomePayload {
   categories: CategoryRef[]
   stores: StoreInfo[]
   deals: DealData[]
   platformDeals: unknown[]
-  heroSlides: HeroSlideConfig[]
 }
 
 /**
- * One client round-trip: categories, stores, deals, platform promos, and hero configs.
+ * One client round-trip: categories, stores, deals, platform promos.
  * Backed by `/api/public/home-data` (Next fetch cache + CDN Cache-Control).
  */
 export async function fetchStorefrontHomeData(): Promise<StorefrontHomePayload> {
@@ -17,23 +16,11 @@ export async function fetchStorefrontHomeData(): Promise<StorefrontHomePayload> 
     priority: "high",
   })
   if (!res.ok) {
-    return {
-      categories: [],
-      stores: [],
-      deals: [],
-      platformDeals: [],
-      heroSlides: [],
-    }
+    return { categories: [], stores: [], deals: [], platformDeals: [] }
   }
   try {
     return (await res.json()) as StorefrontHomePayload
   } catch {
-    return {
-      categories: [],
-      stores: [],
-      deals: [],
-      platformDeals: [],
-      heroSlides: [],
-    }
+    return { categories: [], stores: [], deals: [], platformDeals: [] }
   }
 }

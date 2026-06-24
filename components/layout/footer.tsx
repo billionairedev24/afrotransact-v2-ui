@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { MapPin, Mail, Phone } from "lucide-react"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
 
@@ -84,8 +85,14 @@ export function Footer() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-8">
           {/* Brand column */}
           <div className="col-span-2 sm:col-span-3 md:col-span-1 space-y-4">
-            <Link href="/" className="inline-flex items-center gap-0.5" aria-label="AfroTransact home">
-              <span className="text-xl font-black text-brand-gold">AfroTransact</span>
+            <Link href="/" className="inline-flex items-center" aria-label="AfroTransact home">
+              <Image
+                src="/brand/logo-mark-dark.svg"
+                alt="AfroTransact"
+                width={48}
+                height={56}
+                className="h-12 w-auto"
+              />
             </Link>
 
             <p className="text-[13px] text-white/70 leading-relaxed">

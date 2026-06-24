@@ -828,15 +828,11 @@ function DeliveryOptions({
     )
   }
 
-  // Platform fallback. Only reachable when carrier mode is off, the address
-  // isn't eligible (geo allowlist), or Shippo returned no rates. Surface
-  // why so the buyer doesn't think they're being shortchanged.
-  const fallbackReason =
-    quoteData?.realtimeEnabled === false ? "Carrier rating is currently disabled by the platform."
-    : quoteData?.eligibleByGeo === false ? "Live carrier rates aren't available for this address yet."
-    : (quoteData?.groups?.length ?? 0) === 0 && quoteData?.message ? quoteData.message
-    : (quoteData?.groups?.length ?? 0) === 0 ? "No carrier returned a rate for this shipment — using platform standard."
-    : null
+  // Platform fallback. We render the Standard delivery tile silently —
+  // the customer doesn't need to know about backend mode toggles, geo
+  // allowlists, or empty carrier responses. They just see "Standard
+  // delivery $X" and move on. Internal ops can grep logs if needed.
+  const fallbackReason: string | null = null
   return (
     <div className="space-y-3">
       {fallbackReason && (

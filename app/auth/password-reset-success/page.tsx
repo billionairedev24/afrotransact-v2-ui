@@ -6,12 +6,8 @@ export default function PasswordResetSuccessPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-8 text-center">
-        <Link href="/" className="flex items-center justify-center gap-3">
-          <Image src="/logo.png" alt="AfroTransact" width={40} height={40} className="rounded-xl" />
-          <div>
-            <span className="text-3xl font-bold text-foreground">Afro</span>
-            <span className="text-3xl font-bold text-foreground">Transact</span>
-          </div>
+        <Link href="/" className="flex items-center justify-center">
+          <Image src="/brand/logo-mark.svg" alt="AfroTransact" width={56} height={64} className="h-14 w-auto" />
         </Link>
 
         <div className="rounded-xl border border-border bg-card p-8 shadow-xl shadow-black/20 space-y-6">

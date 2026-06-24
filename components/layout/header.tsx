@@ -315,10 +315,26 @@ export function Header() {
                 <Menu className="h-6 w-6" strokeWidth={2} />
               </button>
 
-              {/* Logo */}
-              <Link href="/" className="flex items-center gap-1.5 shrink-0 mr-1" aria-label="AfroTransact home">
-                <Image src="/logo.png" alt="" width={28} height={28} className="rounded-md" />
-                <span className="text-[20px] sm:text-[22px] font-black tracking-tight text-brand-gold leading-none">AfroTransact</span>
+              {/* Logo — full lockup with tagline (on dark bg). On xs the
+                  wordmark+tagline would dominate the search bar, so mark-
+                  only there. */}
+              <Link href="/" className="flex items-center shrink-0 mr-1" aria-label="AfroTransact home">
+                <Image
+                  src="/brand/logo-mark-dark.svg"
+                  alt="AfroTransact"
+                  width={32}
+                  height={37}
+                  className="h-9 w-auto sm:hidden"
+                  priority
+                />
+                <Image
+                  src="/brand/logo-tagline-dark.svg"
+                  alt="AfroTransact"
+                  width={180}
+                  height={42}
+                  className="hidden sm:block h-10 w-auto"
+                  priority
+                />
               </Link>
 
               {/* "Ask Victory" pill — placed right after the logo per the

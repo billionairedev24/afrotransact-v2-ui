@@ -2037,30 +2037,10 @@ export async function checkShippingEligibility(args: {
   return api<ShippingEligibility>(`/api/v1/sellers/public/shipping/eligibility?${params}`)
 }
 
-export interface GeocodeResult {
-  ok: boolean
-  lat?: number
-  lng?: number
-  postalCode?: string
-  country?: string
-}
-
-export async function geocodePostalCode(postalCode: string, country = "US"): Promise<GeocodeResult> {
-  const params = new URLSearchParams({ postalCode, country })
-  return api<GeocodeResult>(`/api/v1/sellers/public/shipping/geocode?${params}`)
-}
-
-export interface ReverseGeocodeResult {
-  ok: boolean
-  postalCode?: string
-  country?: string
-  state?: string | null
-}
-
-export async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult> {
-  const params = new URLSearchParams({ lat: String(lat), lng: String(lng) })
-  return api<ReverseGeocodeResult>(`/api/v1/sellers/public/shipping/reverse-geocode?${params}`)
-}
+// Geocoding moved fully client-side (DeliverToPicker calls Google Maps
+// directly with NEXT_PUBLIC_GOOGLE_MAPS_API_KEY and falls back to
+// BigDataCloud / Zippopotam.us). The seller-side endpoints that used
+// to live here were removed.
 
 // ── Public: Seller marketing stats ────────────────────────────────────────
 
@@ -2748,71 +2728,6 @@ export function getPublicPlatformDeals(audience?: string, opts?: { revalidate?: 
   const q = audience ? `?audience=${audience}` : ""
   return api<PlatformDealData[]>(`/api/v1/platform-deals${q}`, {
     next: opts?.revalidate !== undefined ? { revalidate: opts.revalidate, tags: ["platform-deals"] } : undefined,
-  })
-}
-
-// ── Config: Ads & Hero Carousel (public) ──
-
-export interface HeroSlideConfig {
-  id: string
-  enabled: boolean
-  order: number
-  badgeText?: string | null
-  badgeColor?: string | null
-  headline: string
-  subtext: string
-  primaryCtaLabel: string
-  primaryCtaHref: string
-  secondaryCtaLabel?: string | null
-  secondaryCtaHref?: string | null
-  bg: string
-  accentBlobs?: string | null
-  mediaType: "none" | "image" | "video"
-  mediaUrl?: string | null
-  mediaOverlay?: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-export async function getPublicHeroSlides(opts?: { revalidate?: number }): Promise<HeroSlideConfig[]> {
-  const init: RequestInit =
-    opts?.revalidate !== undefined
-      ? { next: { revalidate: opts.revalidate, tags: ["hero-carousel"] } }
-      : { cache: "no-store" }
-  try {
-    const res = await fetch(`${API_BASE}/api/v1/config/hero-carousel`, init)
-    if (!res.ok) return []
-    const data = (await res.json()) as { slides?: HeroSlideConfig[] }
-    return data.slides ?? []
-  } catch (err) {
-    if (process.env.NEXT_PHASE !== "phase-production-build") {
-      console.error("[API] GET /api/v1/config/hero-carousel → network error", err)
-    }
-    return []
-  }
-}
-
-// Admin: Hero carousel
-
-export async function getAdminHeroSlides(token: string): Promise<HeroSlideConfig[]> {
-  const res = await api<{ slides?: HeroSlideConfig[] }>("/api/v1/admin/hero-carousel", { token })
-  return res.slides ?? []
-}
-
-export type HeroSlideUpsertRequest = Omit<HeroSlideConfig, "createdAt" | "updatedAt">
-
-export function upsertAdminHeroSlide(token: string, body: HeroSlideUpsertRequest) {
-  return api<{ status: string }>("/api/v1/admin/hero-carousel", {
-    method: "POST",
-    body,
-    token,
-  })
-}
-
-export function deleteAdminHeroSlide(token: string, id: string) {
-  return api<{ status: string }>(`/api/v1/admin/hero-carousel/${id}`, {
-    method: "DELETE",
-    token,
   })
 }
 

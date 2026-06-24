@@ -5,6 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
+import { PromoSlot } from "@/components/marketing/PromoSlot"
 import {
   Grid3X3,
   LayoutList,
@@ -1128,6 +1129,9 @@ function SearchContent() {
           </div>
         </div>
       </div>
+
+      {/* Promotions strip (admin-managed) */}
+      <PromoSlot placement="STRIP_TOP" className="mb-6" />
 
       {/* did_you_mean */}
       {data?.did_you_mean && (

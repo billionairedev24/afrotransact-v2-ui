@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import {
@@ -64,7 +65,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/categories",    label: "Categories",    icon: FolderTree },
       { href: "/admin/deals",         label: "Deals",         icon: Sparkles },
       { href: "/admin/coupons",       label: "Coupons",       icon: Ticket },
-      { href: "/admin/hero-carousel", label: "Hero Carousel", icon: Sparkles },
+      { href: "/admin/promotions", label: "Promotions", icon: Sparkles },
     ],
   },
   {
@@ -149,12 +150,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const sidebar = (onClose?: () => void) => (
     <div className="flex flex-col h-full p-4">
       <div className="flex items-center justify-between mb-6 px-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-bold text-brand-gold">AfroTransact</span>
-          <span className="rounded-sm bg-brand-gold px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-gold-foreground">
-            Admin
-          </span>
-        </div>
+        <Image
+          src="/brand/logo-mark-dark.svg"
+          alt="AfroTransact"
+          width={32}
+          height={37}
+          className="h-8 w-auto"
+          priority
+        />
         {onClose && (
           <button onClick={onClose} className="text-white/60 hover:text-white transition-colors">
             <X className="h-5 w-5" />
@@ -202,12 +205,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-foreground transition-colors">
           <Menu className="h-5 w-5" />
         </button>
-        <span className="font-bold text-foreground text-sm flex items-center gap-2">
-          AfroTransact
-          <span className="rounded bg-brand-gold px-2 py-0.5 text-[10px] font-bold tracking-wide text-brand-gold-foreground">
-            Admin
-          </span>
-        </span>
+        <Image
+          src="/brand/logo-mark.svg"
+          alt="AfroTransact"
+          width={28}
+          height={32}
+          className="h-7 w-auto"
+        />
         <div className="w-5" />
       </header>
 

@@ -1,9 +1,6 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
-// REPLACED BY <HeroCarousel> (components/landing/HeroCarousel): kept import
-// commented so an operator can revert by swapping the two imports/mounts.
-// import { HeroCarousel } from "@/components/home/HeroCarousel"
-import { HeroCarousel } from "@/components/landing/HeroCarousel"
+import { PromoSlot } from "@/components/marketing/PromoSlot"
 // REPLACED BY <CategoriesBentoGrid> + <TrustMissionBand>: kept commented for
 // quick revert if there's a visual regression.
 // import { FeaturedProducts } from "@/components/home/FeaturedProducts"
@@ -19,7 +16,6 @@ import { fetchCategoryTiles } from "@/lib/category-tiles"
 import {
   getCategories,
   getFeaturedDeals,
-  getPublicHeroSlides,
   getPublicPlatformDeals,
   searchProducts,
   type CategoryRef,
@@ -46,7 +42,6 @@ export default async function HomePage() {
     categories,
     todaysDeals,
     _platformDealsRaw,
-    heroConfig,
     featuredRating,
     _featuredNewest,
     trendingAustinRes,
@@ -59,7 +54,6 @@ export default async function HomePage() {
     // non-deals. Deals endpoint already enforces enabled+window+discount.
     safe<DealData[]>(getFeaturedDeals({ revalidate: 30 }), []),
     safe<PlatformDealData[]>(getPublicPlatformDeals(undefined, { revalidate: 60 }), []),
-    safe(getPublicHeroSlides({ revalidate: 60 }), []),
     safe(
       // Powers the category bento grid. 30s matches the page-level ISR so
       // an ES re-index lands on the next request instead of staying stale
@@ -200,8 +194,8 @@ export default async function HomePage() {
       <Header />
 
       <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0 space-y-10">
-        {/* 1. Hero Carousel */}
-        <HeroCarousel serverHeroConfigs={heroConfig} />
+        {/* 1. Hero — promotions module (admin-managed) */}
+        <PromoSlot placement="HERO" className="mx-4 md:mx-6 lg:mx-8 mt-4" />
 
         {/* 2. Categories Bento Grid */}
         <CategoriesBentoGrid
@@ -246,6 +240,7 @@ export default async function HomePage() {
           localStorage so it never nags. */}
       <SellOnAfrotransactModal />
 
+      <PromoSlot placement="FOOTER" className="mx-4 md:mx-6 lg:mx-8 mb-6" />
       <Footer />
     </div>
   )
