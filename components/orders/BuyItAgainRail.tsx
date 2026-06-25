@@ -54,9 +54,10 @@ export function BuyItAgainRail() {
 
   if (status !== "authenticated") return null
   if (items === null) return null
-  // Hide a single-item rail (looks broken / promotional), but 2+ is fine —
-  // Amazon shows the rail with as few as 2 products. 4 was too strict.
-  if (items.length < 2) return null
+  // Show the rail with as few as 1 item. A single-card rail isn't broken —
+  // it's the "Buy this thing you already bought" surface, which is exactly
+  // what the buyer wants on first repeat.
+  if (items.length < 1) return null
 
   function handleBuyAgain(p: BuyAgainProduct) {
     if (!p.variantId) {
