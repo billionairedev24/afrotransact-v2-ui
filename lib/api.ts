@@ -1822,6 +1822,28 @@ export function reorderOrder(token: string, orderNumber: string, idempotencyKey?
   })
 }
 
+export interface BuyAgainProduct {
+  productId: string
+  variantId?: string | null
+  storeId?: string | null
+  name: string
+  imageUrl?: string | null
+  currentPriceCents: number
+  currency?: string | null
+  slug?: string | null
+  lastOrderedAt?: string | null
+}
+
+/**
+ * Home-page "Buy It Again" rail. Returns up to 12 unique products the buyer
+ * has bought across recent paid orders, deduped by (productId, variantId)
+ * and filtered to live catalog rows only. Tolerates a minute of staleness —
+ * the backend sets Cache-Control: private, max-age=60.
+ */
+export function getBuyAgainProducts(token: string) {
+  return api<BuyAgainProduct[]>("/api/v1/orders/buy-again-products", { token })
+}
+
 /**
  * Phase 3 of the cart/checkout rewrite: after stripe.confirmPayment succeeds,
  * the order row doesn't exist yet — payment-service's webhook to order-service

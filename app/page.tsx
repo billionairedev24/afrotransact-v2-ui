@@ -7,6 +7,7 @@ import { PromoSlot } from "@/components/marketing/PromoSlot"
 // import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
 // import { FeaturedCategories } from "@/components/landing/FeaturedCategories"
 // import { ForYouSection } from "@/components/home/ForYouSection"
+import { BuyItAgainRail } from "@/components/orders/BuyItAgainRail"
 import { CategoriesBentoGrid } from "@/components/landing/CategoriesBentoGrid"
 import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
 import { ProductRow } from "@/components/landing/ProductRow"
@@ -196,6 +197,9 @@ export default async function HomePage() {
       <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0 space-y-10">
         {/* 1. Hero — promotions module (admin-managed) */}
         <PromoSlot placement="HERO" className="mx-4 md:mx-6 lg:mx-8 mt-4" />
+
+        {/* 1.5 Buy It Again — client-side, self-hides for guests + empty data. */}
+        <BuyItAgainRail />
 
         {/* 2. Categories Bento Grid */}
         <CategoriesBentoGrid
