@@ -54,9 +54,9 @@ export function BuyItAgainRail() {
 
   if (status !== "authenticated") return null
   if (items === null) return null
-  // Don't surface a half-empty personal rail — needs density to feel useful.
-  // Amazon hides Buy It Again entirely for buyers without ~4+ eligible items.
-  if (items.length < 4) return null
+  // Hide a single-item rail (looks broken / promotional), but 2+ is fine —
+  // Amazon shows the rail with as few as 2 products. 4 was too strict.
+  if (items.length < 2) return null
 
   function handleBuyAgain(p: BuyAgainProduct) {
     if (!p.variantId) {
@@ -70,7 +70,10 @@ export function BuyItAgainRail() {
       storeName: "",
       title: p.name,
       variantName: "",
-      price: (p.currentPriceCents ?? 0) / 100,
+      // Cart store stores price in cents (see FeaturedProducts.tsx where it does
+       // Math.round(variant.price * 100)). Passing dollars here caused the
+       // "0.38 at checkout for a $38 item" bug.
+       price: p.currentPriceCents ?? 0,
       quantity: 1,
       imageUrl: p.imageUrl ?? undefined,
       slug: p.slug ?? "",
