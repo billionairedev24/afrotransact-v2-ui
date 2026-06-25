@@ -198,9 +198,6 @@ export default async function HomePage() {
         {/* 1. Hero — promotions module (admin-managed) */}
         <PromoSlot placement="HERO" className="mx-4 md:mx-6 lg:mx-8 mt-4" />
 
-        {/* 1.5 Buy It Again — client-side, self-hides for guests + empty data. */}
-        <BuyItAgainRail />
-
         {/* 2. Categories Bento Grid */}
         <CategoriesBentoGrid
           categories={roots}
@@ -216,13 +213,19 @@ export default async function HomePage() {
           viewAllLabel="See all deals"
         />
 
-        {/* 3.5 Slim mid-page seller CTA */}
+        {/* 3.5 Buy It Again — Amazon-style positioning: nestled after the
+            primary deals surface, alongside other content rows, so it reads
+            as a personalized recommendation rather than a top-of-page banner.
+            Self-hides for guests + buyers with <4 eligible items. */}
+        <BuyItAgainRail />
+
+        {/* 4. Slim mid-page seller CTA */}
         <SellOnAfrotransactStrip />
 
-        {/* 4. Trust & Mission Band */}
+        {/* 5. Trust & Mission Band */}
         <TrustMissionBand />
 
-        {/* 5. New Arrivals */}
+        {/* 6. New Arrivals */}
         <ProductRow
           title="New Arrivals"
           products={newLocalRes.results}

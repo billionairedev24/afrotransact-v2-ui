@@ -54,7 +54,9 @@ export function BuyItAgainRail() {
 
   if (status !== "authenticated") return null
   if (items === null) return null
-  if (items.length === 0) return null
+  // Don't surface a half-empty personal rail — needs density to feel useful.
+  // Amazon hides Buy It Again entirely for buyers without ~4+ eligible items.
+  if (items.length < 4) return null
 
   function handleBuyAgain(p: BuyAgainProduct) {
     if (!p.variantId) {
