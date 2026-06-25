@@ -1649,6 +1649,11 @@ export interface CheckoutResponse {
   currency: string
   paymentClientSecret: string | null
   status: string
+  /** Phase 2 session-mode: when present, no Order row exists yet — the buyer
+   *  must be redirected through Stripe back to /checkout/complete?session=…
+   *  where the UI polls /api/public/checkout-sessions/:id/result for the
+   *  materialized order id. Omitted in legacy flow. */
+  checkoutSessionId?: string | null
 }
 
 export interface ShippingQuoteOption {

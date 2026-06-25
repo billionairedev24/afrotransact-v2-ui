@@ -1930,6 +1930,7 @@ export default function CheckoutClient({
                   onCompleteAction={handlePaymentComplete}
                   total={displayTotal}
                   clientSecret={checkoutResult?.paymentClientSecret ?? null}
+                  checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
                   stripeAvailable={stripeAvailable}
                   paymentMethods={paymentMethods}
                   saveCard={saveCard}
