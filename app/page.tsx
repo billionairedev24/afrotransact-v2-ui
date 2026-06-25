@@ -7,7 +7,7 @@ import { PromoSlot } from "@/components/marketing/PromoSlot"
 // import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
 // import { FeaturedCategories } from "@/components/landing/FeaturedCategories"
 // import { ForYouSection } from "@/components/home/ForYouSection"
-import { BuyItAgainRail } from "@/components/orders/BuyItAgainRail"
+import { ForYouRail } from "@/components/orders/ForYouRail"
 import { CategoriesBentoGrid } from "@/components/landing/CategoriesBentoGrid"
 import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
 import { ProductRow } from "@/components/landing/ProductRow"
@@ -217,7 +217,7 @@ export default async function HomePage() {
             primary deals surface, alongside other content rows, so it reads
             as a personalized recommendation rather than a top-of-page banner.
             Self-hides for guests + buyers with <4 eligible items. */}
-        <BuyItAgainRail />
+        <ForYouRail />
 
         {/* 4. Slim mid-page seller CTA */}
         <SellOnAfrotransactStrip />
