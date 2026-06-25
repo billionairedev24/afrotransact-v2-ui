@@ -1797,6 +1797,31 @@ export function checkout(token: string, data: CheckoutRequest, idempotencyKey?: 
   })
 }
 
+export interface ReorderResponse extends CheckoutResponse {
+  /** Items from the prior order dropped because the catalog row is gone. */
+  skippedItemCount: number
+  /** True when defaults were resolved and checkout ran. False when the cart
+   *  was populated but the UI must bounce to /checkout for a missing default
+   *  or other prerequisite. */
+  fastPath: boolean
+  /** Reason for the fastPath=false fallback. Null on the happy path. */
+  fallbackReason?: string | null
+}
+
+/**
+ * 1-click reorder. Replays a prior order's items into the buyer's cart and,
+ * when the buyer has a default shipping address, runs checkout. Returns the
+ * standard checkout response (paymentClientSecret or checkoutSessionId)
+ * plus fastPath/skippedItemCount signals.
+ */
+export function reorderOrder(token: string, orderNumber: string, idempotencyKey?: string) {
+  return api<ReorderResponse>(`/api/v1/orders/${orderNumber}/reorder`, {
+    method: "POST",
+    token,
+    headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+  })
+}
+
 /**
  * Phase 3 of the cart/checkout rewrite: after stripe.confirmPayment succeeds,
  * the order row doesn't exist yet — payment-service's webhook to order-service
@@ -2214,6 +2239,9 @@ export interface UserProfile {
   avatarUrl: string | null
   role: string
   preferences: string | null
+  /** Stripe PaymentMethod id (pm_...) the buyer flagged as their default in
+   *  Account → Payment Methods. Used by the 1-click reorder fast-path. */
+  defaultPaymentMethodId?: string | null
   createdAt: string
 }
 
@@ -2227,6 +2255,19 @@ export function getUserProfileById(token: string, id: string) {
 
 export function updateUserProfile(token: string, data: Record<string, unknown>) {
   return api<UserProfile>("/api/v1/users/me", { method: "PUT", body: data, token })
+}
+
+/**
+ * Update buyer-facing defaults — currently just the default saved card.
+ * Pass empty string for `defaultPaymentMethodId` to clear the default.
+ * Default address lives on the address row (is_default) and is flipped via
+ * {@link setDefaultAddress}.
+ */
+export function updateUserDefaults(
+  token: string,
+  data: { defaultPaymentMethodId?: string | null },
+) {
+  return api<UserProfile>("/api/v1/users/me/defaults", { method: "PATCH", body: data, token })
 }
 
 // ── Addresses ──

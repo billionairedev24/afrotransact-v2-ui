@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { CreditCard, Loader2, ShieldCheck, Trash2 } from "lucide-react"
+import { CreditCard, Loader2, ShieldCheck, Star, Trash2 } from "lucide-react"
 import {
   deleteSavedPaymentMethod,
+  getUserProfile,
   listSavedPaymentMethods,
+  updateUserDefaults,
   type SavedPaymentMethod,
 } from "@/lib/api"
 
@@ -29,14 +31,23 @@ export default function PaymentMethodsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  /** Profile-level default (Stripe PM id). Source of truth for the "Default"
+   *  badge — the per-row SavedPaymentMethod.isDefault flag is the Stripe
+   *  customer default, which is set separately and we don't write to. */
+  const [defaultPmId, setDefaultPmId] = useState<string | null>(null)
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     if (!token) return
     setLoading(true)
     setError(null)
     try {
-      const list = await listSavedPaymentMethods(token)
+      const [list, profile] = await Promise.all([
+        listSavedPaymentMethods(token),
+        getUserProfile(token),
+      ])
       setMethods(list)
+      setDefaultPmId(profile.defaultPaymentMethodId ?? null)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load saved cards.")
     } finally {
@@ -50,15 +61,40 @@ export default function PaymentMethodsPage() {
     }
   }, [status, token, refresh])
 
+  const handleSetDefault = useCallback(
+    async (pmId: string) => {
+      if (!token) return
+      setSettingDefaultId(pmId)
+      const prev = defaultPmId
+      setDefaultPmId(pmId) // optimistic
+      try {
+        await updateUserDefaults(token, { defaultPaymentMethodId: pmId })
+      } catch (e) {
+        setDefaultPmId(prev)
+        setError(e instanceof Error ? e.message : "Could not set default card.")
+      } finally {
+        setSettingDefaultId(null)
+      }
+    },
+    [token, defaultPmId],
+  )
+
   const handleDelete = useCallback(
     async (id: string) => {
       if (!token) return
       setDeletingId(id)
       // Optimistic remove — restore on failure.
       const prev = methods
+      // Resolve the Stripe PM id so we can clear the profile default if the
+      // buyer is deleting their default card.
+      const removed = (methods ?? []).find((x) => x.id === id)
       setMethods((m) => (m ?? []).filter((x) => x.id !== id))
       try {
         await deleteSavedPaymentMethod(token, id)
+        if (removed && removed.stripePmId === defaultPmId) {
+          setDefaultPmId(null)
+          await updateUserDefaults(token, { defaultPaymentMethodId: "" }).catch(() => {})
+        }
       } catch (e) {
         setMethods(prev)
         setError(e instanceof Error ? e.message : "Could not remove that card.")
@@ -66,7 +102,7 @@ export default function PaymentMethodsPage() {
         setDeletingId(null)
       }
     },
-    [token, methods],
+    [token, methods, defaultPmId],
   )
 
   if (status !== "authenticated") {
@@ -114,26 +150,51 @@ export default function PaymentMethodsPage() {
                   <CreditCard className="h-5 w-5 text-foreground" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">
-                    {formatBrand(m.brand)} ending in {m.last4 ?? "••••"}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {formatBrand(m.brand)} ending in {m.last4 ?? "••••"}
+                    </p>
+                    {m.stripePmId === defaultPmId && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-gold-foreground">
+                        <Star className="h-3 w-3 fill-current" />
+                        Default
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {formatExpiry(m.expMonth, m.expYear) || "Expiry unavailable"}
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => handleDelete(m.id)}
-                disabled={deletingId === m.id}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-              >
-                {deletingId === m.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-2">
+                {m.stripePmId !== defaultPmId && (
+                  <button
+                    onClick={() => handleSetDefault(m.stripePmId)}
+                    disabled={settingDefaultId === m.stripePmId}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    title="Use this card for 1-click reorder"
+                  >
+                    {settingDefaultId === m.stripePmId ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Star className="h-3.5 w-3.5" />
+                    )}
+                    Set default
+                  </button>
                 )}
-                Remove
-              </button>
+                <button
+                  onClick={() => handleDelete(m.id)}
+                  disabled={deletingId === m.id}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                >
+                  {deletingId === m.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  Remove
+                </button>
+              </div>
             </li>
           ))}
         </ul>

@@ -42,7 +42,13 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getBuyerOrders, createReview, type OrderDto, type OrderItemDto } from "@/lib/api"
+import {
+  getBuyerOrders,
+  createReview,
+  reorderOrder,
+  type OrderDto,
+  type OrderItemDto,
+} from "@/lib/api"
 import { logError } from "@/lib/errors"
 import { OrderCardSkeleton } from "@/components/ui/Skeleton"
 import { useCartStore } from "@/stores/cart-store"
@@ -148,44 +154,105 @@ function OrderCard({ order }: { order: OrderDto }) {
   const reviewableItems = allItems.filter((i) => i.productId)
   void firstSubOrder
 
-  // Re-adds every item from this order back to the cart, then routes to /cart.
+  // Client-side cart restore — used as the slow-path fallback for reorder
+  // when the buyer has no default address (or the server returns fastPath=false).
   // Items missing productId are skipped (e.g. legacy soft-deleted entries).
+  const restoreCartFromOrder = (): number => {
+    useCartStore.getState().clearCart()
+    let added = 0
+    for (const so of order.subOrders) {
+      for (const it of so.items) {
+        if (!it.productId) continue
+        addItem({
+          productId: it.productId,
+          variantId: it.variantId,
+          storeId: so.storeId,
+          storeName: so.storeId,
+          title: it.productTitle || "Product",
+          variantName: it.variantName || "Default",
+          price: it.unitPriceCents,
+          quantity: it.quantity,
+          imageUrl: it.imageUrl ?? undefined,
+          slug: it.slug ?? it.productId,
+          weightKg: null,
+          lengthIn: null,
+          widthIn: null,
+          heightIn: null,
+        })
+        added++
+      }
+    }
+    return added
+  }
+
+  // 1-click reorder. Calls the backend reorder endpoint which:
+  //   - replays the prior order's items into the server cart,
+  //   - resolves the buyer's default shipping address,
+  //   - runs checkout (session-mode or legacy fork).
+  // On fastPath success the buyer is routed straight to the existing
+  // payment-confirmation page; on fallback we restore the cart client-side
+  // and drop the buyer onto /checkout so they can finish manually.
   const handleBuyAgain = async () => {
     if (buyingAgain) return
     setBuyingAgain(true)
     try {
-      let added = 0
-      for (const so of order.subOrders) {
-        for (const it of so.items) {
-          if (!it.productId) continue
-          addItem({
-            productId: it.productId,
-            variantId: it.variantId,
-            storeId: so.storeId,
-            // OrderDto doesn't carry storeName today; storeId is good
-            // enough to satisfy the cart store and the cart UI will look
-            // up the human name from the store catalogue on render.
-            storeName: so.storeId,
-            title: it.productTitle || "Product",
-            variantName: it.variantName || "Default",
-            price: it.unitPriceCents,
-            quantity: it.quantity,
-            imageUrl: it.imageUrl ?? undefined,
-            slug: it.slug ?? it.productId,
-            weightKg: null,
-            lengthIn: null,
-            widthIn: null,
-            heightIn: null,
-          })
-          added++
-        }
-      }
-      if (added === 0) {
-        toast.error("Couldn't add these items to your cart — try Details instead")
+      const token = await getAccessToken()
+      if (!token) {
+        toast.error("Session expired — please sign in again")
         return
       }
-      toast.success(`Added ${added} item${added === 1 ? "" : "s"} to your cart`)
-      router.push("/cart")
+      const idempotencyKey = `reorder-${order.orderNumber}-${Date.now()}`
+      let res
+      try {
+        res = await reorderOrder(token, order.orderNumber, idempotencyKey)
+      } catch (e) {
+        logError(e, "1-click reorder")
+        // Backend bounced (404, empty, region-disabled). Fall back to the
+        // client-side cart restore + manual /checkout.
+        const added = restoreCartFromOrder()
+        if (added === 0) {
+          toast.error("Couldn't reorder this — try Details instead")
+          return
+        }
+        toast.message(`Added ${added} item${added === 1 ? "" : "s"} — finish on checkout`)
+        router.push("/cart")
+        return
+      }
+
+      if (res.skippedItemCount > 0) {
+        toast.message(
+          `Reorder ready (${res.skippedItemCount} item${res.skippedItemCount === 1 ? "" : "s"} no longer available)`,
+        )
+      }
+
+      if (!res.fastPath) {
+        // Cart is populated server-side, but the buyer needs to pick an
+        // address / shipping option / coupon. Restore the client cart so
+        // the /checkout page (which reads from Zustand) shows the items.
+        restoreCartFromOrder()
+        if (res.fallbackReason === "no_default_address") {
+          toast.message("Pick a shipping address to continue.")
+        }
+        router.push("/checkout")
+        return
+      }
+
+      // Fast path: backend ran checkout. Hand off to the existing payment
+      // confirmation flow. Session-mode → Stripe Checkout return URL is
+      // the only path the buyer needs to finish on. Legacy → drop on the
+      // /checkout page; the cart is populated and CheckoutClient will
+      // pick up the live PaymentIntent for the new pending order.
+      restoreCartFromOrder()
+      if (res.checkoutSessionId) {
+        router.push(`/checkout/complete?session=${encodeURIComponent(res.checkoutSessionId)}`)
+      } else {
+        // Legacy fork: the order is pending and needs Stripe Elements to
+        // confirm. The /checkout page reuses the user's cart + payment
+        // selection logic; the recent-pending dedup in OrderService.checkout
+        // resumes the same order rather than minting a new one.
+        toast.success("Order created — finish payment to confirm")
+        router.push("/checkout")
+      }
     } finally {
       setBuyingAgain(false)
     }
