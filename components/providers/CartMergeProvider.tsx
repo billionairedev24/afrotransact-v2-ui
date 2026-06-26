@@ -79,14 +79,27 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
     const localItemsAtStart = useCartStore.getState().items
     const seedItems = guestItems.length > 0 ? guestItems : localItemsAtStart
 
+    const hadLocalItemsAtAuth = seedItems.length > 0
+
     ;(async () => {
       try {
-        const dto = seedItems.length > 0
+        const dto = hadLocalItemsAtAuth
           ? await mergeCart(token, toMergePayload(seedItems))
           : await getCart(token)
         useCartStore.getState().replaceFromServer(dto)
         useCartStore.getState().setMode("auth")
         clearGuestCart()
+        if (hadLocalItemsAtAuth) {
+          try {
+            const mergedCount = seedItems.reduce((n, i) => n + i.quantity, 0)
+            sessionStorage.setItem(
+              "at:cart:merge-notice",
+              JSON.stringify({ at: Date.now(), count: mergedCount }),
+            )
+          } catch {
+            // non-critical
+          }
+        }
       } catch (e) {
         logError(e, "cart hydrate on auth")
         // Don't drop local items if hydration failed; just flip mode so future

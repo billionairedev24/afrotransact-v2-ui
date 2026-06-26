@@ -15,6 +15,8 @@ import {
   getAdminRegions,
   createRegion,
   updateRegion,
+  getRegionFeatures,
+  upsertRegionFeature,
   type Region,
 } from "@/lib/api"
 import { friendlyMessage, logError } from "@/lib/errors"
@@ -244,6 +246,8 @@ export default function RegionsPage() {
   const [regions, setRegions] = useState<Region[]>([])
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [couponsByRegion, setCouponsByRegion] = useState<Record<string, boolean>>({})
+  const [couponSavingId, setCouponSavingId] = useState<string | null>(null)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingRegion, setEditingRegion] = useState<Region | null>(null)
@@ -277,6 +281,39 @@ export default function RegionsPage() {
     if (status === "authenticated") fetchRegions()
     else setLoading(false)
   }, [status, fetchRegions])
+
+  // Fetch coupons_enabled for every region in parallel after the regions list
+  // arrives. Avoids N sequential round-trips on the admin page.
+  useEffect(() => {
+    if (status !== "authenticated") return
+    if (regions.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      const token = await getAccessToken()
+      if (!token) return
+      try {
+        const results = await Promise.all(
+          regions.map(async (r) => {
+            try {
+              const features = await getRegionFeatures(token, r.id)
+              const cf = features.find((f) => f.featureKey === "coupons_enabled")
+              return [r.id, cf?.enabled ?? false] as const
+            } catch (err) {
+              logError(err, "regions.fetchCoupons")
+              return [r.id, false] as const
+            }
+          }),
+        )
+        if (cancelled) return
+        const next: Record<string, boolean> = {}
+        for (const [id, enabled] of results) next[id] = enabled
+        setCouponsByRegion(next)
+      } catch (err) {
+        logError(err, "regions.fetchCouponsBatch")
+      }
+    })()
+    return () => { cancelled = true }
+  }, [status, regions])
 
   const grouped = useMemo(() => groupRegions(regions), [regions])
 
@@ -388,6 +425,33 @@ export default function RegionsPage() {
     }
   }
 
+  const toggleCoupons = async (region: Region) => {
+    const token = await getAccessToken()
+    if (!token) return
+    const current = couponsByRegion[region.id] ?? false
+    const next = !current
+    // Optimistic
+    setCouponsByRegion((prev) => ({ ...prev, [region.id]: next }))
+    setCouponSavingId(region.id)
+    try {
+      await upsertRegionFeature(token, region.id, "coupons_enabled", next)
+      toast.success(next ? "Coupons enabled" : "Coupons disabled")
+    } catch (err) {
+      // Revert
+      setCouponsByRegion((prev) => ({ ...prev, [region.id]: current }))
+      logError(err, "regions.toggleCoupons")
+      if (err instanceof ApiError && err.status === 401) {
+        toast.error("Your admin session has expired. Please sign in again.")
+      } else if (err instanceof ApiError && err.status === 403) {
+        toast.error("You don't have permission to change region features.")
+      } else {
+        toast.error(friendlyMessage(err, "Couldn't toggle coupons. Please try again."))
+      }
+    } finally {
+      setCouponSavingId(null)
+    }
+  }
+
   const totalActive = regions.filter((r) => r.active).length
 
   if (status !== "authenticated") {
@@ -489,6 +553,7 @@ export default function RegionsPage() {
                             <th className="text-right px-4 py-2.5 font-medium">Tax %</th>
                             <th className="text-right px-4 py-2.5 font-medium hidden sm:table-cell">Ship ¢/lb</th>
                             <th className="text-right px-4 py-2.5 font-medium hidden md:table-cell">Free Ship</th>
+                            <th className="text-center px-4 py-2.5 font-medium w-[100px]">Coupons</th>
                             <th className="text-center px-4 py-2.5 font-medium w-[90px]">Status</th>
                             <th className="w-[50px]" />
                           </tr>
@@ -526,6 +591,30 @@ export default function RegionsPage() {
                                 <td className="px-4 py-3 text-right text-foreground hidden sm:table-cell tabular-nums">{region.shippingRateCentsPerLb}¢</td>
                                 <td className="px-4 py-3 text-right text-foreground hidden md:table-cell tabular-nums">
                                   ${(region.freeShippingThresholdCents / 100).toFixed(0)}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {(() => {
+                                    const couponsOn = couponsByRegion[region.id] ?? false
+                                    const busy = couponSavingId === region.id
+                                    return (
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleCoupons(region)}
+                                        disabled={busy}
+                                        aria-pressed={couponsOn}
+                                        aria-label={couponsOn ? "Disable coupons" : "Enable coupons"}
+                                        className="inline-flex items-center justify-center text-foreground hover:text-primary transition-colors disabled:opacity-50"
+                                      >
+                                        {busy ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : couponsOn ? (
+                                          <ToggleRight className="h-5 w-5 text-green-600" />
+                                        ) : (
+                                          <ToggleLeft className="h-5 w-5 text-muted-foreground" />
+                                        )}
+                                      </button>
+                                    )
+                                  })()}
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   {savingId === region.id ? (

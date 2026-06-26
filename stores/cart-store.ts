@@ -53,6 +53,23 @@ interface CartState {
 /** Per-tab session storage: cleared when the tab/window closes so the next visitor does not inherit a guest cart. */
 const GUEST_CART_KEY = "afrotransact-guest-cart"
 
+/**
+ * Persisted guest-cart envelope. `lastTouchedAt` is refreshed on every
+ * mutation; on hydration we drop the cart if it's older than the configured
+ * TTL — defensive safety net for shared-computer scenarios.
+ */
+interface GuestCartEnvelope {
+  items: CartItem[]
+  lastTouchedAt: number
+}
+
+function getGuestCartTtlMs(): number {
+  const raw = process.env.NEXT_PUBLIC_GUEST_CART_TTL_HOURS ?? "4"
+  const hours = Number.parseFloat(raw)
+  const safeHours = Number.isFinite(hours) && hours > 0 ? hours : 4
+  return safeHours * 60 * 60 * 1000
+}
+
 function readGuestCartRaw(): string | null {
   try {
     const fromSession = sessionStorage.getItem(GUEST_CART_KEY)
@@ -71,7 +88,8 @@ function readGuestCartRaw(): string | null {
 
 export function saveGuestCart(items: CartItem[]) {
   try {
-    sessionStorage.setItem(GUEST_CART_KEY, JSON.stringify(items))
+    const envelope: GuestCartEnvelope = { items, lastTouchedAt: Date.now() }
+    sessionStorage.setItem(GUEST_CART_KEY, JSON.stringify(envelope))
   } catch {
     // non-critical
   }
@@ -80,7 +98,24 @@ export function saveGuestCart(items: CartItem[]) {
 export function loadGuestCart(): CartItem[] {
   try {
     const raw = readGuestCartRaw()
-    if (raw) return JSON.parse(raw) as CartItem[]
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    // Back-compat: legacy persisted shape was a bare CartItem[].
+    if (Array.isArray(parsed)) return parsed as CartItem[]
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      Array.isArray((parsed as GuestCartEnvelope).items) &&
+      typeof (parsed as GuestCartEnvelope).lastTouchedAt === "number"
+    ) {
+      const env = parsed as GuestCartEnvelope
+      if (Date.now() - env.lastTouchedAt > getGuestCartTtlMs()) {
+        // Stale — drop it so a shared computer doesn't leak prior visitor's cart.
+        try { sessionStorage.removeItem(GUEST_CART_KEY) } catch { /* ignore */ }
+        return []
+      }
+      return env.items
+    }
   } catch {
     // corrupted — ignore
   }

@@ -2045,6 +2045,61 @@ export function deleteRegion(token: string, id: string) {
   return api<void>(`/api/v1/admin/regions/${id}`, { method: "DELETE", token })
 }
 
+// ── Admin: Region features (config-service) ──
+// Wire to GET/POST /api/v1/admin/regions/{id}/features. The config-service
+// stores per-region toggles like `coupons_enabled` in config.region_features
+// and returns them as { region_id, features: RegionFeature[] }.
+
+export interface RegionFeature {
+  id: string
+  regionId: string
+  featureKey: string
+  enabled: boolean
+}
+
+interface RawRegionFeature {
+  id: string
+  region_id: string
+  feature_key: string
+  enabled: boolean
+  config?: unknown
+}
+
+interface RawRegionFeaturesPayload {
+  region_id: string
+  features: RawRegionFeature[]
+}
+
+function mapRegionFeature(f: RawRegionFeature): RegionFeature {
+  return {
+    id: f.id,
+    regionId: f.region_id,
+    featureKey: f.feature_key,
+    enabled: f.enabled,
+  }
+}
+
+export async function getRegionFeatures(token: string, regionId: string): Promise<RegionFeature[]> {
+  const raw = await api<RawRegionFeaturesPayload>(
+    `/api/v1/admin/regions/${regionId}/features`,
+    { token },
+  )
+  return (raw.features ?? []).map(mapRegionFeature)
+}
+
+export async function upsertRegionFeature(
+  token: string,
+  regionId: string,
+  featureKey: string,
+  enabled: boolean,
+): Promise<void> {
+  await api<{ status: string }>(`/api/v1/admin/regions/${regionId}/features`, {
+    method: "POST",
+    body: { feature_key: featureKey, enabled },
+    token,
+  })
+}
+
 // ── Marketplace config ──────────────────────────────────────────────────────
 // Feature flags previously lived here as a regional CRUD; they now live as
 // build-time NEXT_PUBLIC_FEATURE_* env vars via lib/features.ts. The handful
