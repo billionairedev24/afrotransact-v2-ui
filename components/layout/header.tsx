@@ -315,26 +315,25 @@ export function Header() {
                 <Menu className="h-6 w-6" strokeWidth={2} />
               </button>
 
-              {/* Logo — full lockup with tagline (on dark bg). On xs the
-                  wordmark+tagline would dominate the search bar, so mark-
-                  only there. */}
-              <Link href="/" className="flex items-center shrink-0 mr-1" aria-label="AfroTransact home">
+              {/* Logo — SVG mark + live wordmark in the app font (Inter).
+                  Live text avoids the prior baked-in font that didn't match
+                  the rest of the UI and the mobile truncation of the SVG
+                  lockup (last "t" was clipped). Mark only at xs to keep
+                  room for the search bar. */}
+              <Link href="/" className="flex items-center gap-2 shrink-0 mr-1" aria-label="AfroTransact home">
                 <Image
                   src="/brand/logo-mark-dark.svg"
-                  alt="AfroTransact"
+                  alt=""
                   width={32}
                   height={37}
-                  className="h-9 w-auto sm:hidden"
+                  className="h-8 w-auto sm:h-9 shrink-0"
                   priority
                 />
-                <Image
-                  src="/brand/logo-tagline-dark.svg"
-                  alt="AfroTransact"
-                  width={180}
-                  height={42}
-                  className="hidden sm:block h-10 w-auto"
-                  priority
-                />
+                <span
+                  className="hidden sm:inline-block font-sans font-bold text-white text-xl lg:text-2xl tracking-tight leading-none whitespace-nowrap"
+                >
+                  afrotransact
+                </span>
               </Link>
 
               {/* "Ask Victory" pill — placed right after the logo per the
