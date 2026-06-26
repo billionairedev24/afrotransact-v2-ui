@@ -8,11 +8,14 @@ import {
   createAdminCoupon,
   updateAdminCoupon,
   toggleAdminCoupon,
+  getAdminRegions,
+  getRegionFeatures,
+  upsertRegionFeature,
 } from "@/lib/api"
-import type { CouponData, CouponCreateRequest } from "@/lib/api"
-import { logError } from "@/lib/errors"
+import type { CouponData, CouponCreateRequest, Region } from "@/lib/api"
+import { friendlyMessage, logError } from "@/lib/errors"
 import { toast } from "sonner"
-import { Plus, Ticket, Pencil, ToggleLeft, ToggleRight, X } from "lucide-react"
+import { Plus, Ticket, Pencil, X } from "lucide-react"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
 import { createColumnHelper } from "@tanstack/react-table"
@@ -28,12 +31,62 @@ function fmtValue(type: string, value: number) {
 
 const col = createColumnHelper<CouponData>()
 
+type StatusFilter = "all" | "active" | "paused" | "expired"
+
+function couponStatus(c: CouponData): "active" | "paused" | "expired" {
+  if (c.active) return "active"
+  if (c.enabled) return "expired"
+  return "paused"
+}
+
+/** Small inline pill switch, mirrors the regions-page toggle style. */
+function InlineSwitch({
+  on,
+  busy,
+  onClick,
+  ariaLabel,
+}: {
+  on: boolean
+  busy?: boolean
+  onClick: () => void
+  ariaLabel: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={ariaLabel}
+      disabled={busy}
+      onClick={onClick}
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-50 ${
+        on ? "bg-emerald-500" : "bg-gray-300"
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+          on ? "translate-x-4" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  )
+}
+
 export default function AdminCouponsPage() {
   const { status: sessionStatus } = useSession()
   const [coupons, setCoupons] = useState<CouponData[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<CouponData | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<StatusFilter>("all")
+
+  // Region "Coupons feature" band state
+  const [regions, setRegions] = useState<Region[]>([])
+  const [regionFlags, setRegionFlags] = useState<Record<string, boolean>>({})
+  const [regionsLoaded, setRegionsLoaded] = useState(false)
+  const [regionsErrored, setRegionsErrored] = useState(false)
+  const [regionSavingId, setRegionSavingId] = useState<string | null>(null)
 
   const loadCoupons = useCallback(async () => {
     try {
@@ -50,9 +103,41 @@ export default function AdminCouponsPage() {
     }
   }, [])
 
+  const loadRegions = useCallback(async () => {
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      const rs = await getAdminRegions(token)
+      setRegions(rs)
+      const results = await Promise.all(
+        rs.map(async (r) => {
+          try {
+            const features = await getRegionFeatures(token, r.id)
+            const cf = features.find((f) => f.featureKey === "coupons_enabled")
+            return [r.id, cf?.enabled ?? false] as const
+          } catch (err) {
+            logError(err, "coupons.fetchRegionFeature")
+            return [r.id, false] as const
+          }
+        }),
+      )
+      const next: Record<string, boolean> = {}
+      for (const [id, enabled] of results) next[id] = enabled
+      setRegionFlags(next)
+      setRegionsLoaded(true)
+    } catch (err) {
+      logError(err, "coupons.fetchRegions")
+      setRegionsErrored(true)
+      setRegionsLoaded(true)
+    }
+  }, [])
+
   useEffect(() => {
-    if (sessionStatus === "authenticated") loadCoupons()
-  }, [sessionStatus, loadCoupons])
+    if (sessionStatus === "authenticated") {
+      loadCoupons()
+      loadRegions()
+    }
+  }, [sessionStatus, loadCoupons, loadRegions])
 
   async function handleCreate(data: CouponCreateRequest) {
     const token = await getAccessToken()
@@ -72,13 +157,72 @@ export default function AdminCouponsPage() {
     loadCoupons()
   }
 
-  const handleToggle = useCallback(async (id: string) => {
+  const handleToggle = useCallback(async (c: CouponData) => {
     const token = await getAccessToken()
     if (!token) return
-    await toggleAdminCoupon(token, id)
-    toast.success("Coupon toggled")
-    loadCoupons()
-  }, [loadCoupons])
+    const prevEnabled = c.enabled
+    const prevActive = c.active
+    // Optimistic: flip enabled; active flips iff not expired (i.e. expiry not in past)
+    const expired = new Date(c.expiresAt).getTime() <= Date.now()
+    setCoupons((list) =>
+      list.map((x) =>
+        x.id === c.id
+          ? { ...x, enabled: !prevEnabled, active: !prevEnabled && !expired }
+          : x,
+      ),
+    )
+    setTogglingId(c.id)
+    try {
+      await toggleAdminCoupon(token, c.id)
+      toast.success(prevEnabled ? "Coupon paused" : "Coupon activated")
+    } catch (err) {
+      // Revert
+      setCoupons((list) =>
+        list.map((x) =>
+          x.id === c.id ? { ...x, enabled: prevEnabled, active: prevActive } : x,
+        ),
+      )
+      logError(err, "coupons.toggle")
+      toast.error(friendlyMessage(err, "Couldn't update coupon. Please try again."))
+    } finally {
+      setTogglingId(null)
+    }
+  }, [])
+
+  const handleRegionToggle = useCallback(async (region: Region) => {
+    const token = await getAccessToken()
+    if (!token) return
+    const current = regionFlags[region.id] ?? false
+    const next = !current
+    setRegionFlags((prev) => ({ ...prev, [region.id]: next }))
+    setRegionSavingId(region.id)
+    try {
+      await upsertRegionFeature(token, region.id, "coupons_enabled", next)
+      toast.success(`Coupons ${next ? "enabled" : "disabled"} for ${region.name || region.code}`)
+    } catch (err) {
+      setRegionFlags((prev) => ({ ...prev, [region.id]: current }))
+      logError(err, "coupons.toggleRegionFeature")
+      toast.error(friendlyMessage(err, "Couldn't toggle region. Please try again."))
+    } finally {
+      setRegionSavingId(null)
+    }
+  }, [regionFlags])
+
+  const filteredCoupons = useMemo(() => {
+    if (filter === "all") return coupons
+    return coupons.filter((c) => couponStatus(c) === filter)
+  }, [coupons, filter])
+
+  const counts = useMemo(() => {
+    let active = 0, paused = 0, expired = 0
+    for (const c of coupons) {
+      const s = couponStatus(c)
+      if (s === "active") active++
+      else if (s === "paused") paused++
+      else expired++
+    }
+    return { all: coupons.length, active, paused, expired }
+  }, [coupons])
 
   const columns = useMemo(() => [
     col.accessor("code", {
@@ -126,16 +270,27 @@ export default function AdminCouponsPage() {
       header: "Status",
       cell: info => {
         const c = info.row.original
-        const label = c.active ? "Active" : c.enabled ? "Expired" : "Disabled"
-        const cls = c.active
-          ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
-          : c.enabled
-          ? "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
-          : "bg-gray-100 text-gray-500"
+        const s = couponStatus(c)
+        if (s === "expired") {
+          return (
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200">
+              Expired
+            </span>
+          )
+        }
+        const on = s === "active"
         return (
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
-            {label}
-          </span>
+          <div className="flex items-center gap-2">
+            <InlineSwitch
+              on={on}
+              busy={togglingId === c.id}
+              onClick={() => handleToggle(c)}
+              ariaLabel={on ? `Pause coupon ${c.code}` : `Activate coupon ${c.code}`}
+            />
+            <span className={`text-xs font-medium ${on ? "text-emerald-700" : "text-gray-500"}`}>
+              {on ? "Active" : "Paused"}
+            </span>
+          </div>
         )
       },
     }),
@@ -152,18 +307,11 @@ export default function AdminCouponsPage() {
               icon: <Pencil className="h-4 w-4" />,
               onClick: () => { setEditing(c); setShowForm(false) },
             },
-            {
-              label: c.enabled ? "Disable" : "Enable",
-              icon: c.enabled
-                ? <ToggleRight className="h-4 w-4 text-emerald-500" />
-                : <ToggleLeft className="h-4 w-4" />,
-              onClick: () => handleToggle(c.id),
-            },
           ]} />
         )
       },
     }),
-  ], [handleToggle])
+  ], [handleToggle, togglingId])
 
   return (
     <div className="space-y-6">
@@ -179,6 +327,46 @@ export default function AdminCouponsPage() {
           <Plus className="h-4 w-4" /> Create Site-Wide Coupon
         </button>
       </div>
+
+      {/* Region "Coupons feature" status band */}
+      <section className="rounded-xl border border-input bg-white p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-gray-900">Coupons feature</h2>
+        </div>
+        {!regionsLoaded ? (
+          <p className="mt-2 text-xs text-gray-400">Loading regions…</p>
+        ) : regionsErrored || regions.length === 0 ? (
+          <p className="mt-2 text-xs text-gray-500">No regions configured.</p>
+        ) : (
+          <>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+              {regions.map((r) => {
+                const on = regionFlags[r.id] ?? false
+                return (
+                  <div
+                    key={r.id}
+                    className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1"
+                  >
+                    <span className="text-xs font-medium text-gray-700">{r.code || r.name}</span>
+                    <InlineSwitch
+                      on={on}
+                      busy={regionSavingId === r.id}
+                      onClick={() => handleRegionToggle(r)}
+                      ariaLabel={on ? `Disable coupons for ${r.code || r.name}` : `Enable coupons for ${r.code || r.name}`}
+                    />
+                    <span className={`text-[10px] font-semibold uppercase tracking-wide ${on ? "text-emerald-700" : "text-gray-400"}`}>
+                      {on ? "On" : "Off"}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              Toggle to show or hide the coupon input at checkout for buyers in that region.
+            </p>
+          </>
+        )}
+      </section>
 
       {(showForm || editing) && (
         <CouponForm
@@ -196,16 +384,47 @@ export default function AdminCouponsPage() {
           <p className="mt-1 text-xs text-gray-500">Create your first site-wide coupon to start offering discounts.</p>
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={coupons}
-          loading={loading}
-          searchPlaceholder="Search coupons…"
-          searchColumn="code"
-          enableExport
-          exportFilename="coupons"
-          emptyMessage="No coupons match your search."
-        />
+        <>
+          {/* Filter chips */}
+          <div className="flex flex-wrap items-center gap-2">
+            {([
+              { key: "all", label: "All", count: counts.all },
+              { key: "active", label: "Active", count: counts.active },
+              { key: "paused", label: "Paused", count: counts.paused },
+              { key: "expired", label: "Expired", count: counts.expired },
+            ] as { key: StatusFilter; label: string; count: number }[]).map((chip) => {
+              const selected = filter === chip.key
+              return (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => setFilter(chip.key)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    selected
+                      ? "border-gray-900 bg-gray-900 text-white"
+                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {chip.label}
+                  <span className={`tabular-nums ${selected ? "text-gray-200" : "text-gray-400"}`}>
+                    {chip.count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <DataTable
+            columns={columns}
+            data={filteredCoupons}
+            loading={loading}
+            searchPlaceholder="Search coupons…"
+            searchColumn="code"
+            enableExport
+            exportFilename="coupons"
+            emptyMessage="No coupons match your search."
+          />
+        </>
       )}
     </div>
   )
@@ -273,7 +492,7 @@ function CouponForm({
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Type *</label>
-          <select value={type} onChange={e => setType(e.target.value as any)} className={inputCls}>
+          <select value={type} onChange={e => setType(e.target.value as "percentage" | "fixed_amount")} className={inputCls}>
             <option value="percentage">Percentage</option>
             <option value="fixed_amount">Fixed Amount</option>
           </select>
@@ -284,7 +503,7 @@ function CouponForm({
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Scope</label>
-          <select value={scope} onChange={e => setScope(e.target.value as any)} className={inputCls}>
+          <select value={scope} onChange={e => setScope(e.target.value as typeof scope)} className={inputCls}>
             <option value="site_wide">Site-Wide</option>
             <option value="product">Product</option>
             <option value="store">Store</option>
