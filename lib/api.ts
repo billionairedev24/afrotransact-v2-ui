@@ -2100,6 +2100,162 @@ export async function upsertRegionFeature(
   })
 }
 
+// ── Admin: Service Zones (hierarchical geo-rollout) ─────────────────────────
+// Backed by config-service. A zone tree replaces the flat regions table for
+// feature rollout decisions. Most-specific match wins; features inherit
+// from ancestors unless overridden. See services/config/handler/zone.go.
+
+export interface ServiceZone {
+  id: string
+  parentZoneId: string | null
+  code: string
+  displayName: string
+  countryCode: string
+  subdivisionCode: string | null
+  postalPattern: string | null
+  status: "enabled" | "coming_soon" | "disabled"
+  sortOrder: number
+}
+
+export interface ZoneFeature {
+  id: string
+  zoneId: string
+  featureKey: string
+  enabled: boolean
+}
+
+export interface ResolvedZone {
+  zone: ServiceZone
+  ancestors: ServiceZone[]
+  effectiveFeatures: Record<string, boolean>
+  status: string
+}
+
+interface RawServiceZone {
+  id: string
+  parent_zone_id: string | null
+  code: string
+  display_name: string
+  country_code: string
+  subdivision_code: string | null
+  postal_pattern: string | null
+  status: "enabled" | "coming_soon" | "disabled"
+  sort_order: number
+}
+
+interface RawZoneFeature {
+  id: string
+  zone_id: string
+  feature_key: string
+  enabled: boolean
+}
+
+function mapZone(z: RawServiceZone): ServiceZone {
+  return {
+    id: z.id,
+    parentZoneId: z.parent_zone_id,
+    code: z.code,
+    displayName: z.display_name,
+    countryCode: z.country_code,
+    subdivisionCode: z.subdivision_code,
+    postalPattern: z.postal_pattern,
+    status: z.status,
+    sortOrder: z.sort_order,
+  }
+}
+
+function mapZoneFeature(f: RawZoneFeature): ZoneFeature {
+  return {
+    id: f.id,
+    zoneId: f.zone_id,
+    featureKey: f.feature_key,
+    enabled: f.enabled,
+  }
+}
+
+export interface ZoneInput {
+  parent_zone_id?: string | null
+  code: string
+  display_name: string
+  country_code: string
+  subdivision_code?: string | null
+  postal_pattern?: string | null
+  status?: "enabled" | "coming_soon" | "disabled"
+  sort_order?: number
+}
+
+export async function listAdminZones(token: string): Promise<ServiceZone[]> {
+  const res = await api<{ zones: RawServiceZone[] }>("/api/v1/admin/zones", { token })
+  return (res.zones ?? []).map(mapZone)
+}
+
+export async function createAdminZone(token: string, data: ZoneInput): Promise<ServiceZone> {
+  const raw = await api<RawServiceZone>("/api/v1/admin/zones", { method: "POST", body: data, token })
+  return mapZone(raw)
+}
+
+export async function updateAdminZone(
+  token: string,
+  id: string,
+  data: Partial<ZoneInput>,
+): Promise<ServiceZone> {
+  const raw = await api<RawServiceZone>(`/api/v1/admin/zones/${id}`, { method: "PUT", body: data, token })
+  return mapZone(raw)
+}
+
+export function deleteAdminZone(token: string, id: string): Promise<void> {
+  return api<void>(`/api/v1/admin/zones/${id}`, { method: "DELETE", token })
+}
+
+export async function listZoneFeatures(token: string, zoneId: string): Promise<ZoneFeature[]> {
+  const res = await api<{ zone_id: string; features: RawZoneFeature[] | null }>(
+    `/api/v1/admin/zones/${zoneId}/features`,
+    { token },
+  )
+  return (res.features ?? []).map(mapZoneFeature)
+}
+
+export async function upsertZoneFeature(
+  token: string,
+  zoneId: string,
+  featureKey: string,
+  enabled: boolean,
+): Promise<void> {
+  await api<{ status: string }>(`/api/v1/admin/zones/${zoneId}/features`, {
+    method: "POST",
+    body: { feature_key: featureKey, enabled },
+    token,
+  })
+}
+
+// Public resolver used by the storefront once a buyer location is known.
+// Returns null when no zone matches the country (silently fall through).
+export async function resolveServiceZone(
+  country: string,
+  subdivision?: string | null,
+  postal?: string | null,
+): Promise<ResolvedZone | null> {
+  const params = new URLSearchParams({ country })
+  if (subdivision) params.set("subdivision", subdivision)
+  if (postal) params.set("postal", postal)
+  try {
+    const raw = await api<{
+      zone: RawServiceZone
+      ancestors: RawServiceZone[] | null
+      effective_features: Record<string, boolean> | null
+      status: string
+    }>(`/api/v1/zones/resolve?${params.toString()}`)
+    return {
+      zone: mapZone(raw.zone),
+      ancestors: (raw.ancestors ?? []).map(mapZone),
+      effectiveFeatures: raw.effective_features ?? {},
+      status: raw.status,
+    }
+  } catch {
+    return null
+  }
+}
+
 // ── Marketplace config ──────────────────────────────────────────────────────
 // Feature flags previously lived here as a regional CRUD; they now live as
 // build-time NEXT_PUBLIC_FEATURE_* env vars via lib/features.ts. The handful
