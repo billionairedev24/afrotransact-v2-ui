@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react"
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X, Sparkles, Tag, Zap, AlertCircle } from "lucide-react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
-import { clearServerCart, prefetchCheckoutShippingContext } from "@/lib/api"
+import { clearServerCart, getRegionConfig, prefetchCheckoutShippingContext } from "@/lib/api"
 import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useDefaultRegionCommerceGates } from "@/hooks/use-default-region-commerce-gates"
@@ -59,6 +59,20 @@ export default function CartPage() {
   const { decisions: eligibilityByStore, hasBlocker: eligibilityBlocked, locationSet } =
     useCartEligibility(storeIds)
   const buyerPostalCode = useBuyerLocation((s) => s.location?.postalCode ?? "")
+  const [freeShippingThresholdCents, setFreeShippingThresholdCents] = useState<number | null>(null)
+  useEffect(() => {
+    if (!mounted) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const cfg = await getRegionConfig("us-tx-default")
+        if (!cancelled) setFreeShippingThresholdCents(cfg.region.freeShippingThresholdCents)
+      } catch {
+        if (!cancelled) setFreeShippingThresholdCents(null)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [mounted])
   const subtotal = mounted ? getSubtotal() : 0
   const totalQty = mounted ? getItemCount() : 0
   const estimatedTax = Math.round(subtotal * 0.0825) // 8.25% TX
@@ -273,6 +287,26 @@ export default function CartPage() {
           >
             <h2 className="text-lg font-bold text-gray-900 mb-4">Order Summary</h2>
 
+            {freeShippingThresholdCents !== null && (
+              <>
+                {freeShippingThresholdCents === -1 && (
+                  <div className="mb-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-800">
+                    Free shipping on this order
+                  </div>
+                )}
+                {freeShippingThresholdCents > 0 && subtotal < freeShippingThresholdCents && (
+                  <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    Add {formatCents(freeShippingThresholdCents - subtotal)} for free shipping
+                  </div>
+                )}
+                {freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents && (
+                  <div className="mb-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-800">
+                    You unlocked free shipping
+                  </div>
+                )}
+              </>
+            )}
+
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal ({totalQty} items)</span>
@@ -349,9 +383,11 @@ export default function CartPage() {
               Continue Shopping
             </Link>
 
-            <p className="mt-4 text-center text-xs text-gray-500">
-              Free shipping on orders over $75
-            </p>
+            {freeShippingThresholdCents !== null && freeShippingThresholdCents > 0 && (
+              <p className="mt-4 text-center text-xs text-gray-500">
+                Free shipping on orders over {formatCents(freeShippingThresholdCents)}
+              </p>
+            )}
           </div>
         </aside>
       </div>

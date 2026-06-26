@@ -163,6 +163,7 @@ export default function CheckoutClientV2({
   const [region, setRegion] = useState<Region | null>(null)
   const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
   const [configFeatures, setConfigFeatures] = useState<Record<string, boolean>>({})
+  const [freeShippingThresholdCents, setFreeShippingThresholdCents] = useState<number | null>(null)
   useEffect(() => {
     if (!mounted) return
     let cancelled = false
@@ -186,6 +187,7 @@ export default function CheckoutClientV2({
         if (cancelled || !cfg) return
         setPaymentMethods(cfg.paymentMethods ?? [])
         setConfigFeatures(cfg.features ?? {})
+        setFreeShippingThresholdCents(cfg.region.freeShippingThresholdCents)
       } catch { /* non-fatal */ }
     })()
     return () => { cancelled = true }
@@ -1084,7 +1086,15 @@ export default function CheckoutClientV2({
                 </div>
               )}
               <div className="flex justify-between">
-                <dt className="text-gray-600">Shipping</dt>
+                <dt className="text-gray-600">
+                  Shipping
+                  {freeShippingThresholdCents !== null && (
+                    freeShippingThresholdCents === -1 ||
+                    (freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents)
+                  ) && (
+                    <span className="ml-2 text-[11px] font-semibold text-green-700">Free shipping applied</span>
+                  )}
+                </dt>
                 <dd className="text-gray-900 tabular-nums">
                   {selectedQuote ? formatCents(shippingCents) : "—"}
                 </dd>

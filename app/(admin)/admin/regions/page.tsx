@@ -50,6 +50,81 @@ const DEFAULT_FORM: RegionFormData = {
   active: true,
 }
 
+type FreeShippingMode = "never" | "threshold" | "always"
+
+function deriveFreeShippingMode(cents: number): FreeShippingMode {
+  if (cents === -1) return "always"
+  if (cents === 0) return "never"
+  return "threshold"
+}
+
+function FreeShippingPicker({
+  valueCents,
+  onChange,
+}: {
+  valueCents: number
+  onChange: (cents: number) => void
+}) {
+  const mode = deriveFreeShippingMode(valueCents)
+  // Keep the user's last positive threshold so toggling modes doesn't lose it.
+  const [thresholdDollars, setThresholdDollars] = useState<number>(() =>
+    valueCents > 0 ? Math.round(valueCents / 100) : 75,
+  )
+
+  function setMode(next: FreeShippingMode) {
+    if (next === "never") onChange(0)
+    else if (next === "always") onChange(-1)
+    else onChange(Math.max(1, thresholdDollars) * 100)
+  }
+
+  const helper =
+    mode === "always"
+      ? "Never charge shipping in this region — applies to all orders regardless of total."
+      : mode === "threshold"
+        ? "Free shipping kicks in once the buyer's subtotal reaches this amount."
+        : "Always charge shipping based on weight and selected carrier."
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-col gap-1.5">
+        {(["never", "threshold", "always"] as const).map((m) => (
+          <label key={m} className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="radio"
+              name="free-shipping-mode"
+              value={m}
+              checked={mode === m}
+              onChange={() => setMode(m)}
+              className="text-primary focus:ring-primary"
+            />
+            <span>
+              {m === "never" ? "Never free" : m === "threshold" ? "Free above a threshold" : "Always free"}
+            </span>
+          </label>
+        ))}
+      </div>
+      {mode === "threshold" && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">$</span>
+          <input
+            type="number"
+            step={1}
+            min={1}
+            value={thresholdDollars}
+            onChange={(e) => {
+              const dollars = Math.max(1, Number(e.target.value) || 0)
+              setThresholdDollars(dollars)
+              onChange(dollars * 100)
+            }}
+            className={INPUT_CLASS}
+          />
+        </div>
+      )}
+      <p className="text-[11px] text-gray-500 leading-snug">{helper}</p>
+    </div>
+  )
+}
+
 function RegionForm({
   form,
   onChange,
@@ -167,14 +242,10 @@ function RegionForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">Free Ship ($)</label>
-          <input
-            type="number"
-            step={1}
-            min={0}
-            value={Math.round(form.free_shipping_threshold_cents / 100)}
-            onChange={(e) => onChange({ ...form, free_shipping_threshold_cents: Number(e.target.value) * 100 })}
-            className={INPUT_CLASS}
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">Free Shipping</label>
+          <FreeShippingPicker
+            valueCents={form.free_shipping_threshold_cents}
+            onChange={(cents) => onChange({ ...form, free_shipping_threshold_cents: cents })}
           />
         </div>
       </div>
@@ -525,7 +596,11 @@ export default function RegionsPage() {
                                 <td className="px-4 py-3 text-right text-foreground tabular-nums">{region.taxRate}%</td>
                                 <td className="px-4 py-3 text-right text-foreground hidden sm:table-cell tabular-nums">{region.shippingRateCentsPerLb}¢</td>
                                 <td className="px-4 py-3 text-right text-foreground hidden md:table-cell tabular-nums">
-                                  ${(region.freeShippingThresholdCents / 100).toFixed(0)}
+                                  {region.freeShippingThresholdCents === -1
+                                    ? "Always"
+                                    : region.freeShippingThresholdCents === 0
+                                      ? "Never"
+                                      : `$${(region.freeShippingThresholdCents / 100).toFixed(0)}`}
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   {savingId === region.id ? (
