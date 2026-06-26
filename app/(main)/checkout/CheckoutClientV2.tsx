@@ -1263,27 +1263,42 @@ function InlinePaymentForm({
     },
   }), [stripe, elements, clientSecret, checkoutSessionId, usingSaved, selectedSavedCardId, onError])
 
+  // Track the currently-selected payment-method type from Stripe's PaymentElement
+  // so the "save for next time" checkbox can name the right thing (card / bank
+  // account / Apple Pay, etc.) instead of hardcoding "card".
+  const [pmType, setPmType] = useState<string>("card")
+  const saveLabel = (() => {
+    switch (pmType) {
+      case "card":            return "Save this card for next time"
+      case "us_bank_account": return "Save this bank account for next time"
+      case "sepa_debit":      return "Save this bank account for next time"
+      case "link":            return "Save this Link account for next time"
+      default:                return "Save this payment method for next time"
+    }
+  })()
+
   return (
     <div className="space-y-4">
-      <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-50 p-3">
-        <ShieldCheck className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-        <p className="text-xs text-gray-600 leading-relaxed">
-          <span className="text-emerald-700 font-semibold">Card data never touches our servers.</span>{" "}
-          Payment details are encrypted and sent directly to Stripe via a secure iframe.
-        </p>
+      <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+        <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+        <span>Secure checkout</span>
       </div>
 
       {savedCards.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Pay with a saved card</p>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Saved payment methods</p>
           {savedCards.map((card) => {
             const checked = selectedSavedCardId === card.stripePmId
+            const brand = (card.brand ?? "card").toLowerCase()
+            const brandLabel = brand.charAt(0).toUpperCase() + brand.slice(1)
             return (
               <label
                 key={card.id}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors",
-                  checked ? "border-brand-gold bg-brand-gold/10" : "border-gray-200 hover:bg-gray-50",
+                  "flex items-center gap-4 rounded-xl border bg-white p-4 cursor-pointer transition-all",
+                  checked
+                    ? "border-brand-gold ring-2 ring-brand-gold/30 shadow-sm"
+                    : "border-gray-200 hover:border-gray-300",
                 )}
               >
                 <input
@@ -1291,28 +1306,36 @@ function InlinePaymentForm({
                   name="v2-saved-card"
                   checked={checked}
                   onChange={() => onSelectedSavedCardChange(card.stripePmId)}
-                  className="h-4 w-4 accent-brand-gold"
+                  className="h-4 w-4 accent-brand-gold shrink-0"
                 />
-                <CreditCard className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-900 capitalize">{card.brand ?? "card"}</span>
-                <span className="text-sm text-gray-600 font-mono">•••• {card.last4 ?? "????"}</span>
-                {card.expMonth && card.expYear && (
-                  <span className="ml-auto text-xs text-gray-500 tabular-nums">
-                    {String(card.expMonth).padStart(2, "0")}/{String(card.expYear).slice(-2)}
-                  </span>
-                )}
-                {card.isDefault && (
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-                    Default
-                  </span>
-                )}
+                <div className="flex h-9 w-14 items-center justify-center rounded-md border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 shrink-0">
+                  <CreditCard className="h-4 w-4 text-gray-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-900">{brandLabel}</span>
+                    <span className="text-sm text-gray-700 font-mono tabular-nums">ending in {card.last4 ?? "····"}</span>
+                    {card.isDefault && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  {card.expMonth && card.expYear && (
+                    <p className="mt-0.5 text-xs text-gray-500 tabular-nums">
+                      Expires {String(card.expMonth).padStart(2, "0")}/{String(card.expYear).slice(-2)}
+                    </p>
+                  )}
+                </div>
               </label>
             )
           })}
           <label
             className={cn(
-              "flex items-center gap-3 rounded-lg border border-dashed px-3 py-2.5 cursor-pointer transition-colors",
-              selectedSavedCardId === null ? "border-brand-gold bg-brand-gold/5" : "border-gray-300 hover:bg-gray-50",
+              "flex items-center gap-4 rounded-xl border border-dashed bg-white p-4 cursor-pointer transition-all",
+              selectedSavedCardId === null
+                ? "border-brand-gold ring-2 ring-brand-gold/30"
+                : "border-gray-300 hover:border-gray-400",
             )}
           >
             <input
@@ -1320,21 +1343,22 @@ function InlinePaymentForm({
               name="v2-saved-card"
               checked={selectedSavedCardId === null}
               onChange={() => onSelectedSavedCardChange(null)}
-              className="h-4 w-4 accent-brand-gold"
+              className="h-4 w-4 accent-brand-gold shrink-0"
             />
-            <Plus className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-900">Use a new card</span>
+            <div className="flex h-9 w-14 items-center justify-center rounded-md border border-gray-200 bg-gray-50 shrink-0">
+              <Plus className="h-4 w-4 text-gray-500" />
+            </div>
+            <span className="text-sm font-semibold text-gray-900">Use a new payment method</span>
           </label>
         </div>
       )}
 
       {!usingSaved && (
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Lock className="h-3.5 w-3.5 text-foreground" />
-            <span className="text-xs text-gray-500 font-medium">Secured by Stripe</span>
-          </div>
-          <PaymentElement options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }} />
+          <PaymentElement
+            options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }}
+            onChange={(e) => { if (e.value?.type) setPmType(e.value.type) }}
+          />
           <label className="mt-4 flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -1342,7 +1366,7 @@ function InlinePaymentForm({
               onChange={(e) => onSaveCardChange(e.target.checked)}
               className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
             />
-            <span className="text-sm text-foreground">Remember this card for next time</span>
+            <span className="text-sm text-foreground">{saveLabel}</span>
           </label>
         </div>
       )}
