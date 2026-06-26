@@ -5,10 +5,12 @@ import { AlertTriangle, CheckCircle2, Clock, FileText, RefreshCcw } from "lucide
 
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
+  ApiError,
   adminListBusinessTypeChangeRequests,
   adminResolveBusinessTypeChange,
   type BusinessTypeChangeRequestDto,
 } from "@/lib/api"
+import { friendlyMessage, logError } from "@/lib/errors"
 
 const OPEN_STATUSES = ["pending", "needs_more_info"]
 const RESOLVED_STATUSES = ["approved", "rejected", "withdrawn"]
@@ -34,7 +36,14 @@ export default function AdminBusinessTypeChangeRequestsPage() {
       })
       setItems(res.content)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load requests")
+      logError(e, "changeRequests.load")
+      if (e instanceof ApiError && e.status === 401) {
+        setError("Your admin session has expired. Please sign in again.")
+      } else if (e instanceof ApiError && e.status === 403) {
+        setError("You don't have permission to view change requests.")
+      } else {
+        setError(friendlyMessage(e, "Couldn't load change requests. Please try again."))
+      }
     } finally {
       setLoading(false)
     }
@@ -76,7 +85,14 @@ export default function AdminBusinessTypeChangeRequestsPage() {
       })
       await load()
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Action failed")
+      logError(e, "changeRequests.resolve")
+      if (e instanceof ApiError && e.status === 401) {
+        alert("Your admin session has expired. Please sign in again.")
+      } else if (e instanceof ApiError && e.status === 403) {
+        alert("You don't have permission to resolve change requests.")
+      } else {
+        alert(friendlyMessage(e, "Couldn't resolve the request. Please try again."))
+      }
     } finally {
       setActing(null)
     }

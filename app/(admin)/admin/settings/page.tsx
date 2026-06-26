@@ -17,6 +17,7 @@ import {
   type ShippingSettings,
   type AiSettings,
 } from "@/lib/api"
+import { friendlyMessage, logError } from "@/lib/errors"
 import { toast } from "sonner"
 import {
   Loader2,
@@ -36,9 +37,13 @@ const INPUT_CLASS =
   "w-full rounded-xl border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60 transition-colors"
 
 function describeSettingsError(section: string, err: unknown): string {
-  if (err instanceof ApiError) return `${section} failed (HTTP ${err.status}). ${err.body}`
-  if (err instanceof Error && err.message) return `${section} failed. ${err.message}`
-  return `${section} failed.`
+  if (err instanceof ApiError && err.status === 401) {
+    return "Your admin session has expired. Please sign in again."
+  }
+  if (err instanceof ApiError && err.status === 403) {
+    return "You don't have permission to change platform settings."
+  }
+  return friendlyMessage(err, `${section} failed. Please try again.`)
 }
 
 const PROVIDERS = [
@@ -185,6 +190,7 @@ export default function SettingsPage() {
           setMinPayoutDollars((s.minimum_payout_amount_cents ?? 500) / 100)
           setMaxPayoutDollars((s.maximum_payout_amount_cents ?? 500000) / 100)
         } else {
+          logError(payResult.reason, "settings.loadPayment")
           toast.error(describeSettingsError("Payment & payout settings", payResult.reason))
         }
 
@@ -193,6 +199,7 @@ export default function SettingsPage() {
           setShippingStatesInput((shipResult.value.shipping_realtime_state_allowlist ?? []).join(", "))
           setShippingCitiesInput((shipResult.value.shipping_realtime_city_allowlist ?? []).join(", "))
         } else {
+          logError(shipResult.reason, "settings.loadShipping")
           toast.error(describeSettingsError("Shipping settings", shipResult.reason))
         }
 
@@ -200,6 +207,7 @@ export default function SettingsPage() {
           setSlackEnabled(alertsResult.value.slack_enabled ?? false)
           setSlackWebhookUrl(alertsResult.value.slack_webhook_url ?? "")
         } else {
+          logError(alertsResult.reason, "settings.loadAlerts")
           toast.error(describeSettingsError("Alerts settings", alertsResult.reason))
         }
 
@@ -211,6 +219,7 @@ export default function SettingsPage() {
           // AI service unreachable → treat as disabled and hide the whole
           // section. (Kept on old page as an inline warning; users said this
           // is clutter when AI is intentionally off in this env.)
+          logError(aiResult.reason, "settings.loadAi")
           setAiUnavailable(true)
         }
 
@@ -232,6 +241,7 @@ export default function SettingsPage() {
       setSelectedProvider(updated.provider)
       toast.success(`AI provider switched to ${updated.provider === "claude" ? "Claude" : "Gemini"}`)
     } catch (err) {
+      logError(err, "settings.saveAi")
       toast.error(describeSettingsError("AI provider update", err))
     } finally {
       setSavingAi(false)
@@ -260,6 +270,7 @@ export default function SettingsPage() {
       setSlackWebhookUrl(updated.slack_webhook_url)
       toast.success("Alerts settings saved")
     } catch (err) {
+      logError(err, "settings.saveAlerts")
       toast.error(describeSettingsError("Alerts settings were not saved", err))
     } finally {
       setSavingAlerts(false)
@@ -295,12 +306,14 @@ export default function SettingsPage() {
         await putAdminShippingSettings(token, nextShipping)
         setShipping(nextShipping)
       } catch (shipErr) {
+        logError(shipErr, "settings.saveShipping")
         toast.error(describeSettingsError("Shipping settings were not saved", shipErr))
         toast.message("Payment changes may have been saved; refresh to confirm.", { duration: 6000 })
         return
       }
       toast.success("Platform settings saved")
     } catch (err) {
+      logError(err, "settings.savePayment")
       toast.error(describeSettingsError("Payment & payout settings were not saved", err))
     } finally {
       setSavingPayment(false)

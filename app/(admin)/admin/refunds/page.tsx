@@ -7,6 +7,8 @@ import {
 } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
+import { ApiError } from "@/lib/api"
+import { friendlyMessage, logError } from "@/lib/errors"
 import {
   adminCreateRefund,
   adminGetOrderByNumber,
@@ -65,7 +67,12 @@ export default function AdminRefundsPage() {
       const res = await adminGetRefundQueue(token, 0, 25)
       setQueue(res.content)
     } catch (e) {
-      setQueueErr(e instanceof Error ? e.message : "queue load failed")
+      logError(e, "refunds.loadQueue")
+      if (e instanceof ApiError && e.status === 401) {
+        setQueueErr("Your admin session has expired. Please sign in again.")
+      } else {
+        setQueueErr(friendlyMessage(e, "Couldn't load the refund queue. Please try again."))
+      }
     } finally {
       setQueueLoading(false)
     }
@@ -88,13 +95,13 @@ export default function AdminRefundsPage() {
       setRefunds(rs)
       setView("order")
     } catch (e) {
-      // Show a friendly message for the common "not found" case instead of
-      // the raw "API ... returned 400" string.
-      const raw = e instanceof Error ? e.message : String(e)
-      if (/Order not found|404|400/i.test(raw)) {
+      logError(e, "refunds.loadOrder")
+      if (e instanceof ApiError && (e.status === 404 || e.status === 400)) {
         setErr(`No order matches "${n}". Make sure you're using the order number (e.g. ORD-…), not a buyer or seller UUID.`)
+      } else if (e instanceof ApiError && e.status === 401) {
+        setErr("Your admin session has expired. Please sign in again.")
       } else {
-        setErr(raw)
+        setErr(friendlyMessage(e, "Couldn't load that order. Please try again."))
       }
     } finally {
       setLoading(false)
@@ -367,7 +374,8 @@ function RefundForm({ order, maxCents, onIssued }: {
       setAmount(""); setNotes("")
       onIssued()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "refund failed")
+      logError(e, "refunds.issue")
+      setErr(friendlyMessage(e, "Couldn't issue the refund. Please try again."))
     } finally {
       setSubmitting(false)
     }

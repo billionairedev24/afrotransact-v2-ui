@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { Loader2, AlertCircle, ShoppingCart, CheckCircle2, Percent, DollarSign } from "lucide-react"
-import { API_BASE } from "@/lib/api"
+import { API_BASE, ApiError } from "@/lib/api"
+import { friendlyMessage, logError } from "@/lib/errors"
 import { getAccessToken } from "@/lib/auth-helpers"
 
 interface DailyPoint {
@@ -96,7 +97,16 @@ export default function AbandonedCheckoutsPage() {
           setError(null)
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load")
+        logError(e, "abandonedCheckouts.load")
+        if (!cancelled) {
+          if (e instanceof ApiError && e.status === 401) {
+            setError("Your admin session has expired. Please sign in again.")
+          } else if (e instanceof ApiError && e.status === 403) {
+            setError("You don't have permission to view abandoned checkouts.")
+          } else {
+            setError(friendlyMessage(e, "Couldn't load abandoned checkouts. Please try again."))
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }

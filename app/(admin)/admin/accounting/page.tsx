@@ -9,6 +9,7 @@ import {
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   ACCOUNTING_ACCOUNTS,
+  ApiError,
   adminLedgerAccountBalance,
   adminLedgerBackfill,
   adminLedgerSellerBalance,
@@ -17,6 +18,7 @@ import {
   type LedgerSummaryDto,
   type SellerLedgerBalanceDto,
 } from "@/lib/api"
+import { friendlyMessage, logError } from "@/lib/errors"
 
 const fmt = (cents: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: 2 }).format(cents / 100)
@@ -51,7 +53,14 @@ export default function AdminAccountingPage() {
 
       // Summary (single call, fast)
       try { setSummary(await adminLedgerSummary(token)) } catch (e) {
-        setError(e instanceof Error ? e.message : "summary load failed")
+        logError(e, "accounting.loadSummary")
+        if (e instanceof ApiError && e.status === 401) {
+          setError("Your admin session has expired. Please sign in again.")
+        } else if (e instanceof ApiError && e.status === 403) {
+          setError("You don't have permission to view the ledger.")
+        } else {
+          setError(friendlyMessage(e, "Couldn't load the ledger summary. Please try again."))
+        }
       }
 
       // Per-account balances (parallel)
@@ -59,7 +68,10 @@ export default function AdminAccountingPage() {
       await Promise.all(
         ACCOUNTING_ACCOUNTS.map(async ({ code }) => {
           try { next[code] = await adminLedgerAccountBalance(token, code) }
-          catch (e) { next[code] = { error: e instanceof Error ? e.message : "failed" } }
+          catch (e) {
+            logError(e, "accounting.loadAccountBalance")
+            next[code] = { error: friendlyMessage(e, "failed to load") }
+          }
         }),
       )
       setBalances(next)
@@ -83,7 +95,14 @@ export default function AdminAccountingPage() {
       )
       await loadAll()
     } catch (e) {
-      setBackfillResult(`Backfill failed: ${e instanceof Error ? e.message : String(e)}`)
+      logError(e, "accounting.runBackfill")
+      if (e instanceof ApiError && e.status === 401) {
+        setBackfillResult("Your admin session has expired. Please sign in again.")
+      } else if (e instanceof ApiError && e.status === 403) {
+        setBackfillResult("You don't have permission to run the backfill.")
+      } else {
+        setBackfillResult(friendlyMessage(e, "Backfill failed. Please try again."))
+      }
     } finally {
       setBackfillRunning(false)
     }
@@ -99,7 +118,16 @@ export default function AdminAccountingPage() {
       if (!token) throw new Error("Not signed in")
       setSellerBalance(await adminLedgerSellerBalance(token, id))
     } catch (e) {
-      setSellerLookupErr(e instanceof Error ? e.message : "lookup failed")
+      logError(e, "accounting.lookupSeller")
+      if (e instanceof ApiError && e.status === 401) {
+        setSellerLookupErr("Your admin session has expired. Please sign in again.")
+      } else if (e instanceof ApiError && e.status === 403) {
+        setSellerLookupErr("You don't have permission to view seller balances.")
+      } else if (e instanceof ApiError && e.status === 404) {
+        setSellerLookupErr("No seller matches that ID.")
+      } else {
+        setSellerLookupErr(friendlyMessage(e, "Couldn't look up that seller. Please try again."))
+      }
     } finally {
       setSellerLooking(false)
     }

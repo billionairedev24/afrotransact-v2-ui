@@ -11,11 +11,13 @@ import {
 import { Dialog, DialogHeader, DialogBody, DialogFooter } from "@/components/ui/Dialog"
 import { RowActions, type RowAction } from "@/components/ui/RowActions"
 import {
+  ApiError,
   getAdminRegions,
   createRegion,
   updateRegion,
   type Region,
 } from "@/lib/api"
+import { friendlyMessage, logError } from "@/lib/errors"
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60 transition-colors"
@@ -258,7 +260,14 @@ export default function RegionsPage() {
       const data = await getAdminRegions(token)
       setRegions(data)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to load regions")
+      logError(err, "regions.fetchRegions")
+      if (err instanceof ApiError && err.status === 401) {
+        toast.error("Your admin session has expired. Please sign in again.")
+      } else if (err instanceof ApiError && err.status === 403) {
+        toast.error("You don't have permission to view regions.")
+      } else {
+        toast.error(friendlyMessage(err, "Couldn't load regions. Please try again."))
+      }
     } finally {
       setLoading(false)
     }
@@ -344,7 +353,14 @@ export default function RegionsPage() {
       }
       setDialogOpen(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Save failed")
+      logError(err, "regions.saveRegion")
+      if (err instanceof ApiError && err.status === 401) {
+        toast.error("Your admin session has expired. Please sign in again.")
+      } else if (err instanceof ApiError && err.status === 403) {
+        toast.error("You don't have permission to save regions.")
+      } else {
+        toast.error(friendlyMessage(err, "Couldn't save the region. Please try again."))
+      }
     } finally {
       setSaving(false)
     }
@@ -359,7 +375,14 @@ export default function RegionsPage() {
       setRegions((prev) => prev.map((r) => (r.id === region.id ? updated : r)))
       toast.success(updated.active ? "Region activated" : "Region deactivated")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to toggle")
+      logError(err, "regions.toggleActive")
+      if (err instanceof ApiError && err.status === 401) {
+        toast.error("Your admin session has expired. Please sign in again.")
+      } else if (err instanceof ApiError && err.status === 403) {
+        toast.error("You don't have permission to change regions.")
+      } else {
+        toast.error(friendlyMessage(err, "Couldn't toggle the region. Please try again."))
+      }
     } finally {
       setSavingId(null)
     }
