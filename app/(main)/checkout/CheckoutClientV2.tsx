@@ -74,6 +74,7 @@ import {
   deleteAddress,
   getShippingQuotes,
   listSavedPaymentMethods,
+  validateCoupon,
   ApiError,
   type CheckoutResponse,
   type CheckoutShippingContext,
@@ -83,6 +84,7 @@ import {
   type ShippingQuoteOption,
   type ShippingQuoteResponse,
   type UserAddress,
+  type ValidateCouponResponse,
 } from "@/lib/api"
 
 // Module-local Stripe singleton. We don't reuse the one inside
@@ -160,6 +162,7 @@ export default function CheckoutClientV2({
   // ─── region + region config ───────────────────────────────────────
   const [region, setRegion] = useState<Region | null>(null)
   const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
+  const [configFeatures, setConfigFeatures] = useState<Record<string, boolean>>({})
   useEffect(() => {
     if (!mounted) return
     let cancelled = false
@@ -182,6 +185,7 @@ export default function CheckoutClientV2({
         const cfg = await getRegionConfig(region.code).catch(() => null)
         if (cancelled || !cfg) return
         setPaymentMethods(cfg.paymentMethods ?? [])
+        setConfigFeatures(cfg.features ?? {})
       } catch { /* non-fatal */ }
     })()
     return () => { cancelled = true }
@@ -477,10 +481,84 @@ export default function CheckoutClientV2({
     return () => { cancelled = true }
   }, [authToken])
 
+  // ─── coupons (region-gated) ────────────────────────────────────────
+  const couponsEnabled = configFeatures["coupons_enabled"] === true
+  const [couponCode, setCouponCode] = useState("")
+  const [couponInput, setCouponInput] = useState("")
+  const [couponOpen, setCouponOpen] = useState(false)
+  const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [couponLoading, setCouponLoading] = useState(false)
+
+  const couponErrorMessage = useCallback((res: ValidateCouponResponse | null, fallback: string): string => {
+    const raw = (res?.error ?? "").toLowerCase()
+    if (raw.includes("expire")) return "This code has expired"
+    if (raw.includes("minimum") || raw.includes("min ")) return "Minimum spend not met"
+    if (!raw) return fallback
+    return "That code isn’t valid"
+  }, [])
+
+  const runValidateCoupon = useCallback(async (code: string): Promise<ValidateCouponResponse | null> => {
+    if (!authToken) return null
+    return await validateCoupon(authToken, code, subtotal, region?.id)
+  }, [authToken, subtotal, region?.id])
+
+  async function handleApplyCoupon() {
+    if (!couponsEnabled || !couponInput.trim() || !authToken) return
+    setCouponLoading(true)
+    setCouponError(null)
+    try {
+      const res = await runValidateCoupon(couponInput.trim())
+      if (res?.valid) {
+        setCouponResult(res)
+        setCouponCode(couponInput.trim())
+        setCouponInput("")
+        setCouponOpen(false)
+      } else {
+        setCouponError(couponErrorMessage(res, "That code isn’t valid"))
+      }
+    } catch (e) {
+      logError(e, "validate coupon (v2)")
+      setCouponError(friendlyMessage(e, "Could not validate coupon"))
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setCouponResult(null)
+    setCouponCode("")
+    setCouponError(null)
+  }
+
+  // Re-validate the applied coupon whenever the cart changes (min-spend may now fail).
+  useEffect(() => {
+    if (!couponResult || !couponCode || !authToken) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await runValidateCoupon(couponCode)
+        if (cancelled) return
+        if (res?.valid) {
+          setCouponResult(res)
+        } else {
+          setCouponResult(null)
+          setCouponError(couponErrorMessage(res, "Coupon no longer applies"))
+        }
+      } catch (e) {
+        logError(e, "revalidate coupon (v2)")
+      }
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal, cartItems.length, region?.id])
+
   // ─── totals ────────────────────────────────────────────────────────
   const taxRate = region?.taxRate ?? 0.0825
-  const tax = Math.round(subtotal * taxRate)
-  const total = subtotal + tax + shippingCents
+  const discountCents = couponResult?.discountCents ?? 0
+  const taxableSubtotal = Math.max(0, subtotal - discountCents)
+  const tax = Math.round(taxableSubtotal * taxRate)
+  const total = taxableSubtotal + tax + shippingCents
 
   const stripeFeatureEnabled = features.stripeEnabled()
   const stripeRow = paymentMethods.find((m) => m.provider.toLowerCase() === "stripe")
@@ -498,7 +576,7 @@ export default function CheckoutClientV2({
   useEffect(() => {
     idempotencyKeyRef.current = null
     setCheckoutResult(null)
-  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard])
+  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard, couponCode, discountCents])
 
   const mintIntent = useCallback(async () => {
     if (placingRef.current) return null
@@ -540,6 +618,7 @@ export default function CheckoutClientV2({
         selectedShippingService: selectedQuote?.serviceCode,
         selectedShippingAmountCents: selectedQuote?.amountCents,
         saveCard,
+        couponCodes: couponResult && couponCode ? [couponCode] : undefined,
       }, idempotencyKeyRef.current)
       setCheckoutResult(result)
       return result
@@ -941,11 +1020,69 @@ export default function CheckoutClientV2({
         <aside className="lg:col-span-1">
           <div className="lg:sticky lg:top-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-bold text-gray-900 mb-3">Order summary</h2>
+
+            {couponsEnabled && (
+              <div className="mb-3 text-sm">
+                {couponResult ? (
+                  <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+                    <span className="text-green-800">
+                      Code <span className="font-mono font-semibold">{couponResult.code}</span> applied
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-xs font-semibold text-red-600 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : couponOpen ? (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponInput}
+                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                        placeholder="Enter code"
+                        className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading || !couponInput.trim()}
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-brand-gold-foreground disabled:opacity-50"
+                      >
+                        {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                      </button>
+                    </div>
+                    {couponError && <p className="text-xs text-red-600">{couponError}</p>}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setCouponOpen(true); setCouponError(null) }}
+                    className="text-sm font-semibold text-brand-gold-foreground hover:underline"
+                  >
+                    Add a promo code
+                  </button>
+                )}
+                {couponError && !couponOpen && !couponResult && (
+                  <p className="mt-1 text-xs text-red-600">{couponError}</p>
+                )}
+              </div>
+            )}
+
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-gray-600">Items ({cartItems.length})</dt>
                 <dd className="text-gray-900 tabular-nums">{formatCents(subtotal)}</dd>
               </div>
+              {couponResult && discountCents > 0 && (
+                <div className="flex justify-between italic text-green-700">
+                  <dt>Discount ({couponResult.code})</dt>
+                  <dd className="tabular-nums">-{formatCents(discountCents)}</dd>
+                </div>
+              )}
               <div className="flex justify-between">
                 <dt className="text-gray-600">Shipping</dt>
                 <dd className="text-gray-900 tabular-nums">

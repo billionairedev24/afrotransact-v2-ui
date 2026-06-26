@@ -163,6 +163,7 @@ export function Header() {
   const categoryDropdownRef = useRef<HTMLDivElement>(null)
 
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
+  const cartSyncing = useCartStore((s) => s.syncing)
   const { cartReady } = useCartHydration()
   const signOut = useSignOut()
 
@@ -633,10 +634,10 @@ export function Header() {
               >
                 <div className="relative">
                   <ShoppingCart className="h-6 w-6" strokeWidth={1.75} />
-                  {!cartReady ? (
+                  {!cartReady || cartSyncing ? (
                     <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/20">
                       <Loader2 className="h-2.5 w-2.5 animate-spin text-white" aria-hidden />
-                      <span className="sr-only">Loading cart</span>
+                      <span className="sr-only">{cartSyncing ? "Syncing cart" : "Loading cart"}</span>
                     </span>
                   ) : cartCount > 0 ? (
                     <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-brand-gold-foreground px-0.5">

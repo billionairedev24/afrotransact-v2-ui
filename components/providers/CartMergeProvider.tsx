@@ -1,5 +1,19 @@
 "use client"
 
+/**
+ * CartSyncBoundary (legacy name: CartMergeProvider).
+ *
+ * Owns the lifecycle handoff between guest (sessionStorage) and authenticated
+ * (server-backed) cart modes. Per-mutation server sync is owned by
+ * `stores/cart-store.ts` itself — this boundary only does:
+ *
+ *   - guest → guest:        hydrate from sessionStorage; persist on change.
+ *   - guest → authenticated: mergeCart(local items) → replace store from the
+ *                            server's canonical CartDto; flip store.mode = "auth".
+ *   - authenticated → guest: clear local cart (do NOT call server); flip mode.
+ *   - tab mount (already auth): getCart() → replaceFromServer.
+ */
+
 import {
   createContext,
   useContext,
@@ -9,9 +23,15 @@ import {
   useState,
 } from "react"
 import { useSession } from "next-auth/react"
-import { useCartStore, type CartItem, loadGuestCart, clearGuestCart, saveGuestCart } from "@/stores/cart-store"
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+import {
+  useCartStore,
+  loadGuestCart,
+  clearGuestCart,
+  saveGuestCart,
+  type CartItem,
+} from "@/stores/cart-store"
+import { getCart, mergeCart } from "@/lib/api"
+import { logError } from "@/lib/errors"
 
 const CartHydrationContext = createContext({ cartReady: false })
 
@@ -19,47 +39,7 @@ export function useCartHydration() {
   return useContext(CartHydrationContext)
 }
 
-interface ServerCartItem {
-  id: string
-  variantId: string
-  productId: string
-  storeId: string
-  quantity: number
-  unitPriceCents: number
-  productTitle?: string
-  variantName?: string
-  imageUrl?: string
-  weightKg?: number | null
-  lengthIn?: number | null
-  widthIn?: number | null
-  heightIn?: number | null
-}
-
-interface ServerCart {
-  id: string
-  items: ServerCartItem[]
-}
-
-function serverItemsToCartItems(serverCart: ServerCart): CartItem[] {
-  return serverCart.items.map((si) => ({
-    productId: si.productId,
-    variantId: si.variantId,
-    storeId: si.storeId,
-    storeName: si.storeId,
-    title: si.productTitle ?? "Product",
-    variantName: si.variantName ?? "",
-    price: si.unitPriceCents,
-    quantity: si.quantity,
-    imageUrl: si.imageUrl,
-    slug: si.productId,
-    weightKg: si.weightKg ?? null,
-    lengthIn: si.lengthIn ?? null,
-    widthIn: si.widthIn ?? null,
-    heightIn: si.heightIn ?? null,
-  }))
-}
-
-function cartItemsToMergePayload(items: CartItem[]) {
+function toMergePayload(items: CartItem[]) {
   return items.map((item) => ({
     variantId: item.variantId,
     productId: item.productId,
@@ -76,121 +56,70 @@ function cartItemsToMergePayload(items: CartItem[]) {
   }))
 }
 
-function mergeCartItemsPreferHigherQty(a: CartItem[], b: CartItem[]): CartItem[] {
-  const byVariant = new Map<string, CartItem>()
-  for (const item of [...a, ...b]) {
-    const prev = byVariant.get(item.variantId)
-    if (!prev || item.quantity > prev.quantity) {
-      byVariant.set(item.variantId, item)
-    }
-  }
-  return Array.from(byVariant.values())
-}
-
 export function CartMergeProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const [cartReady, setCartReady] = useState(false)
-  const hasMerged = useRef(false)
-  const allowServerCartPush = useRef(false)
+  const hydratedForToken = useRef<string | null>(null)
   const isAuthenticatedRef = useRef(false)
 
   useEffect(() => {
     isAuthenticatedRef.current = status === "authenticated"
   }, [status])
 
+  // ── Authenticated: merge guest cart → server, hydrate canonical cart, flip mode ──
   useEffect(() => {
-    if (status === "loading") {
-      setCartReady(false)
-      return
-    }
-    if (status === "authenticated") {
-      setCartReady(false)
-    }
-  }, [status])
+    if (status !== "authenticated") return
+    const token = session?.accessToken as string | undefined
+    if (!token) return
+    if (hydratedForToken.current === token) return
+    hydratedForToken.current = token
 
-  // ── Authenticated: merge guest cart → server, hydrate from server, then allow push sync ──
-  useEffect(() => {
-    if (status !== "authenticated" || !session?.accessToken || hasMerged.current) return
-
-    hasMerged.current = true
-    allowServerCartPush.current = false
-    const token = session.accessToken as string
+    setCartReady(false)
     const guestItems = loadGuestCart()
     const localItemsAtStart = useCartStore.getState().items
+    const seedItems = guestItems.length > 0 ? guestItems : localItemsAtStart
 
-    async function mergeAndSync() {
+    ;(async () => {
       try {
-        if (guestItems.length > 0) {
-          await fetch(`${API_BASE}/api/v1/cart/merge`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(cartItemsToMergePayload(guestItems)),
-          })
-        }
-
-        const res = await fetch(`${API_BASE}/api/v1/cart`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-
-        if (res.ok) {
-          const serverCart: ServerCart = await res.json()
-          const serverItems = serverItemsToCartItems(serverCart)
-          // Prevent race-loss: preserve any local cart edits made before hydration completed.
-          const merged = mergeCartItemsPreferHigherQty(serverItems, localItemsAtStart)
-          useCartStore.getState().setItems(merged)
-          if (merged.length > 0) {
-            await fetch(`${API_BASE}/api/v1/cart/merge`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify(cartItemsToMergePayload(merged)),
-            })
-          }
-          allowServerCartPush.current = true
-        } else {
-          // If initial read fails, still allow push-sync to avoid dropping local authenticated cart edits.
-          allowServerCartPush.current = true
-        }
-
+        const dto = seedItems.length > 0
+          ? await mergeCart(token, toMergePayload(seedItems))
+          : await getCart(token)
+        useCartStore.getState().replaceFromServer(dto)
+        useCartStore.getState().setMode("auth")
         clearGuestCart()
-      } catch (err) {
-        console.warn("[CartMerge] merge/sync failed (non-blocking):", err)
-        hasMerged.current = false
+      } catch (e) {
+        logError(e, "cart hydrate on auth")
+        // Don't drop local items if hydration failed; just flip mode so future
+        // mutations attempt server sync (next mutation will hit the server).
+        useCartStore.getState().setMode("auth")
       } finally {
         setCartReady(true)
       }
-    }
+    })()
+  }, [status, session?.accessToken])
 
-    mergeAndSync()
-  }, [status, session])
-
-  // Authenticated but no access token yet (or refresh failed): don't block the UI forever.
+  // Authenticated but no access token yet — don't block the UI forever.
   useEffect(() => {
     if (status !== "authenticated") return
     if (session?.accessToken) return
     setCartReady(true)
   }, [status, session?.accessToken])
 
-  // ── Unauthenticated: hydrate from guest sessionStorage; reset merge state for next login ──
+  // ── Unauthenticated: hydrate from guest sessionStorage; reset mode + cached server ids. ──
   useEffect(() => {
     if (status !== "unauthenticated") return
-    hasMerged.current = false
-    allowServerCartPush.current = false
+    hydratedForToken.current = null
     const guestItems = loadGuestCart()
-    if (guestItems.length > 0) {
-      useCartStore.getState().setItems(guestItems)
-    }
+    useCartStore.setState({
+      items: guestItems,
+      mode: "guest",
+      serverItemIds: {},
+      syncing: false,
+    })
     setCartReady(true)
   }, [status])
 
-  // ── Guest: persist cart to sessionStorage (only after auth status is known).
-  // While status is "loading", isAuthenticatedRef is false; subscribing immediately would
-  // save an empty in-memory cart and wipe sessionStorage before guest hydration runs.
+  // ── Guest: persist cart to sessionStorage as it changes. ──
   useEffect(() => {
     if (status === "loading") return
     const unsub = useCartStore.subscribe((state) => {
@@ -200,37 +129,6 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
     })
     return unsub
   }, [status])
-
-  // ── Authenticated: keep server cart in sync with the store (debounced) ──
-  useEffect(() => {
-    if (status !== "authenticated" || !session?.accessToken) return
-    const token = session.accessToken as string
-    let debounce: ReturnType<typeof setTimeout>
-
-    const unsub = useCartStore.subscribe((state) => {
-      if (!allowServerCartPush.current) return
-      clearTimeout(debounce)
-      debounce = setTimeout(async () => {
-        try {
-          await fetch(`${API_BASE}/api/v1/cart/merge`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(cartItemsToMergePayload(state.items)),
-          })
-        } catch (e) {
-          console.warn("[CartMerge] server sync failed:", e)
-        }
-      }, 450)
-    })
-
-    return () => {
-      clearTimeout(debounce)
-      unsub()
-    }
-  }, [status, session?.accessToken])
 
   const value = useMemo(() => ({ cartReady }), [cartReady])
 
