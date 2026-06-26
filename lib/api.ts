@@ -2105,6 +2105,8 @@ export async function upsertRegionFeature(
 // feature rollout decisions. Most-specific match wins; features inherit
 // from ancestors unless overridden. See services/config/handler/zone.go.
 
+export type ZoneLevel = "country" | "subdivision" | "locality"
+
 export interface ServiceZone {
   id: string
   parentZoneId: string | null
@@ -2115,6 +2117,21 @@ export interface ServiceZone {
   postalPattern: string | null
   status: "enabled" | "coming_soon" | "disabled"
   sortOrder: number
+  level: ZoneLevel
+  cityName: string | null
+  currency: string | null
+  timezone: string | null
+  taxRate: number | null
+  shippingRateCentsPerLb: number | null
+  freeShippingThresholdCents: number | null
+}
+
+export interface ResolvedZoneSettings {
+  currency: string | null
+  timezone: string | null
+  taxRate: number | null
+  shippingRateCentsPerLb: number | null
+  freeShippingThresholdCents: number | null
 }
 
 export interface ZoneFeature {
@@ -2128,7 +2145,9 @@ export interface ResolvedZone {
   zone: ServiceZone
   ancestors: ServiceZone[]
   effectiveFeatures: Record<string, boolean>
+  effectiveSettings: ResolvedZoneSettings
   status: string
+  surfacedStatus?: string
 }
 
 interface RawServiceZone {
@@ -2141,6 +2160,21 @@ interface RawServiceZone {
   postal_pattern: string | null
   status: "enabled" | "coming_soon" | "disabled"
   sort_order: number
+  level?: ZoneLevel
+  city_name?: string | null
+  currency?: string | null
+  timezone?: string | null
+  tax_rate?: number | null
+  shipping_rate_cents_per_lb?: number | null
+  free_shipping_threshold_cents?: number | null
+}
+
+interface RawResolvedSettings {
+  currency?: string | null
+  timezone?: string | null
+  tax_rate?: number | null
+  shipping_rate_cents_per_lb?: number | null
+  free_shipping_threshold_cents?: number | null
 }
 
 interface RawZoneFeature {
@@ -2161,6 +2195,23 @@ function mapZone(z: RawServiceZone): ServiceZone {
     postalPattern: z.postal_pattern,
     status: z.status,
     sortOrder: z.sort_order,
+    level: z.level ?? "country",
+    cityName: z.city_name ?? null,
+    currency: z.currency ?? null,
+    timezone: z.timezone ?? null,
+    taxRate: z.tax_rate ?? null,
+    shippingRateCentsPerLb: z.shipping_rate_cents_per_lb ?? null,
+    freeShippingThresholdCents: z.free_shipping_threshold_cents ?? null,
+  }
+}
+
+function mapSettings(s: RawResolvedSettings | null | undefined): ResolvedZoneSettings {
+  return {
+    currency: s?.currency ?? null,
+    timezone: s?.timezone ?? null,
+    taxRate: s?.tax_rate ?? null,
+    shippingRateCentsPerLb: s?.shipping_rate_cents_per_lb ?? null,
+    freeShippingThresholdCents: s?.free_shipping_threshold_cents ?? null,
   }
 }
 
@@ -2182,6 +2233,13 @@ export interface ZoneInput {
   postal_pattern?: string | null
   status?: "enabled" | "coming_soon" | "disabled"
   sort_order?: number
+  level?: ZoneLevel
+  city_name?: string | null
+  currency?: string | null
+  timezone?: string | null
+  tax_rate?: number | null
+  shipping_rate_cents_per_lb?: number | null
+  free_shipping_threshold_cents?: number | null
 }
 
 export async function listAdminZones(token: string): Promise<ServiceZone[]> {
@@ -2234,22 +2292,28 @@ export async function resolveServiceZone(
   country: string,
   subdivision?: string | null,
   postal?: string | null,
+  city?: string | null,
 ): Promise<ResolvedZone | null> {
   const params = new URLSearchParams({ country })
   if (subdivision) params.set("subdivision", subdivision)
   if (postal) params.set("postal", postal)
+  if (city) params.set("city", city)
   try {
     const raw = await api<{
       zone: RawServiceZone
       ancestors: RawServiceZone[] | null
       effective_features: Record<string, boolean> | null
+      effective_settings: RawResolvedSettings | null
       status: string
+      surfaced_status?: string
     }>(`/api/v1/zones/resolve?${params.toString()}`)
     return {
       zone: mapZone(raw.zone),
       ancestors: (raw.ancestors ?? []).map(mapZone),
       effectiveFeatures: raw.effective_features ?? {},
+      effectiveSettings: mapSettings(raw.effective_settings),
       status: raw.status,
+      surfacedStatus: raw.surfaced_status,
     }
   } catch {
     return null

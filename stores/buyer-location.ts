@@ -48,7 +48,7 @@ export const useBuyerLocation = create<BuyerLocationState>()(
         set({ location, prompted: true, resolvedZone: null })
         if (location && location.country) {
           // Best-effort — resolver returns null on miss/error, no UI change.
-          resolveServiceZone(location.country, location.state, location.postalCode)
+          resolveServiceZone(location.country, location.state, location.postalCode, location.city)
             .then((zone) => {
               if (zone) set({ resolvedZone: zone })
             })
