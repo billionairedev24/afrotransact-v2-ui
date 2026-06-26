@@ -309,11 +309,13 @@ export default function CheckoutClientV2({
   const [quotesError, setQuotesError] = useState<string | null>(null)
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<"cheapest" | "fastest">("cheapest")
+  const [ratesUnavailable, setRatesUnavailable] = useState(false)
 
   useEffect(() => {
     setQuotes(null)
     setQuotesError(null)
     setSelectedQuoteId(null)
+    setRatesUnavailable(false)
     if (!authToken || !region || !selectedAddress) return
     let cancelled = false
     setQuotesLoading(true)
@@ -329,9 +331,11 @@ export default function CheckoutClientV2({
         })
         if (cancelled) return
         setQuotes(q)
+        if ((q.groups ?? []).length === 0) setRatesUnavailable(true)
       } catch (e) {
         if (cancelled) return
         setQuotesError(friendlyMessage(e, "Couldn't get rates for this address. Try a different address?"))
+        setRatesUnavailable(true)
       } finally {
         if (!cancelled) setQuotesLoading(false)
       }
@@ -357,6 +361,28 @@ export default function CheckoutClientV2({
     else c.sort((a, b) => (a.estimatedDays ?? 99) - (b.estimatedDays ?? 99) || a.amountCents - b.amountCents)
     return c
   }, [flatQuotes, sortBy])
+
+  // Group sorted quotes by carrier for render (preserving sort order of first
+  // occurrence). Each group is tagged with whether it contains any synthetic
+  // (platform) options and whether it is synthetic-only.
+  const sortedGroups = useMemo(() => {
+    const map = new Map<string, FlatQuote[]>()
+    for (const q of sortedQuotes) {
+      const arr = map.get(q.carrier) ?? []
+      arr.push(q)
+      map.set(q.carrier, arr)
+    }
+    return Array.from(map.entries()).map(([carrier, options]) => {
+      const syntheticCount = options.filter((o) => o.quoteId?.startsWith("synthetic:")).length
+      return {
+        carrier,
+        options,
+        hasSynthetic: syntheticCount > 0,
+        allSynthetic: syntheticCount === options.length,
+      }
+    })
+  }, [sortedQuotes])
+  const anySyntheticVisible = sortedGroups.some((g) => g.hasSynthetic)
 
   // preselect cheapest once
   useEffect(() => {
@@ -392,6 +418,7 @@ export default function CheckoutClientV2({
       const runId = ++requoteRunIdRef.current
       setRequoting(true)
       setRequoteError(null)
+      setRatesUnavailable(false)
       ;(async () => {
         try {
           const q = await getShippingQuotes(authToken, {
@@ -408,6 +435,7 @@ export default function CheckoutClientV2({
           const previousId = selectedQuoteId
           const stillThere = previousId && next.some((o) => o.quoteId === previousId)
           setQuotes(q)
+          if (next.length === 0 && !stillThere) setRatesUnavailable(true)
           if (!stillThere) {
             let newCheapest: string | null = null
             let best = Infinity
@@ -420,6 +448,8 @@ export default function CheckoutClientV2({
         } catch (e) {
           if (runId !== requoteRunIdRef.current) return
           setRequoteError(friendlyMessage(e, "Couldn't refresh delivery options. Please retry."))
+          // Only mark unavailable if we have no prior valid selection to fall back to.
+          if (!selectedQuoteId) setRatesUnavailable(true)
         } finally {
           if (runId === requoteRunIdRef.current) setRequoting(false)
         }
@@ -573,11 +603,12 @@ export default function CheckoutClientV2({
   let disabledReason: string | null = null
   if (cartItems.length === 0) disabledReason = "Your cart is empty"
   else if (!selectedAddress) disabledReason = "Select a shipping address"
+  else if (ratesUnavailable) disabledReason = "Shipping isn't available for this address yet"
   else if (!selectedQuoteId) disabledReason = "Choose a delivery option"
   else if (!stripeAvailable) disabledReason = "Payment is unavailable in this region"
   else if (selectedSavedCardId === null && !checkoutResult && !minting) disabledReason = null // new-card path: minting on click
   if (requoting) disabledReason = "Updating delivery options…"
-  const placeDisabled = disabledReason !== null || minting || placingRef.current || paying || requoting
+  const placeDisabled = disabledReason !== null || minting || placingRef.current || paying || requoting || ratesUnavailable
 
   // ─── empty cart guard ─────────────────────────────────────────────
   useEffect(() => {
@@ -714,6 +745,32 @@ export default function CheckoutClientV2({
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Loader2 className="h-4 w-4 animate-spin" /> Getting rates…
               </div>
+            ) : ratesUnavailable ? (
+              <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+                <p className="font-semibold text-amber-900">We couldn&apos;t find shipping options for this address.</p>
+                <p className="mt-1 text-amber-800 leading-relaxed">
+                  This can happen when a seller doesn&apos;t ship to your area, an address can&apos;t be verified, or our carriers
+                  are temporarily unreachable.
+                </p>
+                <ul className="mt-3 space-y-1 text-amber-900">
+                  <li>• Try a different shipping address above.</li>
+                  <li>• Or contact us and we&apos;ll help you place the order manually.</li>
+                </ul>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <a
+                    href="/help"
+                    className="inline-flex items-center justify-center rounded-md bg-amber-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-950"
+                  >
+                    Contact support
+                  </a>
+                  <a
+                    href="mailto:support@afrotransact.com"
+                    className="inline-flex items-center justify-center rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-50"
+                  >
+                    support@afrotransact.com
+                  </a>
+                </div>
+              </div>
             ) : quotesError ? (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {quotesError}
@@ -739,34 +796,56 @@ export default function CheckoutClientV2({
                     ))}
                   </div>
                 </div>
-                <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-                  {sortedQuotes.map((q) => {
-                    const checked = selectedQuoteId === q.quoteId
-                    return (
-                      <li key={q.quoteId}>
-                        <label className={cn(
-                          "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
-                          checked ? "bg-amber-50/40" : "hover:bg-gray-50",
-                        )}>
-                          <input
-                            type="radio"
-                            name="ship-rate"
-                            checked={checked}
-                            onChange={() => setSelectedQuoteId(q.quoteId)}
-                            className="h-4 w-4 accent-brand-gold"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900">{q.carrier} • {q.serviceName}</p>
-                            <p className="text-xs text-gray-500">
-                              {q.estimatedDays != null ? `Est. ${q.estimatedDays} day${q.estimatedDays === 1 ? "" : "s"}` : "Delivery estimate unavailable"}
-                            </p>
-                          </div>
-                          <p className="text-sm font-bold text-gray-900 tabular-nums">{formatCents(q.amountCents)}</p>
-                        </label>
-                      </li>
-                    )
-                  })}
-                </ul>
+                <div className="space-y-3">
+                  {sortedGroups.map((g) => (
+                    <div key={g.carrier}>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
+                        {g.allSynthetic ? "Platform shipping" : g.carrier}
+                      </p>
+                      <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+                        {g.options.map((q) => {
+                          const checked = selectedQuoteId === q.quoteId
+                          const isPlatform = q.quoteId?.startsWith("synthetic:") ?? false
+                          return (
+                            <li key={q.quoteId}>
+                              <label className={cn(
+                                "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
+                                checked ? "bg-amber-50/40" : "hover:bg-gray-50",
+                              )}>
+                                <input
+                                  type="radio"
+                                  name="ship-rate"
+                                  checked={checked}
+                                  onChange={() => setSelectedQuoteId(q.quoteId)}
+                                  className="h-4 w-4 accent-brand-gold"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
+                                    <span>{q.carrier} • {q.serviceName}</span>
+                                    {isPlatform && (
+                                      <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200">
+                                        Platform estimate
+                                      </span>
+                                    )}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {q.estimatedDays != null ? `Est. ${q.estimatedDays} day${q.estimatedDays === 1 ? "" : "s"}` : "Delivery estimate unavailable"}
+                                  </p>
+                                </div>
+                                <p className="text-sm font-bold text-gray-900 tabular-nums">{formatCents(q.amountCents)}</p>
+                              </label>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+                {anySyntheticVisible && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Platform estimates are used when carriers aren&apos;t reachable. Final cost may differ slightly.
+                  </p>
+                )}
               </>
             )}
           </Section>
