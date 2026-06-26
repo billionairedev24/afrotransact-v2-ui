@@ -332,7 +332,7 @@ export function Header() {
                 <span
                   className="hidden sm:inline-block font-sans font-bold text-white text-xl lg:text-2xl tracking-tight leading-none whitespace-nowrap"
                 >
-                  afrotransact
+                  AfroTransact
                 </span>
               </Link>
 
