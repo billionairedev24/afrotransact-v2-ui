@@ -12,18 +12,30 @@
  * All API calls, Stripe wrapper, cart store, and helpers are reused from the
  * legacy implementation — nothing new was invented.
  *
- * NOTE: PaymentStep (./_stripe-payment.tsx) is reused unmodified. It owns
- * the Stripe.confirmPayment flow and its internal Pay button. The right-rail
- * "Place your order" button programmatically drives that Pay button via a
- * data-attribute selector (`data-checkout-pay`) on the embedded PaymentStep
- * root container — see `triggerPay()`. This is a documented deviation: the
- * brief asks for a single CTA but PaymentStep ships its own button, so the
- * right-rail CTA acts as a façade that fires the embedded Pay flow.
+ * NOTE: V2 inlines its own Stripe <Elements> + <PaymentElement> (see
+ * `InlinePayment` below) and exposes `confirmPayment()` via
+ * `useImperativeHandle`, so the right-rail "Place your order" CTA is the
+ * single payment button. The legacy `_stripe-payment.tsx` remains untouched
+ * and is still used by the legacy CheckoutClient.
  */
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react"
-import dynamic from "next/dynamic"
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+} from "react"
 import { useRouter } from "next/navigation"
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js"
+import { loadStripe, type Stripe } from "@stripe/stripe-js"
 import Link from "next/link"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
@@ -38,6 +50,7 @@ import {
   Trash2,
   Edit2,
   AlertCircle,
+  ShieldCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { friendlyMessage, logError } from "@/lib/errors"
@@ -72,15 +85,42 @@ import {
   type UserAddress,
 } from "@/lib/api"
 
-const PaymentStep = dynamic(() => import("./_stripe-payment"), {
-  ssr: false,
-  loading: () => (
-    <div className="space-y-3">
-      <div className="h-6 w-40 rounded bg-muted animate-pulse" />
-      <div className="h-40 w-full rounded-xl bg-muted animate-pulse" />
-    </div>
-  ),
-})
+// Module-local Stripe singleton. We don't reuse the one inside
+// `_stripe-payment.tsx` because it isn't exported, and per the V2 brief we
+// can't modify that file. Same publishable-key env var, so behavior matches.
+let v2StripePromise: Promise<Stripe | null> | null = null
+function getV2Stripe() {
+  if (!v2StripePromise) {
+    v2StripePromise = loadStripe(
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "pk_test_placeholder",
+    )
+  }
+  return v2StripePromise
+}
+
+const V2_STRIPE_APPEARANCE = {
+  theme: "stripe" as const,
+  variables: {
+    colorPrimary: "#F5C518",
+    colorBackground: "#FFFFFF",
+    colorText: "#171717",
+    colorDanger: "#DC2626",
+    fontFamily: "Inter, system-ui, sans-serif",
+    borderRadius: "10px",
+  },
+  rules: {
+    ".Input": { border: "1px solid #E5E5E5", padding: "10px 14px" },
+    ".Input:focus": {
+      border: "1px solid rgba(212,168,83,0.6)",
+      boxShadow: "none",
+    },
+  },
+}
+
+export type PaymentHandle = {
+  /** Returns true on success, false on user-facing failure (error already surfaced). */
+  confirmPayment: () => Promise<boolean>
+}
 
 function formatCents(v: number) {
   return `$${(v / 100).toFixed(2)}`
@@ -326,6 +366,73 @@ export default function CheckoutClientV2({
   const selectedQuote = flatQuotes.find((q) => q.quoteId === selectedQuoteId) ?? null
   const shippingCents = selectedQuote?.amountCents ?? 0
 
+  // ─── re-quote shipping when the cart changes ──────────────────────
+  // Debounce 400ms; cancel in-flight runs via a stale sentinel. We don't
+  // re-quote on the initial mount path — the effect above handles first-load.
+  const [requoting, setRequoting] = useState(false)
+  const [requoteError, setRequoteError] = useState<string | null>(null)
+  const requoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const requoteRunIdRef = useRef(0)
+  const didInitialQuoteRef = useRef(false)
+  useEffect(() => {
+    // Mark the first useful quotes-load completion so we only react to
+    // *subsequent* cart changes.
+    if (!didInitialQuoteRef.current && quotes && selectedQuoteId) {
+      didInitialQuoteRef.current = true
+    }
+  }, [quotes, selectedQuoteId])
+
+  useEffect(() => {
+    if (!didInitialQuoteRef.current) return
+    if (!authToken || !region || !selectedAddress) return
+    if (cartItems.length === 0) return
+
+    if (requoteTimerRef.current) clearTimeout(requoteTimerRef.current)
+    requoteTimerRef.current = setTimeout(() => {
+      const runId = ++requoteRunIdRef.current
+      setRequoting(true)
+      setRequoteError(null)
+      ;(async () => {
+        try {
+          const q = await getShippingQuotes(authToken, {
+            regionId: region.id,
+            state: selectedAddress.state ?? "",
+            city: selectedAddress.city,
+            destinationLine1: selectedAddress.line1,
+            destinationZip: selectedAddress.postalCode,
+            destinationCountry: selectedAddress.countryCode || "US",
+          })
+          if (runId !== requoteRunIdRef.current) return // stale
+          const next: FlatQuote[] = []
+          for (const g of q.groups ?? []) for (const o of g.options) next.push({ ...o, carrier: g.carrier })
+          const previousId = selectedQuoteId
+          const stillThere = previousId && next.some((o) => o.quoteId === previousId)
+          setQuotes(q)
+          if (!stillThere) {
+            let newCheapest: string | null = null
+            let best = Infinity
+            for (const o of next) if (o.amountCents < best) { best = o.amountCents; newCheapest = o.quoteId }
+            if (newCheapest) {
+              setSelectedQuoteId(newCheapest)
+              toast.info("Delivery option updated to keep your order shippable.")
+            }
+          }
+        } catch (e) {
+          if (runId !== requoteRunIdRef.current) return
+          setRequoteError(friendlyMessage(e, "Couldn't refresh delivery options. Please retry."))
+        } finally {
+          if (runId === requoteRunIdRef.current) setRequoting(false)
+        }
+      })()
+    }, 400)
+
+    return () => {
+      if (requoteTimerRef.current) clearTimeout(requoteTimerRef.current)
+    }
+    // We deliberately depend on cartItems (not items by ref): qty + composition.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartItems, authToken, region?.id, selectedAddress?.id])
+
   // ─── saved cards (Section 3) ───────────────────────────────────────
   const [savedCards, setSavedCards] = useState<SavedPaymentMethod[]>([])
   const [selectedSavedCardId, setSelectedSavedCardId] = useState<string | null>(null)
@@ -421,7 +528,8 @@ export default function CheckoutClientV2({
   }, [authToken, region, selectedAddress, cartItems, checkoutResult, selectedQuote, saveCard, profileName, profilePhone, sessionName, router])
 
   // ─── place order ───────────────────────────────────────────────────
-  const paymentRootRef = useRef<HTMLDivElement | null>(null)
+  const paymentHandleRef = useRef<PaymentHandle | null>(null)
+  const [paying, setPaying] = useState(false)
 
   const handlePaymentComplete = useCallback(async () => {
     try {
@@ -429,36 +537,36 @@ export default function CheckoutClientV2({
     } catch (e) { logError(e, "clear server cart after payment (v2)") }
     clearCart()
     try { clearGuestCart() } catch { /* non-fatal */ }
-    // The legacy flow's "complete" page polls for the materialized order.
-    // PaymentStep's confirmPayment already redirects to /checkout/complete
-    // when a 3DS / off-session flow is required; otherwise we land here and
-    // forward the buyer ourselves.
     const sid = checkoutResult?.checkoutSessionId
     router.push(sid ? `/checkout/complete?session=${encodeURIComponent(sid)}` : "/checkout/complete")
   }, [authToken, clearCart, router, checkoutResult])
 
-  function triggerEmbeddedPay() {
-    const node = paymentRootRef.current?.querySelector<HTMLButtonElement>(
-      "button[data-checkout-pay], button:not([data-checkout-back])"
-    )
-    // PaymentStep renders [Back] [Pay] — pick the Pay one (second button).
-    const buttons = paymentRootRef.current?.querySelectorAll<HTMLButtonElement>("button")
-    if (buttons && buttons.length >= 2) {
-      const pay = buttons[buttons.length - 1]
-      pay.click()
-      return
-    }
-    if (node) node.click()
-  }
+  // Pre-mint the PI as soon as we have an address + rate, so clientSecret is
+  // ready by the time the buyer scrolls to payment. mintIntent is idempotent
+  // for a fixed input set (idempotencyKeyRef + early-return on checkoutResult).
+  useEffect(() => {
+    if (!authToken || !region || !selectedAddress || !selectedQuoteId) return
+    if (checkoutResult) return
+    void mintIntent()
+  }, [authToken, region, selectedAddress, selectedQuoteId, checkoutResult, mintIntent])
 
   async function handlePlaceOrder() {
     setPlaceError(null)
-    // Ensure a PaymentIntent exists before triggering Stripe confirm.
     let result = checkoutResult
     if (!result) result = await mintIntent()
     if (!result) return
-    // Defer to next tick so Stripe Elements rebinds to fresh clientSecret.
-    setTimeout(() => triggerEmbeddedPay(), 0)
+    const handle = paymentHandleRef.current
+    if (!handle) {
+      setPlaceError("Payment isn't ready yet. Please wait a moment and try again.")
+      return
+    }
+    setPaying(true)
+    try {
+      const ok = await handle.confirmPayment()
+      if (ok) await handlePaymentComplete()
+    } finally {
+      setPaying(false)
+    }
   }
 
   // ─── disabled reason for Place Order ──────────────────────────────
@@ -468,7 +576,8 @@ export default function CheckoutClientV2({
   else if (!selectedQuoteId) disabledReason = "Choose a delivery option"
   else if (!stripeAvailable) disabledReason = "Payment is unavailable in this region"
   else if (selectedSavedCardId === null && !checkoutResult && !minting) disabledReason = null // new-card path: minting on click
-  const placeDisabled = disabledReason !== null || minting || placingRef.current
+  if (requoting) disabledReason = "Updating delivery options…"
+  const placeDisabled = disabledReason !== null || minting || placingRef.current || paying || requoting
 
   // ─── empty cart guard ─────────────────────────────────────────────
   useEffect(() => {
@@ -591,6 +700,14 @@ export default function CheckoutClientV2({
               : "Choose a delivery option"}
             disabled={!selectedAddress}
           >
+            {requoting && (
+              <p className="text-xs text-muted-foreground text-right mb-2">Updating delivery options…</p>
+            )}
+            {requoteError && !requoting && (
+              <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {requoteError}
+              </div>
+            )}
             {!selectedAddress ? (
               <p className="text-sm text-gray-500">Select a shipping address to see rates.</p>
             ) : quotesLoading ? (
@@ -663,30 +780,26 @@ export default function CheckoutClientV2({
               : "Use a new card"}
             disabled={!selectedAddress || !selectedQuoteId}
           >
-            <div ref={paymentRootRef}>
-              {(!selectedAddress || !selectedQuoteId) ? (
-                <p className="text-sm text-gray-500">Select an address and delivery option above.</p>
-              ) : !stripeAvailable ? (
-                <div className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
-                  Card payments via Stripe are not available in this region yet.
-                </div>
-              ) : (
-                <PaymentStep
-                  onBackAction={() => { /* no separate back step in V2 */ }}
-                  onCompleteAction={handlePaymentComplete}
-                  total={total}
-                  clientSecret={checkoutResult?.paymentClientSecret ?? null}
-                  checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
-                  stripeAvailable={stripeAvailable}
-                  paymentMethods={paymentMethods}
-                  saveCard={saveCard}
-                  onSaveCardChangeAction={setSaveCard}
-                  savedCards={savedCards}
-                  selectedSavedCardId={selectedSavedCardId}
-                  onSelectedSavedCardChangeAction={setSelectedSavedCardId}
-                />
-              )}
-            </div>
+            {(!selectedAddress || !selectedQuoteId) ? (
+              <p className="text-sm text-gray-500">Select an address and delivery option above.</p>
+            ) : !stripeAvailable ? (
+              <div className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
+                Card payments via Stripe are not available in this region yet.
+              </div>
+            ) : (
+              <InlinePayment
+                ref={paymentHandleRef}
+                clientSecret={checkoutResult?.paymentClientSecret ?? null}
+                checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
+                totalCents={total}
+                saveCard={saveCard}
+                onSaveCardChange={setSaveCard}
+                savedCards={savedCards}
+                selectedSavedCardId={selectedSavedCardId}
+                onSelectedSavedCardChange={setSelectedSavedCardId}
+                onError={setPlaceError}
+              />
+            )}
           </Section>
 
           {/* 4. Review items */}
@@ -778,7 +891,7 @@ export default function CheckoutClientV2({
 
             <PlaceOrderButton
               disabled={placeDisabled}
-              loading={minting}
+              loading={minting || paying}
               disabledReason={disabledReason}
               onClick={handlePlaceOrder}
               className="hidden lg:flex mt-4 w-full"
@@ -958,5 +1071,202 @@ function PlaceOrderButton({
         <span id={describedById} className="sr-only">{disabledReason}</span>
       )}
     </>
+  )
+}
+
+/* ── Inline Stripe payment (replaces the embedded PaymentStep) ───── */
+
+type InlinePaymentProps = {
+  clientSecret: string | null
+  checkoutSessionId: string | null
+  totalCents: number
+  saveCard: boolean
+  onSaveCardChange: (next: boolean) => void
+  savedCards: SavedPaymentMethod[]
+  selectedSavedCardId: string | null
+  onSelectedSavedCardChange: (id: string | null) => void
+  onError: (msg: string | null) => void
+}
+
+const InlinePayment = forwardRef<PaymentHandle, InlinePaymentProps>(function InlinePayment(
+  props,
+  ref,
+) {
+  const { clientSecret, totalCents, saveCard } = props
+  return (
+    // `key` forces a full remount when the PaymentIntent or save-card option
+    // changes, mirroring the legacy PaymentStep's behavior to avoid stale
+    // PaymentIntent references in Stripe Elements.
+    <Elements
+      key={`${clientSecret ?? "no-pi"}|${saveCard ? "sfu" : "no-sfu"}`}
+      stripe={getV2Stripe()}
+      options={{
+        mode: "payment",
+        amount: Math.max(totalCents, 50),
+        currency: "usd",
+        appearance: V2_STRIPE_APPEARANCE,
+        paymentMethodCreation: "manual",
+        ...(saveCard ? { setupFutureUsage: "off_session" as const } : {}),
+      }}
+    >
+      <InlinePaymentForm {...props} handleRef={ref} />
+    </Elements>
+  )
+})
+
+function InlinePaymentForm({
+  clientSecret,
+  checkoutSessionId,
+  saveCard,
+  onSaveCardChange,
+  savedCards,
+  selectedSavedCardId,
+  onSelectedSavedCardChange,
+  onError,
+  handleRef,
+}: InlinePaymentProps & { handleRef: React.ForwardedRef<PaymentHandle> }) {
+  const stripe = useStripe()
+  const elements = useElements()
+
+  const usingSaved = selectedSavedCardId !== null
+
+  useImperativeHandle(handleRef, () => ({
+    async confirmPayment() {
+      onError(null)
+      if (!stripe) {
+        onError("Payment isn't ready yet. Please wait a moment and try again.")
+        return false
+      }
+      if (!clientSecret) {
+        onError("Payment could not be initialized. Please try again or contact support.")
+        return false
+      }
+
+      if (usingSaved && selectedSavedCardId) {
+        const { error: confirmError } = await stripe.confirmCardPayment(
+          clientSecret,
+          { payment_method: selectedSavedCardId },
+        )
+        if (confirmError) {
+          onError(confirmError.message ?? "Payment failed. Please try again.")
+          return false
+        }
+        return true
+      }
+
+      if (!elements) {
+        onError("Payment form not ready. Please wait a moment.")
+        return false
+      }
+
+      const { error: submitError } = await elements.submit()
+      if (submitError) {
+        onError(submitError.message ?? "Payment validation failed.")
+        return false
+      }
+
+      const { error: confirmError } = await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        confirmParams: {
+          return_url: checkoutSessionId
+            ? `${window.location.origin}/checkout/complete?session=${encodeURIComponent(checkoutSessionId)}`
+            : `${window.location.origin}/checkout/complete`,
+        },
+        redirect: "if_required",
+      })
+
+      if (confirmError) {
+        onError(confirmError.message ?? "Payment failed. Please try again.")
+        return false
+      }
+      return true
+    },
+  }), [stripe, elements, clientSecret, checkoutSessionId, usingSaved, selectedSavedCardId, onError])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-50 p-3">
+        <ShieldCheck className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+        <p className="text-xs text-gray-600 leading-relaxed">
+          <span className="text-emerald-700 font-semibold">Card data never touches our servers.</span>{" "}
+          Payment details are encrypted and sent directly to Stripe via a secure iframe.
+        </p>
+      </div>
+
+      {savedCards.length > 0 && (
+        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Pay with a saved card</p>
+          {savedCards.map((card) => {
+            const checked = selectedSavedCardId === card.stripePmId
+            return (
+              <label
+                key={card.id}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors",
+                  checked ? "border-brand-gold bg-brand-gold/10" : "border-gray-200 hover:bg-gray-50",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="v2-saved-card"
+                  checked={checked}
+                  onChange={() => onSelectedSavedCardChange(card.stripePmId)}
+                  className="h-4 w-4 accent-brand-gold"
+                />
+                <CreditCard className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-900 capitalize">{card.brand ?? "card"}</span>
+                <span className="text-sm text-gray-600 font-mono">•••• {card.last4 ?? "????"}</span>
+                {card.expMonth && card.expYear && (
+                  <span className="ml-auto text-xs text-gray-500 tabular-nums">
+                    {String(card.expMonth).padStart(2, "0")}/{String(card.expYear).slice(-2)}
+                  </span>
+                )}
+                {card.isDefault && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                    Default
+                  </span>
+                )}
+              </label>
+            )
+          })}
+          <label
+            className={cn(
+              "flex items-center gap-3 rounded-lg border border-dashed px-3 py-2.5 cursor-pointer transition-colors",
+              selectedSavedCardId === null ? "border-brand-gold bg-brand-gold/5" : "border-gray-300 hover:bg-gray-50",
+            )}
+          >
+            <input
+              type="radio"
+              name="v2-saved-card"
+              checked={selectedSavedCardId === null}
+              onChange={() => onSelectedSavedCardChange(null)}
+              className="h-4 w-4 accent-brand-gold"
+            />
+            <Plus className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-900">Use a new card</span>
+          </label>
+        </div>
+      )}
+
+      {!usingSaved && (
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Lock className="h-3.5 w-3.5 text-foreground" />
+            <span className="text-xs text-gray-500 font-medium">Secured by Stripe</span>
+          </div>
+          <PaymentElement options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }} />
+          <label className="mt-4 flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={saveCard}
+              onChange={(e) => onSaveCardChange(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+            />
+            <span className="text-sm text-foreground">Remember this card for next time</span>
+          </label>
+        </div>
+      )}
+    </div>
   )
 }
