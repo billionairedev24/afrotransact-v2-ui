@@ -61,6 +61,7 @@ import { PhoneInput } from "@/components/ui/PhoneInput"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 import { resolveDefaultRegion } from "@/lib/regions"
+import { useEffectiveFeatures } from "@/hooks/use-effective-features"
 import {
   checkout as apiCheckout,
   mergeCart,
@@ -162,7 +163,12 @@ export default function CheckoutClientV2({
   // ─── region + region config ───────────────────────────────────────
   const [region, setRegion] = useState<Region | null>(null)
   const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
+  // configFeatures is now a legacy backstop for paymentMethods/threshold fetch;
+  // the *authoritative* feature map comes from the Service Zones resolver via
+  // useEffectiveFeatures below. We still call getRegionConfig for non-feature
+  // data (payment methods, free-shipping threshold).
   const [configFeatures, setConfigFeatures] = useState<Record<string, boolean>>({})
+  const { features: zoneOrRegionFeatures } = useEffectiveFeatures(region?.code ?? null)
   const [freeShippingThresholdCents, setFreeShippingThresholdCents] = useState<number | null>(null)
   useEffect(() => {
     if (!mounted) return
@@ -484,7 +490,10 @@ export default function CheckoutClientV2({
   }, [authToken])
 
   // ─── coupons (region-gated) ────────────────────────────────────────
-  const couponsEnabled = configFeatures["coupons_enabled"] === true
+  // Prefer zone-resolved features; fall back to the legacy region config map.
+  const effectiveFeatures =
+    Object.keys(zoneOrRegionFeatures).length > 0 ? zoneOrRegionFeatures : configFeatures
+  const couponsEnabled = effectiveFeatures["coupons_enabled"] === true
   const [couponCode, setCouponCode] = useState("")
   const [couponInput, setCouponInput] = useState("")
   const [couponOpen, setCouponOpen] = useState(false)

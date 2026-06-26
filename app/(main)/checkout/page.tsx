@@ -38,7 +38,13 @@ import CheckoutClientV2 from "./CheckoutClientV2"
 export const dynamic = "force-dynamic"
 
 export default async function CheckoutPage() {
-  /** Server-side guard: avoids loading checkout when commerce kill-switches are off (client still banners). */
+  /** Server-side guard: avoids loading checkout when commerce kill-switches are off (client still banners).
+   *  NOTE: We intentionally do NOT call the Service Zones resolver here.
+   *  Buyer location lives in the client (localStorage-backed Zustand store)
+   *  and is unavailable at SSR time. The legacy `getRegionConfig` path is
+   *  fine as a conservative server-side gate; the client (CheckoutClientV2)
+   *  re-evaluates feature flags using the zone-aware `useEffectiveFeatures`
+   *  hook once mounted. */
   try {
     const regions = await getRegions(undefined, true)
     const region = resolveDefaultRegion(regions)

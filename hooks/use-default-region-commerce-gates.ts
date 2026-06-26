@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { getRegions, getRegionConfig, type Region } from "@/lib/api"
 import { resolveDefaultRegion } from "@/lib/regions"
+import { useBuyerLocation } from "@/stores/buyer-location"
 
 /** Default region storefront gates for cart/checkout (public regions + merged config/features). */
 export function useDefaultRegionCommerceGates() {
@@ -10,6 +11,9 @@ export function useDefaultRegionCommerceGates() {
   const [region, setRegion] = useState<Region | null>(null)
   const [marketplaceEnabled, setMarketplaceEnabled] = useState(true)
   const [stripeEnabled, setStripeEnabled] = useState(true)
+
+  // Service Zones resolver output — preferred source for feature flags.
+  const resolvedZone = useBuyerLocation((s) => s.resolvedZone)
 
   useEffect(() => {
     let cancelled = false
@@ -22,9 +26,26 @@ export function useDefaultRegionCommerceGates() {
           return
         }
         setRegion(r)
-        const cfg = await getRegionConfig(r.code).catch(() => null)
-        if (cancelled) return
-        const feats = cfg?.features ?? {}
+
+        // Prefer the resolved zone's effective features when the buyer has a
+        // location with zone-scoped flags. Otherwise fall through to the legacy
+        // per-region config.
+        const zoneFeats = resolvedZone?.effectiveFeatures
+        const useZone = !!zoneFeats && Object.keys(zoneFeats).length > 0
+
+        let feats: Record<string, boolean> = {}
+        if (useZone && zoneFeats) {
+          feats = zoneFeats
+          // eslint-disable-next-line no-console
+          console.debug("effective-features source=zone (commerce-gates)")
+        } else {
+          const cfg = await getRegionConfig(r.code).catch(() => null)
+          if (cancelled) return
+          feats = cfg?.features ?? {}
+          // eslint-disable-next-line no-console
+          console.debug("effective-features source=region (commerce-gates)")
+        }
+
         const mk =
           feats["marketplace_enabled"] !== undefined ? feats["marketplace_enabled"] === true : undefined
         const st =
@@ -46,7 +67,7 @@ export function useDefaultRegionCommerceGates() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [resolvedZone])
 
   return {
     loading,

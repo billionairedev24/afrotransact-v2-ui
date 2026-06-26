@@ -65,6 +65,10 @@ export default function CartPage() {
     let cancelled = false
     ;(async () => {
       try {
+        // NOTE: this call is only used for the free-shipping threshold (a
+        // non-feature-flag value). Feature flags themselves are routed through
+        // `useDefaultRegionCommerceGates` / `useEffectiveFeatures`, which
+        // already prefer the Service Zones resolver. No swap needed here.
         const cfg = await getRegionConfig("us-tx-default")
         if (!cancelled) setFreeShippingThresholdCents(cfg.region.freeShippingThresholdCents)
       } catch {
