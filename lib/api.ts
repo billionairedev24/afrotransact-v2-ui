@@ -1833,7 +1833,7 @@ export interface ForYouProduct {
   slug?: string | null
   lastOrderedAt?: string | null
   /** Discriminator: which composer source surfaced this row. */
-  source: "BUY_AGAIN" | "CO_PURCHASE" | "CATEGORY"
+  source: "BUY_AGAIN" | "CO_PURCHASE" | "SEMANTIC" | "CATEGORY"
 }
 
 /**

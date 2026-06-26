@@ -98,6 +98,16 @@ export function ForYouRail() {
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
         {items.map((p) => {
           const isBuyAgain = p.source === "BUY_AGAIN"
+          // Per-card chip copy. CATEGORY is the soft fallback; chipping it
+          // would feel noisy because the buyer hasn't asked for it explicitly.
+          const chip =
+            p.source === "BUY_AGAIN"
+              ? "Bought before"
+              : p.source === "SEMANTIC"
+                ? "You might like"
+                : p.source === "CO_PURCHASE"
+                  ? "Often bought together"
+                  : null
           return (
             <div
               key={`${p.productId}-${p.variantId ?? ""}-${p.source}`}
@@ -113,9 +123,9 @@ export function ForYouRail() {
                     loading="lazy"
                   />
                 ) : null}
-                {isBuyAgain ? (
+                {chip ? (
                   <span className="absolute top-1 left-1 text-[10px] font-medium rounded-sm bg-background/90 text-foreground px-1.5 py-0.5 border border-border">
-                    Bought before
+                    {chip}
                   </span>
                 ) : null}
               </div>
