@@ -1,0 +1,962 @@
+"use client"
+
+/**
+ * CheckoutClientV2 — Amazon-style single-page sectioned checkout.
+ *
+ * Replaces the legacy step-machine flow in CheckoutClient.tsx. Selection
+ * IS the commit (no "Continue / Use this address / Confirm payment method"
+ * buttons). The right-rail "Place your order" CTA is the only action.
+ *
+ * Gated behind NEXT_PUBLIC_CHECKOUT_V2 in app/(main)/checkout/page.tsx.
+ *
+ * All API calls, Stripe wrapper, cart store, and helpers are reused from the
+ * legacy implementation — nothing new was invented.
+ *
+ * NOTE: PaymentStep (./_stripe-payment.tsx) is reused unmodified. It owns
+ * the Stripe.confirmPayment flow and its internal Pay button. The right-rail
+ * "Place your order" button programmatically drives that Pay button via a
+ * data-attribute selector (`data-checkout-pay`) on the embedded PaymentStep
+ * root container — see `triggerPay()`. This is a documented deviation: the
+ * brief asks for a single CTA but PaymentStep ships its own button, so the
+ * right-rail CTA acts as a façade that fires the embedded Pay flow.
+ */
+
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
+import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import Image from "next/image"
+import { useSession } from "next-auth/react"
+import {
+  Loader2,
+  Lock,
+  MapPin,
+  Truck,
+  CreditCard,
+  Package,
+  Plus,
+  Trash2,
+  Edit2,
+  AlertCircle,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { friendlyMessage, logError } from "@/lib/errors"
+import { features } from "@/lib/features"
+import { useCartStore, clearGuestCart } from "@/stores/cart-store"
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
+import { PhoneInput } from "@/components/ui/PhoneInput"
+import { getAccessToken } from "@/lib/auth-helpers"
+import { toast } from "sonner"
+import { resolveDefaultRegion } from "@/lib/regions"
+import {
+  checkout as apiCheckout,
+  mergeCart,
+  clearServerCart,
+  getRegions,
+  getRegionConfig,
+  loadCheckoutShippingContext,
+  createAddress,
+  updateAddress,
+  setDefaultAddress,
+  deleteAddress,
+  getShippingQuotes,
+  listSavedPaymentMethods,
+  ApiError,
+  type CheckoutResponse,
+  type CheckoutShippingContext,
+  type Region,
+  type RegionPaymentMethod,
+  type SavedPaymentMethod,
+  type ShippingQuoteOption,
+  type ShippingQuoteResponse,
+  type UserAddress,
+} from "@/lib/api"
+
+const PaymentStep = dynamic(() => import("./_stripe-payment"), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-3">
+      <div className="h-6 w-40 rounded bg-muted animate-pulse" />
+      <div className="h-40 w-full rounded-xl bg-muted animate-pulse" />
+    </div>
+  ),
+})
+
+function formatCents(v: number) {
+  return `$${(v / 100).toFixed(2)}`
+}
+
+type FlatQuote = ShippingQuoteOption & { carrier: string }
+
+export default function CheckoutClientV2({
+  initialContext,
+}: {
+  initialContext: CheckoutShippingContext | null
+}) {
+  const session = useSession()
+  const router = useRouter()
+
+  // ─── mount + auth gate ────────────────────────────────────────────
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  const [authToken, setAuthToken] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const t = await getAccessToken().catch(() => null)
+      if (!cancelled) setAuthToken(t)
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // ─── cart ──────────────────────────────────────────────────────────
+  const cartItems = useCartStore((s) => s.items)
+  const getSubtotal = useCartStore((s) => s.getSubtotal)
+  const updateQuantity = useCartStore((s) => s.updateQuantity)
+  const removeItem = useCartStore((s) => s.removeItem)
+  const clearCart = useCartStore((s) => s.clearCart)
+  const subtotal = getSubtotal()
+
+  // ─── region + region config ───────────────────────────────────────
+  const [region, setRegion] = useState<Region | null>(null)
+  const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
+  useEffect(() => {
+    if (!mounted) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const regions = await getRegions(authToken ?? undefined, true)
+        if (cancelled) return
+        const r = resolveDefaultRegion(regions.filter((x) => x.code))
+        if (r) setRegion(r)
+      } catch { /* fall back to defaults below */ }
+    })()
+    return () => { cancelled = true }
+  }, [mounted, authToken])
+
+  useEffect(() => {
+    if (!region) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const cfg = await getRegionConfig(region.code).catch(() => null)
+        if (cancelled || !cfg) return
+        setPaymentMethods(cfg.paymentMethods ?? [])
+      } catch { /* non-fatal */ }
+    })()
+    return () => { cancelled = true }
+  }, [region])
+
+  // ─── addresses (Section 1) ─────────────────────────────────────────
+  const [addresses, setAddresses] = useState<UserAddress[]>(initialContext?.addresses ?? [])
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(() => {
+    const seed = initialContext?.addresses ?? []
+    return (seed.find((a) => a.isDefault) ?? seed[0])?.id ?? null
+  })
+  const [addrModalOpen, setAddrModalOpen] = useState(false)
+  const [addrEditingId, setAddrEditingId] = useState<string | null>(null)
+  const [addrSaving, setAddrSaving] = useState(false)
+  const sessionName = session?.data?.user?.name ?? ""
+  const [profileName, setProfileName] = useState<string>(() => {
+    const p = initialContext?.profile
+    return p ? [p.firstName, p.lastName].filter(Boolean).join(" ") : ""
+  })
+  const [profilePhone, setProfilePhone] = useState<string>(initialContext?.profile?.phone ?? "")
+  const [form, setForm] = useState({
+    fullName: profileName || sessionName,
+    line1: "", line2: "", city: "", state: "", zip: "", phone: profilePhone,
+  })
+  const [addressQuery, setAddressQuery] = useState("")
+  const [makeDefault, setMakeDefault] = useState(false)
+
+  // Fetch addresses if we weren't seeded
+  useEffect(() => {
+    if (initialContext || !authToken) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const ctx = await loadCheckoutShippingContext(authToken)
+        if (cancelled) return
+        setAddresses(ctx.addresses)
+        const name = [ctx.profile.firstName, ctx.profile.lastName].filter(Boolean).join(" ")
+        setProfileName(name)
+        setProfilePhone(ctx.profile.phone ?? "")
+        setForm((f) => ({ ...f, fullName: name || sessionName || f.fullName, phone: ctx.profile.phone || f.phone }))
+        const def = ctx.addresses.find((a) => a.isDefault) ?? ctx.addresses[0]
+        if (def) setSelectedAddressId(def.id)
+      } catch {
+        toast.error("Could not load your saved addresses. Add a shipping address to continue.")
+      }
+    })()
+    return () => { cancelled = true }
+  }, [authToken, initialContext, sessionName])
+
+  const selectedAddress = useMemo(
+    () => addresses.find((a) => a.id === selectedAddressId) ?? null,
+    [addresses, selectedAddressId],
+  )
+
+  function openNewAddress() {
+    setAddrEditingId(null)
+    setForm({ fullName: profileName || sessionName, line1: "", line2: "", city: "", state: "", zip: "", phone: profilePhone })
+    setAddressQuery("")
+    setMakeDefault(addresses.length === 0)
+    setAddrModalOpen(true)
+  }
+  function openEditAddress(a: UserAddress) {
+    setAddrEditingId(a.id)
+    setForm({
+      fullName: profileName || sessionName,
+      line1: a.line1, line2: a.line2 ?? "",
+      city: a.city, state: a.state ?? "",
+      zip: a.postalCode ?? "", phone: a.phone ?? profilePhone,
+    })
+    setAddressQuery(a.line1)
+    setMakeDefault(a.isDefault)
+    setAddrModalOpen(true)
+  }
+
+  async function handleSaveAddress() {
+    if (!authToken) { toast.error("Please sign in to save addresses."); return }
+    if (!form.line1 || !form.city || !form.zip) return
+    setAddrSaving(true)
+    try {
+      const basePayload = {
+        label: "shipping",
+        line1: form.line1.trim(),
+        line2: form.line2?.trim() || undefined,
+        city: form.city.trim(),
+        state: form.state?.trim() || "",
+        postalCode: form.zip.trim(),
+        countryCode: "US",
+        phone: form.phone?.trim() || undefined,
+      }
+      const saved = addrEditingId
+        ? await updateAddress(authToken, addrEditingId, basePayload)
+        : await createAddress(authToken, { ...basePayload, isDefault: makeDefault || addresses.length === 0 })
+      if (addrEditingId && makeDefault) {
+        try { await setDefaultAddress(authToken, addrEditingId) } catch { /* non-fatal */ }
+      }
+      // Refresh the list
+      const ctx = await loadCheckoutShippingContext(authToken)
+      setAddresses(ctx.addresses)
+      setSelectedAddressId(saved.id)
+      setAddrModalOpen(false)
+    } catch (e) {
+      logError(e, "saving address (v2)")
+      toast.error(friendlyMessage(e, "Could not save address. Check required fields and try again."))
+    } finally {
+      setAddrSaving(false)
+    }
+  }
+
+  async function handleDeleteAddress(id: string) {
+    if (!authToken) return
+    if (!confirm("Delete this address?")) return
+    try {
+      await deleteAddress(authToken, id)
+      const next = addresses.filter((a) => a.id !== id)
+      setAddresses(next)
+      if (selectedAddressId === id) setSelectedAddressId(next[0]?.id ?? null)
+    } catch (e) {
+      toast.error(friendlyMessage(e, "Could not delete that address."))
+    }
+  }
+
+  // ─── shipping quotes (Section 2) ───────────────────────────────────
+  const [quotes, setQuotes] = useState<ShippingQuoteResponse | null>(null)
+  const [quotesLoading, setQuotesLoading] = useState(false)
+  const [quotesError, setQuotesError] = useState<string | null>(null)
+  const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<"cheapest" | "fastest">("cheapest")
+
+  useEffect(() => {
+    setQuotes(null)
+    setQuotesError(null)
+    setSelectedQuoteId(null)
+    if (!authToken || !region || !selectedAddress) return
+    let cancelled = false
+    setQuotesLoading(true)
+    ;(async () => {
+      try {
+        const q = await getShippingQuotes(authToken, {
+          regionId: region.id,
+          state: selectedAddress.state ?? "",
+          city: selectedAddress.city,
+          destinationLine1: selectedAddress.line1,
+          destinationZip: selectedAddress.postalCode,
+          destinationCountry: selectedAddress.countryCode || "US",
+        })
+        if (cancelled) return
+        setQuotes(q)
+      } catch (e) {
+        if (cancelled) return
+        setQuotesError(friendlyMessage(e, "Couldn't get rates for this address. Try a different address?"))
+      } finally {
+        if (!cancelled) setQuotesLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [authToken, region?.id, selectedAddress?.id])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const flatQuotes: FlatQuote[] = useMemo(() => {
+    const out: FlatQuote[] = []
+    for (const g of quotes?.groups ?? []) for (const o of g.options) out.push({ ...o, carrier: g.carrier })
+    return out
+  }, [quotes])
+
+  const cheapestId = useMemo(() => {
+    let id: string | null = null; let best = Infinity
+    for (const o of flatQuotes) if (o.amountCents < best) { best = o.amountCents; id = o.quoteId }
+    return id
+  }, [flatQuotes])
+
+  const sortedQuotes = useMemo(() => {
+    const c = [...flatQuotes]
+    if (sortBy === "cheapest") c.sort((a, b) => a.amountCents - b.amountCents || (a.estimatedDays ?? 99) - (b.estimatedDays ?? 99))
+    else c.sort((a, b) => (a.estimatedDays ?? 99) - (b.estimatedDays ?? 99) || a.amountCents - b.amountCents)
+    return c
+  }, [flatQuotes, sortBy])
+
+  // preselect cheapest once
+  useEffect(() => {
+    if (!selectedQuoteId && cheapestId) setSelectedQuoteId(cheapestId)
+  }, [cheapestId, selectedQuoteId])
+
+  const selectedQuote = flatQuotes.find((q) => q.quoteId === selectedQuoteId) ?? null
+  const shippingCents = selectedQuote?.amountCents ?? 0
+
+  // ─── saved cards (Section 3) ───────────────────────────────────────
+  const [savedCards, setSavedCards] = useState<SavedPaymentMethod[]>([])
+  const [selectedSavedCardId, setSelectedSavedCardId] = useState<string | null>(null)
+  const [saveCard, setSaveCard] = useState(false)
+
+  useEffect(() => {
+    if (!authToken) return
+    let cancelled = false
+    listSavedPaymentMethods(authToken)
+      .then((cards) => { if (!cancelled) setSavedCards(cards ?? []) })
+      .catch(() => { /* no saved cards */ })
+    return () => { cancelled = true }
+  }, [authToken])
+
+  // ─── totals ────────────────────────────────────────────────────────
+  const taxRate = region?.taxRate ?? 0.0825
+  const tax = Math.round(subtotal * taxRate)
+  const total = subtotal + tax + shippingCents
+
+  const stripeFeatureEnabled = features.stripeEnabled()
+  const stripeRow = paymentMethods.find((m) => m.provider.toLowerCase() === "stripe")
+  const stripeMethodEnabled = stripeRow ? stripeRow.enabled : paymentMethods.length === 0
+  const stripeAvailable = stripeFeatureEnabled && stripeMethodEnabled
+
+  // ─── mint PaymentIntent when address+rate ready ───────────────────
+  const [checkoutResult, setCheckoutResult] = useState<CheckoutResponse | null>(null)
+  const [minting, setMinting] = useState(false)
+  const [placeError, setPlaceError] = useState<string | null>(null)
+  const idempotencyKeyRef = useRef<string | null>(null)
+  const placingRef = useRef(false)
+
+  // Reset the PI whenever the inputs that determine its amount change.
+  useEffect(() => {
+    idempotencyKeyRef.current = null
+    setCheckoutResult(null)
+  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard])
+
+  const mintIntent = useCallback(async () => {
+    if (placingRef.current) return null
+    if (!authToken || !region || !selectedAddress) return null
+    if (checkoutResult) return checkoutResult
+    placingRef.current = true
+    setMinting(true)
+    setPlaceError(null)
+    try {
+      const items = cartItems.map((item) => ({
+        variantId: item.variantId,
+        productId: item.productId || item.variantId,
+        storeId: item.storeId,
+        quantity: item.quantity,
+        unitPriceCents: item.price,
+        productTitle: item.title,
+        variantName: item.variantName,
+        imageUrl: item.imageUrl,
+        weightKg: item.weightKg ?? null,
+        lengthIn: item.lengthIn ?? null,
+        widthIn: item.widthIn ?? null,
+        heightIn: item.heightIn ?? null,
+      }))
+      await mergeCart(authToken, items)
+      if (!idempotencyKeyRef.current) idempotencyKeyRef.current = crypto.randomUUID()
+      const result = await apiCheckout(authToken, {
+        regionId: region.id,
+        shippingAddressId: selectedAddress.id,
+        fullName: profileName || sessionName,
+        line1: selectedAddress.line1,
+        line2: selectedAddress.line2 ?? undefined,
+        city: selectedAddress.city,
+        state: selectedAddress.state ?? "",
+        zip: selectedAddress.postalCode ?? "",
+        phone: selectedAddress.phone ?? profilePhone ?? undefined,
+        saveAddress: false,
+        selectedShippingQuoteId: selectedQuote?.quoteId,
+        selectedShippingCarrier: selectedQuote?.carrier,
+        selectedShippingService: selectedQuote?.serviceCode,
+        selectedShippingAmountCents: selectedQuote?.amountCents,
+        saveCard,
+      }, idempotencyKeyRef.current)
+      setCheckoutResult(result)
+      return result
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        router.push("/auth/login?callbackUrl=/checkout")
+        return null
+      }
+      logError(e, "checkout (v2)")
+      setPlaceError(friendlyMessage(e, "Checkout failed. Please try again."))
+      return null
+    } finally {
+      placingRef.current = false
+      setMinting(false)
+    }
+  }, [authToken, region, selectedAddress, cartItems, checkoutResult, selectedQuote, saveCard, profileName, profilePhone, sessionName, router])
+
+  // ─── place order ───────────────────────────────────────────────────
+  const paymentRootRef = useRef<HTMLDivElement | null>(null)
+
+  const handlePaymentComplete = useCallback(async () => {
+    try {
+      if (authToken) await clearServerCart(authToken)
+    } catch (e) { logError(e, "clear server cart after payment (v2)") }
+    clearCart()
+    try { clearGuestCart() } catch { /* non-fatal */ }
+    // The legacy flow's "complete" page polls for the materialized order.
+    // PaymentStep's confirmPayment already redirects to /checkout/complete
+    // when a 3DS / off-session flow is required; otherwise we land here and
+    // forward the buyer ourselves.
+    const sid = checkoutResult?.checkoutSessionId
+    router.push(sid ? `/checkout/complete?session=${encodeURIComponent(sid)}` : "/checkout/complete")
+  }, [authToken, clearCart, router, checkoutResult])
+
+  function triggerEmbeddedPay() {
+    const node = paymentRootRef.current?.querySelector<HTMLButtonElement>(
+      "button[data-checkout-pay], button:not([data-checkout-back])"
+    )
+    // PaymentStep renders [Back] [Pay] — pick the Pay one (second button).
+    const buttons = paymentRootRef.current?.querySelectorAll<HTMLButtonElement>("button")
+    if (buttons && buttons.length >= 2) {
+      const pay = buttons[buttons.length - 1]
+      pay.click()
+      return
+    }
+    if (node) node.click()
+  }
+
+  async function handlePlaceOrder() {
+    setPlaceError(null)
+    // Ensure a PaymentIntent exists before triggering Stripe confirm.
+    let result = checkoutResult
+    if (!result) result = await mintIntent()
+    if (!result) return
+    // Defer to next tick so Stripe Elements rebinds to fresh clientSecret.
+    setTimeout(() => triggerEmbeddedPay(), 0)
+  }
+
+  // ─── disabled reason for Place Order ──────────────────────────────
+  let disabledReason: string | null = null
+  if (cartItems.length === 0) disabledReason = "Your cart is empty"
+  else if (!selectedAddress) disabledReason = "Select a shipping address"
+  else if (!selectedQuoteId) disabledReason = "Choose a delivery option"
+  else if (!stripeAvailable) disabledReason = "Payment is unavailable in this region"
+  else if (selectedSavedCardId === null && !checkoutResult && !minting) disabledReason = null // new-card path: minting on click
+  const placeDisabled = disabledReason !== null || minting || placingRef.current
+
+  // ─── empty cart guard ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!mounted) return
+    if (cartItems.length === 0) router.replace("/cart")
+  }, [mounted, cartItems.length, router])
+
+  if (!mounted) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 py-10">
+        <div className="h-32 flex items-center justify-center text-gray-500">Loading…</div>
+      </main>
+    )
+  }
+
+  if (session?.status === "unauthenticated") {
+    return (
+      <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-16 text-center">
+        <Lock className="mx-auto h-12 w-12 text-gray-500" />
+        <h1 className="text-xl font-bold text-gray-900 mt-4">Sign in to checkout</h1>
+        <p className="text-gray-500 text-sm mt-2">Your cart items will be preserved.</p>
+        <button
+          onClick={() => router.push("/auth/login?callbackUrl=/checkout")}
+          className="mt-6 inline-block rounded-xl bg-primary px-6 py-3 text-sm font-bold text-brand-gold-foreground"
+        >
+          Sign In
+        </button>
+      </main>
+    )
+  }
+
+  // ─── render ────────────────────────────────────────────────────────
+  return (
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10 pb-32 lg:pb-10">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Sections column */}
+        <div className="lg:col-span-2 space-y-4">
+
+          {/* 1. Shipping address */}
+          <Section
+            n={1}
+            title="Shipping address"
+            subtitle={selectedAddress
+              ? `${selectedAddress.line1}, ${selectedAddress.city}, ${selectedAddress.state} ${selectedAddress.postalCode}`
+              : "Choose where to deliver"}
+          >
+            {addresses.length === 0 ? (
+              <p className="text-sm text-gray-500 mb-3">No saved addresses yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {addresses.map((a) => {
+                  const checked = selectedAddressId === a.id
+                  return (
+                    <li key={a.id}>
+                      <label className={cn(
+                        "flex items-start gap-3 rounded-xl border px-4 py-3 cursor-pointer transition-colors",
+                        checked ? "border-brand-gold bg-amber-50/40" : "border-gray-200 hover:bg-gray-50",
+                      )}>
+                        <input
+                          type="radio"
+                          name="ship-addr"
+                          checked={checked}
+                          onChange={() => setSelectedAddressId(a.id)}
+                          className="mt-1 h-4 w-4 accent-brand-gold"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-bold text-gray-900">{profileName || sessionName || "Address"}</p>
+                            {a.isDefault && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">Default</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 leading-snug">
+                            {a.line1}{a.line2 ? `, ${a.line2}` : ""}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {a.city}, {a.state} {a.postalCode}
+                          </p>
+                          {a.phone && <p className="text-xs text-gray-500 mt-1">{a.phone}</p>}
+                          <div className="flex items-center gap-3 mt-2">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); openEditAddress(a) }}
+                              className="text-xs font-semibold text-gray-600 hover:text-gray-900 inline-flex items-center gap-1"
+                            >
+                              <Edit2 className="h-3 w-3" /> Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); handleDeleteAddress(a.id) }}
+                              className="text-xs font-semibold text-red-600 hover:text-red-700 inline-flex items-center gap-1"
+                            >
+                              <Trash2 className="h-3 w-3" /> Delete
+                            </button>
+                          </div>
+                        </div>
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={openNewAddress}
+              className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand-gold-foreground hover:underline"
+            >
+              <Plus className="h-4 w-4" /> Add a new address
+            </button>
+          </Section>
+
+          {/* 2. Delivery options */}
+          <Section
+            n={2}
+            title="Delivery options"
+            subtitle={selectedQuote
+              ? `${selectedQuote.carrier} • ${selectedQuote.serviceName} — ${formatCents(selectedQuote.amountCents)}`
+              : "Choose a delivery option"}
+            disabled={!selectedAddress}
+          >
+            {!selectedAddress ? (
+              <p className="text-sm text-gray-500">Select a shipping address to see rates.</p>
+            ) : quotesLoading ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin" /> Getting rates…
+              </div>
+            ) : quotesError ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {quotesError}
+              </div>
+            ) : flatQuotes.length === 0 ? (
+              <p className="text-sm text-gray-500">No delivery options available for this address.</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-end mb-3">
+                  <div className="flex items-center rounded-full border border-gray-200 p-0.5 text-xs">
+                    {(["cheapest", "fastest"] as const).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setSortBy(s)}
+                        className={cn(
+                          "px-3 py-1 rounded-full font-semibold capitalize transition-colors",
+                          sortBy === s ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100",
+                        )}
+                      >
+                        Sort: {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+                  {sortedQuotes.map((q) => {
+                    const checked = selectedQuoteId === q.quoteId
+                    return (
+                      <li key={q.quoteId}>
+                        <label className={cn(
+                          "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
+                          checked ? "bg-amber-50/40" : "hover:bg-gray-50",
+                        )}>
+                          <input
+                            type="radio"
+                            name="ship-rate"
+                            checked={checked}
+                            onChange={() => setSelectedQuoteId(q.quoteId)}
+                            className="h-4 w-4 accent-brand-gold"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900">{q.carrier} • {q.serviceName}</p>
+                            <p className="text-xs text-gray-500">
+                              {q.estimatedDays != null ? `Est. ${q.estimatedDays} day${q.estimatedDays === 1 ? "" : "s"}` : "Delivery estimate unavailable"}
+                            </p>
+                          </div>
+                          <p className="text-sm font-bold text-gray-900 tabular-nums">{formatCents(q.amountCents)}</p>
+                        </label>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
+            )}
+          </Section>
+
+          {/* 3. Payment method */}
+          <Section
+            n={3}
+            title="Payment method"
+            subtitle={selectedSavedCardId
+              ? `Saved card •••• ${savedCards.find((c) => c.stripePmId === selectedSavedCardId)?.last4 ?? "????"}`
+              : "Use a new card"}
+            disabled={!selectedAddress || !selectedQuoteId}
+          >
+            <div ref={paymentRootRef}>
+              {(!selectedAddress || !selectedQuoteId) ? (
+                <p className="text-sm text-gray-500">Select an address and delivery option above.</p>
+              ) : !stripeAvailable ? (
+                <div className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
+                  Card payments via Stripe are not available in this region yet.
+                </div>
+              ) : (
+                <PaymentStep
+                  onBackAction={() => { /* no separate back step in V2 */ }}
+                  onCompleteAction={handlePaymentComplete}
+                  total={total}
+                  clientSecret={checkoutResult?.paymentClientSecret ?? null}
+                  checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
+                  stripeAvailable={stripeAvailable}
+                  paymentMethods={paymentMethods}
+                  saveCard={saveCard}
+                  onSaveCardChangeAction={setSaveCard}
+                  savedCards={savedCards}
+                  selectedSavedCardId={selectedSavedCardId}
+                  onSelectedSavedCardChangeAction={setSelectedSavedCardId}
+                />
+              )}
+            </div>
+          </Section>
+
+          {/* 4. Review items */}
+          <Section
+            n={4}
+            title="Review items"
+            subtitle={`${cartItems.length} item${cartItems.length === 1 ? "" : "s"} in your order`}
+          >
+            <ul className="divide-y divide-gray-100">
+              {cartItems.map((it) => (
+                <li key={it.variantId} className="flex gap-3 py-3">
+                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                    {it.imageUrl ? (
+                      <Image src={it.imageUrl} alt={it.title} fill className="object-cover" sizes="64px" unoptimized />
+                    ) : (
+                      <div className="h-full w-full grid place-items-center text-gray-400 text-xs">No image</div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 line-clamp-2">{it.title}</p>
+                    <p className="text-xs text-gray-500">{it.storeName}{it.variantName ? ` • ${it.variantName}` : ""}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(it.variantId, Math.max(0, it.quantity - 1))}
+                        className="h-7 w-7 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        aria-label="Decrease quantity"
+                      >−</button>
+                      <span className="text-sm font-semibold tabular-nums w-6 text-center">{it.quantity}</span>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(it.variantId, it.quantity + 1)}
+                        className="h-7 w-7 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        aria-label="Increase quantity"
+                      >+</button>
+                      <button
+                        type="button"
+                        onClick={() => removeItem(it.variantId)}
+                        className="ml-2 text-xs font-semibold text-red-600 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-gray-900 tabular-nums">{formatCents(it.price * it.quantity)}</p>
+                    <p className="text-xs text-gray-500 tabular-nums">{formatCents(it.price)} ea</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <Link href="/cart" className="mt-3 inline-block text-sm font-semibold text-brand-gold-foreground hover:underline">
+              Edit cart
+            </Link>
+          </Section>
+
+        </div>
+
+        {/* Right rail: Order summary */}
+        <aside className="lg:col-span-1">
+          <div className="lg:sticky lg:top-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-gray-900 mb-3">Order summary</h2>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-gray-600">Items ({cartItems.length})</dt>
+                <dd className="text-gray-900 tabular-nums">{formatCents(subtotal)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-600">Shipping</dt>
+                <dd className="text-gray-900 tabular-nums">
+                  {selectedQuote ? formatCents(shippingCents) : "—"}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-600">Tax</dt>
+                <dd className="text-gray-900 tabular-nums">{formatCents(tax)}</dd>
+              </div>
+              <div className="flex justify-between border-t border-gray-200 pt-2 mt-2">
+                <dt className="text-base font-bold text-gray-900">Order total</dt>
+                <dd className="text-base font-bold text-gray-900 tabular-nums">{formatCents(total)}</dd>
+              </div>
+            </dl>
+
+            {placeError && (
+              <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                <AlertCircle className="h-3 w-3 inline mr-1" /> {placeError}
+              </div>
+            )}
+
+            <PlaceOrderButton
+              disabled={placeDisabled}
+              loading={minting}
+              disabledReason={disabledReason}
+              onClick={handlePlaceOrder}
+              className="hidden lg:flex mt-4 w-full"
+            />
+
+            <p className="mt-3 text-[11px] text-gray-500 text-center">
+              By placing your order, you agree to AfroTransact&apos;s{" "}
+              <a href="/terms" className="underline">Terms</a> and{" "}
+              <a href="/privacy" className="underline">Privacy Policy</a>.
+            </p>
+          </div>
+        </aside>
+      </div>
+
+      {/* Mobile sticky bar */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white p-3 lg:hidden">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-500">Order total</p>
+            <p className="text-base font-bold text-gray-900 tabular-nums">{formatCents(total)}</p>
+          </div>
+          <PlaceOrderButton
+            disabled={placeDisabled}
+            loading={minting}
+            disabledReason={disabledReason}
+            onClick={handlePlaceOrder}
+            className="flex-1"
+          />
+        </div>
+      </div>
+
+      {/* Address modal */}
+      {addrModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setAddrModalOpen(false) }}
+        >
+          <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900">{addrEditingId ? "Edit address" : "Add a new address"}</h3>
+              <button type="button" onClick={() => setAddrModalOpen(false)} className="text-gray-400 hover:text-gray-900">×</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <Field label="Full name" value={form.fullName} onChange={(v) => setForm({ ...form, fullName: v })} />
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
+                <PhoneInput value={form.phone} onChange={(e164) => setForm({ ...form, phone: e164 })} className="w-full" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
+                <AddressAutocomplete
+                  value={addressQuery}
+                  onChange={setAddressQuery}
+                  onSelect={(parts) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      line1: parts.line1,
+                      line2: parts.line2 || prev.line2,
+                      city: parts.city || prev.city,
+                      state: parts.state || prev.state,
+                      zip: parts.zip || prev.zip,
+                    }))
+                    setAddressQuery(parts.line1)
+                  }}
+                  placeholder="Start typing your address…"
+                />
+              </div>
+              <Field label="Apt, suite, unit (optional)" value={form.line2} onChange={(v) => setForm({ ...form, line2: v })} />
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="City" value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
+                <Field label="State" value={form.state} onChange={(v) => setForm({ ...form, state: v })} />
+              </div>
+              <Field label="ZIP code" value={form.zip} onChange={(v) => setForm({ ...form, zip: v })} inputMode="numeric" />
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={makeDefault} onChange={(e) => setMakeDefault(e.target.checked)} className="h-4 w-4 accent-brand-gold" />
+                Set as my default address
+              </label>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+              <button type="button" onClick={() => setAddrModalOpen(false)} className="px-4 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-200">Cancel</button>
+              <button
+                type="button"
+                onClick={handleSaveAddress}
+                disabled={!form.fullName || !form.line1 || !form.city || !form.zip || addrSaving}
+                className="px-4 py-2 rounded-lg bg-brand-gold text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-40 inline-flex items-center gap-2"
+              >
+                {addrSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save address"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  )
+}
+
+/* ── Building blocks ─────────────────────────────────────────────── */
+
+function Section({
+  n, title, subtitle, disabled, children,
+}: {
+  n: number
+  title: string
+  subtitle?: string
+  disabled?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <section className={cn(
+      "rounded-xl border border-gray-200 bg-white shadow-sm",
+      disabled && "opacity-70",
+    )}>
+      <header className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+        <span className="grid place-items-center h-7 w-7 rounded-full bg-gray-900 text-white text-sm font-bold">{n}</span>
+        <div className="min-w-0">
+          <h2 className="text-base font-bold text-gray-900">{title}</h2>
+          {subtitle && <p className="text-xs text-gray-500 truncate">{subtitle}</p>}
+        </div>
+      </header>
+      <div className="p-5">{children}</div>
+    </section>
+  )
+}
+
+function Field({
+  label, value, onChange, inputMode,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  inputMode?: "numeric" | "tel" | "email" | "text" | "decimal" | "search" | "url" | "none"
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        inputMode={inputMode}
+        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+      />
+    </div>
+  )
+}
+
+function PlaceOrderButton({
+  disabled, loading, disabledReason, onClick, className,
+}: {
+  disabled: boolean
+  loading: boolean
+  disabledReason: string | null
+  onClick: () => void
+  className?: string
+}) {
+  const describedById = "place-order-reason"
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-disabled={disabled}
+        aria-describedby={disabledReason ? describedById : undefined}
+        title={disabledReason ?? undefined}
+        className={cn(
+          "inline-flex items-center justify-center gap-2 rounded-xl bg-brand-gold py-3 px-4 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+          className,
+        )}
+      >
+        {loading ? (
+          <><Loader2 className="h-4 w-4 animate-spin" /> Placing order…</>
+        ) : (
+          <><Lock className="h-3.5 w-3.5" /> Place your order</>
+        )}
+      </button>
+      {disabledReason && (
+        <span id={describedById} className="sr-only">{disabledReason}</span>
+      )}
+    </>
+  )
+}
