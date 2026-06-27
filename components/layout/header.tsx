@@ -629,8 +629,11 @@ export function Header() {
               </div>
 
               {/* Cart — mockup lines 157-161 — text-only hover, badge on icon.
-                  Hidden for admin/seller-only sessions (no buyer cart). */}
-              {isBuyerCapable && (
+                  Always visible. For admin/seller-only sessions (no buyer
+                  role) the CartMergeProvider keeps the store in guest mode
+                  (sessionStorage only) so testing the buyer flow doesn't
+                  pollute their account cart — but the icon stays visible so
+                  the admin can actually see what they added. */}
               <Link
                 href="/cart"
                 onClick={() => setMobileMenuOpen(false)}
@@ -652,7 +655,6 @@ export function Header() {
                 </div>
                 <span className="text-[12px] font-semibold tracking-[0.02em] leading-none mt-0.5">Cart</span>
               </Link>
-              )}
             </div>
           </div>
         </div>

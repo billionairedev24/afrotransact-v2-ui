@@ -1,11 +1,15 @@
 "use client"
 
-// Pass 3 of regions→service_zones migration: the legacy `getRegions()`/
-// `getRegionConfig()` fallback has been removed. Effective features now come
-// solely from the resolved Service Zone in `useBuyerLocation`. When no zone
-// is resolved (or its effective-features map is empty), commerce gates
-// default to OFF — we'd rather block a non-resolved buyer from checking out
-// than accidentally let a payment through against a missing rollout context.
+// Service-zone-sourced storefront gates. Effective features come from the
+// resolved zone in `useBuyerLocation`. Defaults are PRESENCE-based:
+//   - If a key is explicitly set on the zone (or any ancestor) → use that.
+//   - If a key is absent OR no zone resolved yet → treat as ENABLED.
+//
+// The prior "default OFF when features empty" stance accidentally blocked
+// every buyer whose location either hadn't resolved yet OR resolved to a
+// zone that simply hadn't been configured with a feature row. Marketplace
+// is the baseline experience; admins explicitly turn it OFF when they want
+// to kill checkout in a region.
 
 import { useEffect, useState } from "react"
 import { useBuyerLocation } from "@/stores/buyer-location"
@@ -13,22 +17,16 @@ import { useBuyerLocation } from "@/stores/buyer-location"
 /** Default region storefront gates for cart/checkout (zone-sourced). */
 export function useDefaultRegionCommerceGates() {
   const [loading, setLoading] = useState(true)
-  const [marketplaceEnabled, setMarketplaceEnabled] = useState(false)
-  const [stripeEnabled, setStripeEnabled] = useState(false)
+  const [marketplaceEnabled, setMarketplaceEnabled] = useState(true)
+  const [stripeEnabled, setStripeEnabled] = useState(true)
 
   const resolvedZone = useBuyerLocation((s) => s.resolvedZone)
 
   useEffect(() => {
     const feats = resolvedZone?.effectiveFeatures ?? {}
-    if (Object.keys(feats).length === 0) {
-      // Conservative default: gates OFF when zone features are empty.
-      setMarketplaceEnabled(false)
-      setStripeEnabled(false)
-      setLoading(false)
-      return
-    }
-    setMarketplaceEnabled(feats["marketplace_enabled"] === true)
-    setStripeEnabled(feats["stripe"] === true)
+    // Presence-based: undefined key → enabled (baseline); explicit false → off.
+    setMarketplaceEnabled(feats["marketplace_enabled"] !== false)
+    setStripeEnabled(feats["stripe"] !== false)
     setLoading(false)
   }, [resolvedZone])
 
