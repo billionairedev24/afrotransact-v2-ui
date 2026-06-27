@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react"
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X, Sparkles, Tag, Zap, AlertCircle } from "lucide-react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
-import { clearServerCart, getRegionConfig, prefetchCheckoutShippingContext } from "@/lib/api"
+import { clearServerCart, prefetchCheckoutShippingContext } from "@/lib/api"
 import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useDefaultRegionCommerceGates } from "@/hooks/use-default-region-commerce-gates"
@@ -59,24 +59,13 @@ export default function CartPage() {
   const { decisions: eligibilityByStore, hasBlocker: eligibilityBlocked, locationSet } =
     useCartEligibility(storeIds)
   const buyerPostalCode = useBuyerLocation((s) => s.location?.postalCode ?? "")
-  const [freeShippingThresholdCents, setFreeShippingThresholdCents] = useState<number | null>(null)
-  useEffect(() => {
-    if (!mounted) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        // NOTE: this call is only used for the free-shipping threshold (a
-        // non-feature-flag value). Feature flags themselves are routed through
-        // `useDefaultRegionCommerceGates` / `useEffectiveFeatures`, which
-        // already prefer the Service Zones resolver. No swap needed here.
-        const cfg = await getRegionConfig("us-tx-default")
-        if (!cancelled) setFreeShippingThresholdCents(cfg.region.freeShippingThresholdCents)
-      } catch {
-        if (!cancelled) setFreeShippingThresholdCents(null)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [mounted])
+  // Pass 3 of regions→service_zones: free-shipping threshold now sourced from
+  // the resolved Service Zone. No legacy fallback — banner is hidden when no
+  // zone resolves or the zone does not declare a threshold.
+  const resolvedZoneThreshold = useBuyerLocation(
+    (s) => s.resolvedZone?.effectiveSettings?.freeShippingThresholdCents ?? null,
+  )
+  const freeShippingThresholdCents: number | null = mounted ? resolvedZoneThreshold : null
   const subtotal = mounted ? getSubtotal() : 0
   const totalQty = mounted ? getItemCount() : 0
   const estimatedTax = Math.round(subtotal * 0.0825) // 8.25% TX

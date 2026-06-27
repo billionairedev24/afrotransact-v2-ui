@@ -26,12 +26,10 @@ import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import {
-  getRegionConfig,
-  getRegions,
   loadCheckoutShippingContext,
+  resolveServiceZone,
   type CheckoutShippingContext,
 } from "@/lib/api"
-import { resolveDefaultRegion } from "@/lib/regions"
 import CheckoutClient from "./CheckoutClient"
 import CheckoutClientV2 from "./CheckoutClientV2"
 
@@ -39,21 +37,21 @@ export const dynamic = "force-dynamic"
 
 export default async function CheckoutPage() {
   /** Server-side guard: avoids loading checkout when commerce kill-switches are off (client still banners).
-   *  NOTE: We intentionally do NOT call the Service Zones resolver here.
-   *  Buyer location lives in the client (localStorage-backed Zustand store)
-   *  and is unavailable at SSR time. The legacy `getRegionConfig` path is
-   *  fine as a conservative server-side gate; the client (CheckoutClientV2)
-   *  re-evaluates feature flags using the zone-aware `useEffectiveFeatures`
-   *  hook once mounted. */
+   *  Pass 3 of regions→service_zones migration: this gate now goes through
+   *  the public Service Zone resolver. SSR has no buyer location (it lives
+   *  in a localStorage-backed Zustand store), so we do a best-effort resolve
+   *  using the default country. The client (CheckoutClientV2) re-evaluates
+   *  with the real resolved zone once mounted.
+   *
+   *  paymentMethods are NOT seeded here; per-zone payment methods are not
+   *  yet wired in config-service and joining via regions_legacy_id would
+   *  require a backend change outside this pass's scope. The client picks
+   *  up payment methods independently after mount. */
   try {
-    const regions = await getRegions(undefined, true)
-    const region = resolveDefaultRegion(regions)
-    if (region) {
-      const cfg = await getRegionConfig(region.code)
-      const feats = cfg.features ?? {}
-      if (feats.marketplace_enabled === false || feats.stripe === false) {
-        redirect("/cart?notice=checkout_unavailable")
-      }
+    const resolved = await resolveServiceZone("US")
+    const feats = resolved?.effectiveFeatures ?? {}
+    if (feats.marketplace_enabled === false || feats.stripe === false) {
+      redirect("/cart?notice=checkout_unavailable")
     }
   } catch {
     // Upstream unreachable — CheckoutClient banners + order-service gates still defend.

@@ -2242,6 +2242,17 @@ export interface ZoneInput {
   free_shipping_threshold_cents?: number | null
 }
 
+// Public list of Service Zones. The `level` filter narrows to a single tier
+// (e.g. "country") and is served from the cacheable public endpoint added in
+// Pass 3 of the regions→service_zones migration. Used by seller-facing UIs
+// that previously called getRegions() to populate a country picker.
+export async function getCountryZones(): Promise<ServiceZone[]> {
+  const res = await api<{ zones: RawServiceZone[] | null }>(
+    "/api/v1/zones?level=country",
+  )
+  return (res.zones ?? []).map(mapZone)
+}
+
 export async function listAdminZones(token: string): Promise<ServiceZone[]> {
   const res = await api<{ zones: RawServiceZone[] }>("/api/v1/admin/zones", { token })
   return (res.zones ?? []).map(mapZone)
