@@ -602,6 +602,32 @@ export function updatePaymentSettings(token: string, data: PaymentSettings) {
   return api<PaymentSettings>("/api/v1/admin/settings/payment", { method: "PUT", body: data, token })
 }
 
+// ── Admin: Store shipping diagnostics ────────────────────────────────────
+
+export type StoreShippingMode = "unlimited" | "radius" | "regions"
+
+export interface AdminStoreShippingRow {
+  storeId: string
+  name: string | null
+  slug: string | null
+  shippingMode: StoreShippingMode
+  shippingRadiusMeters: number | null
+  regionCount: number
+  originGeocoded: boolean
+  stuckReason: string | null
+}
+
+export function listAdminStoreShipping(token: string) {
+  return api<AdminStoreShippingRow[]>("/api/v1/admin/stores/shipping", { token })
+}
+
+export function setAdminStoreShippingMode(token: string, storeId: string, mode: StoreShippingMode) {
+  return api<{ storeId: string; shippingMode: StoreShippingMode }>(
+    `/api/v1/admin/stores/shipping/${storeId}/mode`,
+    { method: "POST", body: { mode }, token },
+  )
+}
+
 // ── Admin: Alerts settings (Slack webhook) ──
 
 export interface AlertsSettings {

@@ -450,6 +450,20 @@ export default function SettingsPage() {
         </Link>
       </Section>
 
+      <Section
+        icon={Globe}
+        title="Store shipping diagnostics"
+        subtitle="See every seller's effective shipping policy and force-flip stuck stores to Unlimited so buyers can complete checkout."
+      >
+        <Link
+          href="/admin/settings/store-shipping"
+          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 text-sm font-bold text-background hover:opacity-90 transition-colors"
+        >
+          Open Store shipping
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </Section>
+
       {/* ── Alerts (Slack webhook) — standalone Save since it doesn't share the payment form's endpoint. ── */}
       <Section icon={Bell} title="Alerts" subtitle="Slack webhook for critical seller-lifecycle alerts (payouts paused, charges paused, payout failed, rejected accounts).">
         <div className="space-y-4">
