@@ -56,19 +56,47 @@ function toMergePayload(items: CartItem[]) {
   }))
 }
 
+/**
+ * A user is "buyer-capable" iff their roles list includes "buyer" OR has no
+ * roles at all (default buyer). Admin/seller-only sessions skip the entire
+ * cart-sync lifecycle — no /api/v1/cart calls, no auth mode flip — to avoid
+ * pointless server traffic + 404s in admin/seller surfaces.
+ */
+function isBuyerCapableRoles(roles: string[] | undefined | null): boolean {
+  if (!roles || roles.length === 0) return true
+  return roles.includes("buyer")
+}
+
 export function CartMergeProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const [cartReady, setCartReady] = useState(false)
   const hydratedForToken = useRef<string | null>(null)
   const isAuthenticatedRef = useRef(false)
 
-  useEffect(() => {
-    isAuthenticatedRef.current = status === "authenticated"
-  }, [status])
+  const roles = (session?.user as { roles?: string[] } | undefined)?.roles
+  const isBuyerCapable = isBuyerCapableRoles(roles)
 
-  // ── Authenticated: merge guest cart → server, hydrate canonical cart, flip mode ──
+  useEffect(() => {
+    // Treat non-buyer (admin/seller-only) sessions as "not authenticated" for
+    // cart purposes: subscriber below persists to sessionStorage as guest.
+    isAuthenticatedRef.current = status === "authenticated" && isBuyerCapable
+  }, [status, isBuyerCapable])
+
+  // ── Authenticated buyer: merge guest cart → server, hydrate canonical cart, flip mode ──
   useEffect(() => {
     if (status !== "authenticated") return
+    if (!isBuyerCapable) {
+      // Admin/seller-only session — no buyer cart. Stay in guest mode, no API calls.
+      hydratedForToken.current = null
+      useCartStore.setState({
+        items: [],
+        mode: "guest",
+        serverItemIds: {},
+        syncing: false,
+      })
+      setCartReady(true)
+      return
+    }
     const token = session?.accessToken as string | undefined
     if (!token) return
     if (hydratedForToken.current === token) return
@@ -109,14 +137,15 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
         setCartReady(true)
       }
     })()
-  }, [status, session?.accessToken])
+  }, [status, session?.accessToken, isBuyerCapable])
 
   // Authenticated but no access token yet — don't block the UI forever.
   useEffect(() => {
     if (status !== "authenticated") return
+    if (!isBuyerCapable) return
     if (session?.accessToken) return
     setCartReady(true)
-  }, [status, session?.accessToken])
+  }, [status, session?.accessToken, isBuyerCapable])
 
   // ── Unauthenticated: hydrate from guest sessionStorage; reset mode + cached server ids. ──
   useEffect(() => {

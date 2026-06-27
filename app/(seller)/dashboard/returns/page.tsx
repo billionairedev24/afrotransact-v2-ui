@@ -68,7 +68,7 @@ export default function SellerReturnsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    <div>
       <header className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <RotateCcw className="h-6 w-6" /> Returns

@@ -194,7 +194,7 @@ export default function InvitesPage() {
   ], [resend.isPending, resend.variables, revoke.isPending])
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
+    <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Seller Invites</h1>
         <p className="text-sm text-muted-foreground">

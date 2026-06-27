@@ -279,6 +279,27 @@ export default function AdminCouponsPage() {
           )
         }
         const on = s === "active"
+        // Seller-owned coupons are view-only for admins: surface status as a
+        // static pill rather than a toggle. Admins create + manage site-wide
+        // coupons (sellerId == null) — those still get the inline switch.
+        if (c.sellerId) {
+          return (
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  on
+                    ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+                    : "bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-200"
+                }`}
+              >
+                {on ? "Active" : "Paused"}
+              </span>
+              <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                seller-owned
+              </span>
+            </div>
+          )
+        }
         return (
           <div className="flex items-center gap-2">
             <InlineSwitch

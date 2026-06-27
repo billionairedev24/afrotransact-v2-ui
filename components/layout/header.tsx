@@ -173,6 +173,9 @@ export function Header() {
   const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
   const isAdmin = roles.includes("admin")
   const isSeller = roles.includes("seller")
+  // Cart icon + buyer-cart sync is gated on this — admins/sellers without the
+  // "buyer" role don't have a buyer cart. Mirrors CartMergeProvider's gate.
+  const isBuyerCapable = roles.length === 0 || roles.includes("buyer")
   // Developers carry admin + seller + buyer via the composite role, so the
   // existing isAdmin / isSeller checks already grant access. We surface the
   // discriminator with a badge so it's obvious who has elevated debug access.
@@ -625,7 +628,9 @@ export function Header() {
                 )}
               </div>
 
-              {/* Cart — mockup lines 157-161 — text-only hover, badge on icon */}
+              {/* Cart — mockup lines 157-161 — text-only hover, badge on icon.
+                  Hidden for admin/seller-only sessions (no buyer cart). */}
+              {isBuyerCapable && (
               <Link
                 href="/cart"
                 onClick={() => setMobileMenuOpen(false)}
@@ -647,6 +652,7 @@ export function Header() {
                 </div>
                 <span className="text-[12px] font-semibold tracking-[0.02em] leading-none mt-0.5">Cart</span>
               </Link>
+              )}
             </div>
           </div>
         </div>

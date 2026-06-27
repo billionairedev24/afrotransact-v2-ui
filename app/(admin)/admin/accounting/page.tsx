@@ -136,7 +136,7 @@ export default function AdminAccountingPage() {
   const empty = summary?.journalEntryCount === 0
 
   return (
-    <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8">
+    <main className="py-2">
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
