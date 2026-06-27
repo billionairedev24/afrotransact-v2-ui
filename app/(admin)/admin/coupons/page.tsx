@@ -321,6 +321,19 @@ export default function AdminCouponsPage() {
       enableHiding: false,
       cell: ({ row }) => {
         const c = row.original
+        // Seller-owned coupons are read-only for admin — only "View" is offered.
+        // Site-wide (admin-created) coupons keep the full Edit action.
+        if (c.sellerId) {
+          return (
+            <RowActions actions={[
+              {
+                label: "View",
+                icon: <Pencil className="h-4 w-4" />,
+                onClick: () => { setEditing(c); setShowForm(false) },
+              },
+            ]} />
+          )
+        }
         return (
           <RowActions actions={[
             {
@@ -349,50 +362,16 @@ export default function AdminCouponsPage() {
         </button>
       </div>
 
-      {/* Region "Coupons feature" status band */}
-      <section className="rounded-xl border border-input bg-white p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-gray-900">Coupons feature</h2>
-        </div>
-        {!regionsLoaded ? (
-          <p className="mt-2 text-xs text-gray-400">Loading regions…</p>
-        ) : regionsErrored || regions.length === 0 ? (
-          <p className="mt-2 text-xs text-gray-500">No regions configured.</p>
-        ) : (
-          <>
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-              {regions.map((r) => {
-                const on = regionFlags[r.id] ?? false
-                return (
-                  <div
-                    key={r.id}
-                    className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1"
-                  >
-                    <span className="text-xs font-medium text-gray-700">{r.code || r.name}</span>
-                    <InlineSwitch
-                      on={on}
-                      busy={regionSavingId === r.id}
-                      onClick={() => handleRegionToggle(r)}
-                      ariaLabel={on ? `Disable coupons for ${r.code || r.name}` : `Enable coupons for ${r.code || r.name}`}
-                    />
-                    <span className={`text-[10px] font-semibold uppercase tracking-wide ${on ? "text-emerald-700" : "text-gray-400"}`}>
-                      {on ? "On" : "Off"}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-            <p className="mt-3 text-xs text-gray-500">
-              Toggle to show or hide the coupon input at checkout for buyers in that region.
-            </p>
-          </>
-        )}
-      </section>
+      {/* The "Coupons feature" region-band lived here previously. It moved
+          to Settings → Service locations, where the coupons_enabled feature
+          flag is managed per zone (with inheritance) instead of per region. */}
 
       {(showForm || editing) && (
         <CouponForm
           coupon={editing}
           isAdmin
+          // Seller-owned coupons open in view-only mode; site-wide stay editable.
+          readOnly={!!editing?.sellerId}
           onSubmit={editing ? (d) => handleUpdate(editing.id, d) : handleCreate}
           onCancel={() => { setShowForm(false); setEditing(null) }}
         />
@@ -454,11 +433,13 @@ export default function AdminCouponsPage() {
 function CouponForm({
   coupon,
   isAdmin,
+  readOnly = false,
   onSubmit,
   onCancel,
 }: {
   coupon: CouponData | null
   isAdmin?: boolean
+  readOnly?: boolean
   onSubmit: (data: CouponCreateRequest) => Promise<void>
   onCancel: () => void
 }) {
@@ -499,32 +480,37 @@ function CouponForm({
 
   const inputCls = "w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/50"
 
+  const inputAttrs = readOnly ? { readOnly: true, disabled: true } : {}
+  const selectAttrs = readOnly ? { disabled: true } : {}
+
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-input bg-white p-6 space-y-4">
+    <form onSubmit={readOnly ? (e) => e.preventDefault() : handleSubmit} className="rounded-xl border border-input bg-white p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">{coupon ? "Edit Coupon" : "Create Site-Wide Coupon"}</h3>
+        <h3 className="text-sm font-semibold text-gray-900">
+          {readOnly ? "View Coupon (seller-owned, read-only)" : coupon ? "Edit Coupon" : "Create Site-Wide Coupon"}
+        </h3>
         <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><X className="h-4 w-4" /></button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Code *</label>
-          <input value={code} onChange={e => setCode(e.target.value)} placeholder="LAUNCH50" className={inputCls} />
+          <input value={code} onChange={e => setCode(e.target.value)} placeholder="LAUNCH50" className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Type *</label>
-          <select value={type} onChange={e => setType(e.target.value as "percentage" | "fixed_amount")} className={inputCls}>
+          <select value={type} onChange={e => setType(e.target.value as "percentage" | "fixed_amount")} className={inputCls} {...selectAttrs}>
             <option value="percentage">Percentage</option>
             <option value="fixed_amount">Fixed Amount</option>
           </select>
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Value * ({type === "percentage" ? "%" : "$"})</label>
-          <input type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} placeholder={type === "percentage" ? "25" : "5.00"} className={inputCls} />
+          <input type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} placeholder={type === "percentage" ? "25" : "5.00"} className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Scope</label>
-          <select value={scope} onChange={e => setScope(e.target.value as typeof scope)} className={inputCls}>
+          <select value={scope} onChange={e => setScope(e.target.value as typeof scope)} className={inputCls} {...selectAttrs}>
             <option value="site_wide">Site-Wide</option>
             <option value="product">Product</option>
             <option value="store">Store</option>
@@ -533,31 +519,33 @@ function CouponForm({
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Min Order ($)</label>
-          <input type="number" step="0.01" value={minOrder} onChange={e => setMinOrder(e.target.value)} placeholder="0" className={inputCls} />
+          <input type="number" step="0.01" value={minOrder} onChange={e => setMinOrder(e.target.value)} placeholder="0" className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Max Discount ($)</label>
-          <input type="number" step="0.01" value={maxDiscount} onChange={e => setMaxDiscount(e.target.value)} placeholder="No limit" className={inputCls} />
+          <input type="number" step="0.01" value={maxDiscount} onChange={e => setMaxDiscount(e.target.value)} placeholder="No limit" className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Usage Limit</label>
-          <input type="number" value={usageLimit} onChange={e => setUsageLimit(e.target.value)} placeholder="Unlimited" className={inputCls} />
+          <input type="number" value={usageLimit} onChange={e => setUsageLimit(e.target.value)} placeholder="Unlimited" className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Per-User Limit</label>
-          <input type="number" value={perUserLimit} onChange={e => setPerUserLimit(e.target.value)} placeholder="1" className={inputCls} />
+          <input type="number" value={perUserLimit} onChange={e => setPerUserLimit(e.target.value)} placeholder="1" className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Expires At *</label>
-          <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} className={inputCls} />
+          <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} className={inputCls} {...inputAttrs} />
         </div>
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>
+        <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">{readOnly ? "Close" : "Cancel"}</button>
+        {!readOnly && (
         <button type="submit" disabled={submitting} className="rounded-lg bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-50 transition-colors">
           {submitting ? "Saving…" : coupon ? "Update" : "Create"}
         </button>
+        )}
       </div>
     </form>
   )
