@@ -15,6 +15,7 @@ import { useDefaultRegionCommerceGates } from "@/hooks/use-default-region-commer
 import { useCartEligibility } from "@/components/buyer/useCartEligibility"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { PostMergeNotice } from "@/components/cart/PostMergeNotice"
+import { RegionBlock } from "@/components/geo/RegionBlock"
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -70,6 +71,18 @@ export default function CartPage() {
   const totalQty = mounted ? getItemCount() : 0
   const estimatedTax = Math.round(subtotal * 0.0825) // 8.25% TX
   const total = subtotal + estimatedTax
+
+  // Non-operational zones: block cart entirely. RegionBlock handles its own
+  // status check; we just need to wrap children so they never render in a
+  // coming_soon / disabled / not_serviced region.
+  const resolvedStatus = useBuyerLocation((s) => s.resolvedZone?.status)
+  if (mounted && (resolvedStatus === "coming_soon" || resolvedStatus === "disabled" || resolvedStatus === "not_serviced")) {
+    return (
+      <main className="mx-auto max-w-[1200px] px-4 sm:px-6 py-8">
+        <RegionBlock>{null}</RegionBlock>
+      </main>
+    )
+  }
 
   if (!mounted) {
     return (

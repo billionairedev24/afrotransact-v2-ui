@@ -32,6 +32,7 @@ import {
 } from "@/lib/api"
 import CheckoutClient from "./CheckoutClient"
 import CheckoutClientV2 from "./CheckoutClientV2"
+import { RegionBlock } from "@/components/geo/RegionBlock"
 
 export const dynamic = "force-dynamic"
 
@@ -75,7 +76,15 @@ export default async function CheckoutPage() {
   // Feature-flagged V2 single-page checkout. Default off — flip
   // NEXT_PUBLIC_CHECKOUT_V2=true in .env.local to opt in.
   if (process.env.NEXT_PUBLIC_CHECKOUT_V2 === "true") {
-    return <CheckoutClientV2 initialContext={initialContext} />
+    return (
+      <RegionBlock>
+        <CheckoutClientV2 initialContext={initialContext} />
+      </RegionBlock>
+    )
   }
-  return <CheckoutClient initialContext={initialContext} />
+  return (
+    <RegionBlock>
+      <CheckoutClient initialContext={initialContext} />
+    </RegionBlock>
+  )
 }

@@ -3723,3 +3723,59 @@ export function mergeWishlist(token: string, productIds: string[]) {
 }
 
 export { API_BASE }
+
+// ── Public: Waitlist ─────────────────────────────────────────────────────
+// Captures emails for buyers whose service zone is coming_soon, disabled, or
+// not_serviced. POST-only public endpoint; backend dedupes via UNIQUE(email,
+// country_code) so retries are safe.
+
+export interface WaitlistSignupInput {
+  email: string
+  countryCode: string
+  subdivisionCode?: string | null
+  city?: string | null
+  source?: string
+}
+
+export interface WaitlistSignupResult {
+  ok: boolean
+  existing?: boolean
+}
+
+export async function postWaitlistSignup(input: WaitlistSignupInput): Promise<WaitlistSignupResult> {
+  const body: Record<string, string> = {
+    email: input.email,
+    country_code: input.countryCode,
+  }
+  if (input.subdivisionCode) body.subdivision_code = input.subdivisionCode
+  if (input.city) body.city = input.city
+  body.source = input.source ?? "storefront"
+  return api<WaitlistSignupResult>(`/api/v1/waitlist`, {
+    method: "POST",
+    body,
+  })
+}
+
+export interface WaitlistRow {
+  id: string
+  email: string
+  country_code: string
+  subdivision_code: string | null
+  city: string | null
+  source: string
+  created_at: string
+}
+
+export async function listWaitlistSignups(
+  token: string,
+  opts: { countryCode?: string; limit?: number } = {},
+): Promise<{ signups: WaitlistRow[]; limit: number }> {
+  const params = new URLSearchParams()
+  if (opts.countryCode) params.set("country_code", opts.countryCode)
+  if (opts.limit) params.set("limit", String(opts.limit))
+  const qs = params.toString()
+  return api<{ signups: WaitlistRow[]; limit: number }>(
+    `/api/v1/admin/waitlist${qs ? `?${qs}` : ""}`,
+    { token },
+  )
+}

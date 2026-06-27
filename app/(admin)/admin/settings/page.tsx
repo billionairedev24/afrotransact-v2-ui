@@ -436,6 +436,20 @@ export default function SettingsPage() {
         </Link>
       </Section>
 
+      <Section
+        icon={Globe}
+        title="Waitlist signups"
+        subtitle="Buyers who asked to be notified when AfroTransact launches in their country."
+      >
+        <Link
+          href="/admin/settings/waitlist"
+          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 text-sm font-bold text-background hover:opacity-90 transition-colors"
+        >
+          Open Waitlist signups
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </Section>
+
       {/* ── Alerts (Slack webhook) — standalone Save since it doesn't share the payment form's endpoint. ── */}
       <Section icon={Bell} title="Alerts" subtitle="Slack webhook for critical seller-lifecycle alerts (payouts paused, charges paused, payout failed, rejected accounts).">
         <div className="space-y-4">
