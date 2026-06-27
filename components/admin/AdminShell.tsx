@@ -95,7 +95,8 @@ const NAV_GROUPS: NavGroup[] = [
     title: "Settings",
     items: [
       { href: "/admin/regions",              label: "Regions",         icon: MapPin },
-      { href: "/admin/zones",                label: "Service Zones",   icon: MapPin },
+      // Service Zones moved under Settings → "Service locations" card.
+      // Legacy /admin/zones URL still works; /admin/settings/zones is the new home.
       { href: "/admin/subscription",         label: "Plans",           icon: ShieldCheck },
       { href: "/admin/email-templates",      label: "Email Templates", icon: Mail },
       { href: "/admin/notification-routing", label: "Alert Routing",   icon: Bell },

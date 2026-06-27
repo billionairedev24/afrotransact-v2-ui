@@ -2286,6 +2286,18 @@ export async function upsertZoneFeature(
   })
 }
 
+// Public feature catalog — same shape across envs. Used by the admin UI to
+// render the feature dropdown without a hardcoded list drifting from the
+// server. The static FEATURE_CATALOG in lib/feature-catalog.ts is the
+// synchronous fallback.
+export async function getFeatureCatalog(): Promise<
+  import("./feature-catalog").FeatureCatalogEntry[]
+> {
+  return api<import("./feature-catalog").FeatureCatalogEntry[]>(
+    `/api/v1/zones/feature-catalog`,
+  )
+}
+
 // Public resolver used by the storefront once a buyer location is known.
 // Returns null when no zone matches the country (silently fall through).
 export async function resolveServiceZone(

@@ -25,6 +25,7 @@ import {
   type ZoneInput,
   type ZoneLevel,
 } from "@/lib/api"
+import { FEATURE_CATALOG, featureMeta } from "@/lib/feature-catalog"
 import { friendlyMessage, logError } from "@/lib/errors"
 
 const INPUT_CLASS =
@@ -200,12 +201,12 @@ export default function AdminZonesPage() {
     }
   }
 
-  async function addFeature(zoneId: string, key: string) {
+  async function addFeature(zoneId: string, key: string, enabled = true) {
     if (!key.trim()) return
     try {
       const token = await getAccessToken()
       if (!token) return
-      await upsertZoneFeature(token, zoneId, key.trim(), true)
+      await upsertZoneFeature(token, zoneId, key.trim(), enabled)
       await loadFeatures(zoneId)
     } catch (err) {
       logError(err, "AdminZones.addFeature")
@@ -373,7 +374,7 @@ export default function AdminZonesPage() {
                       zone={node}
                       features={featuresByZone[node.id] ?? []}
                       onSetEnabled={(key, enabled) => setFeatureEnabled(node.id, key, enabled)}
-                      onAdd={(key) => addFeature(node.id, key)}
+                      onAdd={(key, enabled) => addFeature(node.id, key, enabled)}
                     />
                   )}
                 </li>
@@ -564,9 +565,19 @@ function FeaturesPanel({
   zone: ServiceZone
   features: ZoneFeature[]
   onSetEnabled: (key: string, enabled: boolean) => void
-  onAdd: (key: string) => void
+  onAdd: (key: string, enabled: boolean) => void
 }) {
-  const [newKey, setNewKey] = useState("")
+  const configuredKeys = new Set(features.map((f) => f.featureKey))
+  const available = FEATURE_CATALOG.filter((e) => !configuredKeys.has(e.key))
+  const [newKey, setNewKey] = useState<string>(available[0]?.key ?? "")
+  const [newEnabled, setNewEnabled] = useState(true)
+  // Keep dropdown selection valid when the available set changes (e.g. after Add).
+  useEffect(() => {
+    if (newKey && !available.some((e) => e.key === newKey)) {
+      setNewKey(available[0]?.key ?? "")
+    }
+  }, [available, newKey])
+  const selectedMeta = featureMeta(newKey)
   return (
     <div className="border-t border-border bg-muted/30 px-6 py-4">
       <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -576,41 +587,74 @@ function FeaturesPanel({
         <div className="mb-3 text-xs text-muted-foreground">No features defined directly.</div>
       )}
       <ul className="mb-3 space-y-1.5">
-        {features.map((f) => (
-          <li key={f.id} className="flex items-center justify-between gap-3 text-sm">
-            <code className="font-mono text-foreground">{f.featureKey}</code>
-            <label className="inline-flex items-center gap-2">
+        {features.map((f) => {
+          const meta = featureMeta(f.featureKey)
+          return (
+            <li
+              key={f.id}
+              className="flex items-start justify-between gap-3 text-sm"
+              title={meta?.description}
+            >
+              <div className="min-w-0">
+                <div className="font-medium text-foreground">{meta?.name ?? f.featureKey}</div>
+                {meta?.description && (
+                  <div className="text-[11px] text-muted-foreground/80">{meta.description}</div>
+                )}
+              </div>
+              <label className="inline-flex shrink-0 items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={f.enabled}
+                  onChange={(e) => onSetEnabled(f.featureKey, e.target.checked)}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {f.enabled ? "enabled" : "disabled"}
+                </span>
+              </label>
+            </li>
+          )
+        })}
+      </ul>
+      {available.length === 0 ? (
+        <div className="text-xs text-muted-foreground">All catalog features are configured.</div>
+      ) : (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <select
+              value={newKey}
+              onChange={(e) => setNewKey(e.target.value)}
+              className={INPUT_CLASS + " max-w-xs"}
+            >
+              {available.map((e) => (
+                <option key={e.key} value={e.key}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
               <input
                 type="checkbox"
-                checked={f.enabled}
-                onChange={(e) => onSetEnabled(f.featureKey, e.target.checked)}
+                checked={newEnabled}
+                onChange={(e) => setNewEnabled(e.target.checked)}
               />
-              <span className="text-xs text-muted-foreground">
-                {f.enabled ? "enabled" : "disabled"}
-              </span>
+              {newEnabled ? "enabled" : "disabled"}
             </label>
-          </li>
-        ))}
-      </ul>
-      <div className="flex items-center gap-2">
-        <input
-          type="text"
-          value={newKey}
-          onChange={(e) => setNewKey(e.target.value)}
-          placeholder="feature_key"
-          className={INPUT_CLASS + " max-w-xs"}
-        />
-        <button
-          type="button"
-          onClick={() => {
-            onAdd(newKey)
-            setNewKey("")
-          }}
-          className="rounded-lg border border-border px-2 py-1.5 text-xs font-medium hover:bg-muted"
-        >
-          Add
-        </button>
-      </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (!newKey) return
+                onAdd(newKey, newEnabled)
+              }}
+              className="rounded-lg border border-border px-2 py-1.5 text-xs font-medium hover:bg-muted"
+            >
+              Add
+            </button>
+          </div>
+          {selectedMeta?.description && (
+            <div className="text-[11px] text-muted-foreground/80">{selectedMeta.description}</div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
