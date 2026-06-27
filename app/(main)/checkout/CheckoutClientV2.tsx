@@ -886,56 +886,39 @@ export default function CheckoutClientV2({
                     ))}
                   </div>
                 </div>
-                <div className="space-y-3">
-                  {sortedGroups.map((g) => (
-                    <div key={g.carrier}>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
-                        {g.allSynthetic ? "Platform shipping" : g.carrier}
-                      </p>
-                      <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-                        {g.options.map((q) => {
-                          const checked = selectedQuoteId === q.quoteId
-                          const isPlatform = q.quoteId?.startsWith("synthetic:") ?? false
-                          return (
-                            <li key={q.quoteId}>
-                              <label className={cn(
-                                "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
-                                checked ? "bg-amber-50/40" : "hover:bg-gray-50",
-                              )}>
-                                <input
-                                  type="radio"
-                                  name="ship-rate"
-                                  checked={checked}
-                                  onChange={() => setSelectedQuoteId(q.quoteId)}
-                                  className="h-4 w-4 accent-brand-gold"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
-                                    <span>{q.carrier} • {q.serviceName}</span>
-                                    {isPlatform && (
-                                      <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200">
-                                        Platform estimate
-                                      </span>
-                                    )}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    {q.estimatedDays != null ? `Est. ${q.estimatedDays} day${q.estimatedDays === 1 ? "" : "s"}` : "Delivery estimate unavailable"}
-                                  </p>
-                                </div>
-                                <p className="text-sm font-bold text-gray-900 tabular-nums">{formatCents(q.amountCents)}</p>
-                              </label>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-                {anySyntheticVisible && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Platform estimates are used when carriers aren&apos;t reachable. Final cost may differ slightly.
-                  </p>
-                )}
+                {/* Amazon-style flat ranked list. Carrier brand (USPS/UPS/
+                    FedEx) is intentionally hidden — the buyer chooses by
+                    speed and price; the carrier is a backstage detail. */}
+                <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+                  {flatQuotes.map((q) => {
+                    const checked = selectedQuoteId === q.quoteId
+                    return (
+                      <li key={q.quoteId}>
+                        <label className={cn(
+                          "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
+                          checked ? "bg-amber-50/40" : "hover:bg-gray-50",
+                        )}>
+                          <input
+                            type="radio"
+                            name="ship-rate"
+                            checked={checked}
+                            onChange={() => setSelectedQuoteId(q.quoteId)}
+                            className="h-4 w-4 accent-brand-gold"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {q.serviceName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {q.estimatedDays != null ? `Arrives in ${q.estimatedDays} day${q.estimatedDays === 1 ? "" : "s"}` : "Delivery estimate unavailable"}
+                            </p>
+                          </div>
+                          <p className="text-sm font-bold text-gray-900 tabular-nums">{formatCents(q.amountCents)}</p>
+                        </label>
+                      </li>
+                    )
+                  })}
+                </ul>
               </>
             )}
           </Section>
