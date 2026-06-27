@@ -642,16 +642,22 @@ export function Header() {
               >
                 <div className="relative">
                   <ShoppingCart className="h-6 w-6" strokeWidth={1.75} />
-                  {!cartReady || cartSyncing ? (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/20">
-                      <Loader2 className="h-2.5 w-2.5 animate-spin text-white" aria-hidden />
-                      <span className="sr-only">{cartSyncing ? "Syncing cart" : "Loading cart"}</span>
-                    </span>
-                  ) : cartCount > 0 ? (
+                  {/* Show the count whenever we have items. The spinner is a
+                      tiny overlay only during an active server sync. The old
+                      "!cartReady → spinner, else → count" gate left the count
+                      hidden whenever NextAuth was still resolving the session,
+                      which made the cart look stuck on admin sessions. */}
+                  {cartCount > 0 && (
                     <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-brand-gold-foreground px-0.5">
                       {cartCount}
                     </span>
-                  ) : null}
+                  )}
+                  {cartSyncing && (
+                    <span className="absolute -bottom-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-white/20" aria-hidden>
+                      <Loader2 className="h-2 w-2 animate-spin text-white" />
+                      <span className="sr-only">Syncing cart</span>
+                    </span>
+                  )}
                 </div>
                 <span className="text-[12px] font-semibold tracking-[0.02em] leading-none mt-0.5">Cart</span>
               </Link>
