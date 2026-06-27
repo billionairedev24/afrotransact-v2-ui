@@ -109,7 +109,7 @@ export default function AdminRefundsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
+    <main className="min-w-0">
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">

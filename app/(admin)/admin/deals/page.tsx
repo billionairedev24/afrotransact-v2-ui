@@ -222,7 +222,7 @@ export default function AdminDealsPage() {
   )
 
   return (
-    <div className="mx-auto min-w-0 w-full max-w-[1100px] space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-gray-900">Platform Deals</h1>

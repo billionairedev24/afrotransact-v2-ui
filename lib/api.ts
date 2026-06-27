@@ -2361,7 +2361,7 @@ export interface MarketplaceConfig {
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function getMarketplaceConfig(_regionId: string): Promise<MarketplaceConfig> {
-  return { maxProductImages: 8, maxProductTags: 10 }
+  return { maxProductImages: 4, maxProductTags: 5 }
 }
 
 // ── Public: Shipping eligibility ──────────────────────────────────────────
