@@ -8,11 +8,8 @@ import {
   createAdminCoupon,
   updateAdminCoupon,
   toggleAdminCoupon,
-  getAdminRegions,
-  getRegionFeatures,
-  upsertRegionFeature,
 } from "@/lib/api"
-import type { CouponData, CouponCreateRequest, Region } from "@/lib/api"
+import type { CouponData, CouponCreateRequest } from "@/lib/api"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { toast } from "sonner"
 import { Plus, Ticket, Pencil, X } from "lucide-react"
@@ -39,7 +36,7 @@ function couponStatus(c: CouponData): "active" | "paused" | "expired" {
   return "paused"
 }
 
-/** Small inline pill switch, mirrors the regions-page toggle style. */
+/** Small inline pill switch for per-coupon active toggle. */
 function InlineSwitch({
   on,
   busy,
@@ -81,13 +78,6 @@ export default function AdminCouponsPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [filter, setFilter] = useState<StatusFilter>("all")
 
-  // Region "Coupons feature" band state
-  const [regions, setRegions] = useState<Region[]>([])
-  const [regionFlags, setRegionFlags] = useState<Record<string, boolean>>({})
-  const [regionsLoaded, setRegionsLoaded] = useState(false)
-  const [regionsErrored, setRegionsErrored] = useState(false)
-  const [regionSavingId, setRegionSavingId] = useState<string | null>(null)
-
   const loadCoupons = useCallback(async () => {
     try {
       setLoading(true)
@@ -103,41 +93,11 @@ export default function AdminCouponsPage() {
     }
   }, [])
 
-  const loadRegions = useCallback(async () => {
-    try {
-      const token = await getAccessToken()
-      if (!token) return
-      const rs = await getAdminRegions(token)
-      setRegions(rs)
-      const results = await Promise.all(
-        rs.map(async (r) => {
-          try {
-            const features = await getRegionFeatures(token, r.id)
-            const cf = features.find((f) => f.featureKey === "coupons_enabled")
-            return [r.id, cf?.enabled ?? false] as const
-          } catch (err) {
-            logError(err, "coupons.fetchRegionFeature")
-            return [r.id, false] as const
-          }
-        }),
-      )
-      const next: Record<string, boolean> = {}
-      for (const [id, enabled] of results) next[id] = enabled
-      setRegionFlags(next)
-      setRegionsLoaded(true)
-    } catch (err) {
-      logError(err, "coupons.fetchRegions")
-      setRegionsErrored(true)
-      setRegionsLoaded(true)
-    }
-  }, [])
-
   useEffect(() => {
     if (sessionStatus === "authenticated") {
       loadCoupons()
-      loadRegions()
     }
-  }, [sessionStatus, loadCoupons, loadRegions])
+  }, [sessionStatus, loadCoupons])
 
   async function handleCreate(data: CouponCreateRequest) {
     const token = await getAccessToken()
@@ -188,25 +148,6 @@ export default function AdminCouponsPage() {
       setTogglingId(null)
     }
   }, [])
-
-  const handleRegionToggle = useCallback(async (region: Region) => {
-    const token = await getAccessToken()
-    if (!token) return
-    const current = regionFlags[region.id] ?? false
-    const next = !current
-    setRegionFlags((prev) => ({ ...prev, [region.id]: next }))
-    setRegionSavingId(region.id)
-    try {
-      await upsertRegionFeature(token, region.id, "coupons_enabled", next)
-      toast.success(`Coupons ${next ? "enabled" : "disabled"} for ${region.name || region.code}`)
-    } catch (err) {
-      setRegionFlags((prev) => ({ ...prev, [region.id]: current }))
-      logError(err, "coupons.toggleRegionFeature")
-      toast.error(friendlyMessage(err, "Couldn't toggle region. Please try again."))
-    } finally {
-      setRegionSavingId(null)
-    }
-  }, [regionFlags])
 
   const filteredCoupons = useMemo(() => {
     if (filter === "all") return coupons
@@ -362,9 +303,10 @@ export default function AdminCouponsPage() {
         </button>
       </div>
 
-      {/* The "Coupons feature" region-band lived here previously. It moved
-          to Settings → Service locations, where the coupons_enabled feature
-          flag is managed per zone (with inheritance) instead of per region. */}
+      {/* Enablement per Service Location is configured on the Settings page
+          (Settings → Service Locations → per-zone feature toggles). This
+          page is coupon CRUD only, so operators aren't editing the same
+          flag in two places. */}
 
       {(showForm || editing) && (
         <CouponForm

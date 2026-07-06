@@ -56,6 +56,7 @@ import { cn } from "@/lib/utils"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { features } from "@/lib/features"
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
+import { useBuyerLocation } from "@/stores/buyer-location"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import { PhoneInput } from "@/components/ui/PhoneInput"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -65,7 +66,6 @@ import { useEffectiveFeatures } from "@/hooks/use-effective-features"
 import {
   checkout as apiCheckout,
   mergeCart,
-  clearServerCart,
   getRegions,
   getRegionConfig,
   loadCheckoutShippingContext,
@@ -159,6 +159,22 @@ export default function CheckoutClientV2({
   const removeItem = useCartStore((s) => s.removeItem)
   const clearCart = useCartStore((s) => s.clearCart)
   const subtotal = getSubtotal()
+
+  // Buyer's resolved service-location (post-regions rewrite). Preferred
+  // over region for shipping quotes, coupon validation, and free-shipping
+  // threshold. Region stays here as a soft fallback while the last
+  // downstream services finish the cutover.
+  const buyerResolvedZone = useBuyerLocation((s) => s.resolvedZone)
+  const refreshResolvedZone = useBuyerLocation((s) => s.refreshResolvedZone)
+
+  // Force a resolve refresh on checkout mount. Zustand-persist caches the
+  // last zone shape; when server-side migrations change the effective
+  // feature set (as happened when we moved to Service Locations), stale
+  // caches make coupons_enabled / realtime shipping look "off" until the
+  // buyer re-picks their location. Cheap idempotent GET fixes it.
+  useEffect(() => {
+    void refreshResolvedZone()
+  }, [refreshResolvedZone])
 
   // ─── region + region config ───────────────────────────────────────
   const [region, setRegion] = useState<Region | null>(null)
@@ -333,8 +349,12 @@ export default function CheckoutClientV2({
     setQuotesLoading(true)
     ;(async () => {
       try {
+        // Backend expects EXACTLY one of zoneId / regionId (XOR). Prefer the
+        // resolved service-zone id; only fall back to regionId if no zone
+        // is resolved yet. Sending both fails validation with a 400.
+        const zoneId = buyerResolvedZone?.zone?.id
         const q = await getShippingQuotes(authToken, {
-          regionId: region.id,
+          ...(zoneId ? { zoneId } : { regionId: region.id }),
           state: selectedAddress.state ?? "",
           city: selectedAddress.city,
           destinationLine1: selectedAddress.line1,
@@ -493,10 +513,11 @@ export default function CheckoutClientV2({
   // Prefer zone-resolved features; fall back to the legacy region config map.
   const effectiveFeatures =
     Object.keys(zoneOrRegionFeatures).length > 0 ? zoneOrRegionFeatures : configFeatures
-  const couponsEnabled = effectiveFeatures["coupons_enabled"] === true
+  // Coupons are a platform-wide capability, not a per-location one. Admin
+  // creates coupons; buyers can apply them anywhere. No zone/region gate.
+  const couponsEnabled = true
   const [couponCode, setCouponCode] = useState("")
   const [couponInput, setCouponInput] = useState("")
-  const [couponOpen, setCouponOpen] = useState(false)
   const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
   const [couponError, setCouponError] = useState<string | null>(null)
   const [couponLoading, setCouponLoading] = useState(false)
@@ -524,7 +545,6 @@ export default function CheckoutClientV2({
         setCouponResult(res)
         setCouponCode(couponInput.trim())
         setCouponInput("")
-        setCouponOpen(false)
       } else {
         setCouponError(couponErrorMessage(res, "That code isn’t valid"))
       }
@@ -652,14 +672,15 @@ export default function CheckoutClientV2({
   const [paying, setPaying] = useState(false)
 
   const handlePaymentComplete = useCallback(async () => {
-    try {
-      if (authToken) await clearServerCart(authToken)
-    } catch (e) { logError(e, "clear server cart after payment (v2)") }
+    // Server cart is cleared by PaymentEventConsumer once session.converted
+    // fires and the order materializes. Deleting it here caused a race:
+    // any lingering checkout request (mount effect, retry) would hit an
+    // already-empty cart and fail with 400.
     clearCart()
     try { clearGuestCart() } catch { /* non-fatal */ }
     const sid = checkoutResult?.checkoutSessionId
     router.push(sid ? `/checkout/complete?session=${encodeURIComponent(sid)}` : "/checkout/complete")
-  }, [authToken, clearCart, router, checkoutResult])
+  }, [clearCart, router, checkoutResult])
 
   // Pre-mint the PI as soon as we have an address + rate, so clientSecret is
   // ready by the time the buyer scrolls to payment. mintIntent is idempotent
@@ -715,19 +736,8 @@ export default function CheckoutClientV2({
   }
 
   if (session?.status === "unauthenticated") {
-    return (
-      <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-16 text-center">
-        <Lock className="mx-auto h-12 w-12 text-gray-500" />
-        <h1 className="text-xl font-bold text-gray-900 mt-4">Sign in to checkout</h1>
-        <p className="text-gray-500 text-sm mt-2">Your cart items will be preserved.</p>
-        <button
-          onClick={() => router.push("/auth/login?callbackUrl=/checkout")}
-          className="mt-6 inline-block rounded-xl bg-primary px-6 py-3 text-sm font-bold text-brand-gold-foreground"
-        >
-          Sign In
-        </button>
-      </main>
-    )
+    router.replace("/auth/login?callbackUrl=/checkout")
+    return null
   }
 
   // ─── render ────────────────────────────────────────────────────────
@@ -817,7 +827,7 @@ export default function CheckoutClientV2({
             n={2}
             title="Delivery options"
             subtitle={selectedQuote
-              ? `${selectedQuote.carrier} • ${selectedQuote.serviceName} — ${formatCents(selectedQuote.amountCents)}`
+              ? `${selectedQuote.serviceName} — ${formatCents(selectedQuote.amountCents)}`
               : "Choose a delivery option"}
             disabled={!selectedAddress}
           >
@@ -890,7 +900,7 @@ export default function CheckoutClientV2({
                     FedEx) is intentionally hidden — the buyer chooses by
                     speed and price; the carrier is a backstage detail. */}
                 <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-                  {flatQuotes.map((q) => {
+                  {sortedQuotes.map((q) => {
                     const checked = selectedQuoteId === q.quoteId
                     return (
                       <li key={q.quoteId}>
@@ -972,7 +982,11 @@ export default function CheckoutClientV2({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 line-clamp-2">{it.title}</p>
-                    <p className="text-xs text-gray-500">{it.storeName}{it.variantName ? ` • ${it.variantName}` : ""}</p>
+                    <p className="text-xs text-gray-500">
+                      {it.storeName && it.storeName !== it.storeId ? it.storeName : null}
+                      {it.storeName && it.storeName !== it.storeId && it.variantName ? " • " : null}
+                      {it.variantName || null}
+                    </p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <button
                         type="button"
@@ -1030,8 +1044,9 @@ export default function CheckoutClientV2({
                       Remove
                     </button>
                   </div>
-                ) : couponOpen ? (
+                ) : (
                   <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-700">Promo code</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -1051,17 +1066,6 @@ export default function CheckoutClientV2({
                     </div>
                     {couponError && <p className="text-xs text-red-600">{couponError}</p>}
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => { setCouponOpen(true); setCouponError(null) }}
-                    className="text-sm font-semibold text-brand-gold-foreground hover:underline"
-                  >
-                    Add a promo code
-                  </button>
-                )}
-                {couponError && !couponOpen && !couponResult && (
-                  <p className="mt-1 text-xs text-red-600">{couponError}</p>
                 )}
               </div>
             )}

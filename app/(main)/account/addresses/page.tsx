@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import Link from "next/link"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { AccountShell } from "@/components/account/AccountShell"
 import {
   getAddresses,
   createAddress,
@@ -15,7 +15,7 @@ import {
 } from "@/lib/api"
 import { logError } from "@/lib/errors"
 import {
-  MapPin, Plus, Pencil, Trash2, Star, Loader2, AlertCircle, X, ChevronLeft,
+  MapPin, Plus, Pencil, Trash2, Star, Loader2, AlertCircle, X,
 } from "lucide-react"
 
 type FormState = {
@@ -23,7 +23,7 @@ type FormState = {
 }
 const EMPTY: FormState = { label: "", line1: "", line2: "", city: "", state: "", postalCode: "", countryCode: "US", isDefault: false }
 
-export default function AddressesPage() {
+export function AddressesSection() {
   const { status } = useSession()
   const [addresses, setAddresses] = useState<UserAddress[]>([])
   const [loading, setLoading] = useState(true)
@@ -121,14 +121,7 @@ export default function AddressesPage() {
   )
 
   return (
-    <main className="mx-auto max-w-[700px] px-4 sm:px-6 py-8">
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/account" className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
-          <ChevronLeft className="h-5 w-5 text-gray-500" />
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Saved Addresses</h1>
-      </div>
-
+    <>
       {error && (
         <div className="flex items-center gap-3 rounded-2xl border border-red-500/30 bg-white p-4 mb-4">
           <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
@@ -178,9 +171,9 @@ export default function AddressesPage() {
 
       <button
         onClick={() => { setEditingId(null); setForm(EMPTY); setShowForm(true) }}
-        className="flex items-center gap-2 rounded-xl bg-brand-gold/10 border border-primary/20 px-4 py-3 text-sm font-semibold text-foreground hover:bg-brand-gold/20 transition-colors w-full justify-center mb-6"
+        className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors mb-6"
       >
-        <Plus className="h-4 w-4" /> Add New Address
+        <Plus className="h-4 w-4" /> Add new address
       </button>
 
       {loading ? (
@@ -231,6 +224,17 @@ export default function AddressesPage() {
           ))}
         </div>
       )}
-    </main>
+    </>
+  )
+}
+
+export default function AddressesPage() {
+  return (
+    <AccountShell
+      title="Your Addresses"
+      subtitle="Add, edit, or set a default delivery address for checkout."
+    >
+      <AddressesSection />
+    </AccountShell>
   )
 }

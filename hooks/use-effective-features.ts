@@ -65,16 +65,10 @@ export function useEffectiveFeatures(
   }, [zoneHasFeatures, fallbackRegionCode])
 
   if (zoneHasFeatures && resolved) {
-    // eslint-disable-next-line no-console
-    console.debug("effective-features source=zone")
     return { features: resolved.effectiveFeatures, source: "zone", loading: false }
   }
   if (regionFeatures) {
-    // eslint-disable-next-line no-console
-    console.debug("effective-features source=region")
     return { features: regionFeatures, source: "region", loading }
   }
-  // eslint-disable-next-line no-console
-  console.debug("effective-features source=none")
   return { features: {}, source: "none", loading }
 }

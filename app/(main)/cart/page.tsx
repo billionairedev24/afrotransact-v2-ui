@@ -14,7 +14,6 @@ import { getAccessToken } from "@/lib/auth-helpers"
 import { useDefaultRegionCommerceGates } from "@/hooks/use-default-region-commerce-gates"
 import { useCartEligibility } from "@/components/buyer/useCartEligibility"
 import { useBuyerLocation } from "@/stores/buyer-location"
-import { PostMergeNotice } from "@/components/cart/PostMergeNotice"
 import { RegionBlock } from "@/components/geo/RegionBlock"
 
 function formatCents(cents: number) {
@@ -171,7 +170,6 @@ export default function CartPage() {
 
   return (
     <main className="mx-auto max-w-[1200px] px-4 sm:px-6 py-8">
-      <PostMergeNotice />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
           Shopping Cart ({totalQty} {totalQty === 1 ? "item" : "items"})

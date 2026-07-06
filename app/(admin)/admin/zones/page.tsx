@@ -17,15 +17,15 @@ import {
   createAdminZone,
   deleteAdminZone,
   listAdminZones,
-  listZoneFeatures,
+  listPlatformFeatures,
   updateAdminZone,
-  upsertZoneFeature,
+  upsertPlatformFeature,
+  type PlatformFeature,
   type ServiceZone,
-  type ZoneFeature,
   type ZoneInput,
   type ZoneLevel,
 } from "@/lib/api"
-import { FEATURE_CATALOG, featureMeta } from "@/lib/feature-catalog"
+import { FEATURE_CATALOG } from "@/lib/feature-catalog"
 import { friendlyMessage, logError } from "@/lib/errors"
 
 const INPUT_CLASS =
@@ -96,11 +96,11 @@ export default function AdminZonesPage() {
   const [zones, setZones] = useState<ServiceZone[]>([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [featuresOpen, setFeaturesOpen] = useState<Set<string>>(new Set())
   const [settingsOpen, setSettingsOpen] = useState<Set<string>>(new Set())
-  const [featuresByZone, setFeaturesByZone] = useState<Record<string, ZoneFeature[]>>({})
   const [addChildOf, setAddChildOf] = useState<ServiceZone | null>(null)
   const [showRootModal, setShowRootModal] = useState(false)
+  const [platformFeatures, setPlatformFeatures] = useState<PlatformFeature[]>([])
+  const [platformSavingKey, setPlatformSavingKey] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -118,7 +118,41 @@ export default function AdminZonesPage() {
 
   useEffect(() => {
     void reload()
+    ;(async () => {
+      try {
+        const token = await getAccessToken()
+        if (!token) return
+        setPlatformFeatures(await listPlatformFeatures(token))
+      } catch (err) {
+        logError(err, "AdminZones.loadPlatformFeatures")
+      }
+    })()
   }, [reload])
+
+  async function togglePlatformFeature(key: string) {
+    const current = platformFeatures.find((f) => f.featureKey === key)
+    const next = !(current?.enabled ?? false)
+    setPlatformFeatures((prev) => {
+      const has = prev.some((f) => f.featureKey === key)
+      return has
+        ? prev.map((f) => (f.featureKey === key ? { ...f, enabled: next } : f))
+        : [...prev, { featureKey: key, enabled: next }]
+    })
+    setPlatformSavingKey(key)
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      await upsertPlatformFeature(token, key, next)
+    } catch (err) {
+      setPlatformFeatures((prev) =>
+        prev.map((f) => (f.featureKey === key ? { ...f, enabled: !next } : f)),
+      )
+      logError(err, "AdminZones.togglePlatformFeature")
+      toast.error(friendlyMessage(err, "Could not update platform feature."))
+    } finally {
+      setPlatformSavingKey(null)
+    }
+  }
 
   const tree = useMemo(() => buildTree(zones), [zones])
   const flat = useMemo(() => flatten(tree, expanded), [tree, expanded])
@@ -150,30 +184,6 @@ export default function AdminZonesPage() {
     }
   }
 
-  async function loadFeatures(zoneId: string) {
-    try {
-      const token = await getAccessToken()
-      if (!token) return
-      const feats = await listZoneFeatures(token, zoneId)
-      setFeaturesByZone((prev) => ({ ...prev, [zoneId]: feats }))
-    } catch (err) {
-      logError(err, "AdminZones.loadFeatures")
-      toast.error(friendlyMessage(err, "Could not load features."))
-    }
-  }
-
-  function toggleFeaturesPanel(zoneId: string) {
-    setFeaturesOpen((prev) => {
-      const next = new Set(prev)
-      if (next.has(zoneId)) next.delete(zoneId)
-      else {
-        next.add(zoneId)
-        if (!featuresByZone[zoneId]) void loadFeatures(zoneId)
-      }
-      return next
-    })
-  }
-
   function toggleSettingsPanel(zoneId: string) {
     setSettingsOpen((prev) => {
       const next = new Set(prev)
@@ -183,39 +193,8 @@ export default function AdminZonesPage() {
     })
   }
 
-  async function setFeatureEnabled(zoneId: string, key: string, enabled: boolean) {
-    setFeaturesByZone((prev) => ({
-      ...prev,
-      [zoneId]: (prev[zoneId] ?? []).map((f) =>
-        f.featureKey === key ? { ...f, enabled } : f,
-      ),
-    }))
-    try {
-      const token = await getAccessToken()
-      if (!token) return
-      await upsertZoneFeature(token, zoneId, key, enabled)
-    } catch (err) {
-      logError(err, "AdminZones.setFeatureEnabled")
-      toast.error(friendlyMessage(err, "Could not update feature."))
-      await loadFeatures(zoneId)
-    }
-  }
-
-  async function addFeature(zoneId: string, key: string, enabled = true) {
-    if (!key.trim()) return
-    try {
-      const token = await getAccessToken()
-      if (!token) return
-      await upsertZoneFeature(token, zoneId, key.trim(), enabled)
-      await loadFeatures(zoneId)
-    } catch (err) {
-      logError(err, "AdminZones.addFeature")
-      toast.error(friendlyMessage(err, "Could not add feature."))
-    }
-  }
-
   async function handleDelete(zone: ServiceZone) {
-    if (!confirm(`Delete zone "${zone.displayName}"? Children/features must be cleared first.`)) return
+    if (!confirm(`Delete zone "${zone.displayName}"? This will also remove all child zones and their feature flags.`)) return
     try {
       const token = await getAccessToken()
       if (!token) return
@@ -243,21 +222,72 @@ export default function AdminZonesPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Service Zones</h1>
+      <header className="flex items-start justify-between gap-4">
+        <div className="max-w-3xl">
+          <h1 className="text-2xl font-semibold text-foreground">Platform configuration</h1>
           <p className="text-sm text-muted-foreground">
-            Hierarchical rollout tree: country → state → locality. Settings inherit; closest override wins.
+            Two layers. <strong>Platform</strong> features (below) are global on/off — flip once, applies everywhere. <strong>Service locations</strong> only carry things that legitimately vary by geography: tax rate, shipping rate, free-shipping threshold. Set at the highest level that applies; anything you don&apos;t override at a lower level inherits.
           </p>
         </div>
         <button
           type="button"
           onClick={() => setShowRootModal(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           <Plus size={16} /> Add zone
         </button>
       </header>
+
+      <section className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Platform features</h2>
+            <p className="text-xs text-muted-foreground">Global capabilities. Not tied to any location.</p>
+          </div>
+        </div>
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURE_CATALOG.map((meta) => {
+            const rec = platformFeatures.find((f) => f.featureKey === meta.key)
+            const on = rec?.enabled ?? false
+            const busy = platformSavingKey === meta.key
+            return (
+              <li
+                key={meta.key}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-foreground">{meta.name}</div>
+                  {meta.description && (
+                    <div className="truncate text-xs text-muted-foreground">{meta.description}</div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={on}
+                  disabled={busy}
+                  onClick={() => togglePlatformFeature(meta.key)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                    on ? "bg-emerald-500" : "bg-gray-300"
+                  }`}
+                  aria-label={`Toggle ${meta.name}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      on ? "translate-x-4" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      <div>
+        <h2 className="text-base font-semibold text-foreground">Service locations</h2>
+        <p className="text-xs text-muted-foreground mb-3">Per-country / state / city overrides for tax, shipping rate, and free-shipping threshold. Blank fields inherit from the parent.</p>
+      </div>
 
       {loading && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -277,7 +307,6 @@ export default function AdminZonesPage() {
             {flat.map((node) => {
               const hasChildren = node.children.length > 0
               const isOpen = expanded.has(node.id)
-              const featPanelOpen = featuresOpen.has(node.id)
               const settPanelOpen = settingsOpen.has(node.id)
               return (
                 <li key={node.id} className="flex flex-col">
@@ -335,14 +364,7 @@ export default function AdminZonesPage() {
                       onClick={() => toggleSettingsPanel(node.id)}
                       className="rounded-lg border border-border px-2 py-1 text-xs hover:bg-muted"
                     >
-                      {settPanelOpen ? "Hide settings" : "Settings"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleFeaturesPanel(node.id)}
-                      className="rounded-lg border border-border px-2 py-1 text-xs hover:bg-muted"
-                    >
-                      {featPanelOpen ? "Hide features" : "Features"}
+                      {settPanelOpen ? "Hide overrides" : "Overrides"}
                     </button>
                     {node.level !== "locality" && (
                       <button
@@ -367,14 +389,6 @@ export default function AdminZonesPage() {
                       zone={node}
                       ancestors={ancestorsOf(node.id)}
                       onSave={(patch) => saveOperationalFields(node.id, patch)}
-                    />
-                  )}
-                  {featPanelOpen && (
-                    <FeaturesPanel
-                      zone={node}
-                      features={featuresByZone[node.id] ?? []}
-                      onSetEnabled={(key, enabled) => setFeatureEnabled(node.id, key, enabled)}
-                      onAdd={(key, enabled) => addFeature(node.id, key, enabled)}
                     />
                   )}
                 </li>
@@ -508,11 +522,14 @@ function SettingsPanel({
           hint={hint("shippingRateCentsPerLb", shippingRate)}
         />
         <SettingsField
-          label="Free-shipping threshold (¢, -1 = none)"
+          label="Free-shipping threshold (¢)"
           value={freeThreshold}
           onChange={setFreeThreshold}
-          placeholder="5000"
-          hint={hint("freeShippingThresholdCents", freeThreshold)}
+          placeholder="5000 (blank = never free)"
+          hint={
+            hint("freeShippingThresholdCents", freeThreshold) ??
+            "Blank or 0 = never free · -1 = ALWAYS free · N = free when order subtotal ≥ N cents"
+          }
         />
       </div>
       <div className="mt-3 flex justify-end">
@@ -556,108 +573,6 @@ function SettingsField({
   )
 }
 
-function FeaturesPanel({
-  zone,
-  features,
-  onSetEnabled,
-  onAdd,
-}: {
-  zone: ServiceZone
-  features: ZoneFeature[]
-  onSetEnabled: (key: string, enabled: boolean) => void
-  onAdd: (key: string, enabled: boolean) => void
-}) {
-  const configuredKeys = new Set(features.map((f) => f.featureKey))
-  const available = FEATURE_CATALOG.filter((e) => !configuredKeys.has(e.key))
-  const [newKey, setNewKey] = useState<string>(available[0]?.key ?? "")
-  const [newEnabled, setNewEnabled] = useState(true)
-  // Keep dropdown selection valid when the available set changes (e.g. after Add).
-  useEffect(() => {
-    if (newKey && !available.some((e) => e.key === newKey)) {
-      setNewKey(available[0]?.key ?? "")
-    }
-  }, [available, newKey])
-  const selectedMeta = featureMeta(newKey)
-  return (
-    <div className="border-t border-border bg-muted/30 px-6 py-4">
-      <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Features on {zone.displayName}
-      </div>
-      {features.length === 0 && (
-        <div className="mb-3 text-xs text-muted-foreground">No features defined directly.</div>
-      )}
-      <ul className="mb-3 space-y-1.5">
-        {features.map((f) => {
-          const meta = featureMeta(f.featureKey)
-          return (
-            <li
-              key={f.id}
-              className="flex items-start justify-between gap-3 text-sm"
-              title={meta?.description}
-            >
-              <div className="min-w-0">
-                <div className="font-medium text-foreground">{meta?.name ?? f.featureKey}</div>
-                {meta?.description && (
-                  <div className="text-[11px] text-muted-foreground/80">{meta.description}</div>
-                )}
-              </div>
-              <label className="inline-flex shrink-0 items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={f.enabled}
-                  onChange={(e) => onSetEnabled(f.featureKey, e.target.checked)}
-                />
-                <span className="text-xs text-muted-foreground">
-                  {f.enabled ? "enabled" : "disabled"}
-                </span>
-              </label>
-            </li>
-          )
-        })}
-      </ul>
-      {available.length === 0 ? (
-        <div className="text-xs text-muted-foreground">All catalog features are configured.</div>
-      ) : (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <select
-              value={newKey}
-              onChange={(e) => setNewKey(e.target.value)}
-              className={INPUT_CLASS + " max-w-xs"}
-            >
-              {available.map((e) => (
-                <option key={e.key} value={e.key}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
-            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={newEnabled}
-                onChange={(e) => setNewEnabled(e.target.checked)}
-              />
-              {newEnabled ? "enabled" : "disabled"}
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                if (!newKey) return
-                onAdd(newKey, newEnabled)
-              }}
-              className="rounded-lg border border-border px-2 py-1.5 text-xs font-medium hover:bg-muted"
-            >
-              Add
-            </button>
-          </div>
-          {selectedMeta?.description && (
-            <div className="text-[11px] text-muted-foreground/80">{selectedMeta.description}</div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ── Add Zone modal (cascading: country → state → city/postal) ──
 

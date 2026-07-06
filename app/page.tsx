@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { PromoSlot } from "@/components/marketing/PromoSlot"
+import { GeoGate } from "@/components/geo/GeoGate"
 // REPLACED BY <CategoriesBentoGrid> + <TrustMissionBand>: kept commented for
 // quick revert if there's a visual regression.
 // import { FeaturedProducts } from "@/components/home/FeaturedProducts"
@@ -195,6 +196,12 @@ export default async function HomePage() {
       <Header />
 
       <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0 space-y-10">
+        {/* GeoGate wraps the homepage too. The (main) route group has its
+            own GeoGate, but app/page.tsx is OUTSIDE that group so without
+            this wrapper a buyer in a disabled / not_serviced zone would
+            still see the full landing page and only hit the gate after
+            clicking into Cart or another (main) route. */}
+        <GeoGate>
         {/* 1. Hero — promotions module (admin-managed) */}
         <PromoSlot placement="HERO" className="mx-4 md:mx-6 lg:mx-8 mt-4" />
 
@@ -239,6 +246,7 @@ export default async function HomePage() {
           products={trendingAustinRes.results}
           viewAllHref="/search?region_code=us-tx-austin&sort=popularity"
         />
+        </GeoGate>
 
       </main>
 

@@ -58,9 +58,12 @@ export function useTextToSpeech() {
   }, [supported])
 
   const speak = useCallback(
-    (text: string) => {
-      if (!supported || !text.trim()) return
-      window.speechSynthesis.cancel() // stop any current speech
+    (text: string, onEnd?: () => void) => {
+      if (!supported || !text.trim()) {
+        onEnd?.()
+        return
+      }
+      window.speechSynthesis.cancel()
 
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.rate = 1.05
@@ -69,6 +72,7 @@ export function useTextToSpeech() {
 
       const voice = pickFemaleVoice()
       if (voice) utterance.voice = voice
+      if (onEnd) utterance.onend = () => onEnd()
 
       utteranceRef.current = utterance
       window.speechSynthesis.speak(utterance)

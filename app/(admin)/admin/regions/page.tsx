@@ -1,19 +1,19 @@
 "use client"
 
-// Pass 3 of regions→service_zones migration: the legacy admin Regions page
-// has been folded into Settings → Service locations. Redirect any deep links
-// rather than maintaining a parallel UI.
+// Regions are deprecated. Every operational-area setting now lives on
+// /admin/zones (Service Locations). Any deep link into the old regions
+// screens redirects there.
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 
 export default function Page() {
   const r = useRouter()
   useEffect(() => {
-    r.replace("/admin/settings/zones")
+    r.replace("/admin/zones")
   }, [r])
   return (
     <p className="p-6 text-sm text-muted-foreground">
-      Service locations have moved to Settings → Service locations.
+      Regions were replaced by Service Locations. Redirecting…
     </p>
   )
 }

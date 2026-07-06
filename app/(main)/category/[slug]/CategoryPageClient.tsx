@@ -5,7 +5,7 @@ import { useParams, useSearchParams, useRouter, usePathname } from "next/navigat
 import Link from "next/link"
 import Image from "next/image"
 import { ChevronRight, Star, MapPin, Leaf, Loader2, ShoppingCart, Sparkles } from "lucide-react"
-import { searchProducts, getCategories, getProductById, type SearchResult, type CategoryRef, type Product } from "@/lib/api"
+import { searchProducts, getCategories, getProductById, getProductBySlug, type SearchResult, type CategoryRef, type Product } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { toast } from "sonner"
@@ -208,7 +208,9 @@ export default function CategoryPageClient() {
   const pathname = usePathname()
   const slug = params.slug as string
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
-  const featuredId = searchParams.get("featured") ?? null
+  // Callers (CategoryShowcaseAmazon) send `?featured_id=<slug|uuid>`; the
+  // legacy `?featured=` param is still accepted for old bookmarks.
+  const featuredId = searchParams.get("featured_id") ?? searchParams.get("featured") ?? null
   const pageSize = 24
 
   const [name, setName] = useState(slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
@@ -218,11 +220,14 @@ export default function CategoryPageClient() {
   const [error, setError] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
 
-  // Buyer Deliver-to → geo-filtered category browse + distance badges.
-  // Default 25 mi radius to match backend. No URL plumbing here; category
-  // browsers don't need shareable radius links yet.
+  // Category browse is intentionally NOT geo-filtered: buyers want to see
+  // every product in a category regardless of where the seller ships from
+  // (Amazon does the same). Geo only matters at checkout time for
+  // shipping cost. Radius filtering here was hiding results whenever a
+  // seller's store row lacked lat/lon coordinates.
   const buyerLocation = useBuyerLocation((s) => s.location)
-  const hasGeo = buyerLocation?.lat != null && buyerLocation?.lng != null
+  void buyerLocation
+  const hasGeo = false
 
   useEffect(() => {
     getCategories()
@@ -248,15 +253,24 @@ export default function CategoryPageClient() {
     setError(null)
     setFeaturedProduct(null)
 
+    // Featured id may be a UUID or a slug depending on where the caller
+    // came from. Try UUID lookup first; on 404, fall back to slug lookup.
+    // Both return the same Product shape.
     const fetchFeatured =
       page === 1 && featuredId
-        ? getProductById(featuredId).then(productToSearchResult).catch(() => null)
+        ? getProductById(featuredId)
+            .catch(() => getProductBySlug(featuredId))
+            .then(productToSearchResult)
+            .catch(() => null)
         : Promise.resolve(null)
 
     Promise.all([
       fetchFeatured,
       searchProducts({
-        category: name,
+        // Backend expects the category SLUG (e.g. "food-grocery"), not the
+        // display name. Passing name here made every category page look
+        // empty even when 100+ products existed.
+        category: slug,
         size: String(pageSize),
         page: String(page),
         ...(hasGeo
@@ -282,15 +296,18 @@ export default function CategoryPageClient() {
         if (err instanceof Error) setError(err.message)
       })
       .finally(() => setLoading(false))
-  }, [name, page, featuredId, hasGeo, buyerLocation])
+  }, [slug, page, featuredId])
 
   function updatePage(nextPage: number) {
     const next = Math.max(1, nextPage)
     const qs = new URLSearchParams(searchParams.toString())
     if (next <= 1) qs.delete("page")
     else qs.set("page", String(next))
-    // Drop featured param when navigating away from page 1
-    if (next > 1) qs.delete("featured")
+    // Drop featured param when navigating away from page 1.
+    if (next > 1) {
+      qs.delete("featured_id")
+      qs.delete("featured")
+    }
     router.push(`${pathname}?${qs.toString()}`)
   }
 

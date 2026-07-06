@@ -173,9 +173,10 @@ export function Header() {
   const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
   const isAdmin = roles.includes("admin")
   const isSeller = roles.includes("seller")
-  // Cart icon + buyer-cart sync is gated on this — admins/sellers without the
-  // "buyer" role don't have a buyer cart. Mirrors CartMergeProvider's gate.
-  const isBuyerCapable = roles.length === 0 || roles.includes("buyer")
+  // Cart icon + buyer-cart sync is gated on this. Admins shop too (they need
+  // to test the marketplace end-to-end), so we include them. Mirrors
+  // CartMergeProvider's isBuyerCapableRoles — keep these two in sync.
+  const isBuyerCapable = roles.length === 0 || roles.includes("buyer") || roles.includes("admin")
   // Developers carry admin + seller + buyer via the composite role, so the
   // existing isAdmin / isSeller checks already grant access. We surface the
   // discriminator with a badge so it's obvious who has elevated debug access.

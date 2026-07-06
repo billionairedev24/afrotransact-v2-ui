@@ -203,9 +203,8 @@ export default function PayoutsPage() {
     }),
   ], [])
 
-  if (status !== "authenticated") {
-    return <div className="flex items-center justify-center min-h-[400px] text-gray-500">Sign in to view payouts</div>
-  }
+  // Auth gate lives in the (seller) layout — layout redirects unauth
+  // users to /auth/login before this component ever renders.
 
   if (!storeQuery.isLoading && storeQuery.isFetched && storeId === null && !storeQuery.error) {
     return (

@@ -4,8 +4,6 @@ import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
-import { getAccessToken } from "@/lib/auth-helpers"
-import { clearServerCart } from "@/lib/api"
 
 // Session-mode polling: Stripe returns the buyer here with ?session=<uuid>
 // in the URL (set by _stripe-payment.tsx return_url). The order row does NOT
@@ -37,29 +35,10 @@ function CheckoutCompleteContent() {
   useEffect(() => {
     if (sessionId) return // session-mode: defer until we confirm conversion
     if (redirectStatus !== "succeeded") return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const token = await getAccessToken()
-        if (cancelled) return
-        if (token) {
-          await clearServerCart(token)
-        }
-      } catch {
-        // Webhook may clear the server cart later — still clear local UI state
-      }
-      if (!cancelled) {
-        clearCart()
-        try {
-          clearGuestCart()
-        } catch {
-          // non-fatal
-        }
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
+    // Server cart clearing is owned by PaymentEventConsumer (session.converted).
+    // We only clear local UI state here so the badge zeros instantly.
+    clearCart()
+    try { clearGuestCart() } catch { /* non-fatal */ }
   }, [redirectStatus, clearCart, sessionId])
 
   // Session-mode poll
@@ -78,19 +57,9 @@ function CheckoutCompleteContent() {
         if (res.ok) {
           const data = (await res.json()) as SessionResult
           if (data.status === "converted" && "orderId" in data && data.orderId) {
-            // Clear cart now that we know the order materialized
-            try {
-              const token = await getAccessToken()
-              if (token) await clearServerCart(token)
-            } catch {
-              // non-fatal
-            }
+            // Order materialized — server cart was cleared by PaymentEventConsumer.
             clearCart()
-            try {
-              clearGuestCart()
-            } catch {
-              // non-fatal
-            }
+            try { clearGuestCart() } catch { /* non-fatal */ }
             router.replace(`/orders/${data.orderId}`)
             return
           }

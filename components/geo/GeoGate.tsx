@@ -16,8 +16,7 @@
  * is already a dependency.
  */
 
-import { useMemo, useState, type ReactNode } from "react"
-import Link from "next/link"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { Country, State } from "country-state-city"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { joinWaitlist } from "@/lib/waitlist"
@@ -103,7 +102,15 @@ function WaitlistForm({ countryCode, subdivisionCode, countryLabel, onDone }: Wa
 export function GeoGate({ children }: { children: ReactNode }) {
   const resolvedZone = useBuyerLocation((s) => s.resolvedZone)
   const location = useBuyerLocation((s) => s.location)
+  const refreshResolvedZone = useBuyerLocation((s) => s.refreshResolvedZone)
   const [modalOpen, setModalOpen] = useState(false)
+
+  // Re-resolve the buyer's zone on mount so admin-side status flips
+  // (enable → disable) propagate without requiring the buyer to clear
+  // localStorage or re-pick their location.
+  useEffect(() => {
+    void refreshResolvedZone()
+  }, [refreshResolvedZone])
 
   const status: GateStatus | null = useMemo(() => {
     if (!resolvedZone) return null
@@ -169,26 +176,47 @@ export function GeoGate({ children }: { children: ReactNode }) {
     )
   }
 
-  // disabled | not_serviced → replace children entirely.
+  return <DisabledZonePanel countryCode={countryCode} subdivisionCode={subdivisionCode} label={label} />
+}
+
+function DisabledZonePanel({
+  countryCode,
+  subdivisionCode,
+  label,
+}: {
+  countryCode: string
+  subdivisionCode: string | null
+  label: string
+}) {
+  const [submitted, setSubmitted] = useState(false)
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-6 py-16">
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-background flex items-center justify-center px-6 py-16">
       <div className="max-w-md w-full rounded-2xl border border-input bg-white p-8 shadow-sm text-center">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-          AfroTransact is not yet available in {label}.
-        </h1>
-        <p className="text-sm text-gray-600 mb-6">
-          Drop your email and we&apos;ll let you know the moment we launch in your area.
-        </p>
-        <WaitlistForm
-          countryCode={countryCode}
-          subdivisionCode={subdivisionCode}
-          countryLabel={label}
-        />
-        <div className="mt-6 text-sm">
-          <Link href="/?changeLocation=1" className="text-primary underline underline-offset-2">
-            Change location
-          </Link>
-        </div>
+        {!submitted ? (
+          <>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+              AfroTransact is not yet available in {label}.
+            </h1>
+            <p className="text-sm text-gray-600 mb-6">
+              Drop your email and we&apos;ll let you know the moment we launch in your area.
+            </p>
+            <WaitlistForm
+              countryCode={countryCode}
+              subdivisionCode={subdivisionCode}
+              countryLabel={label}
+              onDone={() => setSubmitted(true)}
+            />
+          </>
+        ) : (
+          <>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+              You&apos;re on the list.
+            </h1>
+            <p className="text-sm text-gray-600">
+              We&apos;ll email you the moment AfroTransact goes live in {label}.
+            </p>
+          </>
+        )}
       </div>
     </div>
   )

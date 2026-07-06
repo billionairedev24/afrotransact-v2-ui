@@ -33,6 +33,8 @@ interface AiStore {
   sessionId: string
   isStreaming: boolean
   isListening: boolean   // voice recording active
+  handsFree: boolean     // continuous voice loop: mic auto-reopens after Victory speaks
+  speakReplies: boolean  // when true, Victory speaks every reply even for typed input
   inputMode: "text" | "voice"
 
   open: () => void
@@ -40,6 +42,8 @@ interface AiStore {
   toggle: () => void
   setExpanded: (v: boolean) => void
   setListening: (v: boolean) => void
+  setHandsFree: (v: boolean) => void
+  setSpeakReplies: (v: boolean) => void
   setInputMode: (m: "text" | "voice") => void
 
   addUserMessage: (content: string) => AiMessage
@@ -60,6 +64,8 @@ export const useAiStore = create<AiStore>((set, get) => ({
   sessionId: nanoid(),
   isStreaming: false,
   isListening: false,
+  handsFree: false,
+  speakReplies: false,
   inputMode: "text",
 
   open: () => set({ isOpen: true }),
@@ -67,6 +73,8 @@ export const useAiStore = create<AiStore>((set, get) => ({
   toggle: () => set((s) => ({ isOpen: !s.isOpen })),
   setExpanded: (v) => set({ isExpanded: v }),
   setListening: (v) => set({ isListening: v }),
+  setHandsFree: (v) => set({ handsFree: v }),
+  setSpeakReplies: (v) => set({ speakReplies: v }),
   setInputMode: (m) => set({ inputMode: m }),
 
   addUserMessage: (content) => {

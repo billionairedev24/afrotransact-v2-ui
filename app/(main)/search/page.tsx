@@ -610,13 +610,29 @@ function SearchResultCard({
   item: SearchResult
   viewMode: "grid" | "list"
 }) {
+  // Phase 9.6b — when this hit represents a collapsed catalog-item group
+  // (offer_count > 1, or any hit with catalog_item_id distinct from
+  // product_id), route to the catalog PDP at /p/[slug] so the buyer sees
+  // the Buy Box + other sellers view. Legacy single-offer hits keep
+  // pointing at the offer-level PDP.
+  const isCatalogGrouped =
+    !!item.catalog_item_id &&
+    (item.offer_count ?? 1) > 0 &&
+    item.catalog_item_id !== item.product_id
   const slug = item.slug || item.product_id
+  // The slug indexed today is the offer slug (catalog.products.slug). The
+  // catalog item's own slug is what /p/[slug] expects. Until we index
+  // catalog_item_slug separately (next iteration), route grouped hits
+  // via the catalog item id; legacy single hits keep using the slug.
+  const href = isCatalogGrouped
+    ? `/p/by-id/${item.catalog_item_id}`
+    : `/product/${slug}`
 
   if (viewMode === "list") {
     return (
       <div className="group flex gap-4 rounded-2xl border border-gray-200 bg-white p-4 hover:border-primary/30 hover:shadow-lg transition-all duration-200">
         <Link
-          href={`/product/${slug}`}
+          href={`${href}`}
           className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl bg-gray-100"
         >
           {item.image_url ? (
@@ -636,7 +652,7 @@ function SearchResultCard({
 
         <div className="flex flex-1 flex-col justify-between min-w-0">
           <div>
-            <Link href={`/product/${slug}`}>
+            <Link href={`${href}`}>
               <h3 className="font-medium text-gray-900 group-hover:text-foreground transition-colors line-clamp-2">
                 {item.title}
               </h3>
@@ -686,7 +702,7 @@ function SearchResultCard({
   // Grid card — mockup all-products.html lines 235-256
   return (
     <div className="group bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
-      <Link href={`/product/${slug}`} className="block">
+      <Link href={`${href}`} className="block">
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           {item.image_url ? (
             <Image
@@ -710,7 +726,7 @@ function SearchResultCard({
       </Link>
 
       <div className="p-4 flex flex-col flex-1 gap-2">
-        <Link href={`/product/${slug}`}>
+        <Link href={`${href}`}>
           <h3 className="text-sm font-medium leading-tight text-foreground line-clamp-2 hover:text-brand-gold-hover transition-colors">
             {item.title}
           </h3>

@@ -42,6 +42,11 @@ interface NavItem {
   icon: typeof LayoutDashboard
   exact?: boolean
   badge?: number
+  // Phase 9: when true, render as an outbound link to another property
+  // (typically the Inventory app for catalog management). Catalog admin
+  // is intentionally NOT duplicated in this UI; it lives in the
+  // Inventory app per the architecture-target-state revision.
+  external?: boolean
 }
 
 interface NavGroup {
@@ -63,6 +68,17 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/products",      label: "Products",      icon: Package },
       { href: "/admin/categories",    label: "Categories",    icon: FolderTree },
+      {
+        // Catalog item curation lives in the Inventory app — same team
+        // who manages physical stock also owns the master catalog. URL
+        // is env-driven so dev (3010) / staging / prod each land on the
+        // right host. NEXT_PUBLIC_INVENTORY_WEB_URL is the public name
+        // the admin's browser can reach.
+        href: process.env.NEXT_PUBLIC_INVENTORY_WEB_URL || "http://localhost:3010",
+        label: "Catalog (Inventory)",
+        icon: BookOpen,
+        external: true,
+      },
       { href: "/admin/deals",         label: "Deals",         icon: Sparkles },
       { href: "/admin/coupons",       label: "Coupons",       icon: Ticket },
       { href: "/admin/promotions", label: "Promotions", icon: Sparkles },
@@ -94,9 +110,11 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: "Settings",
     items: [
-      { href: "/admin/regions",              label: "Regions",         icon: MapPin },
-      // Service Zones moved under Settings → "Service locations" card.
-      // Legacy /admin/zones URL still works; /admin/settings/zones is the new home.
+      // Service Locations is now the ONLY place to configure operational
+      // areas — shipping rates, free-shipping threshold, tax, and per-
+      // location feature toggles all live here. Legacy /admin/regions
+      // is hidden; /admin/zones remains reachable via URL only.
+      { href: "/admin/zones",                label: "Service Locations", icon: MapPin },
       { href: "/admin/subscription",         label: "Plans",           icon: ShieldCheck },
       { href: "/admin/email-templates",      label: "Email Templates", icon: Mail },
       { href: "/admin/notification-routing", label: "Alert Routing",   icon: Bell },
@@ -125,20 +143,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const navLink = (item: NavItem, onClick?: () => void) => {
     const Icon = item.icon
-    const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={onClick}
-        aria-current={active ? "page" : undefined}
-        className={cn(
-          "flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-colors",
-          active
-            ? "bg-brand-gold text-brand-gold-foreground font-bold"
-            : "text-white/70 font-medium hover:bg-white/5 hover:text-brand-gold",
-        )}
-      >
+    const active = !item.external && (item.exact ? pathname === item.href : pathname.startsWith(item.href))
+    const body = (
+      <>
         <Icon className="h-5 w-5 shrink-0" />
         <span className="flex-1">{item.label}</span>
         {item.badge != null && item.badge > 0 && (
@@ -146,6 +153,29 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             {item.badge}
           </span>
         )}
+        {item.external && (
+          <span aria-hidden className="text-[10px] text-white/40">↗</span>
+        )}
+      </>
+    )
+    const cls = cn(
+      "flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition-colors",
+      active
+        ? "bg-brand-gold text-brand-gold-foreground font-bold"
+        : "text-white/70 font-medium hover:bg-white/5 hover:text-brand-gold",
+    )
+    if (item.external) {
+      return (
+        <a key={item.href} href={item.href} target="_blank" rel="noopener noreferrer"
+           onClick={onClick} className={cls}>
+          {body}
+        </a>
+      )
+    }
+    return (
+      <Link key={item.href} href={item.href} onClick={onClick}
+            aria-current={active ? "page" : undefined} className={cls}>
+        {body}
       </Link>
     )
   }

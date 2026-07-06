@@ -429,7 +429,7 @@ export default function SettingsPage() {
       >
         <Link
           href="/admin/settings/zones"
-          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 text-sm font-bold text-background hover:opacity-90 transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
         >
           Open Service locations
           <ChevronRight className="h-4 w-4" />
@@ -443,7 +443,7 @@ export default function SettingsPage() {
       >
         <Link
           href="/admin/settings/waitlist"
-          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 text-sm font-bold text-background hover:opacity-90 transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
         >
           Open Waitlist signups
           <ChevronRight className="h-4 w-4" />
@@ -457,7 +457,7 @@ export default function SettingsPage() {
       >
         <Link
           href="/admin/settings/store-shipping"
-          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 text-sm font-bold text-background hover:opacity-90 transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
         >
           Open Store shipping
           <ChevronRight className="h-4 w-4" />
@@ -500,7 +500,7 @@ export default function SettingsPage() {
               type="button"
               onClick={handleSaveAlerts}
               disabled={savingAlerts || loading}
-              className="flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 text-sm font-bold text-background hover:opacity-90 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
             >
               {savingAlerts ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Alerts Settings

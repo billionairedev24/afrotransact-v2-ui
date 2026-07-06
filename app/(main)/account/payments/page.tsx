@@ -11,6 +11,7 @@ import {
   updateUserDefaults,
   type SavedPaymentMethod,
 } from "@/lib/api"
+import { AccountShell } from "@/components/account/AccountShell"
 
 function formatBrand(brand: string | null): string {
   if (!brand) return "Card"
@@ -24,7 +25,7 @@ function formatExpiry(month: number | null, year: number | null): string {
   return `${mm}/${yy}`
 }
 
-export default function PaymentMethodsPage() {
+export function PaymentsSection() {
   const { data: session, status } = useSession()
   const token = (session as { accessToken?: string } | null)?.accessToken
   const [methods, setMethods] = useState<SavedPaymentMethod[] | null>(null)
@@ -107,26 +108,21 @@ export default function PaymentMethodsPage() {
 
   if (status !== "authenticated") {
     return (
-      <main className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
-        <CreditCard className="mx-auto h-14 w-14 text-gray-600" />
-        <h1 className="text-xl font-bold text-gray-900 mt-5">Sign in to manage payment methods</h1>
+      <div className="rounded-2xl border border-border bg-card px-6 py-16 text-center">
+        <CreditCard className="mx-auto h-12 w-12 text-muted-foreground" />
+        <p className="mt-4 text-sm text-foreground font-semibold">Sign in to manage payment methods</p>
         <Link
-          href="/auth/login"
-          className="inline-block mt-6 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
+          href="/auth/login?callbackUrl=/account"
+          className="inline-block mt-5 rounded-xl bg-brand-gold px-6 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
         >
-          Sign In
+          Sign in
         </Link>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 sm:px-6 py-8">
-      <h1 className="text-2xl font-bold text-foreground mb-2">Payment Methods</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Cards you have saved at checkout. Tokenized by Stripe — we never store raw card numbers.
-      </p>
-
+    <>
       {error && (
         <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600">
           {error}
@@ -211,6 +207,17 @@ export default function PaymentMethodsPage() {
           </div>
         </div>
       )}
-    </main>
+    </>
+  )
+}
+
+export default function PaymentMethodsPage() {
+  return (
+    <AccountShell
+      title="Payment Methods"
+      subtitle="Cards you have saved at checkout. Tokenized by Stripe — we never store raw card numbers."
+    >
+      <PaymentsSection />
+    </AccountShell>
   )
 }

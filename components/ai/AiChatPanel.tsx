@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Send, Trash2, X, Maximize2, Minimize2 } from "lucide-react"
+import { Send, Trash2, X, Maximize2, Minimize2, Radio, Volume2, VolumeX } from "lucide-react"
 import { useAiStore } from "@/stores/ai-store"
 import { useAiChat } from "./hooks/useAiChat"
 import { useVoiceInput } from "./hooks/useVoiceInput"
@@ -17,13 +17,13 @@ const QUICK_REPLIES = [
 
 export function AiChatPanel() {
   const { messages, isStreaming, sendMessage } = useAiChat()
-  const { close, setExpanded, isExpanded, clearHistory, isListening } = useAiStore()
+  const { close, setExpanded, isExpanded, clearHistory, isListening, handsFree, setHandsFree, speakReplies, setSpeakReplies } = useAiStore()
   const [input, setInput] = useState("")
   const [interimText, setInterimText] = useState("")
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const { supported: voiceSupported, toggle: toggleVoice, error: voiceError } = useVoiceInput({
+  const { supported: voiceSupported, toggle: toggleVoice, start: startVoice, error: voiceError } = useVoiceInput({
     onTranscript: (text) => {
       setInterimText("")
       setInput("")
@@ -31,6 +31,14 @@ export function AiChatPanel() {
     },
     onInterim: (text) => setInterimText(text),
   })
+
+  // Hands-free loop: when Victory finishes speaking, useAiChat fires
+  // "ai:handsFreeContinue" and we reopen the mic here.
+  useEffect(() => {
+    const handler = () => { if (useAiStore.getState().handsFree) void startVoice() }
+    window.addEventListener("ai:handsFreeContinue", handler)
+    return () => window.removeEventListener("ai:handsFreeContinue", handler)
+  }, [startVoice])
 
   // Auto-scroll to bottom on new content
   useEffect(() => {
@@ -79,6 +87,26 @@ export function AiChatPanel() {
           </p>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSpeakReplies(!speakReplies)}
+            title={speakReplies ? "Mute Victory" : "Have Victory speak replies out loud"}
+            className={`p-1.5 rounded-lg transition-colors ${speakReplies ? "text-emerald-500 bg-emerald-500/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+          >
+            {speakReplies ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+          </button>
+          {voiceSupported && (
+            <button
+              onClick={() => {
+                const next = !handsFree
+                setHandsFree(next)
+                if (next && !isListening) void startVoice()
+              }}
+              title={handsFree ? "Turn off hands-free" : "Hands-free voice mode"}
+              className={`p-1.5 rounded-lg transition-colors ${handsFree ? "text-red-500 bg-red-500/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+            >
+              <Radio className="h-3.5 w-3.5" />
+            </button>
+          )}
           {messages.length > 0 && (
             <button
               onClick={clearHistory}

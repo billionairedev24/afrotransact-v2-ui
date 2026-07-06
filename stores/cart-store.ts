@@ -50,84 +50,21 @@ interface CartState {
   getItemsByStore: () => Map<string, CartItem[]>
 }
 
-/** Per-tab session storage: cleared when the tab/window closes so the next visitor does not inherit a guest cart. */
-const GUEST_CART_KEY = "afrotransact-guest-cart"
+// Cart is server-only. Guest persistence retired: no sessionStorage, no
+// localStorage, no cross-session merges. Callers must be authenticated to
+// mutate the cart. These shims stay callable so existing imports compile
+// and any stale storage entries get purged on first invocation.
+const LEGACY_GUEST_CART_KEY = "afrotransact-guest-cart"
 
-/**
- * Persisted guest-cart envelope. `lastTouchedAt` is refreshed on every
- * mutation; on hydration we drop the cart if it's older than the configured
- * TTL — defensive safety net for shared-computer scenarios.
- */
-interface GuestCartEnvelope {
-  items: CartItem[]
-  lastTouchedAt: number
-}
-
-function getGuestCartTtlMs(): number {
-  const raw = process.env.NEXT_PUBLIC_GUEST_CART_TTL_HOURS ?? "4"
-  const hours = Number.parseFloat(raw)
-  const safeHours = Number.isFinite(hours) && hours > 0 ? hours : 4
-  return safeHours * 60 * 60 * 1000
-}
-
-function readGuestCartRaw(): string | null {
-  try {
-    const fromSession = sessionStorage.getItem(GUEST_CART_KEY)
-    if (fromSession) return fromSession
-    const legacy = localStorage.getItem(GUEST_CART_KEY)
-    if (legacy) {
-      sessionStorage.setItem(GUEST_CART_KEY, legacy)
-      localStorage.removeItem(GUEST_CART_KEY)
-      return legacy
-    }
-  } catch {
-    // storage unavailable
-  }
-  return null
-}
-
-export function saveGuestCart(items: CartItem[]) {
-  try {
-    const envelope: GuestCartEnvelope = { items, lastTouchedAt: Date.now() }
-    sessionStorage.setItem(GUEST_CART_KEY, JSON.stringify(envelope))
-  } catch {
-    // non-critical
-  }
-}
-
-export function loadGuestCart(): CartItem[] {
-  try {
-    const raw = readGuestCartRaw()
-    if (!raw) return []
-    const parsed: unknown = JSON.parse(raw)
-    // Back-compat: legacy persisted shape was a bare CartItem[].
-    if (Array.isArray(parsed)) return parsed as CartItem[]
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      Array.isArray((parsed as GuestCartEnvelope).items) &&
-      typeof (parsed as GuestCartEnvelope).lastTouchedAt === "number"
-    ) {
-      const env = parsed as GuestCartEnvelope
-      if (Date.now() - env.lastTouchedAt > getGuestCartTtlMs()) {
-        // Stale — drop it so a shared computer doesn't leak prior visitor's cart.
-        try { sessionStorage.removeItem(GUEST_CART_KEY) } catch { /* ignore */ }
-        return []
-      }
-      return env.items
-    }
-  } catch {
-    // corrupted — ignore
-  }
-  return []
-}
-
+export function saveGuestCart(_items: CartItem[]) { /* no-op */ }
+export function loadGuestCart(): CartItem[] { return [] }
 export function clearGuestCart() {
   try {
-    sessionStorage.removeItem(GUEST_CART_KEY)
-    localStorage.removeItem(GUEST_CART_KEY)
+    sessionStorage.removeItem(LEGACY_GUEST_CART_KEY)
+    localStorage.removeItem(LEGACY_GUEST_CART_KEY)
+    sessionStorage.removeItem("at:cart:merge-notice")
   } catch {
-    // non-critical
+    // storage unavailable
   }
 }
 
@@ -181,12 +118,17 @@ function shouldUseServer(): boolean {
   return useCartStore.getState().mode === "auth"
 }
 
-async function withSync<T>(fn: () => Promise<T>): Promise<T> {
+async function withSync<T>(key: string, fn: () => Promise<T>): Promise<T> {
   useCartStore.setState({ syncing: true })
   try {
     return await fn()
   } finally {
-    // Only clear if no other inflight is left
+    // Delete first, THEN decide whether to clear the spinner. The previous
+    // ordering relied on an outer `.finally(() => inflight.delete(key))`
+    // chained by the caller, which runs AFTER this block — so the size check
+    // here always saw the current key still present and never flipped
+    // syncing back to false, leaving the header spinner stuck.
+    inflight.delete(key)
     if (inflight.size === 0) useCartStore.setState({ syncing: false })
   }
 }
@@ -200,7 +142,7 @@ async function serverAdd(item: CartItem): Promise<void> {
   const token = await getAccessToken()
   if (!token) return
   const key = `add:${item.variantId}`
-  const run = withSync(() =>
+  const run = withSync(key, () =>
     withRetry(async () => {
       const dto = await addToCart(token, {
         variantId: item.variantId,
@@ -218,7 +160,7 @@ async function serverAdd(item: CartItem): Promise<void> {
       })
       useCartStore.getState().replaceFromServer(dto)
     }),
-  ).finally(() => inflight.delete(key))
+  )
   inflight.set(key, run)
   try {
     await run
@@ -237,14 +179,14 @@ async function serverUpdate(variantId: string, quantity: number, prevQty: number
   const serverId = useCartStore.getState().serverItemIds[variantId]
   if (!serverId) return // not yet hydrated; merge sync will reconcile
   const key = `upd:${variantId}`
-  const run = withSync(() =>
+  const run = withSync(key, () =>
     withRetry(async () => {
       const dto = quantity <= 0
         ? await apiRemoveCartItem(token, serverId)
         : await updateCartItemQty(token, serverId, quantity)
       useCartStore.getState().replaceFromServer(dto)
     }),
-  ).finally(() => inflight.delete(key))
+  )
   inflight.set(key, run)
   try {
     await run
@@ -269,12 +211,12 @@ async function serverRemove(variantId: string, prevItem: CartItem | undefined): 
   const serverId = useCartStore.getState().serverItemIds[variantId]
   if (!serverId) return
   const key = `del:${variantId}`
-  const run = withSync(() =>
+  const run = withSync(key, () =>
     withRetry(async () => {
       const dto = await apiRemoveCartItem(token, serverId)
       useCartStore.getState().replaceFromServer(dto)
     }),
-  ).finally(() => inflight.delete(key))
+  )
   inflight.set(key, run)
   try {
     await run
@@ -288,7 +230,7 @@ async function serverClear(): Promise<void> {
   const token = await getAccessToken()
   if (!token) return
   try {
-    await withSync(() => withRetry(() => clearServerCart(token)))
+    await withSync("clear:all", () => withRetry(() => clearServerCart(token)))
     useCartStore.setState({ serverItemIds: {} })
   } catch (e) {
     reportError(e, "cart clear", "Could not clear cart")
@@ -359,8 +301,18 @@ export const useCartStore = create<CartState>()((set, get) => ({
   replaceFromServer: (dto) => {
     const fallbackByVariant: Record<string, CartItem> = {}
     for (const i of get().items) fallbackByVariant[i.variantId] = i
+    const nextItems = dtoToItems(dto, fallbackByVariant)
+    // Guard against silent data loss: if the server says "your cart is
+    // empty" but we have local items, do NOT wipe. This is almost always
+    // a transient sync race (silent token refresh that arrived before
+    // the server saw the latest add), not a real user-driven clear. The
+    // explicit clearCart() path is what zeros things out.
+    if (nextItems.length === 0 && get().items.length > 0) {
+      set({ serverItemIds: dtoToServerItemIds(dto) })
+      return
+    }
     set({
-      items: dtoToItems(dto, fallbackByVariant),
+      items: nextItems,
       serverItemIds: dtoToServerItemIds(dto),
     })
   },

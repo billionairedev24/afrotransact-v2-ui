@@ -64,43 +64,67 @@ function toMergePayload(items: CartItem[]) {
  */
 function isBuyerCapableRoles(roles: string[] | undefined | null): boolean {
   if (!roles || roles.length === 0) return true
-  return roles.includes("buyer")
+  // Admins shop too — they need to test the marketplace end-to-end and
+  // are real customers in their own right. Excluding them put admin
+  // sessions into a guest-only cart mode that surprised everyone.
+  // Only seller-ONLY sessions (no buyer/admin) skip cart sync.
+  return roles.includes("buyer") || roles.includes("admin")
 }
 
 export function CartMergeProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const [cartReady, setCartReady] = useState(false)
-  const hydratedForToken = useRef<string | null>(null)
+  // Key hydration by STABLE user identity (Keycloak sub), not by the
+  // access-token string. The access token rotates every few minutes via
+  // silent refresh; if we keyed by token value, every refresh would
+  // re-hydrate from the server — and if the server returned an empty
+  // cart (transient 401, abandoned-cart sweep, or just a stale token
+  // moment) we'd wipe the buyer's local items. Keying by user id pins
+  // hydration to "this user, this tab" — once per real login.
+  const hydratedForUser = useRef<string | null>(null)
   const isAuthenticatedRef = useRef(false)
+  // Tracks whether THIS tab has ever observed an authenticated session.
+  // The unauthenticated-mount effect uses this to distinguish a true
+  // first-mount-as-guest from a token blip mid-session — only the former
+  // should overwrite the in-memory cart from sessionStorage.
+  const everAuthedInTab = useRef(false)
 
   const roles = (session?.user as { roles?: string[] } | undefined)?.roles
   const isBuyerCapable = isBuyerCapableRoles(roles)
+
+  // Cart is server-only now — purge any legacy sessionStorage/localStorage
+  // entries left behind by the retired guest-cart path so a returning
+  // buyer never sees a stale "previous session" merge again.
+  useEffect(() => {
+    clearGuestCart()
+  }, [])
 
   useEffect(() => {
     // Treat non-buyer (admin/seller-only) sessions as "not authenticated" for
     // cart purposes: subscriber below persists to sessionStorage as guest.
     isAuthenticatedRef.current = status === "authenticated" && isBuyerCapable
+    if (isAuthenticatedRef.current) {
+      everAuthedInTab.current = true
+    }
   }, [status, isBuyerCapable])
 
   // ── Authenticated buyer: merge guest cart → server, hydrate canonical cart, flip mode ──
   useEffect(() => {
     if (status !== "authenticated") return
     if (!isBuyerCapable) {
-      // Admin/seller-only session — no buyer cart. Stay in guest mode, no API calls.
-      hydratedForToken.current = null
-      useCartStore.setState({
-        items: [],
-        mode: "guest",
-        serverItemIds: {},
-        syncing: false,
-      })
+      // Admin/seller-only session — no buyer cart, no API calls. Do NOT
+      // wipe existing items either: buyers regularly nip into /admin or
+      // /dashboard and back; wiping on that transition destroys their
+      // in-progress cart. Items harmlessly sit in memory. If they never
+      // return to the buyer surface, browser lifecycle cleans up.
       setCartReady(true)
       return
     }
     const token = session?.accessToken as string | undefined
-    if (!token) return
-    if (hydratedForToken.current === token) return
-    hydratedForToken.current = token
+    const userId = (session?.user as { id?: string } | undefined)?.id
+    if (!token || !userId) return
+    if (hydratedForUser.current === userId) return
+    hydratedForUser.current = userId
 
     setCartReady(false)
     const guestItems = loadGuestCart()
@@ -117,17 +141,7 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
         useCartStore.getState().replaceFromServer(dto)
         useCartStore.getState().setMode("auth")
         clearGuestCart()
-        if (hadLocalItemsAtAuth) {
-          try {
-            const mergedCount = seedItems.reduce((n, i) => n + i.quantity, 0)
-            sessionStorage.setItem(
-              "at:cart:merge-notice",
-              JSON.stringify({ at: Date.now(), count: mergedCount }),
-            )
-          } catch {
-            // non-critical
-          }
-        }
+        // Cart is server-only now — no merge notice, no session persistence.
       } catch (e) {
         logError(e, "cart hydrate on auth")
         // Don't drop local items if hydration failed; just flip mode so future
@@ -137,7 +151,12 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
         setCartReady(true)
       }
     })()
-  }, [status, session?.accessToken, isBuyerCapable])
+    // Intentionally NOT depending on session.accessToken — that string rotates
+    // on every silent refresh and would re-trigger hydrate, wiping local cart
+    // items if the server returned an empty cart. We re-run only when the
+    // user identity itself changes (login/logout).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, (session?.user as { id?: string } | undefined)?.id, isBuyerCapable])
 
   // Authenticated but no access token yet — don't block the UI forever.
   useEffect(() => {
@@ -148,9 +167,30 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
   }, [status, session?.accessToken, isBuyerCapable])
 
   // ── Unauthenticated: hydrate from guest sessionStorage; reset mode + cached server ids. ──
+  //
+  // Critical: only seed items from guest storage on a TRUE first mount as
+  // guest. If we've already observed an authenticated session in this tab
+  // and the status just flipped to "unauthenticated" (silent token failure,
+  // explicit signOut, NextAuth refresh blip), do NOT overwrite the
+  // in-memory cart from sessionStorage — that storage was deliberately
+  // not kept in sync during auth mode (see subscriber below) and would
+  // typically be empty or stale, causing the cart to vanish visually.
+  // The server cart is the source of truth and re-hydrates on next login.
   useEffect(() => {
     if (status !== "unauthenticated") return
-    hydratedForToken.current = null
+    hydratedForUser.current = null
+    if (everAuthedInTab.current) {
+      // Mid-session auth loss: flip mode + drop server-side ids so a
+      // re-login starts clean, but keep whatever items the user can still
+      // see. They'll be re-reconciled against the server on next login.
+      useCartStore.setState({
+        mode: "guest",
+        serverItemIds: {},
+        syncing: false,
+      })
+      setCartReady(true)
+      return
+    }
     const guestItems = loadGuestCart()
     useCartStore.setState({
       items: guestItems,

@@ -3,10 +3,9 @@
 import { useEffect, useRef } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { usePathname } from "next/navigation"
-import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
 import { setOn401Handler } from "@/lib/api"
 
-const PROTECTED_PREFIXES = ["/admin", "/dashboard"]
+const PROTECTED_PREFIXES = ["/admin", "/dashboard", "/account", "/orders", "/checkout"]
 
 function isProtectedPath(pathname: string) {
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))
@@ -29,7 +28,10 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
   function bailOut(reason: string) {
     if (handlingRef.current) return
     handlingRef.current = true
-    clearClientCartOnly()
+    // Do NOT clear the cart here. A transient 401 / expired token does not
+    // mean the buyer abandoned the cart — the server-side cart is still
+    // intact and will re-hydrate on next login. Wiping locally before
+    // signOut was destroying carts on stale-token blips.
     const callbackUrl = encodeURIComponent(pathname)
     void signOut({
       callbackUrl: `/auth/login?callbackUrl=${callbackUrl}&reason=${reason}`,
@@ -40,10 +42,16 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
   // without importing next-auth itself.
   useEffect(() => {
     setOn401Handler(() => {
-      if (isProtectedPath(pathname)) bailOut("token_rejected")
+      // A 401 on any authenticated API call means the access token was
+      // rejected AND the silent refresh in lib/auth.ts already failed
+      // (otherwise we'd have a fresh token). Don't gate on path — the
+      // session is dead regardless of where the user happens to be.
+      if (status === "authenticated" || isProtectedPath(pathname)) {
+        bailOut("token_rejected")
+      }
     })
     return () => setOn401Handler(null)
-  }, [pathname])
+  }, [pathname, status])
 
   useEffect(() => {
     if (handlingRef.current) return

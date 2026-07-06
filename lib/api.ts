@@ -103,8 +103,14 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     if (res.status === 401 && on401Handler && typeof window !== "undefined") {
       try { on401Handler() } catch { /* don't mask the original failure */ }
     }
-    // Log every API error at source so it's always captured regardless of how the caller handles it
-    console.error(`[API] ${opts.method ?? "GET"} ${path} → ${res.status}`, userMessage)
+    // Log every API error at source so it's always captured regardless of how
+    // the caller handles it. Silence during `next build`: pre-render on the
+    // home / category / deals pages tries to hit the backend, and CI/CD
+    // pipelines routinely build without the backend up. The safe() wrappers
+    // upstream fall back to empty data anyway.
+    if (process.env.NEXT_PHASE !== "phase-production-build") {
+      console.error(`[API] ${opts.method ?? "GET"} ${path} → ${res.status}`, userMessage)
+    }
     throw new ApiError(res.status, userMessage, path)
   }
 
@@ -189,6 +195,10 @@ export interface Product {
   variants: ProductVariant[]
   images: ProductImage[]
   categories: CategoryRef[]
+  // Phase 9.7 — when this offer was created via "Add from catalog",
+  // catalogItemId links back to the master catalog item. /product/{slug}
+  // server-redirects to /p/{catalog-slug} when this is set.
+  catalogItemId?: string | null
 }
 
 export interface Page<T> {
@@ -259,6 +269,12 @@ export interface SearchResult {
   highlight_description: string | null
   score: number | null
   slug?: string
+  // Phase 9.6b — when this result is a collapsed catalog item group,
+  // catalog_item_id is shared across the offer roster and offer_count
+  // is the group size. Storefront uses these to badge "X sellers" and
+  // to link to /p/[slug] (catalog PDP) instead of /product/[slug].
+  catalog_item_id?: string | null
+  offer_count?: number
 }
 
 export interface SearchFacetBucket {
@@ -1925,7 +1941,10 @@ export function deleteSavedPaymentMethod(token: string, id: string) {
 export function getShippingQuotes(
   token: string,
   data: {
-    regionId: string
+    /** New primary key: buyer's resolved service-zone id. */
+    zoneId?: string
+    /** Legacy fallback while callers migrate. */
+    regionId?: string
     state?: string
     city?: string
     destinationLine1?: string
@@ -2321,6 +2340,31 @@ export async function upsertZoneFeature(
     body: { feature_key: featureKey, enabled },
     token,
   })
+}
+
+// Platform-wide feature flags. Global on/off — no location scope.
+export interface PlatformFeature {
+  featureKey: string
+  enabled: boolean
+}
+
+export async function listPlatformFeatures(token: string): Promise<PlatformFeature[]> {
+  const raw = await api<{ feature_key: string; enabled: boolean }[]>(
+    `/api/v1/admin/settings/platform-features`,
+    { token },
+  )
+  return (raw ?? []).map((f) => ({ featureKey: f.feature_key, enabled: f.enabled }))
+}
+
+export async function upsertPlatformFeature(
+  token: string,
+  featureKey: string,
+  enabled: boolean,
+): Promise<void> {
+  await api<{ feature_key: string; enabled: boolean }>(
+    `/api/v1/admin/settings/platform-features`,
+    { method: "PUT", body: { feature_key: featureKey, enabled }, token },
+  )
 }
 
 // Public feature catalog — same shape across envs. Used by the admin UI to
@@ -3804,4 +3848,283 @@ export async function listWaitlistSignups(
     `/api/v1/admin/waitlist${qs ? `?${qs}` : ""}`,
     { token },
   )
+}
+
+// ─── Phase 9: Catalog items (Amazon ASIN-equivalent) ───────────────────────
+//
+// Admin-managed master catalog. AT-Inv operators and third-party sellers
+// attach offers against these items. See
+// inventory/docs/architecture-target-state.md.
+
+export interface CatalogItem {
+  id: string
+  itemNumber: string
+  title: string
+  description: string
+  brand?: string | null
+  slug: string
+  productType: string
+  status: "draft" | "published" | "suppressed"
+  tags: string[]
+  highlights: string  // JSON string of string[]
+  metaTitle?: string | null
+  metaDescription?: string | null
+  submittedByStore?: string | null
+  submittedAt?: string | null
+  publishedAt?: string | null
+  suppressedAt?: string | null
+  createdAt: string
+  updatedAt: string
+  variants: CatalogItemVariant[]
+  images: CatalogItemImage[]
+  categoryIds: string[]
+}
+
+export interface CatalogItemVariant {
+  id: string
+  itemId: string
+  variantSku: string
+  gtin?: string | null
+  name?: string | null
+  attributeValues: string  // JSON string
+  weightKg?: number | null
+  dimensions?: string | null
+  imageId?: string | null
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CatalogItemImage {
+  id: string
+  itemId: string
+  url: string
+  altText?: string | null
+  sortOrder: number
+  isPrimary: boolean
+  createdAt: string
+}
+
+export interface CreateCatalogItemVariantRequest {
+  variantSku?: string
+  gtin?: string
+  name?: string
+  attributeValues?: string
+  weightKg?: number
+  dimensions?: string
+  isDefault?: boolean
+}
+
+export interface CreateCatalogItemRequest {
+  title: string
+  description?: string
+  brand?: string
+  productType?: string
+  tags?: string[]
+  highlights?: string  // JSON-encoded string of string[]
+  metaTitle?: string
+  metaDescription?: string
+  categoryIds?: string[]
+  variants: CreateCatalogItemVariantRequest[]
+}
+
+export interface UpdateCatalogItemRequest {
+  title?: string
+  description?: string
+  brand?: string
+  productType?: string
+  status?: "draft" | "published" | "suppressed"
+  tags?: string[]
+  highlights?: string
+  metaTitle?: string
+  metaDescription?: string
+  categoryIds?: string[]  // present = replace-all; omit = no change
+}
+
+export interface CreateCatalogItemImageRequest {
+  url: string
+  altText?: string
+  sortOrder?: number
+  isPrimary?: boolean
+}
+
+export function listCatalogItems(
+  token: string,
+  params: { q?: string; status?: string; page?: number; size?: number; sort?: string } = {},
+): Promise<Page<CatalogItem>> {
+  const sp = new URLSearchParams()
+  if (params.q) sp.set("q", params.q)
+  if (params.status) sp.set("status", params.status)
+  if (params.page != null) sp.set("page", String(params.page))
+  if (params.size != null) sp.set("size", String(params.size))
+  if (params.sort) sp.set("sort", params.sort)
+  const qs = sp.toString()
+  return api<Page<CatalogItem>>(
+    `/api/v1/catalog/items${qs ? `?${qs}` : ""}`,
+    { token },
+  )
+}
+
+
+export function getCatalogItem(token: string, id: string): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items/${id}`, { token })
+}
+
+export function createCatalogItem(
+  token: string,
+  body: CreateCatalogItemRequest,
+): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items`, { method: "POST", body, token })
+}
+
+export function updateCatalogItem(
+  token: string,
+  id: string,
+  body: UpdateCatalogItemRequest,
+): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items/${id}`, { method: "PATCH", body, token })
+}
+
+export function publishCatalogItem(token: string, id: string): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items/${id}/publish`, { method: "POST", body: {}, token })
+}
+
+export function suppressCatalogItem(token: string, id: string): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items/${id}/suppress`, { method: "POST", body: {}, token })
+}
+
+export function addCatalogItemVariant(
+  token: string,
+  itemId: string,
+  body: CreateCatalogItemVariantRequest,
+): Promise<CatalogItemVariant> {
+  return api<CatalogItemVariant>(`/api/v1/catalog/items/${itemId}/variants`, {
+    method: "POST", body, token,
+  })
+}
+
+export function addCatalogItemImage(
+  token: string,
+  itemId: string,
+  body: CreateCatalogItemImageRequest,
+): Promise<CatalogItemImage> {
+  return api<CatalogItemImage>(`/api/v1/catalog/items/${itemId}/images`, {
+    method: "POST", body, token,
+  })
+}
+
+export function removeCatalogItemImage(token: string, itemId: string, imageId: string): Promise<void> {
+  return api<void>(`/api/v1/catalog/items/${itemId}/images/${imageId}`, {
+    method: "DELETE", token,
+  })
+}
+
+export function reorderCatalogItemImages(token: string, itemId: string, imageIds: string[]): Promise<void> {
+  return api<void>(`/api/v1/catalog/items/${itemId}/images/reorder`, {
+    method: "PUT", body: { imageIds }, token,
+  })
+}
+
+// Phase 9.4 — seller "Add from catalog" flow.
+export interface CreateOfferFromCatalogRequest {
+  catalogItemId: string
+  storeId: string
+  internalSkuPrefix?: string
+  variants: Array<{
+    catalogVariantId: string
+    price: number
+    compareAtPrice?: number
+    currency?: string
+    stockQuantity?: number
+  }>
+}
+
+export function createOfferFromCatalog(
+  token: string,
+  body: CreateOfferFromCatalogRequest,
+): Promise<Product> {
+  return api<Product>(`/api/v1/products/from-catalog`, {
+    method: "POST", body, token,
+  })
+}
+
+// ─── Phase 9.6 — buyer-side flip (catalog item + Buy Box) ──────────────────
+
+export interface OfferSummary {
+  offerId: string
+  storeId: string
+  variantId: string
+  variantSku: string
+  variantName?: string | null
+  price: number
+  compareAtPrice?: number | null
+  currency: string
+  stockQuantity: number
+  condition: string
+}
+
+export interface CatalogItemBuyBox {
+  id: string
+  itemNumber: string
+  title: string
+  description: string
+  brand?: string | null
+  slug: string
+  productType: string
+  status: "draft" | "published" | "suppressed"
+  tags: string[]
+  highlights: string
+  images: CatalogItemImage[]
+  categoryIds: string[]
+  publishedAt?: string | null
+  buyBox: OfferSummary | null
+  otherOffers: OfferSummary[]
+  totalOffers: number
+  /**
+   * Phase 9.8 — Buy Box decision metadata. `reason` is a machine token
+   * ("cheapest_in_stock" | "no_offers" | "no_eligible_offers");
+   * `ineligible` is keyed by offerId with a short rejection code
+   * (e.g. "out_of_stock", "currency_mismatch:NGN_vs_USD"). The seller
+   * dashboard reads its own offer's entry to show a "Why isn't my offer
+   * winning?" tooltip.
+   */
+  buyBoxDecision: {
+    reason: string
+    eligibleCount: number
+    ineligible: Record<string, string>
+  }
+}
+
+export function getCatalogItemBuyBoxBySlug(
+  slug: string,
+  opts: { revalidate?: number } = {},
+): Promise<CatalogItemBuyBox> {
+  return api<CatalogItemBuyBox>(
+    `/api/v1/catalog/items/by-slug/${encodeURIComponent(slug)}/with-offers`,
+    opts.revalidate ? { next: { revalidate: opts.revalidate } } : {},
+  )
+}
+
+export function listCatalogItemsWithBuyBox(
+  opts: { page?: number; size?: number; revalidate?: number } = {},
+): Promise<Page<CatalogItemBuyBox>> {
+  const sp = new URLSearchParams()
+  if (opts.page != null) sp.set("page", String(opts.page))
+  if (opts.size != null) sp.set("size", String(opts.size))
+  const qs = sp.toString()
+  return api<Page<CatalogItemBuyBox>>(
+    `/api/v1/catalog/items/with-buybox${qs ? `?${qs}` : ""}`,
+    opts.revalidate ? { next: { revalidate: opts.revalidate } } : {},
+  )
+}
+
+/**
+ * Public read of a catalog item by id. GET endpoints on /api/v1/catalog/items
+ * are permitAll in SecurityConfig — no token required. Used by the
+ * /p/by-id/{id} redirect to resolve search-result hits → catalog slug.
+ */
+export function getCatalogItemPublic(id: string): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items/${id}`, {
+    next: { revalidate: 60 },
+  })
 }
