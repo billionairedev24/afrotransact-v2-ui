@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
+import { storeDisplayName } from "@/lib/house-store"
 import { ApiError } from "@/lib/api"
 import { friendlyMessage, logError } from "@/lib/errors"
 import {
@@ -435,7 +436,7 @@ function RefundForm({ order, maxCents, onIssued }: {
               <option value="">Whole order ({order.subOrders.length} sellers)</option>
               {order.subOrders.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.id.slice(0, 8)} · store {s.storeId.slice(0, 8)} · {fmt(s.subtotalCents, order.currency)}
+                  {s.id.slice(0, 8)} · {storeDisplayName(s.storeId)} · {fmt(s.subtotalCents, order.currency)}
                 </option>
               ))}
             </select>

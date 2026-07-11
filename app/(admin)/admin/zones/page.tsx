@@ -445,11 +445,17 @@ function SettingsPanel({
   const [taxRate, setTaxRate] = useState(
     zone.taxRate !== null ? String(zone.taxRate) : "",
   )
+  // Money fields are entered in DOLLARS (stored as cents). The threshold keeps
+  // its -1 "always free" sentinel as a literal.
   const [shippingRate, setShippingRate] = useState(
-    zone.shippingRateCentsPerLb !== null ? String(zone.shippingRateCentsPerLb) : "",
+    zone.shippingRateCentsPerLb !== null ? String(zone.shippingRateCentsPerLb / 100) : "",
   )
   const [freeThreshold, setFreeThreshold] = useState(
-    zone.freeShippingThresholdCents !== null ? String(zone.freeShippingThresholdCents) : "",
+    zone.freeShippingThresholdCents === null
+      ? ""
+      : zone.freeShippingThresholdCents === -1
+        ? "-1"
+        : String(zone.freeShippingThresholdCents / 100),
   )
   const [saving, setSaving] = useState(false)
 
@@ -477,9 +483,13 @@ function SettingsPanel({
         timezone: timezone === "" ? null : timezone,
         tax_rate: taxRate === "" ? null : Number(taxRate),
         shipping_rate_cents_per_lb:
-          shippingRate === "" ? null : Number(shippingRate),
+          shippingRate === "" ? null : Math.round(Number(shippingRate) * 100),
         free_shipping_threshold_cents:
-          freeThreshold === "" ? null : Number(freeThreshold),
+          freeThreshold === ""
+            ? null
+            : freeThreshold.trim() === "-1"
+              ? -1
+              : Math.round(Number(freeThreshold) * 100),
       }
       await onSave(patch)
     } finally {
@@ -515,21 +525,17 @@ function SettingsPanel({
           hint={hint("taxRate", taxRate)}
         />
         <SettingsField
-          label="Shipping rate (¢/lb)"
+          label="Shipping rate ($/lb)"
           value={shippingRate}
           onChange={setShippingRate}
-          placeholder="50"
-          hint={hint("shippingRateCentsPerLb", shippingRate)}
+          placeholder="5.99"
         />
         <SettingsField
-          label="Free-shipping threshold (¢)"
+          label="Free-shipping threshold ($)"
           value={freeThreshold}
           onChange={setFreeThreshold}
-          placeholder="5000 (blank = never free)"
-          hint={
-            hint("freeShippingThresholdCents", freeThreshold) ??
-            "Blank or 0 = never free · -1 = ALWAYS free · N = free when order subtotal ≥ N cents"
-          }
+          placeholder="300 (blank = never free)"
+          hint="Blank or 0 = never free · -1 = ALWAYS free · N = free when order subtotal ≥ $N"
         />
       </div>
       <div className="mt-3 flex justify-end">
@@ -557,7 +563,7 @@ function SettingsField({
   value: string
   onChange: (v: string) => void
   placeholder?: string
-  hint: string | null
+  hint?: string | null
 }) {
   return (
     <label className="block">

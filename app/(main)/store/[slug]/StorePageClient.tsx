@@ -362,8 +362,11 @@ export default function StorePageClient() {
         try {
           const productsRes = await getStoreProducts(storeData.id, 0, PAGE_SIZE)
           if (!cancelled) {
-            setProducts(productsRes.content)
-            setTotalProducts(productsRes.totalElements ?? productsRes.content.length)
+            // Only show products a buyer can actually order — hide anything
+            // with no in-stock variant. The catalog endpoint isn't stock-filtered.
+            const inStock = productsRes.content.filter(productHasSellableStock)
+            setProducts(inStock)
+            setTotalProducts(productsRes.totalElements ?? inStock.length)
             setPage(0)
           }
         } catch {
@@ -391,7 +394,7 @@ export default function StorePageClient() {
       setProducts((prev) => {
         const seen = new Set(prev.map((p) => p.id))
         const merged = [...prev]
-        for (const p of res.content) if (!seen.has(p.id)) merged.push(p)
+        for (const p of res.content) if (!seen.has(p.id) && productHasSellableStock(p)) merged.push(p)
         return merged
       })
       setTotalProducts(res.totalElements ?? totalProducts)

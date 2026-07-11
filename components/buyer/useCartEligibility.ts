@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 
 import { checkShippingEligibility, type ShippingEligibility } from "@/lib/api"
 import { useBuyerLocation } from "@/stores/buyer-location"
+import { isHouseStore } from "@/lib/house-store"
 
 /**
  * Resolves shipping eligibility for each distinct storeId in the cart
@@ -17,9 +18,11 @@ import { useBuyerLocation } from "@/stores/buyer-location"
  */
 export function useCartEligibility(storeIds: string[]) {
   const location = useBuyerLocation((s) => s.location)
+  const resolvedZone = useBuyerLocation((s) => s.resolvedZone)
   const [decisions, setDecisions] = useState<Map<string, ShippingEligibility | null>>(new Map())
 
   const key = storeIds.slice().sort().join(",")
+  const zoneStatus = resolvedZone?.status
 
   useEffect(() => {
     if (!location || storeIds.length === 0) {
@@ -27,9 +30,19 @@ export function useCartEligibility(storeIds: string[]) {
       return
     }
     let cancelled = false
+    // First-party (house store) eligibility comes from AfroTransact's areas of
+    // operation — the resolved service zone — not a seller serviceability call.
+    const houseOutside =
+      zoneStatus === "coming_soon" || zoneStatus === "disabled" || zoneStatus === "not_serviced"
+    const houseDecision: ShippingEligibility = houseOutside
+      ? { result: "not_eligible", reason: "Outside AfroTransact's delivery areas" }
+      : { result: "eligible" }
     Promise.all(
-      storeIds.map((storeId) =>
-        checkShippingEligibility({
+      storeIds.map((storeId) => {
+        if (isHouseStore(storeId)) {
+          return Promise.resolve([storeId, houseDecision] as const)
+        }
+        return checkShippingEligibility({
           storeId,
           lat: location.lat,
           lng: location.lng,
@@ -38,8 +51,8 @@ export function useCartEligibility(storeIds: string[]) {
           postalCode: location.postalCode,
         })
           .then((d) => [storeId, d] as const)
-          .catch(() => [storeId, null] as const),
-      ),
+          .catch(() => [storeId, null] as const)
+      }),
     ).then((entries) => {
       if (cancelled) return
       setDecisions(new Map(entries))
@@ -47,7 +60,7 @@ export function useCartEligibility(storeIds: string[]) {
     return () => {
       cancelled = true
     }
-  }, [key, location])
+  }, [key, location, zoneStatus])
 
   const hasBlocker = Array.from(decisions.values()).some(
     (d) => d?.result === "not_eligible",

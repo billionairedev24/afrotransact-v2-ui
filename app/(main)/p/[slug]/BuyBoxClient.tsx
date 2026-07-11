@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useCartStore } from "@/stores/cart-store"
+import { storeDisplayName } from "@/lib/house-store"
 import type { CatalogItemBuyBox, OfferSummary } from "@/lib/api"
 
 /**
@@ -33,7 +34,7 @@ export function BuyBoxClient({
         productId: offer.offerId,
         variantId: offer.variantId,
         storeId: offer.storeId,
-        storeName: offer.storeId.slice(0, 8), // fallback — proper store name resolution is a follow-up
+        storeName: storeDisplayName(offer.storeId),
         title: item.title,
         variantName: offer.variantName ?? "Default",
         // CartStore.price is in cents. OfferSummary.price is in major units.
@@ -79,8 +80,8 @@ export function BuyBoxClient({
         </div>
         <p className="mt-2 text-sm">
           <span className="text-emerald-700 font-semibold">In stock</span>
-          <span className="text-muted-foreground"> · sold by store </span>
-          <span className="font-mono text-[11px] text-foreground">{bb.storeId.slice(0, 8)}</span>
+          <span className="text-muted-foreground"> · sold by </span>
+          <span className="text-[11px] text-foreground">{storeDisplayName(bb.storeId)}</span>
         </p>
         {item.totalOffers > 1 && (
           <p className="mt-1 text-xs text-muted-foreground">
@@ -129,7 +130,7 @@ export function BuyBoxClient({
               return (
               <li key={o.offerId} className="flex items-center gap-4 px-5 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-[11px] text-muted-foreground">store {o.storeId.slice(0, 8)}</p>
+                  <p className="text-[11px] text-muted-foreground">{storeDisplayName(o.storeId)}</p>
                   <p className="text-sm text-foreground">
                     {o.stockQuantity > 0 ? (
                       <span className="text-emerald-700 font-semibold">In stock</span>

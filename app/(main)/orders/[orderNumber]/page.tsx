@@ -42,6 +42,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
 import { logError } from "@/lib/errors"
+import { storeDisplayName } from "@/lib/house-store"
 
 /* ─────────────────────── Helpers ─────────────────────── */
 
@@ -360,7 +361,7 @@ function OrderItem({
         productId: item.productId,
         variantId: item.variantId,
         storeId: sub.storeId,
-        storeName: sub.storeId,
+        storeName: storeDisplayName(sub.storeId),
         title: item.productTitle || "Product",
         variantName: item.variantName || "Default",
         price: item.unitPriceCents,
@@ -480,7 +481,7 @@ function SubOrderBlock({
             </h2>
             {!single && (
               <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                <Store className="h-3 w-3" /> Store {sub.storeId.slice(0, 8)}
+                <Store className="h-3 w-3" /> {storeDisplayName(sub.storeId)}
               </p>
             )}
           </div>

@@ -13,6 +13,7 @@ import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useDefaultRegionCommerceGates } from "@/hooks/use-default-region-commerce-gates"
 import { useCartEligibility } from "@/components/buyer/useCartEligibility"
+import { isHouseStore } from "@/lib/house-store"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { RegionBlock } from "@/components/geo/RegionBlock"
 
@@ -198,9 +199,9 @@ export default function CartPage() {
                   <div className="flex gap-2 items-start px-4 py-2.5 bg-red-50 border-b border-red-100 text-xs text-red-800">
                     <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
                     <span>
-                      This seller doesn't ship to{" "}
-                      <span className="font-semibold">{buyerPostalCode || "your area"}</span>.
-                      Remove these items or change your delivery location to continue.
+                      {isHouseStore(storeId) ? "AfroTransact doesn't deliver to " : "This seller doesn't ship to "}
+                      <span className="font-semibold">{buyerPostalCode || "your area"}</span>{" "}
+                      yet. Remove these items or change your delivery location to continue.
                     </span>
                   </div>
                 )}
@@ -318,7 +319,13 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Shipping</span>
-                <span className="text-green-400">Calculated at checkout</span>
+                {freeShippingThresholdCents !== null &&
+                (freeShippingThresholdCents === -1 ||
+                  (freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents)) ? (
+                  <span className="font-semibold text-green-600">Free</span>
+                ) : (
+                  <span className="text-green-400">Calculated at checkout</span>
+                )}
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Estimated tax</span>

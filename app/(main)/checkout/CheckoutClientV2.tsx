@@ -185,7 +185,6 @@ export default function CheckoutClientV2({
   // data (payment methods, free-shipping threshold).
   const [configFeatures, setConfigFeatures] = useState<Record<string, boolean>>({})
   const { features: zoneOrRegionFeatures } = useEffectiveFeatures(region?.code ?? null)
-  const [freeShippingThresholdCents, setFreeShippingThresholdCents] = useState<number | null>(null)
   useEffect(() => {
     if (!mounted) return
     let cancelled = false
@@ -209,7 +208,6 @@ export default function CheckoutClientV2({
         if (cancelled || !cfg) return
         setPaymentMethods(cfg.paymentMethods ?? [])
         setConfigFeatures(cfg.features ?? {})
-        setFreeShippingThresholdCents(cfg.region.freeShippingThresholdCents)
       } catch { /* non-fatal */ }
     })()
     return () => { cancelled = true }
@@ -423,6 +421,9 @@ export default function CheckoutClientV2({
 
   const selectedQuote = flatQuotes.find((q) => q.quoteId === selectedQuoteId) ?? null
   const shippingCents = selectedQuote?.amountCents ?? 0
+  // A $0 shipping quote means free shipping (global switch or threshold met) —
+  // show "Free" rather than "$0.00" everywhere shipping is displayed.
+  const fmtShip = (cents: number) => (cents === 0 ? "Free" : formatCents(cents))
 
   // ─── re-quote shipping when the cart changes ──────────────────────
   // Debounce 400ms; cancel in-flight runs via a stale sentinel. We don't
@@ -827,7 +828,7 @@ export default function CheckoutClientV2({
             n={2}
             title="Delivery options"
             subtitle={selectedQuote
-              ? `${selectedQuote.serviceName} — ${formatCents(selectedQuote.amountCents)}`
+              ? `${selectedQuote.serviceName} — ${fmtShip(selectedQuote.amountCents)}`
               : "Choose a delivery option"}
             disabled={!selectedAddress}
           >
@@ -923,7 +924,7 @@ export default function CheckoutClientV2({
                               {q.estimatedDays != null ? `Arrives in ${q.estimatedDays} day${q.estimatedDays === 1 ? "" : "s"}` : "Delivery estimate unavailable"}
                             </p>
                           </div>
-                          <p className="text-sm font-bold text-gray-900 tabular-nums">{formatCents(q.amountCents)}</p>
+                          <p className="text-sm font-bold text-gray-900 tabular-nums">{fmtShip(q.amountCents)}</p>
                         </label>
                       </li>
                     )
@@ -1084,15 +1085,15 @@ export default function CheckoutClientV2({
               <div className="flex justify-between">
                 <dt className="text-gray-600">
                   Shipping
-                  {freeShippingThresholdCents !== null && (
-                    freeShippingThresholdCents === -1 ||
-                    (freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents)
-                  ) && (
+                  {/* The badge must reflect what we actually charge — never
+                      contradict the line total. Only "free" when the selected
+                      quote is genuinely $0. */}
+                  {selectedQuote && shippingCents === 0 && (
                     <span className="ml-2 text-[11px] font-semibold text-green-700">Free shipping applied</span>
                   )}
                 </dt>
                 <dd className="text-gray-900 tabular-nums">
-                  {selectedQuote ? formatCents(shippingCents) : "—"}
+                  {selectedQuote ? fmtShip(shippingCents) : "—"}
                 </dd>
               </div>
               <div className="flex justify-between">

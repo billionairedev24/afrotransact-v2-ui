@@ -47,6 +47,7 @@ import {
 import { features } from "@/lib/features"
 import { logError } from "@/lib/errors"
 import { ShippingEligibilityBadge } from "@/components/buyer/ShippingEligibilityBadge"
+import { isHouseStore, HOUSE_STORE_NAME } from "@/lib/house-store"
 import { resolveDefaultRegion } from "@/lib/regions"
 
 /** Parse a product description into bullet list + leftover paragraphs. */
@@ -120,17 +121,23 @@ export default function ProductPageClient() {
           category: data.categories?.[0]?.name,
         })
 
-        getStoreById(data.storeId)
-          .then((store) => {
-            if (cancelled) return
-            setStoreName(store.name)
-            setStoreSlug(store.slug ?? "")
-            setStoreReturnsSupported(store.returnsSupported === true)
-            setStoreReturnWindowDays(
-              typeof store.returnWindowDays === "number" ? store.returnWindowDays : null,
-            )
-          })
-          .catch(() => { if (!cancelled) setStoreName(data.storeId) })
+        if (isHouseStore(data.storeId)) {
+          // First-party: resolve locally — the seller service has no record for it.
+          setStoreName(HOUSE_STORE_NAME)
+        } else {
+          getStoreById(data.storeId)
+            .then((store) => {
+              if (cancelled) return
+              setStoreName(store.name)
+              setStoreSlug(store.slug ?? "")
+              setStoreReturnsSupported(store.returnsSupported === true)
+              setStoreReturnWindowDays(
+                typeof store.returnWindowDays === "number" ? store.returnWindowDays : null,
+              )
+            })
+            // Never surface the raw store UUID to buyers.
+            .catch(() => { if (!cancelled) setStoreName("") })
+        }
 
         try {
           // Region call still kicks off so future region-aware logic
@@ -190,12 +197,12 @@ export default function ProductPageClient() {
   )
 
   function handleAddToCart() {
-    if (!product || !variant) return
+    if (!product || !variant || !inStock) return
     addItem({
       productId: product.id,
       variantId: variant.id,
       storeId: product.storeId,
-      storeName: storeName || product.storeId,
+      storeName: storeName || (isHouseStore(product.storeId) ? HOUSE_STORE_NAME : "Store"),
       title: product.title,
       variantName: variant.name || "Default",
       price: displayPriceCents,
@@ -210,7 +217,7 @@ export default function ProductPageClient() {
   }
 
   function handleBuyNow() {
-    if (!product || !variant) return
+    if (!product || !variant || !inStock) return
     if (!isInCart) handleAddToCart()
     router.push("/checkout")
   }
