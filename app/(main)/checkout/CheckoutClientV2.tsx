@@ -941,7 +941,13 @@ export default function CheckoutClientV2({
                               {q.estimatedDays != null ? `Arrives in ${q.estimatedDays} day${q.estimatedDays === 1 ? "" : "s"}` : "Delivery estimate unavailable"}
                             </p>
                           </div>
-                          <p className="text-sm font-bold text-gray-900 tabular-nums">{fmtShip(q.amountCents)}</p>
+                          {/* Once the free-delivery threshold is met we never
+                              show a price — the carrier fee is waived. */}
+                          {freeShippingApplies ? (
+                            <p className="text-sm font-bold text-green-700 tabular-nums">Free</p>
+                          ) : (
+                            <p className="text-sm font-bold text-gray-900 tabular-nums">{fmtShip(q.amountCents)}</p>
+                          )}
                         </label>
                       </li>
                     )
