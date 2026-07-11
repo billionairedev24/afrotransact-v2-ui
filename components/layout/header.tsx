@@ -325,20 +325,17 @@ export function Header() {
                   the rest of the UI and the mobile truncation of the SVG
                   lockup (last "t" was clipped). Mark only at xs to keep
                   room for the search bar. */}
-              <Link href="/" className="flex items-center gap-2 shrink-0 mr-1" aria-label="AfroTransact home">
+              {/* Brand lockup (brand-logo-2) — full yellow wordmark on the black
+                  header. Single SVG includes the mark + lowercase "afrotransact". */}
+              <Link href="/" className="flex items-center shrink-0 mr-1" aria-label="afrotransact home">
                 <Image
-                  src="/brand/logo-mark-dark.svg"
-                  alt=""
-                  width={32}
-                  height={37}
-                  className="h-8 w-auto sm:h-9 shrink-0"
+                  src="/brand-logo-2/SVG/Yellow.svg"
+                  alt="afrotransact"
+                  width={476}
+                  height={101}
+                  className="h-6 w-auto sm:h-7 lg:h-8"
                   priority
                 />
-                <span
-                  className="hidden sm:inline-block font-sans font-bold text-white text-xl lg:text-2xl tracking-tight leading-none whitespace-nowrap"
-                >
-                  AfroTransact
-                </span>
               </Link>
 
               {/* "Ask Victory" pill — placed right after the logo per the
