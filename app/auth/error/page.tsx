@@ -5,42 +5,13 @@ import { Suspense } from "react"
 import Link from "next/link"
 import Image from "next/image"
 
-const errorMessages: Record<string, { title: string; description: string }> = {
-  Configuration: {
-    title: "Server Configuration Error",
-    description: "There is a problem with the server configuration. Please contact support.",
-  },
-  AccessDenied: {
-    title: "Access Denied",
-    description: "You do not have permission to access this resource.",
-  },
-  Verification: {
-    title: "Link invalid or expired",
-    description:
-      "This verification or reset link has expired or was already used. Request a new email from the sign-in page (Forgot password) or register again.",
-  },
-  OAuthSignin: {
-    title: "Sign-in Error",
-    description: "Could not start the sign-in process. Please try again.",
-  },
-  OAuthCallback: {
-    title: "Callback Error",
-    description: "An error occurred during authentication. Please try again.",
-  },
-  OAuthAccountNotLinked: {
-    title: "Account Not Linked",
-    description: "This email is already associated with another sign-in method. Please use your original sign-in method.",
-  },
-  Default: {
-    title: "Authentication Error",
-    description: "An unexpected error occurred during authentication. Please try again.",
-  },
-}
-
 function AuthErrorContent() {
   const searchParams = useSearchParams()
-  const errorType = searchParams.get("error") || "Default"
-  const { title, description } = errorMessages[errorType] ?? errorMessages.Default
+  const code = searchParams.get("error") || "Default"
+
+  if (typeof window !== "undefined") {
+    console.error("auth.error", { code })
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -57,19 +28,10 @@ function AuthErrorContent() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-xl font-semibold text-card-foreground">{title}</h1>
-            <p className="text-sm text-muted-foreground">{description}</p>
-          </div>
-
-          {/* Helper for redirect_uri_mismatch if relevant */}
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-left space-y-2">
-            <p className="text-[0.7rem] font-semibold text-amber-800 uppercase tracking-wider">Developer Note</p>
-            <p className="text-xs text-amber-700 leading-normal">
-              If Google shows <code className="font-mono text-[0.65rem] bg-amber-100 px-1 rounded">redirect_uri_mismatch</code>, you must register the Keycloak broker endpoint in your Google Cloud Console:
+            <h1 className="text-xl font-semibold text-card-foreground">We couldn&rsquo;t sign you in.</h1>
+            <p className="text-sm text-muted-foreground">
+              This usually clears up on a retry. If it keeps happening, please reach out to support.
             </p>
-            <code className="block break-all rounded bg-white/50 p-2 text-[0.65rem] font-mono text-amber-900 border border-amber-200/50">
-              {process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER}/broker/google/endpoint
-            </code>
           </div>
 
           <div className="flex flex-col gap-3">
@@ -77,13 +39,13 @@ function AuthErrorContent() {
               href="/auth/login"
               className="inline-flex items-center justify-center rounded-lg bg-brand-gold px-4 py-3 text-sm font-semibold text-brand-gold-foreground shadow-lg shadow-primary/25 transition-colors hover:bg-accent"
             >
-              Try Again
+              Try again
             </Link>
             <Link
-              href="/"
+              href="/help"
               className="inline-flex items-center justify-center rounded-lg border border-border px-4 py-3 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
             >
-              Go Home
+              Contact support
             </Link>
           </div>
         </div>

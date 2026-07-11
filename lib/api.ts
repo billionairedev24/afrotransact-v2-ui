@@ -103,8 +103,14 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     if (res.status === 401 && on401Handler && typeof window !== "undefined") {
       try { on401Handler() } catch { /* don't mask the original failure */ }
     }
-    // Log every API error at source so it's always captured regardless of how the caller handles it
-    console.error(`[API] ${opts.method ?? "GET"} ${path} → ${res.status}`, userMessage)
+    // Log every API error at source so it's always captured regardless of how
+    // the caller handles it. Silence during `next build`: pre-render on the
+    // home / category / deals pages tries to hit the backend, and CI/CD
+    // pipelines routinely build without the backend up. The safe() wrappers
+    // upstream fall back to empty data anyway.
+    if (process.env.NEXT_PHASE !== "phase-production-build") {
+      console.error(`[API] ${opts.method ?? "GET"} ${path} → ${res.status}`, userMessage)
+    }
     throw new ApiError(res.status, userMessage, path)
   }
 
@@ -189,6 +195,10 @@ export interface Product {
   variants: ProductVariant[]
   images: ProductImage[]
   categories: CategoryRef[]
+  // Phase 9.7 — when this offer was created via "Add from catalog",
+  // catalogItemId links back to the master catalog item. /product/{slug}
+  // server-redirects to /p/{catalog-slug} when this is set.
+  catalogItemId?: string | null
 }
 
 export interface Page<T> {
@@ -259,6 +269,12 @@ export interface SearchResult {
   highlight_description: string | null
   score: number | null
   slug?: string
+  // Phase 9.6b — when this result is a collapsed catalog item group,
+  // catalog_item_id is shared across the offer roster and offer_count
+  // is the group size. Storefront uses these to badge "X sellers" and
+  // to link to /p/[slug] (catalog PDP) instead of /product/[slug].
+  catalog_item_id?: string | null
+  offer_count?: number
 }
 
 export interface SearchFacetBucket {
@@ -600,6 +616,32 @@ export function getPaymentSettings(token: string) {
 
 export function updatePaymentSettings(token: string, data: PaymentSettings) {
   return api<PaymentSettings>("/api/v1/admin/settings/payment", { method: "PUT", body: data, token })
+}
+
+// ── Admin: Store shipping diagnostics ────────────────────────────────────
+
+export type StoreShippingMode = "unlimited" | "radius" | "regions"
+
+export interface AdminStoreShippingRow {
+  storeId: string
+  name: string | null
+  slug: string | null
+  shippingMode: StoreShippingMode
+  shippingRadiusMeters: number | null
+  regionCount: number
+  originGeocoded: boolean
+  stuckReason: string | null
+}
+
+export function listAdminStoreShipping(token: string) {
+  return api<AdminStoreShippingRow[]>("/api/v1/admin/stores/shipping", { token })
+}
+
+export function setAdminStoreShippingMode(token: string, storeId: string, mode: StoreShippingMode) {
+  return api<{ storeId: string; shippingMode: StoreShippingMode }>(
+    `/api/v1/admin/stores/shipping/${storeId}/mode`,
+    { method: "POST", body: { mode }, token },
+  )
 }
 
 // ── Admin: Alerts settings (Slack webhook) ──
@@ -1649,6 +1691,11 @@ export interface CheckoutResponse {
   currency: string
   paymentClientSecret: string | null
   status: string
+  /** Phase 2 session-mode: when present, no Order row exists yet — the buyer
+   *  must be redirected through Stripe back to /checkout/complete?session=…
+   *  where the UI polls /api/public/checkout-sessions/:id/result for the
+   *  materialized order id. Omitted in legacy flow. */
+  checkoutSessionId?: string | null
 }
 
 export interface ShippingQuoteOption {
@@ -1792,6 +1839,55 @@ export function checkout(token: string, data: CheckoutRequest, idempotencyKey?: 
   })
 }
 
+export interface ReorderResponse extends CheckoutResponse {
+  /** Items from the prior order dropped because the catalog row is gone. */
+  skippedItemCount: number
+  /** True when defaults were resolved and checkout ran. False when the cart
+   *  was populated but the UI must bounce to /checkout for a missing default
+   *  or other prerequisite. */
+  fastPath: boolean
+  /** Reason for the fastPath=false fallback. Null on the happy path. */
+  fallbackReason?: string | null
+}
+
+/**
+ * 1-click reorder. Replays a prior order's items into the buyer's cart and,
+ * when the buyer has a default shipping address, runs checkout. Returns the
+ * standard checkout response (paymentClientSecret or checkoutSessionId)
+ * plus fastPath/skippedItemCount signals.
+ */
+export function reorderOrder(token: string, orderNumber: string, idempotencyKey?: string) {
+  return api<ReorderResponse>(`/api/v1/orders/${orderNumber}/reorder`, {
+    method: "POST",
+    token,
+    headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+  })
+}
+
+export interface ForYouProduct {
+  productId: string
+  variantId?: string | null
+  storeId?: string | null
+  name: string
+  imageUrl?: string | null
+  currentPriceCents: number
+  currency?: string | null
+  slug?: string | null
+  lastOrderedAt?: string | null
+  /** Discriminator: which composer source surfaced this row. */
+  source: "BUY_AGAIN" | "CO_PURCHASE" | "SEMANTIC" | "CATEGORY"
+}
+
+/**
+ * Home-page "For You" rail. Composes Buy-Again + Co-purchase recommendations
+ * + a category-level pad. Returns up to `limit` rows (default 12), deduped
+ * across sources, ordered Buy-Again → Co-purchase → Category. Backend sets
+ * Cache-Control: private, max-age=60 — the rail tolerates a minute of staleness.
+ */
+export function getForYouProducts(token: string, limit = 12) {
+  return api<ForYouProduct[]>(`/api/v1/orders/for-you?limit=${limit}`, { token })
+}
+
 /**
  * Phase 3 of the cart/checkout rewrite: after stripe.confirmPayment succeeds,
  * the order row doesn't exist yet — payment-service's webhook to order-service
@@ -1845,7 +1941,10 @@ export function deleteSavedPaymentMethod(token: string, id: string) {
 export function getShippingQuotes(
   token: string,
   data: {
-    regionId: string
+    /** New primary key: buyer's resolved service-zone id. */
+    zoneId?: string
+    /** Legacy fallback while callers migrate. */
+    regionId?: string
     state?: string
     city?: string
     destinationLine1?: string
@@ -1991,6 +2090,329 @@ export function deleteRegion(token: string, id: string) {
   return api<void>(`/api/v1/admin/regions/${id}`, { method: "DELETE", token })
 }
 
+// ── Admin: Region features (config-service) ──
+// Wire to GET/POST /api/v1/admin/regions/{id}/features. The config-service
+// stores per-region toggles like `coupons_enabled` in config.region_features
+// and returns them as { region_id, features: RegionFeature[] }.
+
+export interface RegionFeature {
+  id: string
+  regionId: string
+  featureKey: string
+  enabled: boolean
+}
+
+interface RawRegionFeature {
+  id: string
+  region_id: string
+  feature_key: string
+  enabled: boolean
+  config?: unknown
+}
+
+interface RawRegionFeaturesPayload {
+  region_id: string
+  features: RawRegionFeature[]
+}
+
+function mapRegionFeature(f: RawRegionFeature): RegionFeature {
+  return {
+    id: f.id,
+    regionId: f.region_id,
+    featureKey: f.feature_key,
+    enabled: f.enabled,
+  }
+}
+
+export async function getRegionFeatures(token: string, regionId: string): Promise<RegionFeature[]> {
+  const raw = await api<RawRegionFeaturesPayload>(
+    `/api/v1/admin/regions/${regionId}/features`,
+    { token },
+  )
+  return (raw.features ?? []).map(mapRegionFeature)
+}
+
+export async function upsertRegionFeature(
+  token: string,
+  regionId: string,
+  featureKey: string,
+  enabled: boolean,
+): Promise<void> {
+  await api<{ status: string }>(`/api/v1/admin/regions/${regionId}/features`, {
+    method: "POST",
+    body: { feature_key: featureKey, enabled },
+    token,
+  })
+}
+
+// ── Admin: Service Zones (hierarchical geo-rollout) ─────────────────────────
+// Backed by config-service. A zone tree replaces the flat regions table for
+// feature rollout decisions. Most-specific match wins; features inherit
+// from ancestors unless overridden. See services/config/handler/zone.go.
+
+export type ZoneLevel = "country" | "subdivision" | "locality"
+
+export interface ServiceZone {
+  id: string
+  parentZoneId: string | null
+  code: string
+  displayName: string
+  countryCode: string
+  subdivisionCode: string | null
+  postalPattern: string | null
+  status: "enabled" | "coming_soon" | "disabled"
+  sortOrder: number
+  level: ZoneLevel
+  cityName: string | null
+  currency: string | null
+  timezone: string | null
+  taxRate: number | null
+  shippingRateCentsPerLb: number | null
+  freeShippingThresholdCents: number | null
+}
+
+export interface ResolvedZoneSettings {
+  currency: string | null
+  timezone: string | null
+  taxRate: number | null
+  shippingRateCentsPerLb: number | null
+  freeShippingThresholdCents: number | null
+}
+
+export interface ZoneFeature {
+  id: string
+  zoneId: string
+  featureKey: string
+  enabled: boolean
+}
+
+export interface ResolvedZone {
+  zone: ServiceZone
+  ancestors: ServiceZone[]
+  effectiveFeatures: Record<string, boolean>
+  effectiveSettings: ResolvedZoneSettings
+  status: string
+  surfacedStatus?: string
+}
+
+interface RawServiceZone {
+  id: string
+  parent_zone_id: string | null
+  code: string
+  display_name: string
+  country_code: string
+  subdivision_code: string | null
+  postal_pattern: string | null
+  status: "enabled" | "coming_soon" | "disabled"
+  sort_order: number
+  level?: ZoneLevel
+  city_name?: string | null
+  currency?: string | null
+  timezone?: string | null
+  tax_rate?: number | null
+  shipping_rate_cents_per_lb?: number | null
+  free_shipping_threshold_cents?: number | null
+}
+
+interface RawResolvedSettings {
+  currency?: string | null
+  timezone?: string | null
+  tax_rate?: number | null
+  shipping_rate_cents_per_lb?: number | null
+  free_shipping_threshold_cents?: number | null
+}
+
+interface RawZoneFeature {
+  id: string
+  zone_id: string
+  feature_key: string
+  enabled: boolean
+}
+
+function mapZone(z: RawServiceZone): ServiceZone {
+  return {
+    id: z.id,
+    parentZoneId: z.parent_zone_id,
+    code: z.code,
+    displayName: z.display_name,
+    countryCode: z.country_code,
+    subdivisionCode: z.subdivision_code,
+    postalPattern: z.postal_pattern,
+    status: z.status,
+    sortOrder: z.sort_order,
+    level: z.level ?? "country",
+    cityName: z.city_name ?? null,
+    currency: z.currency ?? null,
+    timezone: z.timezone ?? null,
+    taxRate: z.tax_rate ?? null,
+    shippingRateCentsPerLb: z.shipping_rate_cents_per_lb ?? null,
+    freeShippingThresholdCents: z.free_shipping_threshold_cents ?? null,
+  }
+}
+
+function mapSettings(s: RawResolvedSettings | null | undefined): ResolvedZoneSettings {
+  return {
+    currency: s?.currency ?? null,
+    timezone: s?.timezone ?? null,
+    taxRate: s?.tax_rate ?? null,
+    shippingRateCentsPerLb: s?.shipping_rate_cents_per_lb ?? null,
+    freeShippingThresholdCents: s?.free_shipping_threshold_cents ?? null,
+  }
+}
+
+function mapZoneFeature(f: RawZoneFeature): ZoneFeature {
+  return {
+    id: f.id,
+    zoneId: f.zone_id,
+    featureKey: f.feature_key,
+    enabled: f.enabled,
+  }
+}
+
+export interface ZoneInput {
+  parent_zone_id?: string | null
+  code: string
+  display_name: string
+  country_code: string
+  subdivision_code?: string | null
+  postal_pattern?: string | null
+  status?: "enabled" | "coming_soon" | "disabled"
+  sort_order?: number
+  level?: ZoneLevel
+  city_name?: string | null
+  currency?: string | null
+  timezone?: string | null
+  tax_rate?: number | null
+  shipping_rate_cents_per_lb?: number | null
+  free_shipping_threshold_cents?: number | null
+}
+
+// Public list of Service Zones. The `level` filter narrows to a single tier
+// (e.g. "country") and is served from the cacheable public endpoint added in
+// Pass 3 of the regions→service_zones migration. Used by seller-facing UIs
+// that previously called getRegions() to populate a country picker.
+export async function getCountryZones(): Promise<ServiceZone[]> {
+  const res = await api<{ zones: RawServiceZone[] | null }>(
+    "/api/v1/zones?level=country",
+  )
+  return (res.zones ?? []).map(mapZone)
+}
+
+export async function listAdminZones(token: string): Promise<ServiceZone[]> {
+  const res = await api<{ zones: RawServiceZone[] }>("/api/v1/admin/zones", { token })
+  return (res.zones ?? []).map(mapZone)
+}
+
+export async function createAdminZone(token: string, data: ZoneInput): Promise<ServiceZone> {
+  const raw = await api<RawServiceZone>("/api/v1/admin/zones", { method: "POST", body: data, token })
+  return mapZone(raw)
+}
+
+export async function updateAdminZone(
+  token: string,
+  id: string,
+  data: Partial<ZoneInput>,
+): Promise<ServiceZone> {
+  const raw = await api<RawServiceZone>(`/api/v1/admin/zones/${id}`, { method: "PUT", body: data, token })
+  return mapZone(raw)
+}
+
+export function deleteAdminZone(token: string, id: string): Promise<void> {
+  return api<void>(`/api/v1/admin/zones/${id}`, { method: "DELETE", token })
+}
+
+export async function listZoneFeatures(token: string, zoneId: string): Promise<ZoneFeature[]> {
+  const res = await api<{ zone_id: string; features: RawZoneFeature[] | null }>(
+    `/api/v1/admin/zones/${zoneId}/features`,
+    { token },
+  )
+  return (res.features ?? []).map(mapZoneFeature)
+}
+
+export async function upsertZoneFeature(
+  token: string,
+  zoneId: string,
+  featureKey: string,
+  enabled: boolean,
+): Promise<void> {
+  await api<{ status: string }>(`/api/v1/admin/zones/${zoneId}/features`, {
+    method: "POST",
+    body: { feature_key: featureKey, enabled },
+    token,
+  })
+}
+
+// Platform-wide feature flags. Global on/off — no location scope.
+export interface PlatformFeature {
+  featureKey: string
+  enabled: boolean
+}
+
+export async function listPlatformFeatures(token: string): Promise<PlatformFeature[]> {
+  const raw = await api<{ feature_key: string; enabled: boolean }[]>(
+    `/api/v1/admin/settings/platform-features`,
+    { token },
+  )
+  return (raw ?? []).map((f) => ({ featureKey: f.feature_key, enabled: f.enabled }))
+}
+
+export async function upsertPlatformFeature(
+  token: string,
+  featureKey: string,
+  enabled: boolean,
+): Promise<void> {
+  await api<{ feature_key: string; enabled: boolean }>(
+    `/api/v1/admin/settings/platform-features`,
+    { method: "PUT", body: { feature_key: featureKey, enabled }, token },
+  )
+}
+
+// Public feature catalog — same shape across envs. Used by the admin UI to
+// render the feature dropdown without a hardcoded list drifting from the
+// server. The static FEATURE_CATALOG in lib/feature-catalog.ts is the
+// synchronous fallback.
+export async function getFeatureCatalog(): Promise<
+  import("./feature-catalog").FeatureCatalogEntry[]
+> {
+  return api<import("./feature-catalog").FeatureCatalogEntry[]>(
+    `/api/v1/zones/feature-catalog`,
+  )
+}
+
+// Public resolver used by the storefront once a buyer location is known.
+// Returns null when no zone matches the country (silently fall through).
+export async function resolveServiceZone(
+  country: string,
+  subdivision?: string | null,
+  postal?: string | null,
+  city?: string | null,
+): Promise<ResolvedZone | null> {
+  const params = new URLSearchParams({ country })
+  if (subdivision) params.set("subdivision", subdivision)
+  if (postal) params.set("postal", postal)
+  if (city) params.set("city", city)
+  try {
+    const raw = await api<{
+      zone: RawServiceZone
+      ancestors: RawServiceZone[] | null
+      effective_features: Record<string, boolean> | null
+      effective_settings: RawResolvedSettings | null
+      status: string
+      surfaced_status?: string
+    }>(`/api/v1/zones/resolve?${params.toString()}`)
+    return {
+      zone: mapZone(raw.zone),
+      ancestors: (raw.ancestors ?? []).map(mapZone),
+      effectiveFeatures: raw.effective_features ?? {},
+      effectiveSettings: mapSettings(raw.effective_settings),
+      status: raw.status,
+      surfacedStatus: raw.surfaced_status,
+    }
+  } catch {
+    return null
+  }
+}
+
 // ── Marketplace config ──────────────────────────────────────────────────────
 // Feature flags previously lived here as a regional CRUD; they now live as
 // build-time NEXT_PUBLIC_FEATURE_* env vars via lib/features.ts. The handful
@@ -2009,7 +2431,7 @@ export interface MarketplaceConfig {
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function getMarketplaceConfig(_regionId: string): Promise<MarketplaceConfig> {
-  return { maxProductImages: 8, maxProductTags: 10 }
+  return { maxProductImages: 4, maxProductTags: 5 }
 }
 
 // ── Public: Shipping eligibility ──────────────────────────────────────────
@@ -2209,6 +2631,9 @@ export interface UserProfile {
   avatarUrl: string | null
   role: string
   preferences: string | null
+  /** Stripe PaymentMethod id (pm_...) the buyer flagged as their default in
+   *  Account → Payment Methods. Used by the 1-click reorder fast-path. */
+  defaultPaymentMethodId?: string | null
   createdAt: string
 }
 
@@ -2222,6 +2647,19 @@ export function getUserProfileById(token: string, id: string) {
 
 export function updateUserProfile(token: string, data: Record<string, unknown>) {
   return api<UserProfile>("/api/v1/users/me", { method: "PUT", body: data, token })
+}
+
+/**
+ * Update buyer-facing defaults — currently just the default saved card.
+ * Pass empty string for `defaultPaymentMethodId` to clear the default.
+ * Default address lives on the address row (is_default) and is flipped via
+ * {@link setDefaultAddress}.
+ */
+export function updateUserDefaults(
+  token: string,
+  data: { defaultPaymentMethodId?: string | null },
+) {
+  return api<UserProfile>("/api/v1/users/me/defaults", { method: "PATCH", body: data, token })
 }
 
 // ── Addresses ──
@@ -3355,3 +3793,338 @@ export function mergeWishlist(token: string, productIds: string[]) {
 }
 
 export { API_BASE }
+
+// ── Public: Waitlist ─────────────────────────────────────────────────────
+// Captures emails for buyers whose service zone is coming_soon, disabled, or
+// not_serviced. POST-only public endpoint; backend dedupes via UNIQUE(email,
+// country_code) so retries are safe.
+
+export interface WaitlistSignupInput {
+  email: string
+  countryCode: string
+  subdivisionCode?: string | null
+  city?: string | null
+  source?: string
+}
+
+export interface WaitlistSignupResult {
+  ok: boolean
+  existing?: boolean
+}
+
+export async function postWaitlistSignup(input: WaitlistSignupInput): Promise<WaitlistSignupResult> {
+  const body: Record<string, string> = {
+    email: input.email,
+    country_code: input.countryCode,
+  }
+  if (input.subdivisionCode) body.subdivision_code = input.subdivisionCode
+  if (input.city) body.city = input.city
+  body.source = input.source ?? "storefront"
+  return api<WaitlistSignupResult>(`/api/v1/waitlist`, {
+    method: "POST",
+    body,
+  })
+}
+
+export interface WaitlistRow {
+  id: string
+  email: string
+  country_code: string
+  subdivision_code: string | null
+  city: string | null
+  source: string
+  created_at: string
+}
+
+export async function listWaitlistSignups(
+  token: string,
+  opts: { countryCode?: string; limit?: number } = {},
+): Promise<{ signups: WaitlistRow[]; limit: number }> {
+  const params = new URLSearchParams()
+  if (opts.countryCode) params.set("country_code", opts.countryCode)
+  if (opts.limit) params.set("limit", String(opts.limit))
+  const qs = params.toString()
+  return api<{ signups: WaitlistRow[]; limit: number }>(
+    `/api/v1/admin/waitlist${qs ? `?${qs}` : ""}`,
+    { token },
+  )
+}
+
+// ─── Phase 9: Catalog items (Amazon ASIN-equivalent) ───────────────────────
+//
+// Admin-managed master catalog. AT-Inv operators and third-party sellers
+// attach offers against these items. See
+// inventory/docs/architecture-target-state.md.
+
+export interface CatalogItem {
+  id: string
+  itemNumber: string
+  title: string
+  description: string
+  brand?: string | null
+  slug: string
+  productType: string
+  status: "draft" | "published" | "suppressed"
+  tags: string[]
+  highlights: string  // JSON string of string[]
+  metaTitle?: string | null
+  metaDescription?: string | null
+  submittedByStore?: string | null
+  submittedAt?: string | null
+  publishedAt?: string | null
+  suppressedAt?: string | null
+  createdAt: string
+  updatedAt: string
+  variants: CatalogItemVariant[]
+  images: CatalogItemImage[]
+  categoryIds: string[]
+}
+
+export interface CatalogItemVariant {
+  id: string
+  itemId: string
+  variantSku: string
+  gtin?: string | null
+  name?: string | null
+  attributeValues: string  // JSON string
+  weightKg?: number | null
+  dimensions?: string | null
+  imageId?: string | null
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CatalogItemImage {
+  id: string
+  itemId: string
+  url: string
+  altText?: string | null
+  sortOrder: number
+  isPrimary: boolean
+  createdAt: string
+}
+
+export interface CreateCatalogItemVariantRequest {
+  variantSku?: string
+  gtin?: string
+  name?: string
+  attributeValues?: string
+  weightKg?: number
+  dimensions?: string
+  isDefault?: boolean
+}
+
+export interface CreateCatalogItemRequest {
+  title: string
+  description?: string
+  brand?: string
+  productType?: string
+  tags?: string[]
+  highlights?: string  // JSON-encoded string of string[]
+  metaTitle?: string
+  metaDescription?: string
+  categoryIds?: string[]
+  variants: CreateCatalogItemVariantRequest[]
+}
+
+export interface UpdateCatalogItemRequest {
+  title?: string
+  description?: string
+  brand?: string
+  productType?: string
+  status?: "draft" | "published" | "suppressed"
+  tags?: string[]
+  highlights?: string
+  metaTitle?: string
+  metaDescription?: string
+  categoryIds?: string[]  // present = replace-all; omit = no change
+}
+
+export interface CreateCatalogItemImageRequest {
+  url: string
+  altText?: string
+  sortOrder?: number
+  isPrimary?: boolean
+}
+
+export function listCatalogItems(
+  token: string,
+  params: { q?: string; status?: string; page?: number; size?: number; sort?: string } = {},
+): Promise<Page<CatalogItem>> {
+  const sp = new URLSearchParams()
+  if (params.q) sp.set("q", params.q)
+  if (params.status) sp.set("status", params.status)
+  if (params.page != null) sp.set("page", String(params.page))
+  if (params.size != null) sp.set("size", String(params.size))
+  if (params.sort) sp.set("sort", params.sort)
+  const qs = sp.toString()
+  return api<Page<CatalogItem>>(
+    `/api/v1/catalog/items${qs ? `?${qs}` : ""}`,
+    { token },
+  )
+}
+
+
+export function getCatalogItem(token: string, id: string): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items/${id}`, { token })
+}
+
+export function createCatalogItem(
+  token: string,
+  body: CreateCatalogItemRequest,
+): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items`, { method: "POST", body, token })
+}
+
+export function updateCatalogItem(
+  token: string,
+  id: string,
+  body: UpdateCatalogItemRequest,
+): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items/${id}`, { method: "PATCH", body, token })
+}
+
+export function publishCatalogItem(token: string, id: string): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items/${id}/publish`, { method: "POST", body: {}, token })
+}
+
+export function suppressCatalogItem(token: string, id: string): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items/${id}/suppress`, { method: "POST", body: {}, token })
+}
+
+export function addCatalogItemVariant(
+  token: string,
+  itemId: string,
+  body: CreateCatalogItemVariantRequest,
+): Promise<CatalogItemVariant> {
+  return api<CatalogItemVariant>(`/api/v1/catalog/items/${itemId}/variants`, {
+    method: "POST", body, token,
+  })
+}
+
+export function addCatalogItemImage(
+  token: string,
+  itemId: string,
+  body: CreateCatalogItemImageRequest,
+): Promise<CatalogItemImage> {
+  return api<CatalogItemImage>(`/api/v1/catalog/items/${itemId}/images`, {
+    method: "POST", body, token,
+  })
+}
+
+export function removeCatalogItemImage(token: string, itemId: string, imageId: string): Promise<void> {
+  return api<void>(`/api/v1/catalog/items/${itemId}/images/${imageId}`, {
+    method: "DELETE", token,
+  })
+}
+
+export function reorderCatalogItemImages(token: string, itemId: string, imageIds: string[]): Promise<void> {
+  return api<void>(`/api/v1/catalog/items/${itemId}/images/reorder`, {
+    method: "PUT", body: { imageIds }, token,
+  })
+}
+
+// Phase 9.4 — seller "Add from catalog" flow.
+export interface CreateOfferFromCatalogRequest {
+  catalogItemId: string
+  storeId: string
+  internalSkuPrefix?: string
+  variants: Array<{
+    catalogVariantId: string
+    price: number
+    compareAtPrice?: number
+    currency?: string
+    stockQuantity?: number
+  }>
+}
+
+export function createOfferFromCatalog(
+  token: string,
+  body: CreateOfferFromCatalogRequest,
+): Promise<Product> {
+  return api<Product>(`/api/v1/products/from-catalog`, {
+    method: "POST", body, token,
+  })
+}
+
+// ─── Phase 9.6 — buyer-side flip (catalog item + Buy Box) ──────────────────
+
+export interface OfferSummary {
+  offerId: string
+  storeId: string
+  variantId: string
+  variantSku: string
+  variantName?: string | null
+  price: number
+  compareAtPrice?: number | null
+  currency: string
+  stockQuantity: number
+  condition: string
+}
+
+export interface CatalogItemBuyBox {
+  id: string
+  itemNumber: string
+  title: string
+  description: string
+  brand?: string | null
+  slug: string
+  productType: string
+  status: "draft" | "published" | "suppressed"
+  tags: string[]
+  highlights: string
+  images: CatalogItemImage[]
+  categoryIds: string[]
+  publishedAt?: string | null
+  buyBox: OfferSummary | null
+  otherOffers: OfferSummary[]
+  totalOffers: number
+  /**
+   * Phase 9.8 — Buy Box decision metadata. `reason` is a machine token
+   * ("cheapest_in_stock" | "no_offers" | "no_eligible_offers");
+   * `ineligible` is keyed by offerId with a short rejection code
+   * (e.g. "out_of_stock", "currency_mismatch:NGN_vs_USD"). The seller
+   * dashboard reads its own offer's entry to show a "Why isn't my offer
+   * winning?" tooltip.
+   */
+  buyBoxDecision: {
+    reason: string
+    eligibleCount: number
+    ineligible: Record<string, string>
+  }
+}
+
+export function getCatalogItemBuyBoxBySlug(
+  slug: string,
+  opts: { revalidate?: number } = {},
+): Promise<CatalogItemBuyBox> {
+  return api<CatalogItemBuyBox>(
+    `/api/v1/catalog/items/by-slug/${encodeURIComponent(slug)}/with-offers`,
+    opts.revalidate ? { next: { revalidate: opts.revalidate } } : {},
+  )
+}
+
+export function listCatalogItemsWithBuyBox(
+  opts: { page?: number; size?: number; revalidate?: number } = {},
+): Promise<Page<CatalogItemBuyBox>> {
+  const sp = new URLSearchParams()
+  if (opts.page != null) sp.set("page", String(opts.page))
+  if (opts.size != null) sp.set("size", String(opts.size))
+  const qs = sp.toString()
+  return api<Page<CatalogItemBuyBox>>(
+    `/api/v1/catalog/items/with-buybox${qs ? `?${qs}` : ""}`,
+    opts.revalidate ? { next: { revalidate: opts.revalidate } } : {},
+  )
+}
+
+/**
+ * Public read of a catalog item by id. GET endpoints on /api/v1/catalog/items
+ * are permitAll in SecurityConfig — no token required. Used by the
+ * /p/by-id/{id} redirect to resolve search-result hits → catalog slug.
+ */
+export function getCatalogItemPublic(id: string): Promise<CatalogItem> {
+  return api<CatalogItem>(`/api/v1/catalog/items/${id}`, {
+    next: { revalidate: 60 },
+  })
+}

@@ -879,25 +879,8 @@ export default function SellerOnboardingPage() {
   }
 
   if (status === "unauthenticated") {
-    return (
-      <div className={`flex items-center justify-center min-h-[60vh] ${BG}`}>
-        <div
-          className={`flex flex-col items-center justify-center rounded-2xl border ${BORDER} ${CARD} p-12 text-center max-w-md`}
-        >
-          <Store className="h-14 w-14 text-muted-foreground mb-4" />
-          <h2 className="text-xl font-bold text-gray-900">Sign in to continue</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            You need to be signed in to set up your seller account.
-          </p>
-          <button
-            onClick={() => signIn("keycloak", { callbackUrl: "/dashboard/onboarding" })}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors"
-          >
-            Sign In <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    )
+    router.replace("/auth/login?callbackUrl=/dashboard/onboarding")
+    return null
   }
 
   if (submitted) {

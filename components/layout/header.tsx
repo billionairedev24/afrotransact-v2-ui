@@ -163,6 +163,7 @@ export function Header() {
   const categoryDropdownRef = useRef<HTMLDivElement>(null)
 
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
+  const cartSyncing = useCartStore((s) => s.syncing)
   const { cartReady } = useCartHydration()
   const signOut = useSignOut()
 
@@ -172,6 +173,10 @@ export function Header() {
   const roles: string[] = (session?.user as { roles?: string[] })?.roles ?? []
   const isAdmin = roles.includes("admin")
   const isSeller = roles.includes("seller")
+  // Cart icon + buyer-cart sync is gated on this. Admins shop too (they need
+  // to test the marketplace end-to-end), so we include them. Mirrors
+  // CartMergeProvider's isBuyerCapableRoles — keep these two in sync.
+  const isBuyerCapable = roles.length === 0 || roles.includes("buyer") || roles.includes("admin")
   // Developers carry admin + seller + buyer via the composite role, so the
   // existing isAdmin / isSeller checks already grant access. We surface the
   // discriminator with a badge so it's obvious who has elevated debug access.
@@ -315,26 +320,25 @@ export function Header() {
                 <Menu className="h-6 w-6" strokeWidth={2} />
               </button>
 
-              {/* Logo — full lockup with tagline (on dark bg). On xs the
-                  wordmark+tagline would dominate the search bar, so mark-
-                  only there. */}
-              <Link href="/" className="flex items-center shrink-0 mr-1" aria-label="AfroTransact home">
+              {/* Logo — SVG mark + live wordmark in the app font (Inter).
+                  Live text avoids the prior baked-in font that didn't match
+                  the rest of the UI and the mobile truncation of the SVG
+                  lockup (last "t" was clipped). Mark only at xs to keep
+                  room for the search bar. */}
+              <Link href="/" className="flex items-center gap-2 shrink-0 mr-1" aria-label="AfroTransact home">
                 <Image
                   src="/brand/logo-mark-dark.svg"
-                  alt="AfroTransact"
+                  alt=""
                   width={32}
                   height={37}
-                  className="h-9 w-auto sm:hidden"
+                  className="h-8 w-auto sm:h-9 shrink-0"
                   priority
                 />
-                <Image
-                  src="/brand/logo-tagline-dark.svg"
-                  alt="AfroTransact"
-                  width={180}
-                  height={42}
-                  className="hidden sm:block h-10 w-auto"
-                  priority
-                />
+                <span
+                  className="hidden sm:inline-block font-sans font-bold text-white text-xl lg:text-2xl tracking-tight leading-none whitespace-nowrap"
+                >
+                  AfroTransact
+                </span>
               </Link>
 
               {/* "Ask Victory" pill — placed right after the logo per the
@@ -625,7 +629,12 @@ export function Header() {
                 )}
               </div>
 
-              {/* Cart — mockup lines 157-161 — text-only hover, badge on icon */}
+              {/* Cart — mockup lines 157-161 — text-only hover, badge on icon.
+                  Always visible. For admin/seller-only sessions (no buyer
+                  role) the CartMergeProvider keeps the store in guest mode
+                  (sessionStorage only) so testing the buyer flow doesn't
+                  pollute their account cart — but the icon stays visible so
+                  the admin can actually see what they added. */}
               <Link
                 href="/cart"
                 onClick={() => setMobileMenuOpen(false)}
@@ -634,16 +643,22 @@ export function Header() {
               >
                 <div className="relative">
                   <ShoppingCart className="h-6 w-6" strokeWidth={1.75} />
-                  {!cartReady ? (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white/20">
-                      <Loader2 className="h-2.5 w-2.5 animate-spin text-white" aria-hidden />
-                      <span className="sr-only">Loading cart</span>
-                    </span>
-                  ) : cartCount > 0 ? (
+                  {/* Show the count whenever we have items. The spinner is a
+                      tiny overlay only during an active server sync. The old
+                      "!cartReady → spinner, else → count" gate left the count
+                      hidden whenever NextAuth was still resolving the session,
+                      which made the cart look stuck on admin sessions. */}
+                  {cartCount > 0 && (
                     <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-brand-gold-foreground px-0.5">
                       {cartCount}
                     </span>
-                  ) : null}
+                  )}
+                  {cartSyncing && (
+                    <span className="absolute -bottom-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-white/20" aria-hidden>
+                      <Loader2 className="h-2 w-2 animate-spin text-white" />
+                      <span className="sr-only">Syncing cart</span>
+                    </span>
+                  )}
                 </div>
                 <span className="text-[12px] font-semibold tracking-[0.02em] leading-none mt-0.5">Cart</span>
               </Link>

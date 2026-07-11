@@ -83,6 +83,8 @@ export function useAiChat() {
   const { appendToMessage, resetMessage } = store
   const { speak, stop: stopSpeaking } = useTextToSpeech()
   const addCartItem = useCartStore((s) => s.addItem)
+  const updateCartQuantity = useCartStore((s) => s.updateQuantity)
+  const removeCartItem = useCartStore((s) => s.removeItem)
   const voiceTriggeredRef = useRef(false)
 
   const sendMessage = useCallback(
@@ -167,6 +169,30 @@ export function useAiChat() {
                   const products = extractProducts(chunk.data)
                   if (products.length > 0) attachProducts(assistantMsg.id, products)
 
+                } else if (chunk.tool === "update_cart_quantity" && chunk.data?.action === "update_cart_quantity") {
+                  const d = chunk.data as Record<string, unknown>
+                  const vid = String(d.variantId ?? "")
+                  const qty = Number(d.quantity ?? 0)
+                  if (vid) {
+                    if (qty <= 0) removeCartItem(vid)
+                    else updateCartQuantity(vid, qty)
+                  }
+
+                } else if (chunk.tool === "start_checkout" && chunk.data?.action === "start_checkout") {
+                  if (typeof window !== "undefined") window.location.assign("/checkout")
+
+                } else if (chunk.tool === "place_order") {
+                  const d = chunk.data as Record<string, unknown>
+                  if (d.action === "order_placed" && typeof window !== "undefined") {
+                    const sid = (d.checkoutSessionId as string | undefined) ?? ""
+                    window.location.assign(sid ? `/checkout/complete?session=${encodeURIComponent(sid)}` : "/checkout/complete")
+                  } else if (d.action === "resume_3ds" && typeof window !== "undefined") {
+                    const sid = (d.checkoutSessionId as string | undefined) ?? ""
+                    // Frontend will pick up the pending PI from the session
+                    // and let Stripe.js walk the 3DS challenge.
+                    window.location.assign(sid ? `/checkout?resume=${encodeURIComponent(sid)}` : "/checkout")
+                  }
+
                 } else if (chunk.tool === "add_to_cart" && chunk.data?.action === "add_to_cart") {
                   // The AI fetched product details — add to the client-side Zustand cart
                   const d = chunk.data as Record<string, unknown>
@@ -217,12 +243,21 @@ export function useAiChat() {
         useAiStore.getState().finaliseMessage(assistantMsg.id)
         useAiStore.getState().setStreaming(false)
         // Speak only the cleaned conversational text, not the full markdown response
-        if (voiceTriggeredRef.current && fullResponse) {
-          speak(cleanForSpeech(fullResponse))
+        const shouldSpeak = voiceTriggeredRef.current || useAiStore.getState().speakReplies
+        if (shouldSpeak && fullResponse) {
+          speak(cleanForSpeech(fullResponse), () => {
+            // Continuous loop: if hands-free mode is on, reopen the mic
+            // once Victory finishes talking so the buyer can respond
+            // without touching the button. Handled via the store so the
+            // panel's useVoiceInput hook picks it up.
+            if (useAiStore.getState().handsFree) {
+              window.dispatchEvent(new CustomEvent("ai:handsFreeContinue"))
+            }
+          })
         }
       }
     },
-    [session, appendToMessage, resetMessage, speak, stopSpeaking, addCartItem]
+    [session, appendToMessage, resetMessage, speak, stopSpeaking, addCartItem, updateCartQuantity, removeCartItem]
   )
 
   return { sendMessage, messages: store.messages, isStreaming: store.isStreaming }

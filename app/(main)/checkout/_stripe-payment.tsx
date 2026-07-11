@@ -64,6 +64,7 @@ function StripePaymentForm({
   onComplete,
   totalCents,
   clientSecret,
+  checkoutSessionId,
   stripeAvailable,
   paymentMethods,
   saveCard,
@@ -76,6 +77,7 @@ function StripePaymentForm({
   onComplete: () => void
   totalCents: number
   clientSecret: string | null
+  checkoutSessionId: string | null
   stripeAvailable: boolean
   paymentMethods: RegionPaymentMethod[]
   saveCard: boolean
@@ -135,7 +137,11 @@ function StripePaymentForm({
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout/complete`,
+        // Session-mode: stash the checkout-session id in the return URL so
+        // the confirmation page can poll for the materialized order.
+        return_url: checkoutSessionId
+          ? `${window.location.origin}/checkout/complete?session=${encodeURIComponent(checkoutSessionId)}`
+          : `${window.location.origin}/checkout/complete`,
       },
       redirect: "if_required",
     })
@@ -147,7 +153,7 @@ function StripePaymentForm({
       setProcessing(false)
       onComplete()
     }
-  }, [stripe, elements, clientSecret, onComplete, usingSaved, selectedSavedCardId])
+  }, [stripe, elements, clientSecret, checkoutSessionId, onComplete, usingSaved, selectedSavedCardId])
 
   return (
     <div className="space-y-5">
@@ -354,6 +360,7 @@ export default function PaymentStep({
   onCompleteAction,
   total,
   clientSecret,
+  checkoutSessionId,
   stripeAvailable,
   paymentMethods,
   saveCard,
@@ -366,6 +373,7 @@ export default function PaymentStep({
   onCompleteAction: () => void
   total: number
   clientSecret: string | null
+  checkoutSessionId: string | null
   stripeAvailable: boolean
   paymentMethods: RegionPaymentMethod[]
   saveCard: boolean
@@ -405,6 +413,7 @@ export default function PaymentStep({
         onComplete={onCompleteAction}
         totalCents={total}
         clientSecret={clientSecret}
+        checkoutSessionId={checkoutSessionId}
         stripeAvailable={stripeAvailable}
         paymentMethods={paymentMethods}
         saveCard={saveCard}

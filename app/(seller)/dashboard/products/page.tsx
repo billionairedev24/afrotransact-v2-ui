@@ -229,7 +229,7 @@ export default function ProductsPage() {
                 setSelectedProductId(row.id)
               },
             },
-            { label: "Delete", icon: <Trash2 />, variant: "danger" as const, onClick: () => setDeleteTarget(row) },
+            { label: "Archive", icon: <Trash2 />, variant: "danger" as const, onClick: () => setDeleteTarget(row) },
           ]
           return <RowActions actions={actions} />
         },
@@ -297,9 +297,9 @@ export default function ProductsPage() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Delete Product"
-        description={`Are you sure you want to delete "${deleteTarget?.title}"? This will archive the product.`}
-        confirmLabel="Delete"
+        title="Archive product"
+        description={`This hides "${deleteTarget?.title}" from buyers and stops it appearing in the Buy Box. Only your listing is affected — the shared catalog record, other sellers' offers, and AfroTransact inventory stay untouched. You can restore this later; nothing is permanently deleted.`}
+        confirmLabel="Archive"
         loading={deleteLoading}
       />
     </div>

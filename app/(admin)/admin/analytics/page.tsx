@@ -19,6 +19,7 @@ import {
 import { useAdminAnalytics } from "@/hooks/use-admin-stats"
 import { useAnalyticsAvailability } from "@/hooks/use-analytics-settings"
 import type { AdminAnalyticsStoreRevenue, AdminAnalyticsRegionRevenue } from "@/lib/api"
+import { isHouseStore, HOUSE_STORE_NAME } from "@/lib/house-store"
 import { localYmdToday, localYmdDaysAgo } from "@/lib/local-date"
 
 // Recharts (~100KB) is loaded in its own chunk once the page shell,
@@ -81,6 +82,7 @@ const ADMIN_MAX_DAYS = 365
 // ── Display names (backend sends storeName / regionName when DB joins work) ───
 
 function fullStoreLabel(s: AdminAnalyticsStoreRevenue) {
+  if (isHouseStore(s.storeId)) return HOUSE_STORE_NAME
   const n = s.storeName?.trim()
   if (n) return n
   return `Store ${s.storeId.slice(0, 8)}…`

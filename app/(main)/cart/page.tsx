@@ -13,7 +13,9 @@ import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useDefaultRegionCommerceGates } from "@/hooks/use-default-region-commerce-gates"
 import { useCartEligibility } from "@/components/buyer/useCartEligibility"
+import { isHouseStore } from "@/lib/house-store"
 import { useBuyerLocation } from "@/stores/buyer-location"
+import { RegionBlock } from "@/components/geo/RegionBlock"
 
 function formatCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -58,10 +60,29 @@ export default function CartPage() {
   const { decisions: eligibilityByStore, hasBlocker: eligibilityBlocked, locationSet } =
     useCartEligibility(storeIds)
   const buyerPostalCode = useBuyerLocation((s) => s.location?.postalCode ?? "")
+  // Pass 3 of regions→service_zones: free-shipping threshold now sourced from
+  // the resolved Service Zone. No legacy fallback — banner is hidden when no
+  // zone resolves or the zone does not declare a threshold.
+  const resolvedZoneThreshold = useBuyerLocation(
+    (s) => s.resolvedZone?.effectiveSettings?.freeShippingThresholdCents ?? null,
+  )
+  const freeShippingThresholdCents: number | null = mounted ? resolvedZoneThreshold : null
   const subtotal = mounted ? getSubtotal() : 0
   const totalQty = mounted ? getItemCount() : 0
   const estimatedTax = Math.round(subtotal * 0.0825) // 8.25% TX
   const total = subtotal + estimatedTax
+
+  // Non-operational zones: block cart entirely. RegionBlock handles its own
+  // status check; we just need to wrap children so they never render in a
+  // coming_soon / disabled / not_serviced region.
+  const resolvedStatus = useBuyerLocation((s) => s.resolvedZone?.status)
+  if (mounted && (resolvedStatus === "coming_soon" || resolvedStatus === "disabled" || resolvedStatus === "not_serviced")) {
+    return (
+      <main className="mx-auto max-w-[1200px] px-4 sm:px-6 py-8">
+        <RegionBlock>{null}</RegionBlock>
+      </main>
+    )
+  }
 
   if (!mounted) {
     return (
@@ -178,9 +199,9 @@ export default function CartPage() {
                   <div className="flex gap-2 items-start px-4 py-2.5 bg-red-50 border-b border-red-100 text-xs text-red-800">
                     <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
                     <span>
-                      This seller doesn't ship to{" "}
-                      <span className="font-semibold">{buyerPostalCode || "your area"}</span>.
-                      Remove these items or change your delivery location to continue.
+                      {isHouseStore(storeId) ? "AfroTransact doesn't deliver to " : "This seller doesn't ship to "}
+                      <span className="font-semibold">{buyerPostalCode || "your area"}</span>{" "}
+                      yet. Remove these items or change your delivery location to continue.
                     </span>
                   </div>
                 )}
@@ -271,6 +292,26 @@ export default function CartPage() {
           >
             <h2 className="text-lg font-bold text-gray-900 mb-4">Order Summary</h2>
 
+            {freeShippingThresholdCents !== null && (
+              <>
+                {freeShippingThresholdCents === -1 && (
+                  <div className="mb-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-800">
+                    Free shipping on this order
+                  </div>
+                )}
+                {freeShippingThresholdCents > 0 && subtotal < freeShippingThresholdCents && (
+                  <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    Add {formatCents(freeShippingThresholdCents - subtotal)} for free shipping
+                  </div>
+                )}
+                {freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents && (
+                  <div className="mb-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-800">
+                    You unlocked free shipping
+                  </div>
+                )}
+              </>
+            )}
+
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal ({totalQty} items)</span>
@@ -278,7 +319,13 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Shipping</span>
-                <span className="text-green-400">Calculated at checkout</span>
+                {freeShippingThresholdCents !== null &&
+                (freeShippingThresholdCents === -1 ||
+                  (freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents)) ? (
+                  <span className="font-semibold text-green-600">Free</span>
+                ) : (
+                  <span className="text-green-400">Calculated at checkout</span>
+                )}
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Estimated tax</span>
@@ -347,9 +394,11 @@ export default function CartPage() {
               Continue Shopping
             </Link>
 
-            <p className="mt-4 text-center text-xs text-gray-500">
-              Free shipping on orders over $75
-            </p>
+            {freeShippingThresholdCents !== null && freeShippingThresholdCents > 0 && (
+              <p className="mt-4 text-center text-xs text-gray-500">
+                Free shipping on orders over {formatCents(freeShippingThresholdCents)}
+              </p>
+            )}
           </div>
         </aside>
       </div>

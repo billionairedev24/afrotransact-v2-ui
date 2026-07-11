@@ -38,6 +38,32 @@ export async function generateMetadata(
   }
 }
 
-export default function ProductPage() {
+/**
+ * Phase 9.7 — when this offer is catalog-linked, redirect server-side to
+ * /p/{catalog-item-slug} so the buyer lands on the Buy Box view. The
+ * legacy ProductPageClient stays as the fallback for offers that don't
+ * have a catalog item yet (pre-9.5 inventory).
+ */
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  try {
+    const product = await getProductBySlug(slug, { revalidate: 60 })
+    if (product.catalogItemId) {
+      const { getCatalogItemPublic } = await import("@/lib/api")
+      try {
+        const item = await getCatalogItemPublic(product.catalogItemId)
+        const { redirect } = await import("next/navigation")
+        redirect(`/p/${item.slug}`)
+      } catch {
+        // Catalog item missing — fall through to the legacy view.
+      }
+    }
+  } catch {
+    // Product missing — let the client component render its own 404.
+  }
   return <ProductPageClient />
 }

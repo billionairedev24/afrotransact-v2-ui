@@ -1,22 +1,24 @@
 "use client"
 
 /**
- * Customer Orders — list view.
+ * Customer Orders — list view (Amazon-style).
  *
- * Design ported from public/ux-designs/order-1.html + order-2.html (combined):
- *   • Page header with search field (order-1)
- *   • Status tabs: All / To Ship / To Receive / Completed / Cancelled (both)
- *   • Bento 2-col grid of order cards on lg+ (order-1), with the cleaner
- *     per-card chrome from order-2 (order # as title, right-aligned actions)
- *   • Multi-item visual cue: 2×2 thumbnail grid with "+N" overflow (order-1)
+ * Layout:
+ *   • Single-column stacked feed (full-width cards, not a bento grid)
+ *   • Each card: gray header strip (Order placed | Total | Ship to · #order)
+ *     with the body rendering each item as its own row (thumb + title +
+ *     variant + qty + per-item actions). Matches the Your Orders UX buyers
+ *     expect from Amazon.
+ *   • Infinite scroll via IntersectionObserver — PAGE_SIZE rows per fetch,
+ *     auto-loaded as the sentinel scrolls into view. No "Page X of Y"
+ *     pagination, no "shows 4 even when there are more" labeling.
  *
- * API wiring is unchanged — uses `getBuyerOrders(token, page, PAGE_SIZE)`.
- * Tab + search filtering is client-side over the current page (the backend
- * does not yet filter by status group). When that lands we can pass the
- * group key down to getBuyerOrders.
+ * Server filtering: backend currently owns text search (`q`) only. Tab
+ * filtering still runs client-side over loaded rows; when the backend
+ * adds status-group filtering we can pass the group key down.
  */
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -42,7 +44,13 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getBuyerOrders, createReview, type OrderDto, type OrderItemDto } from "@/lib/api"
+import {
+  getBuyerOrders,
+  createReview,
+  reorderOrder,
+  type OrderDto,
+  type OrderItemDto,
+} from "@/lib/api"
 import { logError } from "@/lib/errors"
 import { OrderCardSkeleton } from "@/components/ui/Skeleton"
 import { useCartStore } from "@/stores/cart-store"
@@ -148,44 +156,105 @@ function OrderCard({ order }: { order: OrderDto }) {
   const reviewableItems = allItems.filter((i) => i.productId)
   void firstSubOrder
 
-  // Re-adds every item from this order back to the cart, then routes to /cart.
+  // Client-side cart restore — used as the slow-path fallback for reorder
+  // when the buyer has no default address (or the server returns fastPath=false).
   // Items missing productId are skipped (e.g. legacy soft-deleted entries).
+  const restoreCartFromOrder = (): number => {
+    useCartStore.getState().clearCart()
+    let added = 0
+    for (const so of order.subOrders) {
+      for (const it of so.items) {
+        if (!it.productId) continue
+        addItem({
+          productId: it.productId,
+          variantId: it.variantId,
+          storeId: so.storeId,
+          storeName: so.storeId,
+          title: it.productTitle || "Product",
+          variantName: it.variantName || "Default",
+          price: it.unitPriceCents,
+          quantity: it.quantity,
+          imageUrl: it.imageUrl ?? undefined,
+          slug: it.slug ?? it.productId,
+          weightKg: null,
+          lengthIn: null,
+          widthIn: null,
+          heightIn: null,
+        })
+        added++
+      }
+    }
+    return added
+  }
+
+  // 1-click reorder. Calls the backend reorder endpoint which:
+  //   - replays the prior order's items into the server cart,
+  //   - resolves the buyer's default shipping address,
+  //   - runs checkout (session-mode or legacy fork).
+  // On fastPath success the buyer is routed straight to the existing
+  // payment-confirmation page; on fallback we restore the cart client-side
+  // and drop the buyer onto /checkout so they can finish manually.
   const handleBuyAgain = async () => {
     if (buyingAgain) return
     setBuyingAgain(true)
     try {
-      let added = 0
-      for (const so of order.subOrders) {
-        for (const it of so.items) {
-          if (!it.productId) continue
-          addItem({
-            productId: it.productId,
-            variantId: it.variantId,
-            storeId: so.storeId,
-            // OrderDto doesn't carry storeName today; storeId is good
-            // enough to satisfy the cart store and the cart UI will look
-            // up the human name from the store catalogue on render.
-            storeName: so.storeId,
-            title: it.productTitle || "Product",
-            variantName: it.variantName || "Default",
-            price: it.unitPriceCents,
-            quantity: it.quantity,
-            imageUrl: it.imageUrl ?? undefined,
-            slug: it.slug ?? it.productId,
-            weightKg: null,
-            lengthIn: null,
-            widthIn: null,
-            heightIn: null,
-          })
-          added++
-        }
-      }
-      if (added === 0) {
-        toast.error("Couldn't add these items to your cart — try Details instead")
+      const token = await getAccessToken()
+      if (!token) {
+        toast.error("Session expired — please sign in again")
         return
       }
-      toast.success(`Added ${added} item${added === 1 ? "" : "s"} to your cart`)
-      router.push("/cart")
+      const idempotencyKey = `reorder-${order.orderNumber}-${Date.now()}`
+      let res
+      try {
+        res = await reorderOrder(token, order.orderNumber, idempotencyKey)
+      } catch (e) {
+        logError(e, "1-click reorder")
+        // Backend bounced (404, empty, region-disabled). Fall back to the
+        // client-side cart restore + manual /checkout.
+        const added = restoreCartFromOrder()
+        if (added === 0) {
+          toast.error("Couldn't reorder this — try Details instead")
+          return
+        }
+        toast.message(`Added ${added} item${added === 1 ? "" : "s"} — finish on checkout`)
+        router.push("/cart")
+        return
+      }
+
+      if (res.skippedItemCount > 0) {
+        toast.message(
+          `Reorder ready (${res.skippedItemCount} item${res.skippedItemCount === 1 ? "" : "s"} no longer available)`,
+        )
+      }
+
+      if (!res.fastPath) {
+        // Cart is populated server-side, but the buyer needs to pick an
+        // address / shipping option / coupon. Restore the client cart so
+        // the /checkout page (which reads from Zustand) shows the items.
+        restoreCartFromOrder()
+        if (res.fallbackReason === "no_default_address") {
+          toast.message("Pick a shipping address to continue.")
+        }
+        router.push("/checkout")
+        return
+      }
+
+      // Fast path: backend ran checkout. Hand off to the existing payment
+      // confirmation flow. Session-mode → Stripe Checkout return URL is
+      // the only path the buyer needs to finish on. Legacy → drop on the
+      // /checkout page; the cart is populated and CheckoutClient will
+      // pick up the live PaymentIntent for the new pending order.
+      restoreCartFromOrder()
+      if (res.checkoutSessionId) {
+        router.push(`/checkout/complete?session=${encodeURIComponent(res.checkoutSessionId)}`)
+      } else {
+        // Legacy fork: the order is pending and needs Stripe Elements to
+        // confirm. The /checkout page reuses the user's cart + payment
+        // selection logic; the recent-pending dedup in OrderService.checkout
+        // resumes the same order rather than minting a new one.
+        toast.success("Order created — finish payment to confirm")
+        router.push("/checkout")
+      }
     } finally {
       setBuyingAgain(false)
     }
@@ -275,36 +344,20 @@ function OrderCard({ order }: { order: OrderDto }) {
         </div>
       </header>
 
-      {/* Body — tighter row layout */}
-      <div className="flex gap-3 p-4">
-        <div className="shrink-0">
-          <OrderThumb items={allItems} />
-        </div>
-        <div className="flex flex-1 min-w-0 flex-col gap-1">
-          <h3 className="text-sm font-semibold text-foreground line-clamp-2 leading-snug">
-            {allItems.length > 1
-              ? `${firstItem?.productTitle ?? "Multiple items"} + ${allItems.length - 1} more`
-              : firstItem?.productTitle ?? "Order"}
-          </h3>
-          {firstItem?.variantName && (
-            <p className="text-xs text-gray-500">{firstItem.variantName}</p>
-          )}
-          <p className="text-xs text-gray-500">
-            {allItems.reduce((n, i) => n + i.quantity, 0)} item{allItems.reduce((n, i) => n + i.quantity, 0) === 1 ? "" : "s"}
-            {order.subOrders.length > 1 && ` · ${order.subOrders.length} stores`}
-          </p>
-          {helper && (
-            <p className="flex items-center gap-1.5 text-xs text-gray-600 mt-1">
-              <helper.Icon className="h-3 w-3 text-brand-gold" />
-              {helper.text}
-            </p>
-          )}
-        </div>
-        {/* Action column — right-aligned, stacked, narrow */}
-        <div className="flex shrink-0 flex-col gap-1.5 w-32 sm:w-36">
-          {actions}
-        </div>
-      </div>
+      {/* Body — one row per item (Amazon-style), with the order-level
+          actions stacked on the right. For very long orders we collapse
+          past the 4th item with a "Show all N items" toggle. */}
+      <OrderBody
+        items={allItems}
+        helper={helper}
+        actions={actions}
+        detailsHref={detailsHref}
+      />
+      {order.subOrders.length > 1 && (
+        <p className="border-t border-gray-100 bg-gray-50/60 px-4 py-2 text-[11px] text-gray-500">
+          Shipped from {order.subOrders.length} stores
+        </p>
+      )}
 
       {reviewOpen && reviewItem?.productId && (
         <WriteReviewModal
@@ -318,6 +371,108 @@ function OrderCard({ order }: { order: OrderDto }) {
         />
       )}
     </article>
+  )
+}
+
+/* ──────────────────────── Order body (item rows) ─────────────────────
+ * Renders each line item as a row inside the card — thumb + title +
+ * variant + qty. The order-level action stack lives on the right of the
+ * first row so the primary CTA stays above the fold. Orders with >4
+ * items collapse to the first 4 with an expand toggle, mirroring
+ * Amazon's threshold for long carts.
+ */
+const ITEMS_VISIBLE_BY_DEFAULT = 4
+
+function OrderBody({
+  items,
+  helper,
+  actions,
+  detailsHref,
+}: {
+  items: OrderItemDto[]
+  helper: { Icon: typeof Truck; text: string } | null
+  actions: React.ReactNode
+  detailsHref: string
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const visible = expanded ? items : items.slice(0, ITEMS_VISIBLE_BY_DEFAULT)
+  const hiddenCount = items.length - visible.length
+
+  return (
+    <div className="p-4 sm:p-5">
+      {helper && (
+        <p className="mb-3 flex items-center gap-1.5 text-xs text-gray-600">
+          <helper.Icon className="h-3.5 w-3.5 text-brand-gold" />
+          {helper.text}
+        </p>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 sm:gap-6">
+        <ul className="flex flex-col divide-y divide-gray-100">
+          {visible.map((it, idx) => (
+            <li key={it.id ?? idx} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+              <Link
+                href={it.slug ? `/product/${it.slug}` : detailsHref}
+                className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-gray-100 sm:h-20 sm:w-20"
+              >
+                {it.imageUrl ? (
+                  <Image
+                    src={it.imageUrl}
+                    alt={it.productTitle ?? "Item"}
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Package className="h-5 w-5 text-gray-300" />
+                  </div>
+                )}
+              </Link>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <Link
+                  href={it.slug ? `/product/${it.slug}` : detailsHref}
+                  className="line-clamp-2 text-sm font-medium text-foreground hover:text-brand-gold leading-snug"
+                >
+                  {it.productTitle ?? "Item"}
+                </Link>
+                {it.variantName && (
+                  <p className="mt-0.5 text-xs text-gray-500">{it.variantName}</p>
+                )}
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Qty {it.quantity}
+                  {it.totalPriceCents != null && (
+                    <span className="ml-2 tabular-nums">
+                      {formatCents(it.totalPriceCents)}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="flex shrink-0 flex-col gap-1.5 sm:w-40">
+          {actions}
+        </div>
+      </div>
+      {hiddenCount > 0 && !expanded && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="mt-3 text-xs font-semibold text-brand-gold hover:underline"
+        >
+          Show {hiddenCount} more {hiddenCount === 1 ? "item" : "items"}
+        </button>
+      )}
+      {expanded && items.length > ITEMS_VISIBLE_BY_DEFAULT && (
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="mt-3 text-xs font-semibold text-brand-gold hover:underline"
+        >
+          Show less
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -572,8 +727,9 @@ function OrderThumb({ items }: { items: OrderDto["subOrders"][number]["items"] }
 
 /* ──────────────────────── Page ───────────────────────────────────── */
 
-// Mockup (order-1.html) shows 4 orders per page — 2×2 grid + pagination.
-const PAGE_SIZE = 4
+// Amazon-style: ~10 orders per fetch, more loaded automatically as the
+// sentinel scrolls into view.
+const PAGE_SIZE = 10
 const SEARCH_MIN_CHARS = 2
 const SEARCH_DEBOUNCE_MS = 300
 
@@ -581,22 +737,23 @@ export default function OrdersPage() {
   const session = useSession()
   const status = session?.status
   const [orders, setOrders] = useState<OrderDto[]>([])
-  const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [appending, setAppending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
   const [totalElements, setTotalElements] = useState(0)
   const [tab, setTab] = useState<StatusGroup>("all")
   const [search, setSearch] = useState("")
   // Debounced copy of `search` — the value we actually send to the server.
   // Keeping the input snappy (`search`) separate from the fetch trigger
-  // (`debouncedSearch`) avoids a request per keystroke (#42).
+  // (`debouncedSearch`) avoids a request per keystroke.
   const [debouncedSearch, setDebouncedSearch] = useState("")
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   // Debounce keystrokes before firing the search request.
   useEffect(() => {
     const trimmed = search.trim()
-    // Treat 1-char queries as empty so we don't search on a stray keystroke.
     const next = trimmed.length >= SEARCH_MIN_CHARS ? trimmed : ""
     const t = setTimeout(() => setDebouncedSearch(next), SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(t)
@@ -604,43 +761,72 @@ export default function OrdersPage() {
 
   const searchActive = debouncedSearch.length > 0
 
-  // Reset to the first page whenever the search query changes — otherwise
-  // a buyer on page 3 of the unsearched list would land on page 3 of a
-  // (potentially much shorter) search result and see "no results".
+  // Reset the feed on a new search query.
   useEffect(() => {
     setPage(0)
+    setOrders([])
+    setHasMore(true)
   }, [debouncedSearch])
 
+  // Fetch loop: appends to `orders` instead of replacing. First page also
+  // sets the initial loading flag for the skeleton; subsequent pages use
+  // the appending flag for the bottom spinner.
   useEffect(() => {
     if (status !== "authenticated") {
-      setLoading(false)
+      setInitialLoading(false)
       return
     }
     let cancelled = false
     ;(async () => {
       try {
-        setLoading(true)
+        if (page === 0) setInitialLoading(true)
+        else setAppending(true)
         setError(null)
         const token = await getAccessToken()
         if (!token || cancelled) return
         const res = await getBuyerOrders(token, page, PAGE_SIZE, debouncedSearch || undefined)
         if (cancelled) return
-        // Server now filters pre-payment placeholders + system-cancelled
-        // sweeps, so totalElements lines up with rendered rows. No client-
-        // side filter needed.
-        setOrders(res.content ?? [])
-        setTotalPages(res.totalPages ?? Math.ceil((res.totalElements ?? 0) / PAGE_SIZE))
+        const incoming = res.content ?? []
+        setOrders((prev) => (page === 0 ? incoming : [...prev, ...incoming]))
         setTotalElements(res.totalElements ?? 0)
+        // No more pages if either: server says we got fewer than asked for,
+        // OR we've now loaded everything the server promised.
+        const loadedAfter = (page === 0 ? 0 : orders.length) + incoming.length
+        setHasMore(
+          incoming.length === PAGE_SIZE && loadedAfter < (res.totalElements ?? Infinity),
+        )
       } catch (e) {
         logError(e, "loading orders")
         if (!cancelled) setError("Failed to load orders")
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setInitialLoading(false)
+          setAppending(false)
+        }
       }
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, page, debouncedSearch])
+
+  // Infinite-scroll trigger: load next page when the sentinel enters
+  // the viewport. Guards: not on the initial load, not already fetching,
+  // and we actually expect more rows.
+  useEffect(() => {
+    if (!hasMore || initialLoading || appending) return
+    const el = sentinelRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setPage((p) => p + 1)
+        }
+      },
+      { rootMargin: "400px 0px" }, // start fetching well before the user reaches it
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [hasMore, initialLoading, appending, orders.length])
 
   // Tab is still applied client-side over the current page — the server only
   // owns the text filter. Buyers rarely use both at once.
@@ -664,32 +850,25 @@ export default function OrdersPage() {
     return map
   }, [orders])
 
-  if (status === "unauthenticated") {
-    return (
-      <main className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
-        <ShoppingBag className="mx-auto h-14 w-14 text-gray-400" />
-        <h1 className="text-xl font-bold text-foreground mt-5">Sign in to view your orders</h1>
-        <p className="text-gray-500 text-sm mt-2 max-w-md mx-auto">
-          Track your purchases, view order details, and manage your order history.
-        </p>
-        <Link
-          href="/auth/login"
-          className="inline-block mt-6 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
-        >
-          Sign In
-        </Link>
-      </main>
-    )
-  }
+  // Auth is gated by app/(main)/orders/layout.tsx server-side.
+
+  // Total label is sourced from the server's totalElements (the true count
+  // of orders the user has placed), independent of how many pages have
+  // been loaded into the feed so far. This fixes the long-standing
+  // "shows 4 even when more exist" bug.
+  const totalLabel =
+    totalElements > 0
+      ? `${totalElements} order${totalElements === 1 ? "" : "s"}`
+      : null
 
   return (
-    <main className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8 py-8 md:py-10 flex flex-col gap-8">
-      {/* Header — title + search (order-1 lines 136-145) */}
+    <main className="mx-auto w-full max-w-[1080px] px-4 sm:px-6 lg:px-8 py-8 md:py-10 flex flex-col gap-6">
+      {/* Header — title + search */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Your Orders</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Manage and track your recent purchases.{totalElements > 0 && ` ${totalElements} total.`}
+            {totalLabel ? `${totalLabel} placed` : "Manage and track your recent purchases."}
           </p>
         </div>
         <div className="relative w-full md:w-80">
@@ -738,9 +917,9 @@ export default function OrdersPage() {
         })}
       </nav>
 
-      {loading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((k) => <OrderCardSkeleton key={k} />)}
+      {initialLoading ? (
+        <div className="flex flex-col gap-4">
+          {[1, 2, 3].map((k) => <OrderCardSkeleton key={k} />)}
         </div>
       ) : error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
@@ -779,36 +958,32 @@ export default function OrdersPage() {
         </div>
       ) : (
         <>
-          {/* Bento grid — order-1 line 155 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Single-column stacked feed — Amazon-style. */}
+          <div className="flex flex-col gap-4">
             {visibleOrders.map((order) => (
               <OrderCard key={order.id} order={order} />
             ))}
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <button
-                disabled={page <= 0}
-                onClick={() => setPage((p) => p - 1)}
-                aria-label="Previous page"
-                className="h-10 w-10 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-sm text-gray-500 px-3">
-                Page {page + 1} of {totalPages}
-              </span>
-              <button
-                disabled={page >= totalPages - 1}
-                onClick={() => setPage((p) => p + 1)}
-                aria-label="Next page"
-                className="h-10 w-10 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+          {/* Infinite-scroll trigger + bottom states. The sentinel is what
+              the IntersectionObserver watches; the spinner / "end of list"
+              text just sits above it for affordance. */}
+          {hasMore ? (
+            <div className="flex items-center justify-center py-6">
+              {appending ? (
+                <span className="inline-flex items-center gap-2 text-sm text-gray-500">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading more orders…
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400">Scroll for more</span>
+              )}
             </div>
-          )}
+          ) : orders.length > 0 ? (
+            <p className="text-center text-xs text-gray-400 py-6">
+              That&rsquo;s all your orders.
+            </p>
+          ) : null}
+          <div ref={sentinelRef} aria-hidden className="h-px" />
         </>
       )}
 

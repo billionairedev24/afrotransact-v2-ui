@@ -224,21 +224,8 @@ export default function WishlistPage() {
     )
   }
 
-  if (status !== "authenticated") {
-    return (
-      <main className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
-        <Heart className="mx-auto h-14 w-14 text-gray-400" />
-        <h1 className="text-xl font-bold text-foreground mt-5">Sign in to view your wishlist</h1>
-        <p className="text-sm text-gray-500 mt-2">Saved items sync to your account so you don&apos;t lose them.</p>
-        <Link
-          href="/auth/login"
-          className="inline-block mt-6 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
-        >
-          Sign In
-        </Link>
-      </main>
-    )
-  }
+  // Auth is gated by app/(main)/account/layout.tsx server-side.
+  if (status !== "authenticated") return null
 
   return <ServerWishlist />
 }

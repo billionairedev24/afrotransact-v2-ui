@@ -21,11 +21,13 @@ import { createColumnHelper } from "@tanstack/react-table"
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
+  ApiError,
   getAdminOrders,
   updateSubOrderStatus,
   type OrderDto,
   type Page as ApiPage,
 } from "@/lib/api"
+import { friendlyMessage, logError } from "@/lib/errors"
 import { useStoreNameMap } from "@/hooks/use-stores"
 import { formatShippingAddressLines } from "@/lib/format-address"
 
@@ -247,7 +249,14 @@ function AdminOrderDetailSheet({
       setPendingExceptionSubId(null)
       onUpdated(updated)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update status")
+      logError(err, "adminOrders.updateStatus")
+      if (err instanceof ApiError && err.status === 401) {
+        toast.error("Your admin session has expired. Please sign in again.")
+      } else if (err instanceof ApiError && err.status === 403) {
+        toast.error("You don't have permission to update fulfillment.")
+      } else {
+        toast.error(friendlyMessage(err, "Couldn't update fulfillment status. Please try again."))
+      }
     } finally {
       setUpdating(null)
     }

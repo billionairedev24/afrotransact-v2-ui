@@ -281,7 +281,7 @@ export default function SellerDealsPage() {
   if (loading) return <div className="flex items-center justify-center min-h-[400px] gap-2 text-gray-500"><Loader2 className="h-5 w-5 animate-spin" /> Loading deals...</div>
 
   return (
-    <div className="mx-auto min-w-0 w-full max-w-[960px] space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Deals</h1>

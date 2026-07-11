@@ -7,6 +7,9 @@ import {
 } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
+import { storeDisplayName } from "@/lib/house-store"
+import { ApiError } from "@/lib/api"
+import { friendlyMessage, logError } from "@/lib/errors"
 import {
   adminCreateRefund,
   adminGetOrderByNumber,
@@ -65,7 +68,12 @@ export default function AdminRefundsPage() {
       const res = await adminGetRefundQueue(token, 0, 25)
       setQueue(res.content)
     } catch (e) {
-      setQueueErr(e instanceof Error ? e.message : "queue load failed")
+      logError(e, "refunds.loadQueue")
+      if (e instanceof ApiError && e.status === 401) {
+        setQueueErr("Your admin session has expired. Please sign in again.")
+      } else {
+        setQueueErr(friendlyMessage(e, "Couldn't load the refund queue. Please try again."))
+      }
     } finally {
       setQueueLoading(false)
     }
@@ -88,13 +96,13 @@ export default function AdminRefundsPage() {
       setRefunds(rs)
       setView("order")
     } catch (e) {
-      // Show a friendly message for the common "not found" case instead of
-      // the raw "API ... returned 400" string.
-      const raw = e instanceof Error ? e.message : String(e)
-      if (/Order not found|404|400/i.test(raw)) {
+      logError(e, "refunds.loadOrder")
+      if (e instanceof ApiError && (e.status === 404 || e.status === 400)) {
         setErr(`No order matches "${n}". Make sure you're using the order number (e.g. ORD-…), not a buyer or seller UUID.`)
+      } else if (e instanceof ApiError && e.status === 401) {
+        setErr("Your admin session has expired. Please sign in again.")
       } else {
-        setErr(raw)
+        setErr(friendlyMessage(e, "Couldn't load that order. Please try again."))
       }
     } finally {
       setLoading(false)
@@ -102,7 +110,7 @@ export default function AdminRefundsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
+    <main className="min-w-0">
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -367,7 +375,8 @@ function RefundForm({ order, maxCents, onIssued }: {
       setAmount(""); setNotes("")
       onIssued()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "refund failed")
+      logError(e, "refunds.issue")
+      setErr(friendlyMessage(e, "Couldn't issue the refund. Please try again."))
     } finally {
       setSubmitting(false)
     }
@@ -427,7 +436,7 @@ function RefundForm({ order, maxCents, onIssued }: {
               <option value="">Whole order ({order.subOrders.length} sellers)</option>
               {order.subOrders.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.id.slice(0, 8)} · store {s.storeId.slice(0, 8)} · {fmt(s.subtotalCents, order.currency)}
+                  {s.id.slice(0, 8)} · {storeDisplayName(s.storeId)} · {fmt(s.subtotalCents, order.currency)}
                 </option>
               ))}
             </select>

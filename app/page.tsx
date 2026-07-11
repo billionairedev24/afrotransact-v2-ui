@@ -1,12 +1,14 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { PromoSlot } from "@/components/marketing/PromoSlot"
+import { GeoGate } from "@/components/geo/GeoGate"
 // REPLACED BY <CategoriesBentoGrid> + <TrustMissionBand>: kept commented for
 // quick revert if there's a visual regression.
 // import { FeaturedProducts } from "@/components/home/FeaturedProducts"
 // import { CategoryShowcaseAmazon } from "@/components/categories/CategoryShowcaseAmazon"
 // import { FeaturedCategories } from "@/components/landing/FeaturedCategories"
 // import { ForYouSection } from "@/components/home/ForYouSection"
+import { ForYouRail } from "@/components/orders/ForYouRail"
 import { CategoriesBentoGrid } from "@/components/landing/CategoriesBentoGrid"
 import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
 import { ProductRow } from "@/components/landing/ProductRow"
@@ -194,6 +196,12 @@ export default async function HomePage() {
       <Header />
 
       <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0 space-y-10">
+        {/* GeoGate wraps the homepage too. The (main) route group has its
+            own GeoGate, but app/page.tsx is OUTSIDE that group so without
+            this wrapper a buyer in a disabled / not_serviced zone would
+            still see the full landing page and only hit the gate after
+            clicking into Cart or another (main) route. */}
+        <GeoGate>
         {/* 1. Hero — promotions module (admin-managed) */}
         <PromoSlot placement="HERO" className="mx-4 md:mx-6 lg:mx-8 mt-4" />
 
@@ -212,13 +220,19 @@ export default async function HomePage() {
           viewAllLabel="See all deals"
         />
 
-        {/* 3.5 Slim mid-page seller CTA */}
+        {/* 3.5 Buy It Again — Amazon-style positioning: nestled after the
+            primary deals surface, alongside other content rows, so it reads
+            as a personalized recommendation rather than a top-of-page banner.
+            Self-hides for guests + buyers with <4 eligible items. */}
+        <ForYouRail />
+
+        {/* 4. Slim mid-page seller CTA */}
         <SellOnAfrotransactStrip />
 
-        {/* 4. Trust & Mission Band */}
+        {/* 5. Trust & Mission Band */}
         <TrustMissionBand />
 
-        {/* 5. New Arrivals */}
+        {/* 6. New Arrivals */}
         <ProductRow
           title="New Arrivals"
           products={newLocalRes.results}
@@ -232,6 +246,7 @@ export default async function HomePage() {
           products={trendingAustinRes.results}
           viewAllHref="/search?region_code=us-tx-austin&sort=popularity"
         />
+        </GeoGate>
 
       </main>
 

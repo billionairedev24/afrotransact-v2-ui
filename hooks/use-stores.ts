@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getAllStores, type StoreInfo } from "@/lib/api"
+import { isHouseStore, HOUSE_STORE_NAME } from "@/lib/house-store"
 
 export function useAllStores() {
   return useQuery({
@@ -23,8 +24,11 @@ export function useStoreNameMap() {
   }, [q.data])
 
   const nameFor = useCallback(
-    (id: string | null | undefined) =>
-      id ? (map.get(id) ?? `Store ${id.slice(0, 8)}…`) : "—",
+    (id: string | null | undefined) => {
+      if (!id) return "—"
+      if (isHouseStore(id)) return HOUSE_STORE_NAME
+      return map.get(id) ?? `Store ${id.slice(0, 8)}…`
+    },
     [map],
   )
 

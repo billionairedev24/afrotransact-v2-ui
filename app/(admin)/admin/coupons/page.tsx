@@ -10,9 +10,9 @@ import {
   toggleAdminCoupon,
 } from "@/lib/api"
 import type { CouponData, CouponCreateRequest } from "@/lib/api"
-import { logError } from "@/lib/errors"
+import { friendlyMessage, logError } from "@/lib/errors"
 import { toast } from "sonner"
-import { Plus, Ticket, Pencil, ToggleLeft, ToggleRight, X } from "lucide-react"
+import { Plus, Ticket, Pencil, X } from "lucide-react"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
 import { createColumnHelper } from "@tanstack/react-table"
@@ -28,12 +28,55 @@ function fmtValue(type: string, value: number) {
 
 const col = createColumnHelper<CouponData>()
 
+type StatusFilter = "all" | "active" | "paused" | "expired"
+
+function couponStatus(c: CouponData): "active" | "paused" | "expired" {
+  if (c.active) return "active"
+  if (c.enabled) return "expired"
+  return "paused"
+}
+
+/** Small inline pill switch for per-coupon active toggle. */
+function InlineSwitch({
+  on,
+  busy,
+  onClick,
+  ariaLabel,
+}: {
+  on: boolean
+  busy?: boolean
+  onClick: () => void
+  ariaLabel: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={ariaLabel}
+      disabled={busy}
+      onClick={onClick}
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-50 ${
+        on ? "bg-emerald-500" : "bg-gray-300"
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+          on ? "translate-x-4" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  )
+}
+
 export default function AdminCouponsPage() {
   const { status: sessionStatus } = useSession()
   const [coupons, setCoupons] = useState<CouponData[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<CouponData | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<StatusFilter>("all")
 
   const loadCoupons = useCallback(async () => {
     try {
@@ -51,7 +94,9 @@ export default function AdminCouponsPage() {
   }, [])
 
   useEffect(() => {
-    if (sessionStatus === "authenticated") loadCoupons()
+    if (sessionStatus === "authenticated") {
+      loadCoupons()
+    }
   }, [sessionStatus, loadCoupons])
 
   async function handleCreate(data: CouponCreateRequest) {
@@ -72,13 +117,53 @@ export default function AdminCouponsPage() {
     loadCoupons()
   }
 
-  const handleToggle = useCallback(async (id: string) => {
+  const handleToggle = useCallback(async (c: CouponData) => {
     const token = await getAccessToken()
     if (!token) return
-    await toggleAdminCoupon(token, id)
-    toast.success("Coupon toggled")
-    loadCoupons()
-  }, [loadCoupons])
+    const prevEnabled = c.enabled
+    const prevActive = c.active
+    // Optimistic: flip enabled; active flips iff not expired (i.e. expiry not in past)
+    const expired = new Date(c.expiresAt).getTime() <= Date.now()
+    setCoupons((list) =>
+      list.map((x) =>
+        x.id === c.id
+          ? { ...x, enabled: !prevEnabled, active: !prevEnabled && !expired }
+          : x,
+      ),
+    )
+    setTogglingId(c.id)
+    try {
+      await toggleAdminCoupon(token, c.id)
+      toast.success(prevEnabled ? "Coupon paused" : "Coupon activated")
+    } catch (err) {
+      // Revert
+      setCoupons((list) =>
+        list.map((x) =>
+          x.id === c.id ? { ...x, enabled: prevEnabled, active: prevActive } : x,
+        ),
+      )
+      logError(err, "coupons.toggle")
+      toast.error(friendlyMessage(err, "Couldn't update coupon. Please try again."))
+    } finally {
+      setTogglingId(null)
+    }
+  }, [])
+
+  const filteredCoupons = useMemo(() => {
+    if (filter === "all") return coupons
+    return coupons.filter((c) => couponStatus(c) === filter)
+  }, [coupons, filter])
+
+  const counts = useMemo(() => {
+    let active = 0, paused = 0, expired = 0
+    for (const c of coupons) {
+      const s = couponStatus(c)
+      if (s === "active") active++
+      else if (s === "paused") paused++
+      else expired++
+    }
+    return { all: coupons.length, active, paused, expired }
+  }, [coupons])
 
   const columns = useMemo(() => [
     col.accessor("code", {
@@ -126,16 +211,48 @@ export default function AdminCouponsPage() {
       header: "Status",
       cell: info => {
         const c = info.row.original
-        const label = c.active ? "Active" : c.enabled ? "Expired" : "Disabled"
-        const cls = c.active
-          ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
-          : c.enabled
-          ? "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
-          : "bg-gray-100 text-gray-500"
+        const s = couponStatus(c)
+        if (s === "expired") {
+          return (
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200">
+              Expired
+            </span>
+          )
+        }
+        const on = s === "active"
+        // Seller-owned coupons are view-only for admins: surface status as a
+        // static pill rather than a toggle. Admins create + manage site-wide
+        // coupons (sellerId == null) — those still get the inline switch.
+        if (c.sellerId) {
+          return (
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  on
+                    ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+                    : "bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-200"
+                }`}
+              >
+                {on ? "Active" : "Paused"}
+              </span>
+              <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                seller-owned
+              </span>
+            </div>
+          )
+        }
         return (
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
-            {label}
-          </span>
+          <div className="flex items-center gap-2">
+            <InlineSwitch
+              on={on}
+              busy={togglingId === c.id}
+              onClick={() => handleToggle(c)}
+              ariaLabel={on ? `Pause coupon ${c.code}` : `Activate coupon ${c.code}`}
+            />
+            <span className={`text-xs font-medium ${on ? "text-emerald-700" : "text-gray-500"}`}>
+              {on ? "Active" : "Paused"}
+            </span>
+          </div>
         )
       },
     }),
@@ -145,6 +262,19 @@ export default function AdminCouponsPage() {
       enableHiding: false,
       cell: ({ row }) => {
         const c = row.original
+        // Seller-owned coupons are read-only for admin — only "View" is offered.
+        // Site-wide (admin-created) coupons keep the full Edit action.
+        if (c.sellerId) {
+          return (
+            <RowActions actions={[
+              {
+                label: "View",
+                icon: <Pencil className="h-4 w-4" />,
+                onClick: () => { setEditing(c); setShowForm(false) },
+              },
+            ]} />
+          )
+        }
         return (
           <RowActions actions={[
             {
@@ -152,18 +282,11 @@ export default function AdminCouponsPage() {
               icon: <Pencil className="h-4 w-4" />,
               onClick: () => { setEditing(c); setShowForm(false) },
             },
-            {
-              label: c.enabled ? "Disable" : "Enable",
-              icon: c.enabled
-                ? <ToggleRight className="h-4 w-4 text-emerald-500" />
-                : <ToggleLeft className="h-4 w-4" />,
-              onClick: () => handleToggle(c.id),
-            },
           ]} />
         )
       },
     }),
-  ], [handleToggle])
+  ], [handleToggle, togglingId])
 
   return (
     <div className="space-y-6">
@@ -180,10 +303,17 @@ export default function AdminCouponsPage() {
         </button>
       </div>
 
+      {/* Enablement per Service Location is configured on the Settings page
+          (Settings → Service Locations → per-zone feature toggles). This
+          page is coupon CRUD only, so operators aren't editing the same
+          flag in two places. */}
+
       {(showForm || editing) && (
         <CouponForm
           coupon={editing}
           isAdmin
+          // Seller-owned coupons open in view-only mode; site-wide stay editable.
+          readOnly={!!editing?.sellerId}
           onSubmit={editing ? (d) => handleUpdate(editing.id, d) : handleCreate}
           onCancel={() => { setShowForm(false); setEditing(null) }}
         />
@@ -196,16 +326,47 @@ export default function AdminCouponsPage() {
           <p className="mt-1 text-xs text-gray-500">Create your first site-wide coupon to start offering discounts.</p>
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={coupons}
-          loading={loading}
-          searchPlaceholder="Search coupons…"
-          searchColumn="code"
-          enableExport
-          exportFilename="coupons"
-          emptyMessage="No coupons match your search."
-        />
+        <>
+          {/* Filter chips */}
+          <div className="flex flex-wrap items-center gap-2">
+            {([
+              { key: "all", label: "All", count: counts.all },
+              { key: "active", label: "Active", count: counts.active },
+              { key: "paused", label: "Paused", count: counts.paused },
+              { key: "expired", label: "Expired", count: counts.expired },
+            ] as { key: StatusFilter; label: string; count: number }[]).map((chip) => {
+              const selected = filter === chip.key
+              return (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => setFilter(chip.key)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    selected
+                      ? "border-gray-900 bg-gray-900 text-white"
+                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {chip.label}
+                  <span className={`tabular-nums ${selected ? "text-gray-200" : "text-gray-400"}`}>
+                    {chip.count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <DataTable
+            columns={columns}
+            data={filteredCoupons}
+            loading={loading}
+            searchPlaceholder="Search coupons…"
+            searchColumn="code"
+            enableExport
+            exportFilename="coupons"
+            emptyMessage="No coupons match your search."
+          />
+        </>
       )}
     </div>
   )
@@ -214,11 +375,13 @@ export default function AdminCouponsPage() {
 function CouponForm({
   coupon,
   isAdmin,
+  readOnly = false,
   onSubmit,
   onCancel,
 }: {
   coupon: CouponData | null
   isAdmin?: boolean
+  readOnly?: boolean
   onSubmit: (data: CouponCreateRequest) => Promise<void>
   onCancel: () => void
 }) {
@@ -259,32 +422,37 @@ function CouponForm({
 
   const inputCls = "w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/50"
 
+  const inputAttrs = readOnly ? { readOnly: true, disabled: true } : {}
+  const selectAttrs = readOnly ? { disabled: true } : {}
+
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-input bg-white p-6 space-y-4">
+    <form onSubmit={readOnly ? (e) => e.preventDefault() : handleSubmit} className="rounded-xl border border-input bg-white p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">{coupon ? "Edit Coupon" : "Create Site-Wide Coupon"}</h3>
+        <h3 className="text-sm font-semibold text-gray-900">
+          {readOnly ? "View Coupon (seller-owned, read-only)" : coupon ? "Edit Coupon" : "Create Site-Wide Coupon"}
+        </h3>
         <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><X className="h-4 w-4" /></button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Code *</label>
-          <input value={code} onChange={e => setCode(e.target.value)} placeholder="LAUNCH50" className={inputCls} />
+          <input value={code} onChange={e => setCode(e.target.value)} placeholder="LAUNCH50" className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Type *</label>
-          <select value={type} onChange={e => setType(e.target.value as any)} className={inputCls}>
+          <select value={type} onChange={e => setType(e.target.value as "percentage" | "fixed_amount")} className={inputCls} {...selectAttrs}>
             <option value="percentage">Percentage</option>
             <option value="fixed_amount">Fixed Amount</option>
           </select>
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Value * ({type === "percentage" ? "%" : "$"})</label>
-          <input type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} placeholder={type === "percentage" ? "25" : "5.00"} className={inputCls} />
+          <input type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} placeholder={type === "percentage" ? "25" : "5.00"} className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Scope</label>
-          <select value={scope} onChange={e => setScope(e.target.value as any)} className={inputCls}>
+          <select value={scope} onChange={e => setScope(e.target.value as typeof scope)} className={inputCls} {...selectAttrs}>
             <option value="site_wide">Site-Wide</option>
             <option value="product">Product</option>
             <option value="store">Store</option>
@@ -293,31 +461,33 @@ function CouponForm({
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Min Order ($)</label>
-          <input type="number" step="0.01" value={minOrder} onChange={e => setMinOrder(e.target.value)} placeholder="0" className={inputCls} />
+          <input type="number" step="0.01" value={minOrder} onChange={e => setMinOrder(e.target.value)} placeholder="0" className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Max Discount ($)</label>
-          <input type="number" step="0.01" value={maxDiscount} onChange={e => setMaxDiscount(e.target.value)} placeholder="No limit" className={inputCls} />
+          <input type="number" step="0.01" value={maxDiscount} onChange={e => setMaxDiscount(e.target.value)} placeholder="No limit" className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Usage Limit</label>
-          <input type="number" value={usageLimit} onChange={e => setUsageLimit(e.target.value)} placeholder="Unlimited" className={inputCls} />
+          <input type="number" value={usageLimit} onChange={e => setUsageLimit(e.target.value)} placeholder="Unlimited" className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Per-User Limit</label>
-          <input type="number" value={perUserLimit} onChange={e => setPerUserLimit(e.target.value)} placeholder="1" className={inputCls} />
+          <input type="number" value={perUserLimit} onChange={e => setPerUserLimit(e.target.value)} placeholder="1" className={inputCls} {...inputAttrs} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Expires At *</label>
-          <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} className={inputCls} />
+          <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} className={inputCls} {...inputAttrs} />
         </div>
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>
+        <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">{readOnly ? "Close" : "Cancel"}</button>
+        {!readOnly && (
         <button type="submit" disabled={submitting} className="rounded-lg bg-brand-gold px-5 py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-50 transition-colors">
           {submitting ? "Saving…" : coupon ? "Update" : "Create"}
         </button>
+        )}
       </div>
     </form>
   )

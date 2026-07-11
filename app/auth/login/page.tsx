@@ -166,34 +166,14 @@ function LoginRedirect() {
 
   // Surface OAuth / callback errors — no auto-retry from useEffect (prevents infinite redirect loops).
   if (error) {
-    const errorMessages: Record<string, string> = {
-      OAuthSignin: "Error starting sign-in.",
-      OAuthCallback: "Something went wrong during authentication.",
-      OAuthAccountNotLinked: "This email is already associated with another account.",
-      Callback: "Authentication error.",
-    }
-    const message = errorMessages[error] ?? "Something went wrong. Please try signing in again."
+    console.error("auth.error", { code: error })
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4 px-4 text-center">
         <div className="w-full max-w-[380px] rounded-2xl border border-destructive/30 bg-destructive/5 p-6 space-y-4">
-          <p className="text-sm text-destructive leading-relaxed">{message}</p>
-          {/* Technical hint for admins */}
+          <p className="text-sm font-semibold text-destructive leading-relaxed">We couldn&rsquo;t sign you in.</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            If you see <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">ECONNRESET</code> in server logs, Keycloak is not
-            reachable from the Next.js process — double-check <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">KEYCLOAK_ISSUER</code>{" "}
-            (in Docker, <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">localhost</code> is often wrong).
+            This usually clears up on a retry. If it keeps happening, please reach out to support.
           </p>
-
-          {/* New helper for redirect_uri_mismatch */}
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-left space-y-2">
-            <p className="text-[0.7rem] font-semibold text-amber-800 uppercase tracking-wider">Developer Note: redirect_uri_mismatch</p>
-            <p className="text-xs text-amber-700 leading-normal">
-              If Google says <code className="font-mono text-[0.65rem] bg-amber-100 px-1 rounded">redirect_uri_mismatch</code>, you must register the Keycloak broker endpoint in Google Cloud Console:
-            </p>
-            <code className="block break-all rounded bg-white/50 p-2 text-[0.65rem] font-mono text-amber-900 border border-amber-200/50">
-              {process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER}/broker/google/endpoint
-            </code>
-          </div>
           <button
             onClick={triggerKeycloakSignIn}
             disabled={isLoading}
@@ -205,16 +185,12 @@ function LoginRedirect() {
               <>Try again<ArrowRight className="h-4 w-4" /></>
             )}
           </button>
-          <p className="text-xs text-muted-foreground">
-            Stuck with an old <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">?error=</code> in the URL?{" "}
-            <Link
-              href={loginHrefWithoutOauthError(new URLSearchParams(searchParams.toString()))}
-              className="font-medium text-foreground underline-offset-4 hover:underline"
-            >
-              Clear error and use automatic redirect
-            </Link>
-            .
-          </p>
+          <Link
+            href="/help"
+            className="flex w-full items-center justify-center rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-card-foreground hover:bg-muted"
+          >
+            Contact support
+          </Link>
         </div>
       </div>
     )

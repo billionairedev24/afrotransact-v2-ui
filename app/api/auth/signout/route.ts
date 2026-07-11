@@ -43,30 +43,37 @@ function clearNextAuthCookies(req: NextRequest, response: NextResponse) {
 async function handleSignout(req: NextRequest) {
   const token = await getToken({ req })
 
-  // Browser redirect target for Keycloak end-session (`KEYCLOAK_ISSUER`).
   const publicIssuer = kcIssuerPublic
-
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3001"
-
   const clientId = process.env.KEYCLOAK_CLIENT_ID || "afrotransact-web"
 
-  // Build the Keycloak OIDC end-session URL.
-  // id_token_hint is critical — without it Keycloak 22+ cannot confirm the client
-  // and the SSO browser cookie survives, causing silent re-authentication.
-  const logoutUrl = new URL(`${publicIssuer}/protocol/openid-connect/logout`)
-  logoutUrl.searchParams.set("client_id", clientId)
-  logoutUrl.searchParams.set("post_logout_redirect_uri", baseUrl)
-
+  // Best-effort Keycloak SSO logout from the SERVER (not via browser
+  // redirect). If the id_token_hint refers to a session Keycloak no longer
+  // tracks (e.g. Keycloak was restarted, JWKS rotated, session timed out),
+  // Keycloak responds with a session_expired error. We silently swallow it
+  // — the user's local NextAuth cookies are about to be cleared anyway, so
+  // their signed-in state on this app is gone either way. Doing this
+  // server-side means the buyer never sees Keycloak's error page.
   if (token?.idToken) {
+    const logoutUrl = new URL(`${publicIssuer}/protocol/openid-connect/logout`)
+    logoutUrl.searchParams.set("client_id", clientId)
     logoutUrl.searchParams.set("id_token_hint", String(token.idToken))
+    try {
+      await fetch(logoutUrl.toString(), {
+        method: "GET",
+        redirect: "manual",
+        // Short timeout — we don't want a hung Keycloak to delay the user.
+        signal: AbortSignal.timeout(2500),
+      })
+    } catch {
+      // Network blip, timeout, or session_expired — local cleanup proceeds.
+    }
   }
 
-  const redirectTarget = logoutUrl.toString()
-
-  const response = NextResponse.redirect(redirectTarget, { status: 302 })
+  // Always land the buyer on the app's home page. Never on a Keycloak page.
+  const response = NextResponse.redirect(baseUrl, { status: 302 })
   clearNextAuthCookies(req, response)
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate")
-
   return response
 }
 

@@ -1,5 +1,11 @@
 "use client"
 
+// Region/zone selection is a platform concern (sellers only onboard in zones
+// where AfroTransact operates). This page intentionally has no
+// region/state/city/zone picker. The Shipping Reach radio set below is
+// limited to platform-neutral options: "Unlimited" (ship anywhere) and
+// "By radius" (X miles from origin). The legacy "By region" mode was removed.
+
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -17,8 +23,6 @@ import {
   AlertCircle,
   Upload,
   X,
-  Plus,
-  Trash2,
   Globe,
 } from "lucide-react"
 import {
@@ -27,7 +31,6 @@ import {
   createStore,
   updateStore,
   getAdminShippingSettings,
-  getRegionConfig,
   type StoreDetail,
 } from "@/lib/api"
 import { useSellerMe, useSellerStores } from "@/hooks/use-seller-stats"
@@ -283,17 +286,8 @@ export default function StoreSettingsPage() {
           setCarrierShippingEnabled(settings.shipping_realtime_enabled === true)
         }
       } catch {
-        // Seller users may not have admin-config access; fall back to region config features.
-        const regionCode = process.env.NEXT_PUBLIC_DEFAULT_REGION_CODE
-        if (!regionCode || cancelled) return
-        try {
-          const regionCfg = await getRegionConfig(regionCode)
-          if (!cancelled) {
-            setCarrierShippingEnabled(regionCfg.features?.shipping_realtime_enabled === true)
-          }
-        } catch {
-          // Keep hidden when shipping mode cannot be determined.
-        }
+        // Seller users may not have admin-config access. Default to disabled;
+        // platform-level realtime shipping is gated by admins, not sellers.
       }
     })()
     return () => {
@@ -728,7 +722,6 @@ export default function StoreSettingsPage() {
               {([
                 { value: "unlimited", label: "Unlimited", hint: "Ship anywhere" },
                 { value: "radius", label: "By radius", hint: "Within X miles of origin" },
-                { value: "regions", label: "By region", hint: "Specific countries / states" },
               ] as const).map((opt) => {
                 const checked = form.shippingMode === opt.value
                 return (
@@ -785,85 +778,9 @@ export default function StoreSettingsPage() {
               </div>
             )}
 
-            {form.shippingMode === "regions" && (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Add each country (and optional state/province) you ship to. Leave the state blank to ship to the entire country.
-                </p>
-                {form.shippingRegions.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic">
-                    No regions yet — add at least one below.
-                  </p>
-                )}
-                <div className="space-y-2">
-                  {form.shippingRegions.map((region, idx) => (
-                    <div key={idx} className="flex items-end gap-2">
-                      <div className="flex-1">
-                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                          Country
-                        </label>
-                        <select
-                          value={region.countryCode || "US"}
-                          onChange={(e) => {
-                            const next = [...form.shippingRegions]
-                            next[idx] = { ...next[idx], countryCode: e.target.value }
-                            update("shippingRegions", next)
-                          }}
-                          className={inputClass}
-                        >
-                          <option value="US">United States (US)</option>
-                          <option value="CA">Canada (CA)</option>
-                          <option value="GB">United Kingdom (GB)</option>
-                          <option value="NG">Nigeria (NG)</option>
-                          <option value="MX">Mexico (MX)</option>
-                        </select>
-                      </div>
-                      <div className="w-28">
-                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                          State (opt.)
-                        </label>
-                        <input
-                          type="text"
-                          maxLength={3}
-                          value={region.stateCode}
-                          onChange={(e) => {
-                            const next = [...form.shippingRegions]
-                            next[idx] = { ...next[idx], stateCode: e.target.value.toUpperCase() }
-                            update("shippingRegions", next)
-                          }}
-                          placeholder="NY"
-                          className={inputClass}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = form.shippingRegions.filter((_, i) => i !== idx)
-                          update("shippingRegions", next)
-                        }}
-                        className="flex h-10 w-10 items-center justify-center rounded-md border border-border text-muted-foreground hover:border-destructive hover:text-destructive transition-colors"
-                        aria-label="Remove region"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    update("shippingRegions", [
-                      ...form.shippingRegions,
-                      { countryCode: "US", stateCode: "" },
-                    ])
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add region
-                </button>
-              </div>
-            )}
+            {/* Region-based shipping is platform-controlled — sellers cannot
+                pick countries / states. Operational zones are managed by
+                admins; this picker was removed intentionally. */}
           </div>
         </section>
 

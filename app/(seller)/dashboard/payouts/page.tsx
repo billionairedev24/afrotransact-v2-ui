@@ -203,9 +203,8 @@ export default function PayoutsPage() {
     }),
   ], [])
 
-  if (status !== "authenticated") {
-    return <div className="flex items-center justify-center min-h-[400px] text-gray-500">Sign in to view payouts</div>
-  }
+  // Auth gate lives in the (seller) layout — layout redirects unauth
+  // users to /auth/login before this component ever renders.
 
   if (!storeQuery.isLoading && storeQuery.isFetched && storeId === null && !storeQuery.error) {
     return (
@@ -239,7 +238,7 @@ export default function PayoutsPage() {
   }
 
   return (
-    <div className="mx-auto min-w-0 w-full max-w-[960px] space-y-6">
+    <div className="min-w-0 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Payouts</h1>
         <p className="text-sm text-gray-500 mt-1">Track your earnings and see exactly where every dollar goes.</p>

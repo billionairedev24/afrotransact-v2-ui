@@ -26,27 +26,33 @@ import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import {
-  getRegionConfig,
-  getRegions,
   loadCheckoutShippingContext,
+  resolveServiceZone,
   type CheckoutShippingContext,
 } from "@/lib/api"
-import { resolveDefaultRegion } from "@/lib/regions"
 import CheckoutClient from "./CheckoutClient"
+import CheckoutClientV2 from "./CheckoutClientV2"
+import { RegionBlock } from "@/components/geo/RegionBlock"
 
 export const dynamic = "force-dynamic"
 
 export default async function CheckoutPage() {
-  /** Server-side guard: avoids loading checkout when commerce kill-switches are off (client still banners). */
+  /** Server-side guard: avoids loading checkout when commerce kill-switches are off (client still banners).
+   *  Pass 3 of regions→service_zones migration: this gate now goes through
+   *  the public Service Zone resolver. SSR has no buyer location (it lives
+   *  in a localStorage-backed Zustand store), so we do a best-effort resolve
+   *  using the default country. The client (CheckoutClientV2) re-evaluates
+   *  with the real resolved zone once mounted.
+   *
+   *  paymentMethods are NOT seeded here; per-zone payment methods are not
+   *  yet wired in config-service and joining via regions_legacy_id would
+   *  require a backend change outside this pass's scope. The client picks
+   *  up payment methods independently after mount. */
   try {
-    const regions = await getRegions(undefined, true)
-    const region = resolveDefaultRegion(regions)
-    if (region) {
-      const cfg = await getRegionConfig(region.code)
-      const feats = cfg.features ?? {}
-      if (feats.marketplace_enabled === false || feats.stripe === false) {
-        redirect("/cart?notice=checkout_unavailable")
-      }
+    const resolved = await resolveServiceZone("US")
+    const feats = resolved?.effectiveFeatures ?? {}
+    if (feats.marketplace_enabled === false || feats.stripe === false) {
+      redirect("/cart?notice=checkout_unavailable")
     }
   } catch {
     // Upstream unreachable — CheckoutClient banners + order-service gates still defend.
@@ -67,5 +73,18 @@ export default async function CheckoutPage() {
     }
   }
 
-  return <CheckoutClient initialContext={initialContext} />
+  // Feature-flagged V2 single-page checkout. Default off — flip
+  // NEXT_PUBLIC_CHECKOUT_V2=true in .env.local to opt in.
+  if (process.env.NEXT_PUBLIC_CHECKOUT_V2 === "true") {
+    return (
+      <RegionBlock>
+        <CheckoutClientV2 initialContext={initialContext} />
+      </RegionBlock>
+    )
+  }
+  return (
+    <RegionBlock>
+      <CheckoutClient initialContext={initialContext} />
+    </RegionBlock>
+  )
 }

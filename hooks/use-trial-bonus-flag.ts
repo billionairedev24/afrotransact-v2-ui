@@ -1,45 +1,31 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { getRegions, getRegionConfig } from "@/lib/api"
-import { resolveDefaultRegion } from "@/lib/regions"
+// Pass 3 of regions→service_zones migration: the legacy region-config
+// fallback has been removed. The flag now comes solely from the resolved
+// Service Zone in `useBuyerLocation`. When no zone is resolved (or its
+// effective-features map is empty), the trial bonus defaults to FALSE so
+// we never show the offer in an unknown rollout context.
 
-/**
- * "Get a free second trial month by listing 9+ products" is a marketing
- * promotion we may want to switch on/off without a deploy. Backed by the
- * existing per-region feature-flag table (config service) under the key
- * {@code seller_trial_bonus_enabled} so ops can flip it from the admin
- * feature-flags page like any other gate.
- *
- * Defaults to `true` — if the flag isn't set or the config service is
- * unreachable, behaviour matches what shipped today (the bonus is shown).
- * Admins flip it to `false` to hide the offer everywhere the hook is
- * consumed.
- */
+import { useEffect, useState } from "react"
+import { useBuyerLocation } from "@/stores/buyer-location"
+
 export const TRIAL_BONUS_FLAG_KEY = "seller_trial_bonus_enabled"
 
 export function useTrialBonusFlag(): { enabled: boolean; loading: boolean } {
-  const [enabled, setEnabled] = useState(true)
+  const [enabled, setEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
+  const resolvedZone = useBuyerLocation((s) => s.resolvedZone)
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const regions = await getRegions("", true)
-        const region = resolveDefaultRegion(regions)
-        if (!region || cancelled) return
-        const cfg = await getRegionConfig(region.code).catch(() => null)
-        if (cancelled) return
-        const value = cfg?.features?.[TRIAL_BONUS_FLAG_KEY]
-        if (value === false) setEnabled(false)
-        // Any other shape (undefined, true, non-boolean) -> default to on.
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [])
+    const feats = resolvedZone?.effectiveFeatures ?? {}
+    if (Object.keys(feats).length === 0) {
+      setEnabled(false)
+      setLoading(false)
+      return
+    }
+    setEnabled(feats[TRIAL_BONUS_FLAG_KEY] === true)
+    setLoading(false)
+  }, [resolvedZone])
 
   return { enabled, loading }
 }

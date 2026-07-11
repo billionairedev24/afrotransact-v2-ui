@@ -238,7 +238,7 @@ export default function SellerLifecyclePage() {
   ], [nudge.isPending, nudge.variables, refresh.isPending, refresh.variables])
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
+    <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Seller Lifecycle</h1>
         <p className="text-sm text-muted-foreground">
