@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useCallback, useState } from "react"
 import { useSession, signOut } from "next-auth/react"
-import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
 
-// How long the user can be idle before being logged out
-const IDLE_MS = process.env.NODE_ENV === "development"
-  ? 3 * 60 * 1000   // 3 min in dev so you can test
-  : 30 * 60 * 1000  // 30 min in production
+// How long the user can be idle before being logged out. 30 min everywhere —
+// the old 3-min dev value logged testers out (and used to wipe the cart)
+// constantly.
+const IDLE_MS = 30 * 60 * 1000
 
 // How long before logout to show the warning modal
 const WARN_BEFORE_MS = 2 * 60 * 1000 // warn 2 minutes before logout
@@ -111,7 +110,10 @@ export function IdleTimeoutProvider({ children }: { children: React.ReactNode })
     loggingOutRef.current = true
     clearAllTimers()
     setShowWarning(false)
-    clearClientCartOnly()
+    // NOTE: we deliberately do NOT clear the cart on an idle logout — the buyer
+    // didn't choose to leave, and wiping their cart out from under them is
+    // hostile. The cart persists (client + server) so it's waiting when they
+    // sign back in. Explicit sign-out still clears it (see SignOutButton).
     // Force a hard redirect to the inactive-reason login page. next-auth's
     // signOut({ callbackUrl }) sometimes returns to the current route
     // (federated logout swallows the callbackUrl), so we run signOut without
