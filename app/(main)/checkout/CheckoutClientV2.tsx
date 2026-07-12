@@ -329,6 +329,29 @@ export default function CheckoutClientV2({
     }
   }
 
+  // Push the client cart to the server so cart-dependent endpoints (shipping
+  // quotes, checkout) see the current contents. The shipping-quote endpoint
+  // reads the SERVER cart to weigh the order; without this it throws
+  // "Cart is empty" and the UI shows "couldn't find shipping options".
+  const syncServerCart = useCallback(async () => {
+    if (!authToken) return
+    const items = cartItems.map((item) => ({
+      variantId: item.variantId,
+      productId: item.productId || item.variantId,
+      storeId: item.storeId,
+      quantity: item.quantity,
+      unitPriceCents: item.price,
+      productTitle: item.title,
+      variantName: item.variantName,
+      imageUrl: item.imageUrl,
+      weightKg: item.weightKg ?? null,
+      lengthIn: item.lengthIn ?? null,
+      widthIn: item.widthIn ?? null,
+      heightIn: item.heightIn ?? null,
+    }))
+    await mergeCart(authToken, items)
+  }, [authToken, cartItems])
+
   // ─── shipping quotes (Section 2) ───────────────────────────────────
   const [quotes, setQuotes] = useState<ShippingQuoteResponse | null>(null)
   const [quotesLoading, setQuotesLoading] = useState(false)
@@ -347,6 +370,9 @@ export default function CheckoutClientV2({
     setQuotesLoading(true)
     ;(async () => {
       try {
+        // Sync the cart to the server first — the quote endpoint weighs the
+        // SERVER cart, so without this it sees an empty cart.
+        await syncServerCart()
         // Backend expects EXACTLY one of zoneId / regionId (XOR). Prefer the
         // resolved service-zone id; only fall back to regionId if no zone
         // is resolved yet. Sending both fails validation with a 400.
@@ -463,8 +489,11 @@ export default function CheckoutClientV2({
       setRatesUnavailable(false)
       ;(async () => {
         try {
+          // Re-sync the (now-changed) cart before re-quoting.
+          await syncServerCart()
+          const zoneId = buyerResolvedZone?.zone?.id
           const q = await getShippingQuotes(authToken, {
-            regionId: region.id,
+            ...(zoneId ? { zoneId } : { regionId: region.id }),
             state: selectedAddress.state ?? "",
             city: selectedAddress.city,
             destinationLine1: selectedAddress.line1,
