@@ -210,7 +210,13 @@ export const authOptions: NextAuthOptions = {
       if (account && user) {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
-        token.idToken = account.id_token
+        // NOTE: we intentionally do NOT persist the id_token in the session JWT.
+        // Keycloak's access + refresh + id tokens together push the encrypted
+        // NextAuth cookie past the 4 KB single-cookie limit, so it gets chunked
+        // — and chunked cookies make getServerSession() flaky in Server
+        // Components (it returns null → the /admin guard bounces an authenticated
+        // admin to the login page). SSO logout still works via the refresh-token
+        // revocation in the signOut event + client_id on the browser logout.
         token.expiresAt = account.expires_at
         token.id = user.id
 
@@ -371,7 +377,8 @@ async function refreshAccessToken(token: {
     ...token,
     accessToken: refreshedTokens.access_token,
     refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
-    idToken: refreshedTokens.id_token ?? token.idToken,
+    // id_token intentionally not persisted — see the jwt() callback note.
+    idToken: undefined,
     expiresAt: refreshedTokens.expires_at
       ?? Math.floor(Date.now() / 1000) + (refreshedTokens.expires_in as number ?? 300),
     roles,

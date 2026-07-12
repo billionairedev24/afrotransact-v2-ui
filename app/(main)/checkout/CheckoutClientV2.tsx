@@ -329,6 +329,29 @@ export default function CheckoutClientV2({
     }
   }
 
+  // Push the client cart to the server so cart-dependent endpoints (shipping
+  // quotes, checkout) see the current contents. The shipping-quote endpoint
+  // reads the SERVER cart to weigh the order; without this it throws
+  // "Cart is empty" and the UI shows "couldn't find shipping options".
+  const syncServerCart = useCallback(async () => {
+    if (!authToken) return
+    const items = cartItems.map((item) => ({
+      variantId: item.variantId,
+      productId: item.productId || item.variantId,
+      storeId: item.storeId,
+      quantity: item.quantity,
+      unitPriceCents: item.price,
+      productTitle: item.title,
+      variantName: item.variantName,
+      imageUrl: item.imageUrl,
+      weightKg: item.weightKg ?? null,
+      lengthIn: item.lengthIn ?? null,
+      widthIn: item.widthIn ?? null,
+      heightIn: item.heightIn ?? null,
+    }))
+    await mergeCart(authToken, items)
+  }, [authToken, cartItems])
+
   // ─── shipping quotes (Section 2) ───────────────────────────────────
   const [quotes, setQuotes] = useState<ShippingQuoteResponse | null>(null)
   const [quotesLoading, setQuotesLoading] = useState(false)
@@ -347,6 +370,9 @@ export default function CheckoutClientV2({
     setQuotesLoading(true)
     ;(async () => {
       try {
+        // Sync the cart to the server first — the quote endpoint weighs the
+        // SERVER cart, so without this it sees an empty cart.
+        await syncServerCart()
         // Backend expects EXACTLY one of zoneId / regionId (XOR). Prefer the
         // resolved service-zone id; only fall back to regionId if no zone
         // is resolved yet. Sending both fails validation with a 400.
@@ -420,8 +446,17 @@ export default function CheckoutClientV2({
   }, [cheapestId, selectedQuoteId])
 
   const selectedQuote = flatQuotes.find((q) => q.quoteId === selectedQuoteId) ?? null
-  const shippingCents = selectedQuote?.amountCents ?? 0
-  // A $0 shipping quote means free shipping (global switch or threshold met) —
+  // Free shipping at/above the threshold overrides any quote: once the buyer has
+  // unlocked free shipping we never charge the platform shipping fee. The
+  // threshold is set on the buyer's resolved service zone (that's where
+  // operators configure it); the region is a fallback. A threshold of 0 / null
+  // means "not configured" — free shipping does NOT apply by threshold, so we
+  // don't make everything free by accident.
+  const freeShippingThresholdCents =
+    buyerResolvedZone?.effectiveSettings?.freeShippingThresholdCents ?? region?.freeShippingThresholdCents ?? 0
+  const freeShippingApplies = freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents
+  const shippingCents = freeShippingApplies ? 0 : (selectedQuote?.amountCents ?? 0)
+  // A $0 shipping charge means free shipping (global switch or threshold met) —
   // show "Free" rather than "$0.00" everywhere shipping is displayed.
   const fmtShip = (cents: number) => (cents === 0 ? "Free" : formatCents(cents))
 
@@ -454,8 +489,11 @@ export default function CheckoutClientV2({
       setRatesUnavailable(false)
       ;(async () => {
         try {
+          // Re-sync the (now-changed) cart before re-quoting.
+          await syncServerCart()
+          const zoneId = buyerResolvedZone?.zone?.id
           const q = await getShippingQuotes(authToken, {
-            regionId: region.id,
+            ...(zoneId ? { zoneId } : { regionId: region.id }),
             state: selectedAddress.state ?? "",
             city: selectedAddress.city,
             destinationLine1: selectedAddress.line1,
@@ -514,6 +552,13 @@ export default function CheckoutClientV2({
   // Prefer zone-resolved features; fall back to the legacy region config map.
   const effectiveFeatures =
     Object.keys(zoneOrRegionFeatures).length > 0 ? zoneOrRegionFeatures : configFeatures
+  // "Global shipping" = realtime carrier shipping. When it's off we run a
+  // courier-free delivery model, so the UI says "Delivery" rather than
+  // "Shipping" (we don't hand parcels to a shipping provider). Prefer the
+  // resolved quote flag; fall back to the effective feature map before quotes load.
+  const globalShippingOn = quotes?.realtimeEnabled ?? Boolean(effectiveFeatures["realtime_shipping_enabled"])
+  const shipNoun = globalShippingOn ? "Shipping" : "Delivery"
+  const shipNounLower = globalShippingOn ? "shipping" : "delivery"
   // Coupons are a platform-wide capability, not a per-location one. Admin
   // creates coupons; buyers can apply them anywhere. No zone/region gate.
   const couponsEnabled = true
@@ -645,10 +690,13 @@ export default function CheckoutClientV2({
         zip: selectedAddress.postalCode ?? "",
         phone: selectedAddress.phone ?? profilePhone ?? undefined,
         saveAddress: false,
-        selectedShippingQuoteId: selectedQuote?.quoteId,
-        selectedShippingCarrier: selectedQuote?.carrier,
-        selectedShippingService: selectedQuote?.serviceCode,
-        selectedShippingAmountCents: selectedQuote?.amountCents,
+        // When free shipping applies we don't assert a paid carrier quote — the
+        // order service bills $0 shipping above the threshold, and this keeps the
+        // charge in agreement with what the buyer sees.
+        selectedShippingQuoteId: freeShippingApplies ? undefined : selectedQuote?.quoteId,
+        selectedShippingCarrier: freeShippingApplies ? undefined : selectedQuote?.carrier,
+        selectedShippingService: freeShippingApplies ? undefined : selectedQuote?.serviceCode,
+        selectedShippingAmountCents: shippingCents,
         saveCard,
         couponCodes: couponResult && couponCode ? [couponCode] : undefined,
       }, idempotencyKeyRef.current)
@@ -714,7 +762,7 @@ export default function CheckoutClientV2({
   // ─── disabled reason for Place Order ──────────────────────────────
   let disabledReason: string | null = null
   if (cartItems.length === 0) disabledReason = "Your cart is empty"
-  else if (!selectedAddress) disabledReason = "Select a shipping address"
+  else if (!selectedAddress) disabledReason = `Select a ${shipNounLower} address`
   else if (ratesUnavailable) disabledReason = "Shipping isn't available for this address yet"
   else if (!selectedQuoteId) disabledReason = "Choose a delivery option"
   else if (!stripeAvailable) disabledReason = "Payment is unavailable in this region"
@@ -753,7 +801,7 @@ export default function CheckoutClientV2({
           {/* 1. Shipping address */}
           <Section
             n={1}
-            title="Shipping address"
+            title={`${shipNoun} address`}
             subtitle={selectedAddress
               ? `${selectedAddress.line1}, ${selectedAddress.city}, ${selectedAddress.state} ${selectedAddress.postalCode}`
               : "Choose where to deliver"}
@@ -827,9 +875,11 @@ export default function CheckoutClientV2({
           <Section
             n={2}
             title="Delivery options"
-            subtitle={selectedQuote
-              ? `${selectedQuote.serviceName} — ${fmtShip(selectedQuote.amountCents)}`
-              : "Choose a delivery option"}
+            subtitle={freeShippingApplies
+              ? "Free — your order qualifies for free delivery"
+              : selectedQuote
+                ? `${selectedQuote.serviceName} — ${fmtShip(selectedQuote.amountCents)}`
+                : "Choose a delivery option"}
             disabled={!selectedAddress}
           >
             {requoting && (
@@ -841,7 +891,7 @@ export default function CheckoutClientV2({
               </div>
             )}
             {!selectedAddress ? (
-              <p className="text-sm text-gray-500">Select a shipping address to see rates.</p>
+              <p className="text-sm text-gray-500">Select a {shipNounLower} address to see options.</p>
             ) : quotesLoading ? (
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Loader2 className="h-4 w-4 animate-spin" /> Getting rates…
@@ -854,7 +904,7 @@ export default function CheckoutClientV2({
                   are temporarily unreachable.
                 </p>
                 <ul className="mt-3 space-y-1 text-amber-900">
-                  <li>• Try a different shipping address above.</li>
+                  <li>• Try a different {shipNounLower} address above.</li>
                   <li>• Or contact us and we&apos;ll help you place the order manually.</li>
                 </ul>
                 <div className="mt-3 flex flex-wrap gap-3">
@@ -924,7 +974,13 @@ export default function CheckoutClientV2({
                               {q.estimatedDays != null ? `Arrives in ${q.estimatedDays} day${q.estimatedDays === 1 ? "" : "s"}` : "Delivery estimate unavailable"}
                             </p>
                           </div>
-                          <p className="text-sm font-bold text-gray-900 tabular-nums">{fmtShip(q.amountCents)}</p>
+                          {/* Once the free-delivery threshold is met we never
+                              show a price — the carrier fee is waived. */}
+                          {freeShippingApplies ? (
+                            <p className="text-sm font-bold text-green-700 tabular-nums">Free</p>
+                          ) : (
+                            <p className="text-sm font-bold text-gray-900 tabular-nums">{fmtShip(q.amountCents)}</p>
+                          )}
                         </label>
                       </li>
                     )
@@ -1084,16 +1140,16 @@ export default function CheckoutClientV2({
               )}
               <div className="flex justify-between">
                 <dt className="text-gray-600">
-                  Shipping
+                  {shipNoun}
                   {/* The badge must reflect what we actually charge — never
-                      contradict the line total. Only "free" when the selected
-                      quote is genuinely $0. */}
-                  {selectedQuote && shippingCents === 0 && (
-                    <span className="ml-2 text-[11px] font-semibold text-green-700">Free shipping applied</span>
+                      contradict the line total. Show "free" when the buyer has
+                      met the free-shipping threshold or the quote is genuinely $0. */}
+                  {shippingCents === 0 && (freeShippingApplies || selectedQuote) && (
+                    <span className="ml-2 text-[11px] font-semibold text-green-700">Free {shipNounLower} applied</span>
                   )}
                 </dt>
                 <dd className="text-gray-900 tabular-nums">
-                  {selectedQuote ? fmtShip(shippingCents) : "—"}
+                  {freeShippingApplies || selectedQuote ? fmtShip(shippingCents) : "—"}
                 </dd>
               </div>
               <div className="flex justify-between">

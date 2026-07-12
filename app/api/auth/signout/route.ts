@@ -54,10 +54,14 @@ async function handleSignout(req: NextRequest) {
   // — the user's local NextAuth cookies are about to be cleared anyway, so
   // their signed-in state on this app is gone either way. Doing this
   // server-side means the buyer never sees Keycloak's error page.
-  if (token?.idToken) {
+  // Keycloak accepts client_id alone for RP-initiated logout; id_token_hint is
+  // optional (we no longer persist the id_token to keep the session cookie
+  // small). The refresh-token revocation in the NextAuth signOut event is the
+  // primary SSO terminator; this browser-level logout is belt-and-suspenders.
+  {
     const logoutUrl = new URL(`${publicIssuer}/protocol/openid-connect/logout`)
     logoutUrl.searchParams.set("client_id", clientId)
-    logoutUrl.searchParams.set("id_token_hint", String(token.idToken))
+    if (token?.idToken) logoutUrl.searchParams.set("id_token_hint", String(token.idToken))
     try {
       await fetch(logoutUrl.toString(), {
         method: "GET",
