@@ -420,11 +420,15 @@ export default function CheckoutClientV2({
   }, [cheapestId, selectedQuoteId])
 
   const selectedQuote = flatQuotes.find((q) => q.quoteId === selectedQuoteId) ?? null
-  // Free shipping at/above the region threshold overrides any quote: once the
-  // buyer has unlocked free shipping we never charge the platform shipping fee,
-  // regardless of what a carrier quote says.
-  const freeShippingThresholdCents = region?.freeShippingThresholdCents ?? 7500
-  const freeShippingApplies = subtotal >= freeShippingThresholdCents
+  // Free shipping at/above the threshold overrides any quote: once the buyer has
+  // unlocked free shipping we never charge the platform shipping fee. The
+  // threshold is set on the buyer's resolved service zone (that's where
+  // operators configure it); the region is a fallback. A threshold of 0 / null
+  // means "not configured" — free shipping does NOT apply by threshold, so we
+  // don't make everything free by accident.
+  const freeShippingThresholdCents =
+    buyerResolvedZone?.effectiveSettings?.freeShippingThresholdCents ?? region?.freeShippingThresholdCents ?? 0
+  const freeShippingApplies = freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents
   const shippingCents = freeShippingApplies ? 0 : (selectedQuote?.amountCents ?? 0)
   // A $0 shipping charge means free shipping (global switch or threshold met) —
   // show "Free" rather than "$0.00" everywhere shipping is displayed.
