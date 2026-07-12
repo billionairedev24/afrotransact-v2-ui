@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useState, Suspense } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { CheckCircle, XCircle, Loader2, Package } from "lucide-react"
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
+import { PopularPicksStrip } from "@/app/(main)/categories/PopularPicksStrip"
 
 // Session-mode polling: Stripe returns the buyer here with ?session=<uuid>
 // in the URL (set by _stripe-payment.tsx return_url). The order row does NOT
@@ -19,6 +21,48 @@ type SessionResult =
   | { status: "failed"; reason?: string }
   | { status: "abandoned" }
 
+/**
+ * Friendly post-checkout acknowledgment. We stay on this page rather than
+ * bouncing to the order detail (which can race the async materialization and
+ * dump the buyer on an empty cart). `orderId` is optional — the legacy inline
+ * flow doesn't have one yet; the session flow does once conversion confirms.
+ */
+function OrderPlaced({ orderId }: { orderId?: string | null }) {
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-16">
+      <div className="text-center">
+        <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-green-500/15 border border-green-500/30">
+          <CheckCircle className="h-10 w-10 text-green-600" />
+        </div>
+        <h1 className="mt-6 text-2xl font-bold text-gray-900">Order placed — thank you!</h1>
+        <p className="mt-2 text-sm text-gray-500">
+          We&apos;re getting it ready. A confirmation email is on its way, and you can track everything from your orders.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link
+            href={orderId ? `/orders/${orderId}` : "/orders"}
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
+          >
+            <Package className="h-4 w-4" /> {orderId ? "View your order" : "View orders"}
+          </Link>
+          <Link
+            href="/"
+            className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Continue shopping
+          </Link>
+        </div>
+      </div>
+
+      {/* Keep them shopping — recommendations right under the confirmation. */}
+      <div className="mt-14">
+        <h2 className="mb-4 text-lg font-bold text-gray-900">You might also like</h2>
+        <PopularPicksStrip />
+      </div>
+    </main>
+  )
+}
+
 function CheckoutCompleteContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -28,6 +72,7 @@ function CheckoutCompleteContent() {
   const [pollState, setPollState] = useState<"idle" | "polling" | "timeout" | "failed">(
     sessionId ? "polling" : "idle",
   )
+  const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null)
 
   const legacyStatus = redirectStatus === "failed" ? "failed" : "success"
 
@@ -58,9 +103,11 @@ function CheckoutCompleteContent() {
           const data = (await res.json()) as SessionResult
           if (data.status === "converted" && "orderId" in data && data.orderId) {
             // Order materialized — server cart was cleared by PaymentEventConsumer.
+            // Stay on this page with a friendly acknowledgment instead of bouncing
+            // to the order detail (which can race materialization → empty cart).
             clearCart()
             try { clearGuestCart() } catch { /* non-fatal */ }
-            router.replace(`/orders/${data.orderId}`)
+            setConfirmedOrderId(data.orderId)
             return
           }
           if (data.status === "failed" || data.status === "abandoned") {
@@ -83,10 +130,13 @@ function CheckoutCompleteContent() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [sessionId, router, clearCart])
+  }, [sessionId, clearCart])
 
   // ── Session-mode rendering ────────────────────────────────────────────
   if (sessionId) {
+    if (confirmedOrderId) {
+      return <OrderPlaced orderId={confirmedOrderId} />
+    }
     if (pollState === "polling") {
       return (
         <main className="mx-auto max-w-[600px] px-4 py-20 text-center">
@@ -95,6 +145,33 @@ function CheckoutCompleteContent() {
           <p className="text-gray-500 text-sm mt-2">
             Hang tight while we confirm your payment. This usually takes a few seconds.
           </p>
+        </main>
+      )
+    }
+    // timeout: payment likely succeeded but the order is still materializing —
+    // reassure rather than alarm, and let them check their orders.
+    if (pollState === "timeout") {
+      return (
+        <main className="mx-auto max-w-[600px] px-4 py-20 text-center">
+          <Loader2 className="mx-auto h-10 w-10 animate-spin text-foreground" />
+          <h1 className="text-xl font-bold text-gray-900 mt-6">Almost there…</h1>
+          <p className="text-gray-500 text-sm mt-2">
+            Your payment went through and we&apos;re finishing your order. It&apos;ll appear in your orders shortly.
+          </p>
+          <div className="flex justify-center gap-3 mt-6">
+            <button
+              onClick={() => router.push("/orders")}
+              className="rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
+            >
+              View orders
+            </button>
+            <button
+              onClick={() => router.push("/")}
+              className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Continue shopping
+            </button>
+          </div>
         </main>
       )
     }
@@ -145,31 +222,7 @@ function CheckoutCompleteContent() {
     )
   }
 
-  return (
-    <main className="mx-auto max-w-[600px] px-4 py-20 text-center">
-      <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-green-500/15 border border-green-500/30">
-        <CheckCircle className="h-10 w-10 text-green-400" />
-      </div>
-      <h1 className="text-xl font-bold text-gray-900 mt-6">Order Placed!</h1>
-      <p className="text-gray-500 text-sm mt-2">
-        Thank you for your purchase. You&apos;ll receive a confirmation email shortly.
-      </p>
-      <div className="flex justify-center gap-3 mt-6">
-        <button
-          onClick={() => router.push("/orders")}
-          className="rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
-        >
-          View Orders
-        </button>
-        <button
-          onClick={() => router.push("/")}
-          className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-        >
-          Continue Shopping
-        </button>
-      </div>
-    </main>
-  )
+  return <OrderPlaced />
 }
 
 export default function CheckoutCompletePage() {

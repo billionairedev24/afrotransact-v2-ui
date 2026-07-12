@@ -75,7 +75,7 @@ const NAV_GROUPS: NavGroup[] = [
         // right host. NEXT_PUBLIC_INVENTORY_WEB_URL is the public name
         // the admin's browser can reach.
         href: process.env.NEXT_PUBLIC_INVENTORY_WEB_URL || "http://localhost:3010",
-        label: "Catalog (Inventory)",
+        label: "Inventory",
         icon: BookOpen,
         external: true,
       },
