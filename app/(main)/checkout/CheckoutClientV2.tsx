@@ -56,6 +56,7 @@ import { cn } from "@/lib/utils"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { features } from "@/lib/features"
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
+import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import { PhoneInput } from "@/components/ui/PhoneInput"
@@ -154,6 +155,7 @@ export default function CheckoutClientV2({
 
   // ─── cart ──────────────────────────────────────────────────────────
   const cartItems = useCartStore((s) => s.items)
+  const { cartReady } = useCartHydration()
   const getSubtotal = useCartStore((s) => s.getSubtotal)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeItem = useCartStore((s) => s.removeItem)
@@ -303,11 +305,20 @@ export default function CheckoutClientV2({
       if (addrEditingId && makeDefault) {
         try { await setDefaultAddress(authToken, addrEditingId) } catch { /* non-fatal */ }
       }
-      // Refresh the list
-      const ctx = await loadCheckoutShippingContext(authToken)
-      setAddresses(ctx.addresses)
+      // Show the saved address immediately (optimistic). The server re-read
+      // below can lag behind the write, which left the new address invisible
+      // until a manual page refresh.
+      setAddresses((prev) => [saved, ...prev.filter((a) => a.id !== saved.id)])
       setSelectedAddressId(saved.id)
       setAddrModalOpen(false)
+      // Background reconcile with the canonical server list, but keep `saved`
+      // if the re-read hasn't caught up to it yet.
+      try {
+        const ctx = await loadCheckoutShippingContext(authToken)
+        setAddresses(
+          ctx.addresses.some((a) => a.id === saved.id) ? ctx.addresses : [saved, ...ctx.addresses],
+        )
+      } catch { /* keep the optimistic list */ }
     } catch (e) {
       logError(e, "saving address (v2)")
       toast.error(friendlyMessage(e, "Could not save address. Check required fields and try again."))
@@ -772,9 +783,13 @@ export default function CheckoutClientV2({
 
   // ─── empty cart guard ─────────────────────────────────────────────
   useEffect(() => {
-    if (!mounted) return
+    // The cart is server-only, so on a fresh load/refresh `cartItems` is []
+    // for a moment until getCart() lands. Wait for the cart to actually
+    // hydrate (cartReady) before treating an empty cart as real — otherwise a
+    // checkout refresh redirects to /cart on the transient empty state.
+    if (!mounted || !cartReady) return
     if (cartItems.length === 0) router.replace("/cart")
-  }, [mounted, cartItems.length, router])
+  }, [mounted, cartReady, cartItems.length, router])
 
   if (!mounted) {
     return (
