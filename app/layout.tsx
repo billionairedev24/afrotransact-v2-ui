@@ -23,6 +23,12 @@ export const metadata: Metadata = {
     description: "Authentic food, spices, fashion, and cultural goods from immigrant-owned stores.",
     images: [{ url: "/logo.png", width: 512, height: 512 }],
   },
+  // Google Merchant Center / Search Console site verification. Renders
+  // <meta name="google-site-verification" content="…"> into <head> on every
+  // page (incl. the home page Google fetches to verify the store).
+  verification: {
+    google: "J8ES2z6EgHkohYBiaDFrY9zUP8e5y-YLgkQXHnniYHg",
+  },
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ||
       (process.env.NODE_ENV === 'production'
