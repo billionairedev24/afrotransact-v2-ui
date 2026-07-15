@@ -62,8 +62,8 @@ function getPlanAccent(index: number, total: number): PlanAccent {
   return {
     badge: null,
     badgeColor: "",
-    accentClass: "border-gray-200",
-    headerClass: "bg-gray-50",
+    accentClass: "border-border",
+    headerClass: "bg-muted",
     isPrimaryCta: false,
   }
 }
@@ -130,7 +130,7 @@ function PlanCard({
 
   return (
     <div
-      className={`relative flex flex-col rounded-2xl border ${accent.accentClass} overflow-hidden transition-all duration-200 hover:scale-[1.01] bg-white`}
+      className={`relative flex flex-col rounded-2xl border ${accent.accentClass} overflow-hidden transition-all duration-200 hover:scale-[1.01] bg-card`}
     >
       {accent.badge && (
         <div className="absolute top-0 right-0">
@@ -144,14 +144,14 @@ function PlanCard({
       )}
 
       <div className={`p-6 ${accent.headerClass}`}>
-        <h3 className="text-xl font-black text-gray-900">{plan.name}</h3>
+        <h3 className="text-xl font-black text-foreground">{plan.name}</h3>
         {plan.description && (
-          <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
+          <p className="text-sm text-muted-foreground mt-1">{plan.description}</p>
         )}
 
         <div className="mt-5 flex items-end gap-1">
-          <span className="text-4xl font-black text-gray-900">{price}</span>
-          <span className="text-gray-500 mb-1">
+          <span className="text-4xl font-black text-foreground">{price}</span>
+          <span className="text-muted-foreground mb-1">
             {plan.priceCentsPerMonth === 0 ? "" : "/month"}
           </span>
         </div>
@@ -166,21 +166,21 @@ function PlanCard({
             marketing fact. Surface products + stores instead so the buyer
             sees the catalog limits at a glance. */}
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
-            <p className="text-xs text-gray-500">Products</p>
-            <p className="text-sm font-bold text-gray-900">
+          <div className="rounded-lg bg-muted border border-input px-3 py-2 text-center">
+            <p className="text-xs text-muted-foreground">Products</p>
+            <p className="text-sm font-bold text-foreground">
               {plan.maxProducts === -1 ? "Unlimited" : `${plan.maxProducts}`}
             </p>
           </div>
-          <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
-            <p className="text-xs text-gray-500">Stores</p>
-            <p className="text-sm font-bold text-gray-900">
+          <div className="rounded-lg bg-muted border border-input px-3 py-2 text-center">
+            <p className="text-xs text-muted-foreground">Stores</p>
+            <p className="text-sm font-bold text-foreground">
               {plan.maxStores === -1 ? "Unlimited" : `${plan.maxStores}`}
             </p>
           </div>
-          <div className="rounded-lg bg-gray-50 border border-input px-3 py-2 text-center">
-            <p className="text-xs text-gray-500">Analytics</p>
-            <p className="text-sm font-bold text-gray-900 capitalize">
+          <div className="rounded-lg bg-muted border border-input px-3 py-2 text-center">
+            <p className="text-xs text-muted-foreground">Analytics</p>
+            <p className="text-sm font-bold text-foreground capitalize">
               {plan.analyticsTier ?? "basic"}
             </p>
           </div>
@@ -196,12 +196,12 @@ function PlanCard({
               duplicate rows per card. Admins control the feature copy via
               the subscription-plans admin page. */}
           {(plan.features ?? []).length === 0 && (
-            <p className="text-xs text-gray-500 italic">No features listed yet.</p>
+            <p className="text-xs text-muted-foreground italic">No features listed yet.</p>
           )}
           {(plan.features ?? []).map((f) => (
             <div key={f} className="flex items-start gap-2 text-sm">
               <Check className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-              <span className="text-gray-600">{f}</span>
+              <span className="text-muted-foreground">{f}</span>
             </div>
           ))}
         </div>
@@ -214,13 +214,13 @@ function PlanCard({
           className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] ${
             accent.isPrimaryCta
               ? "bg-brand-gold text-brand-gold-foreground hover:bg-brand-gold-hover shadow-lg shadow-primary/20"
-              : "border border-input bg-gray-50 text-gray-900 hover:bg-gray-100"
+              : "border border-input bg-muted text-foreground hover:bg-muted"
           }`}
         >
           Start Free Trial
           <ChevronRight className="h-4 w-4" />
         </StartSellingLink>
-        <p className="text-center text-[11px] text-gray-600 mt-2">
+        <p className="text-center text-[11px] text-muted-foreground mt-2">
           1st month free · No credit card required
         </p>
       </div>
@@ -230,24 +230,24 @@ function PlanCard({
 
 function PlanCardSkeleton() {
   return (
-    <div className="flex flex-col rounded-2xl border border-gray-200 bg-white overflow-hidden">
-      <div className="p-6 bg-gray-50 animate-pulse space-y-4">
-        <div className="h-6 w-24 bg-gray-200 rounded" />
-        <div className="h-4 w-40 bg-gray-200 rounded" />
-        <div className="h-10 w-32 bg-gray-200 rounded" />
+    <div className="flex flex-col rounded-2xl border border-border bg-card overflow-hidden">
+      <div className="p-6 bg-muted animate-pulse space-y-4">
+        <div className="h-6 w-24 bg-muted rounded" />
+        <div className="h-4 w-40 bg-muted rounded" />
+        <div className="h-10 w-32 bg-muted rounded" />
         <div className="grid grid-cols-2 gap-2">
-          <div className="h-12 bg-gray-200 rounded" />
-          <div className="h-12 bg-gray-200 rounded" />
+          <div className="h-12 bg-muted rounded" />
+          <div className="h-12 bg-muted rounded" />
         </div>
       </div>
       <div className="p-6 space-y-3 animate-pulse">
-        <div className="h-4 w-3/4 bg-gray-200 rounded" />
-        <div className="h-4 w-2/3 bg-gray-200 rounded" />
-        <div className="h-4 w-3/5 bg-gray-200 rounded" />
-        <div className="h-4 w-1/2 bg-gray-200 rounded" />
+        <div className="h-4 w-3/4 bg-muted rounded" />
+        <div className="h-4 w-2/3 bg-muted rounded" />
+        <div className="h-4 w-3/5 bg-muted rounded" />
+        <div className="h-4 w-1/2 bg-muted rounded" />
       </div>
       <div className="p-6 pt-0 animate-pulse">
-        <div className="h-11 w-full bg-gray-200 rounded-xl" />
+        <div className="h-11 w-full bg-muted rounded-xl" />
       </div>
     </div>
   )
@@ -287,11 +287,11 @@ export default function PricingPage() {
             <Store className="h-3 w-3" />
             Simple, transparent pricing
           </span>
-          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-black text-foreground leading-tight">
             Grow your business.<br />
             <span className="text-foreground">Pay only when you&apos;re ready.</span>
           </h1>
-          <p className="mt-4 text-lg text-gray-500 max-w-xl mx-auto">
+          <p className="mt-4 text-lg text-muted-foreground max-w-xl mx-auto">
             {trialBonusEnabled
               ? "First month always free. Second month free if you list 9+ products. Then choose the plan that fits your stage."
               : "First month always free. Then choose the plan that fits your stage."}
@@ -304,7 +304,7 @@ export default function PricingPage() {
               { icon: <Zap className="h-4 w-4 text-emerald-400" />,  text: "Month 2: Free with 9+ products", show: trialBonusEnabled },
               { icon: <ShieldCheck className="h-4 w-4 text-sky-400" />, text: trialBonusEnabled ? "Month 3+: Pay your chosen plan" : "Month 2+: Pay your chosen plan", show: true },
             ].filter(({ show }) => show).map(({ icon, text }) => (
-              <div key={text} className="flex items-center gap-2 rounded-xl border border-input bg-gray-50 px-4 py-2 text-sm text-gray-600">
+              <div key={text} className="flex items-center gap-2 rounded-xl border border-input bg-muted px-4 py-2 text-sm text-muted-foreground">
                 {icon}
                 {text}
               </div>
@@ -313,16 +313,16 @@ export default function PricingPage() {
 
           {/* Billing toggle */}
           <div className="mt-8 flex items-center justify-center gap-3">
-            <span className={`text-sm ${!isAnnual ? "text-gray-900 font-semibold" : "text-gray-500"}`}>Monthly</span>
+            <span className={`text-sm ${!isAnnual ? "text-foreground font-semibold" : "text-muted-foreground"}`}>Monthly</span>
             <button
               onClick={() => setIsAnnual(!isAnnual)}
-              className={`relative h-6 w-11 rounded-full transition-colors ${isAnnual ? "bg-primary" : "bg-gray-200"}`}
+              className={`relative h-6 w-11 rounded-full transition-colors ${isAnnual ? "bg-primary" : "bg-muted"}`}
             >
               <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isAnnual ? "translate-x-5" : "translate-x-0.5"}`}
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-transform ${isAnnual ? "translate-x-5" : "translate-x-0.5"}`}
               />
             </button>
-            <span className={`text-sm ${isAnnual ? "text-gray-900 font-semibold" : "text-gray-500"}`}>
+            <span className={`text-sm ${isAnnual ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
               Annual
               <span className="ml-1.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 font-bold">
                 2 months free
@@ -344,10 +344,10 @@ export default function PricingPage() {
           ) : error || plans.length === 0 ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center max-w-lg mx-auto">
               <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-gray-900 mb-1">
+              <p className="text-sm font-semibold text-foreground mb-1">
                 Plans are temporarily unavailable
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 We couldn&apos;t load our subscription plans right now. Please try
                 again in a moment, or{" "}
                 <Link href="/help" className="underline hover:text-foreground">
@@ -387,7 +387,7 @@ export default function PricingPage() {
       {/* ── FAQ ── */}
       <section className="px-4 sm:px-6 py-16">
         <div className="mx-auto max-w-3xl">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8 flex items-center justify-center gap-2">
+          <h2 className="text-2xl font-bold text-foreground text-center mb-8 flex items-center justify-center gap-2">
             <HelpCircle className="h-6 w-6 text-foreground" />
             Frequently asked questions
           </h2>
@@ -395,19 +395,19 @@ export default function PricingPage() {
             {visibleFaq.map((item, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-border overflow-hidden bg-white"
+                className="rounded-xl border border-border overflow-hidden bg-card"
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-semibold text-gray-900 hover:bg-gray-50 transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left text-sm font-semibold text-foreground hover:bg-muted transition-colors"
                 >
                   {item.q}
                   <ChevronRight
-                    className={`h-4 w-4 text-gray-500 transition-transform shrink-0 ml-3 ${openFaq === i ? "rotate-90" : ""}`}
+                    className={`h-4 w-4 text-muted-foreground transition-transform shrink-0 ml-3 ${openFaq === i ? "rotate-90" : ""}`}
                   />
                 </button>
                 {openFaq === i && (
-                  <div className="px-5 pb-4 text-sm text-gray-500 leading-relaxed border-t border-border">
+                  <div className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed border-t border-border">
                     <p className="pt-3">{item.a}</p>
                   </div>
                 )}
@@ -419,10 +419,10 @@ export default function PricingPage() {
 
       {/* ── Bottom CTA ── */}
       <section className="border-t border-border bg-gradient-to-br from-primary/10 to-transparent px-4 sm:px-6 py-16 text-center">
-        <h2 className="text-3xl font-black text-gray-900 mb-4">
+        <h2 className="text-3xl font-black text-foreground mb-4">
           Ready to start selling?
         </h2>
-        <p className="text-gray-500 max-w-md mx-auto mb-8">
+        <p className="text-muted-foreground max-w-md mx-auto mb-8">
           Join 200+ immigrant entrepreneurs already earning on AfroTransact. Your first month is on us.
         </p>
         <div className="flex flex-wrap gap-3 justify-center">
@@ -432,16 +432,16 @@ export default function PricingPage() {
           </StartSellingLink>
           <Link
             href="/sell"
-            className="inline-flex h-12 items-center gap-2 rounded-xl border border-input bg-gray-50 px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-100 transition-all"
+            className="inline-flex h-12 items-center gap-2 rounded-xl border border-input bg-muted px-8 text-[15px] font-semibold text-foreground hover:bg-muted transition-all"
           >
             Learn More
           </Link>
         </div>
-        <p className="text-xs text-gray-600 mt-4">
+        <p className="text-xs text-muted-foreground mt-4">
           By signing up you agree to our{" "}
-          <Link href="/terms" className="underline hover:text-gray-400">Terms of Service</Link>,{" "}
-          <Link href="/seller-agreement" className="underline hover:text-gray-400">Seller Agreement</Link>, and{" "}
-          <Link href="/privacy" className="underline hover:text-gray-400">Privacy Policy</Link>.
+          <Link href="/terms" className="underline hover:text-muted-foreground">Terms of Service</Link>,{" "}
+          <Link href="/seller-agreement" className="underline hover:text-muted-foreground">Seller Agreement</Link>, and{" "}
+          <Link href="/privacy" className="underline hover:text-muted-foreground">Privacy Policy</Link>.
         </p>
       </section>
     </main>

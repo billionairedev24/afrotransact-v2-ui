@@ -226,7 +226,7 @@ export default function ProductPageClient() {
     return (
       <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 py-20 flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
-        <p className="text-sm text-gray-500">Loading product…</p>
+        <p className="text-sm text-muted-foreground">Loading product…</p>
       </div>
     )
   }
@@ -235,7 +235,7 @@ export default function ProductPageClient() {
     return (
       <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 py-20 text-center">
         <h2 className="text-xl font-bold text-foreground mb-2">Product Not Found</h2>
-        <p className="text-gray-500 mb-4">{error || "This product doesn't exist or has been removed."}</p>
+        <p className="text-muted-foreground mb-4">{error || "This product doesn't exist or has been removed."}</p>
         <Link href="/" className="text-brand-gold-foreground font-semibold hover:underline">
           Back to home
         </Link>
@@ -247,7 +247,7 @@ export default function ProductPageClient() {
     return (
       <div className="mx-auto max-w-[1280px] px-4 sm:px-6 py-20 text-center">
         <h2 className="text-xl font-bold text-foreground mb-2">Marketplace not available</h2>
-        <p className="text-gray-500 mb-4">
+        <p className="text-muted-foreground mb-4">
           The marketplace is currently disabled for your region. Product pages are not available.
         </p>
         <Link href="/" className="text-brand-gold-foreground font-semibold hover:underline">
@@ -268,7 +268,7 @@ export default function ProductPageClient() {
   return (
     <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 py-6 md:py-8">
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-gray-500 mb-6 overflow-hidden">
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground mb-6 overflow-hidden">
         <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
         <ChevronRight className="h-3.5 w-3.5 shrink-0" />
         {product.categories[0] && (
@@ -313,7 +313,7 @@ export default function ProductPageClient() {
                         "relative h-16 w-16 rounded-md overflow-hidden border-2 transition-colors shrink-0",
                         i === selectedImage
                           ? "border-brand-gold"
-                          : "border-gray-200 hover:border-gray-400",
+                          : "border-border hover:border-border",
                       )}
                       aria-label={`Image ${i + 1}`}
                     >
@@ -334,7 +334,7 @@ export default function ProductPageClient() {
                         "relative h-16 w-16 rounded-md overflow-hidden border-2 shrink-0 group",
                         selectedImage >= MAX_VISIBLE - 1
                           ? "border-brand-gold"
-                          : "border-gray-200 hover:border-gray-400",
+                          : "border-border hover:border-border",
                       )}
                       aria-label={`See ${hiddenCount} more images`}
                     >
@@ -354,7 +354,7 @@ export default function ProductPageClient() {
               )
             })()}
 
-            <div className="flex-1 relative aspect-square bg-white border border-gray-200 rounded-xl overflow-hidden flex items-center justify-center group">
+            <div className="flex-1 relative aspect-square bg-card border border-border rounded-xl overflow-hidden flex items-center justify-center group">
               {imageUrl ? (
                 <Image
                   src={imageUrl}
@@ -365,7 +365,7 @@ export default function ProductPageClient() {
                   className="w-full h-full object-contain p-4 transition-transform duration-300 hover:scale-110"
                 />
               ) : (
-                <div className="flex flex-col items-center gap-2 text-gray-400">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Package className="h-16 w-16" />
                   <span className="text-xs">No image</span>
                 </div>
@@ -376,7 +376,7 @@ export default function ProductPageClient() {
                     type="button"
                     onClick={() => setSelectedImage((selectedImage - 1 + product.images.length) % product.images.length)}
                     aria-label="Previous image"
-                    className="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white border border-gray-200 shadow-sm text-foreground hover:bg-gray-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-card border border-border shadow-sm text-foreground hover:bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <ChevronRight className="h-4 w-4 rotate-180" />
                   </button>
@@ -384,7 +384,7 @@ export default function ProductPageClient() {
                     type="button"
                     onClick={() => setSelectedImage((selectedImage + 1) % product.images.length)}
                     aria-label="Next image"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white border border-gray-200 shadow-sm text-foreground hover:bg-gray-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-card border border-border shadow-sm text-foreground hover:bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -410,7 +410,7 @@ export default function ProductPageClient() {
             <RatingSummary productId={product.id} />
           </div>
 
-          <hr className="border-gray-200" />
+          <hr className="border-border" />
 
           {/* Price block — multi-seller compare/list-price is hidden until
               the marketplace supports it (backlog #44). */}
@@ -423,7 +423,7 @@ export default function ProductPageClient() {
                 ${(displayPriceCents / 100).toFixed(2)}
               </span>
               {onSale && compareCents && compareCents > displayPriceCents && (
-                <span className="text-sm text-gray-500 line-through">
+                <span className="text-sm text-muted-foreground line-through">
                   ${(compareCents / 100).toFixed(2)}
                 </span>
               )}
@@ -446,10 +446,10 @@ export default function ProductPageClient() {
             if (!showPicker) return null
             return (
             <>
-            <hr className="border-gray-200" />
+            <hr className="border-border" />
             <div className="space-y-3">
               <p className="text-sm">
-                <span className="text-gray-500">Option:</span>{" "}
+                <span className="text-muted-foreground">Option:</span>{" "}
                 <span className="font-bold text-foreground">{variant.name || "Default"}</span>
               </p>
               <div className="flex gap-2 flex-wrap">
@@ -463,14 +463,14 @@ export default function ProductPageClient() {
                       onClick={() => { setSelectedVariant(v); setQuantity(1) }}
                       disabled={oos}
                       className={cn(
-                        "px-4 py-2 border-2 rounded-lg bg-white text-sm font-medium transition-all",
+                        "px-4 py-2 border-2 rounded-lg bg-card text-sm font-medium transition-all",
                         active
                           ? "border-brand-gold shadow-sm text-foreground"
-                          : "border-gray-200 hover:border-gray-400 text-foreground",
+                          : "border-border hover:border-border text-foreground",
                         oos && "opacity-50 line-through cursor-not-allowed",
                       )}
                     >
-                      {v.name || v.sku} <span className="text-gray-500">(${v.price.toFixed(2)})</span>
+                      {v.name || v.sku} <span className="text-muted-foreground">(${v.price.toFixed(2)})</span>
                     </button>
                   )
                 })}
@@ -515,13 +515,13 @@ export default function ProductPageClient() {
             if (pairs.length === 0) return null
             return (
               <>
-                <hr className="border-gray-200" />
+                <hr className="border-border" />
                 <div>
                   <h2 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider">Details</h2>
                   <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm">
                     {pairs.map(([k, v], i) => (
                       <div key={`${k}-${i}`} className="contents">
-                        <dt className="text-gray-500">{k}</dt>
+                        <dt className="text-muted-foreground">{k}</dt>
                         <dd className="text-foreground">{v}</dd>
                       </div>
                     ))}
@@ -532,7 +532,7 @@ export default function ProductPageClient() {
           })()}
 
           {(lead || bullets.length > 0) && (
-            <hr className="border-gray-200" />
+            <hr className="border-border" />
           )}
 
           {/* About this item */}
@@ -549,7 +549,7 @@ export default function ProductPageClient() {
                 <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{lead}</p>
               )}
               {bullets.length > 0 && lead && (
-                <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line mt-4">{lead}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line mt-4">{lead}</p>
               )}
             </div>
           )}
@@ -558,13 +558,13 @@ export default function ProductPageClient() {
         {/* ── RIGHT: Buy box (col-span-3 on lg) ─────────────────────── */}
         <aside className="lg:col-span-3 space-y-4">
           <PromoSlot placement="SIDEBAR" />
-          <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm lg:sticky lg:top-20 space-y-4">
+          <div className="border border-border rounded-xl p-5 bg-card shadow-sm lg:sticky lg:top-20 space-y-4">
             <p className="text-2xl font-bold text-foreground">
               ${(displayPriceCents / 100).toFixed(2)}
             </p>
 
-            <p className="text-sm text-gray-600 flex items-start gap-1.5">
-              <Truck className="h-4 w-4 mt-0.5 shrink-0 text-gray-500" />
+            <p className="text-sm text-muted-foreground flex items-start gap-1.5">
+              <Truck className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
               <span>FREE delivery <span className="font-bold text-foreground">in 3-5 business days</span></span>
             </p>
 
@@ -577,11 +577,11 @@ export default function ProductPageClient() {
               <div>
                 <label htmlFor="quantity" className="sr-only">Quantity</label>
                 {isInCart ? (
-                  <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-1">
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted p-1">
                     <button
                       type="button"
                       onClick={() => updateQuantity(cartItem!.variantId, cartItem!.quantity - 1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-white text-foreground transition-colors"
+                      className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-card text-foreground transition-colors"
                       aria-label="Decrease quantity"
                     >
                       <Minus className="h-4 w-4" />
@@ -592,7 +592,7 @@ export default function ProductPageClient() {
                     <button
                       type="button"
                       onClick={() => updateQuantity(cartItem!.variantId, Math.min(variant.stockQuantity, cartItem!.quantity + 1))}
-                      className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-white text-foreground transition-colors"
+                      className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-card text-foreground transition-colors"
                       aria-label="Increase quantity"
                     >
                       <Plus className="h-4 w-4" />
@@ -603,7 +603,7 @@ export default function ProductPageClient() {
                     id="quantity"
                     value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
-                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-foreground focus:border-brand-gold focus:ring-1 focus:ring-brand-gold outline-none"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground focus:border-brand-gold focus:ring-1 focus:ring-brand-gold outline-none"
                   >
                     {Array.from({ length: Math.min(10, variant.stockQuantity) }, (_, i) => i + 1).map((n) => (
                       <option key={n} value={n}>Quantity: {n}</option>
@@ -646,7 +646,7 @@ export default function ProductPageClient() {
                 <button
                   type="button"
                   onClick={() => removeItem(cartItem!.variantId)}
-                  className="w-full inline-flex items-center justify-center gap-1.5 text-xs text-gray-500 hover:text-red-600 transition-colors py-1"
+                  className="w-full inline-flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-red-600 transition-colors py-1"
                 >
                   <Trash2 className="h-3 w-3" /> Remove from cart
                 </button>
@@ -654,34 +654,34 @@ export default function ProductPageClient() {
               {product && <ShippingEligibilityBadge storeId={product.storeId} />}
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3.5 w-3.5" /> Secure transaction
             </div>
 
-            <hr className="border-gray-200" />
+            <hr className="border-border" />
 
             <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs">
-              <span className="text-gray-500">Ships from</span>
+              <span className="text-muted-foreground">Ships from</span>
               <span className="text-foreground font-medium">AfroTransact</span>
               {/* Single-seller: AfroTransact is the seller. No per-store link. */}
-              <span className="text-gray-500">Sold by</span>
+              <span className="text-muted-foreground">Sold by</span>
               <span className="text-foreground font-medium truncate">{HOUSE_STORE_NAME}</span>
-              <span className="text-gray-500">Delivery</span>
+              <span className="text-muted-foreground">Delivery</span>
               <span className="text-foreground flex items-center gap-1">
-                <MapPin className="h-3 w-3 text-gray-400" /> United States
+                <MapPin className="h-3 w-3 text-muted-foreground" /> United States
               </span>
               {storeReturnsSupported && storeReturnWindowDays != null && (
                 <>
-                  <span className="text-gray-500">Returns</span>
+                  <span className="text-muted-foreground">Returns</span>
                   <span className="text-foreground flex items-center gap-1">
-                    <RotateCcw className="h-3 w-3 text-gray-400" />
+                    <RotateCcw className="h-3 w-3 text-muted-foreground" />
                     {storeReturnWindowDays}-day returns from {HOUSE_STORE_NAME}
                   </span>
                 </>
               )}
             </div>
 
-            <hr className="border-gray-200" />
+            <hr className="border-border" />
 
             <button
               type="button"
@@ -712,7 +712,7 @@ export default function ProductPageClient() {
                 "w-full inline-flex items-center justify-center gap-2 rounded-lg border py-2 text-sm font-semibold transition-colors",
                 wishlisted
                   ? "border-red-200 bg-red-50 text-red-700"
-                  : "border-gray-200 bg-white text-foreground hover:bg-gray-50",
+                  : "border-border bg-card text-foreground hover:bg-muted",
               )}
             >
               <Heart className={cn("h-4 w-4", wishlisted && "fill-current")} />
@@ -724,7 +724,7 @@ export default function ProductPageClient() {
 
       {/* Reviews */}
       {product && reviewsEnabled && (
-        <div id="reviews" className="mt-16 border-t border-gray-200 pt-12">
+        <div id="reviews" className="mt-16 border-t border-border pt-12">
           <ProductReviews productId={product.id} />
         </div>
       )}
@@ -761,17 +761,17 @@ function RatingSummary({ productId }: { productId: string }) {
 
   if (count == null) {
     // Loading — render a neutral placeholder so the header doesn't reflow.
-    return <div className="mt-3 h-5 w-40 rounded bg-gray-100 animate-pulse" />
+    return <div className="mt-3 h-5 w-40 rounded bg-muted animate-pulse" />
   }
   if (count === 0) {
     // Show empty stars + "No reviews yet" as static text — NOT a link.
     // Reviews are only solicited from verified buyers via order history,
     // so we deliberately avoid a clickable CTA here.
     return (
-      <div className="mt-3 inline-flex items-center gap-2 text-xs text-gray-500">
+      <div className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground">
         <span className="flex" aria-hidden>
           {[1, 2, 3, 4, 5].map((i) => (
-            <Star key={i} className="h-4 w-4 fill-gray-200 text-gray-200" />
+            <Star key={i} className="h-4 w-4 fill-muted text-gray-200" />
           ))}
         </span>
         <span>No reviews yet</span>
@@ -780,17 +780,17 @@ function RatingSummary({ productId }: { productId: string }) {
   }
   const filled = Math.round(avg ?? 0)
   return (
-    <a href="#reviews" className="mt-3 inline-flex items-center gap-2 text-xs text-gray-600 hover:text-foreground transition-colors">
+    <a href="#reviews" className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
       <span className="flex" aria-hidden>
         {[1, 2, 3, 4, 5].map((i) => (
           <Star
             key={i}
-            className={cn("h-4 w-4", i <= filled ? "fill-brand-gold text-brand-gold" : "fill-gray-200 text-gray-200")}
+            className={cn("h-4 w-4", i <= filled ? "fill-brand-gold text-brand-gold" : "fill-muted text-gray-200")}
           />
         ))}
       </span>
       <span className="font-medium text-foreground">{(avg ?? 0).toFixed(1)}</span>
-      <span className="text-gray-500">|</span>
+      <span className="text-muted-foreground">|</span>
       <span className="underline underline-offset-2">{count.toLocaleString()} {count === 1 ? "rating" : "ratings"}</span>
     </a>
   )

@@ -129,7 +129,7 @@ function ServerWishlist() {
       <div className="mb-6 flex items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Your Wishlist</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {wishlist.loading
               ? "Loading…"
               : ids.length === 0
@@ -140,10 +140,10 @@ function ServerWishlist() {
       </div>
 
       {!wishlist.loading && ids.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-          <Heart className="mx-auto h-14 w-14 text-gray-300" />
+        <div className="rounded-xl border border-border bg-card px-6 py-16 text-center">
+          <Heart className="mx-auto h-14 w-14 text-muted-foreground" />
           <h2 className="text-lg font-semibold text-foreground mt-5">Your wishlist is empty</h2>
-          <p className="text-gray-500 text-sm mt-2 max-w-sm mx-auto">
+          <p className="text-muted-foreground text-sm mt-2 max-w-sm mx-auto">
             Save products you love by tapping the heart icon. Your wishlist syncs across devices.
           </p>
           <Link
@@ -157,8 +157,8 @@ function ServerWishlist() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {items.map((item) => (
-            <article key={item.productId} className="rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-md transition-shadow">
-              <Link href={`/product/${item.slug || item.productId}`} className="block aspect-square bg-gray-100 relative">
+            <article key={item.productId} className="rounded-xl border border-border bg-card overflow-hidden hover:shadow-md transition-shadow">
+              <Link href={`/product/${item.slug || item.productId}`} className="block aspect-square bg-muted relative">
                 {item.imageUrl ? (
                   <Image
                     src={item.imageUrl}
@@ -169,7 +169,7 @@ function ServerWishlist() {
                   />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center">
-                    <Package className="h-10 w-10 text-gray-300" />
+                    <Package className="h-10 w-10 text-muted-foreground" />
                   </div>
                 )}
               </Link>
@@ -180,7 +180,7 @@ function ServerWishlist() {
                   </h3>
                 </Link>
                 {item.storeName && (
-                  <p className="text-xs text-gray-500 truncate">{item.storeName}</p>
+                  <p className="text-xs text-muted-foreground truncate">{item.storeName}</p>
                 )}
                 <p className="text-lg font-bold text-foreground">{formatCents(item.priceCents)}</p>
                 <div className="flex gap-2 mt-1">
@@ -199,7 +199,7 @@ function ServerWishlist() {
                       localRemove(item.productId)
                     }}
                     aria-label="Remove from wishlist"
-                    className="inline-flex items-center justify-center rounded-full border border-gray-200 px-3 text-gray-500 hover:bg-gray-50 transition-colors"
+                    className="inline-flex items-center justify-center rounded-full border border-border px-3 text-muted-foreground hover:bg-muted transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -219,7 +219,7 @@ export default function WishlistPage() {
   if (status === "loading") {
     return (
       <main className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     )
   }

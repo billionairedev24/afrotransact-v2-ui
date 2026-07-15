@@ -794,7 +794,7 @@ export default function CheckoutClientV2({
   if (!mounted) {
     return (
       <main className="mx-auto max-w-6xl px-4 sm:px-6 py-10">
-        <div className="h-32 flex items-center justify-center text-gray-500">Loading…</div>
+        <div className="h-32 flex items-center justify-center text-muted-foreground">Loading…</div>
       </main>
     )
   }
@@ -807,7 +807,7 @@ export default function CheckoutClientV2({
   // ─── render ────────────────────────────────────────────────────────
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10 pb-32 lg:pb-10">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-6">Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sections column */}
@@ -822,7 +822,7 @@ export default function CheckoutClientV2({
               : "Choose where to deliver"}
           >
             {addresses.length === 0 ? (
-              <p className="text-sm text-gray-500 mb-3">No saved addresses yet.</p>
+              <p className="text-sm text-muted-foreground mb-3">No saved addresses yet.</p>
             ) : (
               <ul className="space-y-2">
                 {addresses.map((a) => {
@@ -831,7 +831,7 @@ export default function CheckoutClientV2({
                     <li key={a.id}>
                       <label className={cn(
                         "flex items-start gap-3 rounded-xl border px-4 py-3 cursor-pointer transition-colors",
-                        checked ? "border-brand-gold bg-amber-50/40" : "border-gray-200 hover:bg-gray-50",
+                        checked ? "border-brand-gold bg-amber-50/40" : "border-border hover:bg-muted",
                       )}>
                         <input
                           type="radio"
@@ -842,23 +842,23 @@ export default function CheckoutClientV2({
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-bold text-gray-900">{profileName || sessionName || "Address"}</p>
+                            <p className="text-sm font-bold text-foreground">{profileName || sessionName || "Address"}</p>
                             {a.isDefault && (
                               <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">Default</span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600 leading-snug">
+                          <p className="text-sm text-muted-foreground leading-snug">
                             {a.line1}{a.line2 ? `, ${a.line2}` : ""}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {a.city}, {a.state} {a.postalCode}
                           </p>
-                          {a.phone && <p className="text-xs text-gray-500 mt-1">{a.phone}</p>}
+                          {a.phone && <p className="text-xs text-muted-foreground mt-1">{a.phone}</p>}
                           <div className="flex items-center gap-3 mt-2">
                             <button
                               type="button"
                               onClick={(e) => { e.preventDefault(); openEditAddress(a) }}
-                              className="text-xs font-semibold text-gray-600 hover:text-gray-900 inline-flex items-center gap-1"
+                              className="text-xs font-semibold text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
                             >
                               <Edit2 className="h-3 w-3" /> Edit
                             </button>
@@ -906,9 +906,9 @@ export default function CheckoutClientV2({
               </div>
             )}
             {!selectedAddress ? (
-              <p className="text-sm text-gray-500">Select a {shipNounLower} address to see options.</p>
+              <p className="text-sm text-muted-foreground">Select a {shipNounLower} address to see options.</p>
             ) : quotesLoading ? (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Getting rates…
               </div>
             ) : ratesUnavailable ? (
@@ -931,7 +931,7 @@ export default function CheckoutClientV2({
                   </a>
                   <a
                     href="mailto:support@afrotransact.com"
-                    className="inline-flex items-center justify-center rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-50"
+                    className="inline-flex items-center justify-center rounded-md border border-amber-300 bg-card px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-50"
                   >
                     support@afrotransact.com
                   </a>
@@ -942,11 +942,11 @@ export default function CheckoutClientV2({
                 {quotesError}
               </div>
             ) : flatQuotes.length === 0 ? (
-              <p className="text-sm text-gray-500">No delivery options available for this address.</p>
+              <p className="text-sm text-muted-foreground">No delivery options available for this address.</p>
             ) : (
               <>
                 <div className="flex items-center justify-end mb-3">
-                  <div className="flex items-center rounded-full border border-gray-200 p-0.5 text-xs">
+                  <div className="flex items-center rounded-full border border-border p-0.5 text-xs">
                     {(["cheapest", "fastest"] as const).map((s) => (
                       <button
                         key={s}
@@ -954,7 +954,7 @@ export default function CheckoutClientV2({
                         onClick={() => setSortBy(s)}
                         className={cn(
                           "px-3 py-1 rounded-full font-semibold capitalize transition-colors",
-                          sortBy === s ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100",
+                          sortBy === s ? "bg-gray-900 text-white" : "text-muted-foreground hover:bg-muted",
                         )}
                       >
                         Sort: {s}
@@ -965,14 +965,14 @@ export default function CheckoutClientV2({
                 {/* Amazon-style flat ranked list. Carrier brand (USPS/UPS/
                     FedEx) is intentionally hidden — the buyer chooses by
                     speed and price; the carrier is a backstage detail. */}
-                <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+                <ul className="rounded-xl border border-border divide-y divide-border overflow-hidden">
                   {sortedQuotes.map((q) => {
                     const checked = selectedQuoteId === q.quoteId
                     return (
                       <li key={q.quoteId}>
                         <label className={cn(
                           "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
-                          checked ? "bg-amber-50/40" : "hover:bg-gray-50",
+                          checked ? "bg-amber-50/40" : "hover:bg-muted",
                         )}>
                           <input
                             type="radio"
@@ -982,10 +982,10 @@ export default function CheckoutClientV2({
                             className="h-4 w-4 accent-brand-gold"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900">
+                            <p className="text-sm font-semibold text-foreground">
                               {q.serviceName}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               {q.estimatedDays != null ? `Arrives in ${q.estimatedDays} day${q.estimatedDays === 1 ? "" : "s"}` : "Delivery estimate unavailable"}
                             </p>
                           </div>
@@ -994,7 +994,7 @@ export default function CheckoutClientV2({
                           {freeShippingApplies ? (
                             <p className="text-sm font-bold text-green-700 tabular-nums">Free</p>
                           ) : (
-                            <p className="text-sm font-bold text-gray-900 tabular-nums">{fmtShip(q.amountCents)}</p>
+                            <p className="text-sm font-bold text-foreground tabular-nums">{fmtShip(q.amountCents)}</p>
                           )}
                         </label>
                       </li>
@@ -1015,7 +1015,7 @@ export default function CheckoutClientV2({
             disabled={!selectedAddress || !selectedQuoteId}
           >
             {(!selectedAddress || !selectedQuoteId) ? (
-              <p className="text-sm text-gray-500">Select an address and delivery option above.</p>
+              <p className="text-sm text-muted-foreground">Select an address and delivery option above.</p>
             ) : !stripeAvailable ? (
               <div className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
                 Card payments via Stripe are not available in this region yet.
@@ -1042,19 +1042,19 @@ export default function CheckoutClientV2({
             title="Review items"
             subtitle={`${cartItems.length} item${cartItems.length === 1 ? "" : "s"} in your order`}
           >
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-border">
               {cartItems.map((it) => (
                 <li key={it.variantId} className="flex gap-3 py-3">
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-muted">
                     {it.imageUrl ? (
                       <Image src={it.imageUrl} alt={it.title} fill className="object-cover" sizes="64px" unoptimized />
                     ) : (
-                      <div className="h-full w-full grid place-items-center text-gray-400 text-xs">No image</div>
+                      <div className="h-full w-full grid place-items-center text-muted-foreground text-xs">No image</div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 line-clamp-2">{it.title}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-semibold text-foreground line-clamp-2">{it.title}</p>
+                    <p className="text-xs text-muted-foreground">
                       {it.storeName && it.storeName !== it.storeId ? it.storeName : null}
                       {it.storeName && it.storeName !== it.storeId && it.variantName ? " • " : null}
                       {it.variantName || null}
@@ -1063,14 +1063,14 @@ export default function CheckoutClientV2({
                       <button
                         type="button"
                         onClick={() => updateQuantity(it.variantId, Math.max(0, it.quantity - 1))}
-                        className="h-7 w-7 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        className="h-7 w-7 rounded-full border border-border text-muted-foreground hover:bg-muted"
                         aria-label="Decrease quantity"
                       >−</button>
                       <span className="text-sm font-semibold tabular-nums w-6 text-center">{it.quantity}</span>
                       <button
                         type="button"
                         onClick={() => updateQuantity(it.variantId, it.quantity + 1)}
-                        className="h-7 w-7 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        className="h-7 w-7 rounded-full border border-border text-muted-foreground hover:bg-muted"
                         aria-label="Increase quantity"
                       >+</button>
                       <button
@@ -1083,8 +1083,8 @@ export default function CheckoutClientV2({
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-gray-900 tabular-nums">{formatCents(it.price * it.quantity)}</p>
-                    <p className="text-xs text-gray-500 tabular-nums">{formatCents(it.price)} ea</p>
+                    <p className="text-sm font-bold text-foreground tabular-nums">{formatCents(it.price * it.quantity)}</p>
+                    <p className="text-xs text-muted-foreground tabular-nums">{formatCents(it.price)} ea</p>
                   </div>
                 </li>
               ))}
@@ -1098,8 +1098,8 @@ export default function CheckoutClientV2({
 
         {/* Right rail: Order summary */}
         <aside className="lg:col-span-1">
-          <div className="lg:sticky lg:top-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">Order summary</h2>
+          <div className="lg:sticky lg:top-24 rounded-xl border border-border bg-card p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-foreground mb-3">Order summary</h2>
 
             {couponsEnabled && (
               <div className="mb-3 text-sm">
@@ -1118,14 +1118,14 @@ export default function CheckoutClientV2({
                   </div>
                 ) : (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-gray-700">Promo code</label>
+                    <label className="text-xs font-semibold text-muted-foreground">Promo code</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={couponInput}
                         onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                         placeholder="Enter code"
-                        className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                        className="flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
                       />
                       <button
                         type="button"
@@ -1144,8 +1144,8 @@ export default function CheckoutClientV2({
 
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <dt className="text-gray-600">Items ({cartItems.length})</dt>
-                <dd className="text-gray-900 tabular-nums">{formatCents(subtotal)}</dd>
+                <dt className="text-muted-foreground">Items ({cartItems.length})</dt>
+                <dd className="text-foreground tabular-nums">{formatCents(subtotal)}</dd>
               </div>
               {couponResult && discountCents > 0 && (
                 <div className="flex justify-between italic text-green-700">
@@ -1154,7 +1154,7 @@ export default function CheckoutClientV2({
                 </div>
               )}
               <div className="flex justify-between">
-                <dt className="text-gray-600">
+                <dt className="text-muted-foreground">
                   {shipNoun}
                   {/* The badge must reflect what we actually charge — never
                       contradict the line total. Show "free" when the buyer has
@@ -1163,17 +1163,17 @@ export default function CheckoutClientV2({
                     <span className="ml-2 text-[11px] font-semibold text-green-700">Free {shipNounLower} applied</span>
                   )}
                 </dt>
-                <dd className="text-gray-900 tabular-nums">
+                <dd className="text-foreground tabular-nums">
                   {freeShippingApplies || selectedQuote ? fmtShip(shippingCents) : "—"}
                 </dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-600">Tax</dt>
-                <dd className="text-gray-900 tabular-nums">{formatCents(tax)}</dd>
+                <dt className="text-muted-foreground">Tax</dt>
+                <dd className="text-foreground tabular-nums">{formatCents(tax)}</dd>
               </div>
-              <div className="flex justify-between border-t border-gray-200 pt-2 mt-2">
-                <dt className="text-base font-bold text-gray-900">Order total</dt>
-                <dd className="text-base font-bold text-gray-900 tabular-nums">{formatCents(total)}</dd>
+              <div className="flex justify-between border-t border-border pt-2 mt-2">
+                <dt className="text-base font-bold text-foreground">Order total</dt>
+                <dd className="text-base font-bold text-foreground tabular-nums">{formatCents(total)}</dd>
               </div>
             </dl>
 
@@ -1191,7 +1191,7 @@ export default function CheckoutClientV2({
               className="hidden lg:flex mt-4 w-full"
             />
 
-            <p className="mt-3 text-[11px] text-gray-500 text-center">
+            <p className="mt-3 text-[11px] text-muted-foreground text-center">
               By placing your order, you agree to AfroTransact&apos;s{" "}
               <a href="/terms" className="underline">Terms</a> and{" "}
               <a href="/privacy" className="underline">Privacy Policy</a>.
@@ -1201,11 +1201,11 @@ export default function CheckoutClientV2({
       </div>
 
       {/* Mobile sticky bar */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white p-3 lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card p-3 lg:hidden">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-500">Order total</p>
-            <p className="text-base font-bold text-gray-900 tabular-nums">{formatCents(total)}</p>
+            <p className="text-xs text-muted-foreground">Order total</p>
+            <p className="text-base font-bold text-foreground tabular-nums">{formatCents(total)}</p>
           </div>
           <PlaceOrderButton
             disabled={placeDisabled}
@@ -1223,19 +1223,19 @@ export default function CheckoutClientV2({
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setAddrModalOpen(false) }}
         >
-          <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-gray-900">{addrEditingId ? "Edit address" : "Add a new address"}</h3>
-              <button type="button" onClick={() => setAddrModalOpen(false)} className="text-gray-400 hover:text-gray-900">×</button>
+          <div className="bg-card rounded-xl border border-border shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-bold text-foreground">{addrEditingId ? "Edit address" : "Add a new address"}</h3>
+              <button type="button" onClick={() => setAddrModalOpen(false)} className="text-muted-foreground hover:text-foreground">×</button>
             </div>
             <div className="p-6 space-y-4">
               <Field label="Full name" value={form.fullName} onChange={(v) => setForm({ ...form, fullName: v })} />
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Phone</label>
                 <PhoneInput value={form.phone} onChange={(e164) => setForm({ ...form, phone: e164 })} className="w-full" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Street address</label>
                 <AddressAutocomplete
                   value={addressQuery}
                   onChange={setAddressQuery}
@@ -1259,13 +1259,13 @@ export default function CheckoutClientV2({
                 <Field label="State" value={form.state} onChange={(v) => setForm({ ...form, state: v })} />
               </div>
               <Field label="ZIP code" value={form.zip} onChange={(v) => setForm({ ...form, zip: v })} inputMode="numeric" />
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <input type="checkbox" checked={makeDefault} onChange={(e) => setMakeDefault(e.target.checked)} className="h-4 w-4 accent-brand-gold" />
                 Set as my default address
               </label>
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-              <button type="button" onClick={() => setAddrModalOpen(false)} className="px-4 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-200">Cancel</button>
+            <div className="px-6 py-4 border-t border-border bg-muted flex justify-end gap-3">
+              <button type="button" onClick={() => setAddrModalOpen(false)} className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted">Cancel</button>
               <button
                 type="button"
                 onClick={handleSaveAddress}
@@ -1295,14 +1295,14 @@ function Section({
 }) {
   return (
     <section className={cn(
-      "rounded-xl border border-gray-200 bg-white shadow-sm",
+      "rounded-xl border border-border bg-card shadow-sm",
       disabled && "opacity-70",
     )}>
-      <header className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+      <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <span className="grid place-items-center h-7 w-7 rounded-full bg-gray-900 text-white text-sm font-bold">{n}</span>
         <div className="min-w-0">
-          <h2 className="text-base font-bold text-gray-900">{title}</h2>
-          {subtitle && <p className="text-xs text-gray-500 truncate">{subtitle}</p>}
+          <h2 className="text-base font-bold text-foreground">{title}</h2>
+          {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
         </div>
       </header>
       <div className="p-5">{children}</div>
@@ -1320,12 +1320,12 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
+      <label className="block text-xs font-medium text-muted-foreground mb-1.5">{label}</label>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         inputMode={inputMode}
-        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+        className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
       />
     </div>
   )
@@ -1494,14 +1494,14 @@ function InlinePaymentForm({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+      <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
         <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
         <span>Secure checkout</span>
       </div>
 
       {savedCards.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Saved payment methods</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Saved payment methods</p>
           {savedCards.map((card) => {
             const checked = selectedSavedCardId === card.stripePmId
             const brand = (card.brand ?? "card").toLowerCase()
@@ -1510,10 +1510,10 @@ function InlinePaymentForm({
               <label
                 key={card.id}
                 className={cn(
-                  "flex items-center gap-4 rounded-xl border bg-white p-4 cursor-pointer transition-all",
+                  "flex items-center gap-4 rounded-xl border bg-card p-4 cursor-pointer transition-all",
                   checked
                     ? "border-brand-gold ring-2 ring-brand-gold/30 shadow-sm"
-                    : "border-gray-200 hover:border-gray-300",
+                    : "border-border hover:border-border",
                 )}
               >
                 <input
@@ -1523,13 +1523,13 @@ function InlinePaymentForm({
                   onChange={() => onSelectedSavedCardChange(card.stripePmId)}
                   className="h-4 w-4 accent-brand-gold shrink-0"
                 />
-                <div className="flex h-9 w-14 items-center justify-center rounded-md border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 shrink-0">
-                  <CreditCard className="h-4 w-4 text-gray-500" />
+                <div className="flex h-9 w-14 items-center justify-center rounded-md border border-border bg-gradient-to-br from-gray-50 to-gray-100 shrink-0">
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-900">{brandLabel}</span>
-                    <span className="text-sm text-gray-700 font-mono tabular-nums">ending in {card.last4 ?? "····"}</span>
+                    <span className="text-sm font-semibold text-foreground">{brandLabel}</span>
+                    <span className="text-sm text-muted-foreground font-mono tabular-nums">ending in {card.last4 ?? "····"}</span>
                     {card.isDefault && (
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
                         Default
@@ -1537,7 +1537,7 @@ function InlinePaymentForm({
                     )}
                   </div>
                   {card.expMonth && card.expYear && (
-                    <p className="mt-0.5 text-xs text-gray-500 tabular-nums">
+                    <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
                       Expires {String(card.expMonth).padStart(2, "0")}/{String(card.expYear).slice(-2)}
                     </p>
                   )}
@@ -1547,10 +1547,10 @@ function InlinePaymentForm({
           })}
           <label
             className={cn(
-              "flex items-center gap-4 rounded-xl border border-dashed bg-white p-4 cursor-pointer transition-all",
+              "flex items-center gap-4 rounded-xl border border-dashed bg-card p-4 cursor-pointer transition-all",
               selectedSavedCardId === null
                 ? "border-brand-gold ring-2 ring-brand-gold/30"
-                : "border-gray-300 hover:border-gray-400",
+                : "border-border hover:border-border",
             )}
           >
             <input
@@ -1560,16 +1560,16 @@ function InlinePaymentForm({
               onChange={() => onSelectedSavedCardChange(null)}
               className="h-4 w-4 accent-brand-gold shrink-0"
             />
-            <div className="flex h-9 w-14 items-center justify-center rounded-md border border-gray-200 bg-gray-50 shrink-0">
-              <Plus className="h-4 w-4 text-gray-500" />
+            <div className="flex h-9 w-14 items-center justify-center rounded-md border border-border bg-muted shrink-0">
+              <Plus className="h-4 w-4 text-muted-foreground" />
             </div>
-            <span className="text-sm font-semibold text-gray-900">Use a new payment method</span>
+            <span className="text-sm font-semibold text-foreground">Use a new payment method</span>
           </label>
         </div>
       )}
 
       {!usingSaved && (
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <div className="rounded-xl border border-border bg-card p-4">
           <PaymentElement
             options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }}
             onChange={(e) => { if (e.value?.type) setPmType(e.value.type) }}
@@ -1579,7 +1579,7 @@ function InlinePaymentForm({
               type="checkbox"
               checked={saveCard}
               onChange={(e) => onSaveCardChange(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+              className="h-4 w-4 rounded border-border text-brand-gold focus:ring-brand-gold accent-brand-gold"
             />
             <span className="text-sm text-foreground">{saveLabel}</span>
           </label>

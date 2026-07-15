@@ -45,7 +45,7 @@ export function ShippingEligibilityBadge({ storeId }: { storeId: string }) {
   if (isHouseStore(storeId)) {
     if (!location) {
       return (
-        <p className="text-xs text-gray-500 inline-flex items-center gap-1.5">
+        <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
           <MapPin className="h-3 w-3" />
           Pick a delivery location to check availability.
         </p>
@@ -72,7 +72,7 @@ export function ShippingEligibilityBadge({ storeId }: { storeId: string }) {
 
   if (!location) {
     return (
-      <p className="text-xs text-gray-500 inline-flex items-center gap-1.5">
+      <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
         <MapPin className="h-3 w-3" />
         Pick a delivery location to check availability.
       </p>
@@ -81,7 +81,7 @@ export function ShippingEligibilityBadge({ storeId }: { storeId: string }) {
 
   if (loading || !decision) {
     return (
-      <p className="text-xs text-gray-500 inline-flex items-center gap-1.5">
+      <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
         <Loader2 className="h-3 w-3 animate-spin" /> Checking delivery to {location.city?.trim() || location.postalCode}…
       </p>
     )
@@ -93,7 +93,7 @@ export function ShippingEligibilityBadge({ storeId }: { storeId: string }) {
         <CheckCircle2 className="h-3.5 w-3.5" />
         Delivers to <span className="font-semibold">{location.city?.trim() || location.postalCode}</span>
         {decision.distanceMeters != null && (
-          <span className="text-gray-500">· {(decision.distanceMeters / 1000).toFixed(0)} km away</span>
+          <span className="text-muted-foreground">· {(decision.distanceMeters / 1000).toFixed(0)} km away</span>
         )}
       </p>
     )
@@ -111,7 +111,7 @@ export function ShippingEligibilityBadge({ storeId }: { storeId: string }) {
 
   // unknown — never alarm the buyer; delivery is confirmed at checkout.
   return (
-    <p className="text-xs text-gray-500 inline-flex items-center gap-1.5">
+    <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
       <MapPin className="h-3 w-3" />
       Delivery confirmed at checkout.
     </p>

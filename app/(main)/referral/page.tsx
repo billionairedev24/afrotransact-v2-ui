@@ -7,21 +7,21 @@ export default function ReferralPage() {
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 border border-primary/30 mx-auto mb-6">
         <Gift className="h-8 w-8 text-foreground" />
       </div>
-      <h1 className="text-3xl font-black text-gray-900">Refer a Friend</h1>
-      <p className="text-gray-500 mt-3 text-base leading-relaxed max-w-md mx-auto">
+      <h1 className="text-3xl font-black text-foreground">Refer a Friend</h1>
+      <p className="text-muted-foreground mt-3 text-base leading-relaxed max-w-md mx-auto">
         Share AfroTransact with a friend. When they place their first order, you both get{" "}
         <span className="text-foreground font-semibold">$5 off</span> your next order.
       </p>
 
-      <div className="mt-8 rounded-2xl border border-gray-200 bg-card p-6 space-y-4">
-        <p className="text-sm text-gray-500">Your referral link</p>
-        <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-          <span className="flex-1 text-sm text-gray-900 text-left truncate">https://afrotransact.com/r/YOUR_CODE</span>
+      <div className="mt-8 rounded-2xl border border-border bg-card p-6 space-y-4">
+        <p className="text-sm text-muted-foreground">Your referral link</p>
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-muted px-4 py-3">
+          <span className="flex-1 text-sm text-foreground text-left truncate">https://afrotransact.com/r/YOUR_CODE</span>
           <button className="flex items-center gap-1.5 rounded-lg bg-brand-gold px-3 py-1.5 text-xs font-bold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors shrink-0">
             <Copy className="h-3.5 w-3.5" /> Copy
           </button>
         </div>
-        <p className="text-xs text-gray-600">Sign in to see your personal referral link and track earnings.</p>
+        <p className="text-xs text-muted-foreground">Sign in to see your personal referral link and track earnings.</p>
       </div>
 
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
@@ -32,9 +32,9 @@ export default function ReferralPage() {
         ].map((item) => (
           <div key={item.step} className="rounded-xl border border-border bg-card p-4 space-y-2">
             {item.icon}
-            <p className="text-xs text-gray-500">Step {item.step}</p>
-            <h3 className="font-semibold text-gray-900 text-sm">{item.title}</h3>
-            <p className="text-xs text-gray-500">{item.desc}</p>
+            <p className="text-xs text-muted-foreground">Step {item.step}</p>
+            <h3 className="font-semibold text-foreground text-sm">{item.title}</h3>
+            <p className="text-xs text-muted-foreground">{item.desc}</p>
           </div>
         ))}
       </div>

@@ -110,12 +110,12 @@ export function AddressesSection() {
 
   const field = (label: string, key: keyof FormState, placeholder = "") => (
     <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs text-muted-foreground mb-1">{label}</label>
       <input
         value={form[key] as string}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
+        className="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 transition-colors"
       />
     </div>
   )
@@ -123,7 +123,7 @@ export function AddressesSection() {
   return (
     <>
       {error && (
-        <div className="flex items-center gap-3 rounded-2xl border border-red-500/30 bg-white p-4 mb-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-red-500/30 bg-card p-4 mb-4">
           <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
           <p className="text-sm text-red-500 flex-1">{error}</p>
           <button onClick={() => setError(null)}><X className="h-4 w-4 text-red-600" /></button>
@@ -131,8 +131,8 @@ export function AddressesSection() {
       )}
 
       {showForm && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">{editingId ? "Edit Address" : "New Address"}</h2>
+        <div className="rounded-2xl border border-border bg-card p-6 mb-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4">{editingId ? "Edit Address" : "New Address"}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {field("Label (e.g. Home, Work)", "label", "Home")}
             {field("Address Line 1", "line1", "123 Main St")}
@@ -146,9 +146,9 @@ export function AddressesSection() {
               type="checkbox"
               checked={form.isDefault}
               onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-              className="rounded border-gray-300"
+              className="rounded border-border"
             />
-            <label className="text-sm text-gray-600">Set as default address</label>
+            <label className="text-sm text-muted-foreground">Set as default address</label>
           </div>
           <div className="flex gap-3 mt-5">
             <button
@@ -161,7 +161,7 @@ export function AddressesSection() {
             </button>
             <button
               onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY) }}
-              className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm text-gray-900"
+              className="rounded-xl border border-border px-5 py-2.5 text-sm text-foreground"
             >
               Cancel
             </button>
@@ -179,41 +179,41 @@ export function AddressesSection() {
       {loading ? (
         <div className="flex items-center justify-center py-16 gap-3">
           <Loader2 className="h-5 w-5 animate-spin text-foreground" />
-          <span className="text-sm text-gray-500">Loading…</span>
+          <span className="text-sm text-muted-foreground">Loading…</span>
         </div>
       ) : addresses.length === 0 ? (
         <div className="py-16 text-center">
-          <MapPin className="mx-auto h-10 w-10 text-gray-600" />
-          <p className="mt-3 text-sm text-gray-500">No saved addresses yet.</p>
+          <MapPin className="mx-auto h-10 w-10 text-muted-foreground" />
+          <p className="mt-3 text-sm text-muted-foreground">No saved addresses yet.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {addresses.map((a) => (
-            <div key={a.id} className="rounded-2xl border border-gray-200 bg-white p-5">
+            <div key={a.id} className="rounded-2xl border border-border bg-card p-5">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-gray-900">{a.label || "Address"}</span>
+                      <span className="text-sm font-semibold text-foreground">{a.label || "Address"}</span>
                       {a.isDefault && (
                         <span className="flex items-center gap-1 text-xs text-foreground font-medium">
                           <Star className="h-3 w-3 fill-current" /> Default
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{a.line1}{a.line2 ? `, ${a.line2}` : ""}</p>
-                    <p className="text-sm text-gray-500">{a.city}, {a.state} {a.postalCode}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{a.line1}{a.line2 ? `, ${a.line2}` : ""}</p>
+                    <p className="text-sm text-muted-foreground">{a.city}, {a.state} {a.postalCode}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
                   {!a.isDefault && (
-                    <button onClick={() => handleSetDefault(a.id)} className="p-1.5 rounded-lg hover:bg-gray-100" title="Set as default">
-                      <Star className="h-4 w-4 text-gray-500" />
+                    <button onClick={() => handleSetDefault(a.id)} className="p-1.5 rounded-lg hover:bg-muted" title="Set as default">
+                      <Star className="h-4 w-4 text-muted-foreground" />
                     </button>
                   )}
-                  <button onClick={() => openEdit(a)} className="p-1.5 rounded-lg hover:bg-gray-100" title="Edit">
-                    <Pencil className="h-4 w-4 text-gray-500" />
+                  <button onClick={() => openEdit(a)} className="p-1.5 rounded-lg hover:bg-muted" title="Edit">
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
                   </button>
                   <button onClick={() => handleDelete(a.id)} className="p-1.5 rounded-lg hover:bg-red-500/10" title="Delete">
                     <Trash2 className="h-4 w-4 text-red-600" />

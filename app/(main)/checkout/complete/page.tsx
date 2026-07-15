@@ -34,8 +34,8 @@ function OrderPlaced({ orderId }: { orderId?: string | null }) {
         <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-green-500/15 border border-green-500/30">
           <CheckCircle className="h-10 w-10 text-green-600" />
         </div>
-        <h1 className="mt-6 text-2xl font-bold text-gray-900">Order placed — thank you!</h1>
-        <p className="mt-2 text-sm text-gray-500">
+        <h1 className="mt-6 text-2xl font-bold text-foreground">Order placed — thank you!</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           We&apos;re getting it ready. A confirmation email is on its way, and you can track everything from your orders.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -47,7 +47,7 @@ function OrderPlaced({ orderId }: { orderId?: string | null }) {
           </Link>
           <Link
             href="/"
-            className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            className="rounded-xl border border-border px-6 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
           >
             Continue shopping
           </Link>
@@ -56,7 +56,7 @@ function OrderPlaced({ orderId }: { orderId?: string | null }) {
 
       {/* Keep them shopping — recommendations right under the confirmation. */}
       <div className="mt-14">
-        <h2 className="mb-4 text-lg font-bold text-gray-900">You might also like</h2>
+        <h2 className="mb-4 text-lg font-bold text-foreground">You might also like</h2>
         <PopularPicksStrip />
       </div>
     </main>
@@ -141,8 +141,8 @@ function CheckoutCompleteContent() {
       return (
         <main className="mx-auto max-w-[600px] px-4 py-20 text-center">
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-foreground" />
-          <h1 className="text-xl font-bold text-gray-900 mt-6">Finalizing your order…</h1>
-          <p className="text-gray-500 text-sm mt-2">
+          <h1 className="text-xl font-bold text-foreground mt-6">Finalizing your order…</h1>
+          <p className="text-muted-foreground text-sm mt-2">
             Hang tight while we confirm your payment. This usually takes a few seconds.
           </p>
         </main>
@@ -154,8 +154,8 @@ function CheckoutCompleteContent() {
       return (
         <main className="mx-auto max-w-[600px] px-4 py-20 text-center">
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-foreground" />
-          <h1 className="text-xl font-bold text-gray-900 mt-6">Almost there…</h1>
-          <p className="text-gray-500 text-sm mt-2">
+          <h1 className="text-xl font-bold text-foreground mt-6">Almost there…</h1>
+          <p className="text-muted-foreground text-sm mt-2">
             Your payment went through and we&apos;re finishing your order. It&apos;ll appear in your orders shortly.
           </p>
           <div className="flex justify-center gap-3 mt-6">
@@ -167,7 +167,7 @@ function CheckoutCompleteContent() {
             </button>
             <button
               onClick={() => router.push("/")}
-              className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              className="rounded-xl border border-border px-6 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
             >
               Continue shopping
             </button>
@@ -180,8 +180,8 @@ function CheckoutCompleteContent() {
         <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
           <XCircle className="h-10 w-10 text-red-600" />
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mt-6">Something went wrong</h1>
-        <p className="text-gray-500 text-sm mt-2">
+        <h1 className="text-xl font-bold text-foreground mt-6">Something went wrong</h1>
+        <p className="text-muted-foreground text-sm mt-2">
           We couldn&apos;t confirm your order. If your card was charged, please contact support — we&apos;ll
           sort it out.
         </p>
@@ -194,7 +194,7 @@ function CheckoutCompleteContent() {
           </button>
           <button
             onClick={() => router.push("/help")}
-            className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            className="rounded-xl border border-border px-6 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
           >
             Contact support
           </button>
@@ -210,8 +210,8 @@ function CheckoutCompleteContent() {
         <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-red-500/15 border border-red-500/30">
           <XCircle className="h-10 w-10 text-red-600" />
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mt-6">Payment Failed</h1>
-        <p className="text-gray-500 text-sm mt-2">Your payment could not be processed. Please try again.</p>
+        <h1 className="text-xl font-bold text-foreground mt-6">Payment Failed</h1>
+        <p className="text-muted-foreground text-sm mt-2">Your payment could not be processed. Please try again.</p>
         <button
           onClick={() => router.push("/checkout")}
           className="mt-6 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-[#0f0f10]"
@@ -230,7 +230,7 @@ export default function CheckoutCompletePage() {
     <Suspense fallback={
       <main className="mx-auto max-w-[600px] px-4 py-20 text-center">
         <Loader2 className="mx-auto h-10 w-10 animate-spin text-foreground" />
-        <p className="mt-4 text-gray-500">Loading…</p>
+        <p className="mt-4 text-muted-foreground">Loading…</p>
       </main>
     }>
       <CheckoutCompleteContent />

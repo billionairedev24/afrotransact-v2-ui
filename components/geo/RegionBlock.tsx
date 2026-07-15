@@ -22,11 +22,11 @@ export function RegionBlock({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[50vh] flex items-center justify-center px-6 py-16">
-      <div className="max-w-md w-full rounded-2xl border border-input bg-white p-8 shadow-sm text-center">
-        <h1 className="text-xl font-semibold text-gray-900 mb-2">
+      <div className="max-w-md w-full rounded-2xl border border-input bg-card p-8 shadow-sm text-center">
+        <h1 className="text-xl font-semibold text-foreground mb-2">
           Cart not available in your region
         </h1>
-        <p className="text-sm text-gray-600 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           AfroTransact hasn&apos;t launched in your area yet. You can keep browsing,
           but checkout is disabled until we go live.
         </p>
