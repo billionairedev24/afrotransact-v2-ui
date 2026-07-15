@@ -90,6 +90,23 @@ export function DeliverToPicker() {
 
   const [open, setOpen] = useState(false)
 
+  // Wait for the persisted store (localStorage) to rehydrate before deciding
+  // whether to auto-pop. On first render `prompted`/`location` still read their
+  // initial false/null values, so without this the modal pops on EVERY visit —
+  // even after the buyer has already accepted/set a location.
+  //
+  // Start `false` on the server and first client render: `persist` (and its
+  // localStorage-backed API) only exists in the browser, so touching
+  // `useBuyerLocation.persist.hasHydrated()` during SSR/prerender throws
+  // ("Cannot read properties of undefined"). The effect below reconciles the
+  // real hydration state on the client, which is also where auto-pop matters.
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => {
+    const unsub = useBuyerLocation.persist.onFinishHydration(() => setHydrated(true))
+    setHydrated(useBuyerLocation.persist.hasHydrated())
+    return unsub
+  }, [])
+
   // First-visit auto-detect: ask the browser for GPS, reverse-geocode to a
   // postal code, and save silently. If the user denies or it fails, fall
   // back to popping the picker modal so they can type a ZIP. Either way
@@ -97,6 +114,7 @@ export function DeliverToPicker() {
   const popped = useRef(false)
   useEffect(() => {
     if (popped.current) return
+    if (!hydrated) return
     if (prompted || location) return
     popped.current = true
     let cancelled = false
@@ -158,7 +176,7 @@ export function DeliverToPicker() {
       cancelled = true
       window.clearTimeout(fallback)
     }
-  }, [prompted, location, setLocation])
+  }, [hydrated, prompted, location, setLocation])
 
   return (
     <>
