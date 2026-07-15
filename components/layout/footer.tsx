@@ -74,7 +74,7 @@ export function Footer() {
               Serving immigrant communities nationwide
             </span>
             <span className="text-[11px] text-white/50">
-              Delivery options vary by seller and are confirmed at checkout.
+              Delivery options are confirmed at checkout.
             </span>
           </div>
         </div>
@@ -87,7 +87,7 @@ export function Footer() {
           <div className="col-span-2 sm:col-span-3 md:col-span-1 space-y-4">
             <Link href="/" className="inline-flex items-center" aria-label="AfroTransact home">
               <Image
-                src="/brand/logo-mark-dark.svg"
+                src="/brand/logo-mark.svg"
                 alt="AfroTransact"
                 width={48}
                 height={56}

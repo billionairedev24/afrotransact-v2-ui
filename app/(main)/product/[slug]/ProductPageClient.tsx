@@ -663,17 +663,9 @@ export default function ProductPageClient() {
             <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs">
               <span className="text-gray-500">Ships from</span>
               <span className="text-foreground font-medium">AfroTransact</span>
+              {/* Single-seller: AfroTransact is the seller. No per-store link. */}
               <span className="text-gray-500">Sold by</span>
-              {storeSlug ? (
-                <Link
-                  href={`/store/${storeSlug}`}
-                  className="text-foreground font-medium hover:text-brand-gold-hover underline underline-offset-2 truncate"
-                >
-                  {storeName || "Store"}
-                </Link>
-              ) : (
-                <span className="text-foreground font-medium truncate">{storeName || "Store"}</span>
-              )}
+              <span className="text-foreground font-medium truncate">{HOUSE_STORE_NAME}</span>
               <span className="text-gray-500">Delivery</span>
               <span className="text-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3 text-gray-400" /> United States
@@ -683,7 +675,7 @@ export default function ProductPageClient() {
                   <span className="text-gray-500">Returns</span>
                   <span className="text-foreground flex items-center gap-1">
                     <RotateCcw className="h-3 w-3 text-gray-400" />
-                    {storeReturnWindowDays}-day returns from {storeName || "this store"}
+                    {storeReturnWindowDays}-day returns from {HOUSE_STORE_NAME}
                   </span>
                 </>
               )}

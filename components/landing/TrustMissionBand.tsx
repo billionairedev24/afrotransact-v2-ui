@@ -25,7 +25,7 @@ const POINTS = [
 export function TrustMissionBand() {
   return (
     <section className="bg-card border-y border-border py-12">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-5 grid grid-cols-1 md:grid-cols-3 gap-12">
+      <div className="max-w-page mx-auto px-4 sm:px-5 grid grid-cols-1 md:grid-cols-3 gap-12">
         {POINTS.map(({ Icon, title, body }) => (
           <div key={title} className="flex gap-4 items-start">
             <div className="bg-primary/20 p-3 rounded-full flex-shrink-0">

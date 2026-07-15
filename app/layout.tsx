@@ -1,27 +1,32 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Fraunces } from "next/font/google"
 import { Providers } from "@/components/providers"
 import { AiChatOverlay } from "@/components/ai/AiWidget"
 import { WhatsAppFab } from "@/components/support/WhatsAppFab"
 import { Toaster } from "sonner"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"] })
+// Body / UI voice.
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" })
+// Display voice — a warm optical serif used with restraint for headings.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+})
 
 export const metadata: Metadata = {
   title: "AfroTransact - Your Community Marketplace",
   description:
     "Connecting immigrant communities with fresh food, authentic products, and trusted local vendors. Shop from your community, support your neighbors.",
-  icons: {
-    icon: [
-      { url: "/favicon.png", type: "image/png" },
-    ],
-    apple: "/favicon.png",
-  },
+  // Favicons are served via the Next App Router file conventions
+  // (app/favicon.ico, app/icon.svg, app/apple-icon.png) — no explicit
+  // `icons` metadata needed.
   openGraph: {
     title: "AfroTransact - Your Community Marketplace",
     description: "Authentic food, spices, fashion, and cultural goods from immigrant-owned stores.",
-    images: [{ url: "/logo.png", width: 512, height: 512 }],
+    images: [{ url: "/brand/email-logo.png", width: 600, height: 183 }],
   },
   // Google Merchant Center / Search Console site verification. Renders
   // <meta name="google-site-verification" content="…"> into <head> on every
@@ -44,7 +49,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-background text-foreground antialiased`}>
+      <body className={`${inter.variable} ${fraunces.variable} font-sans bg-background text-foreground antialiased`}>
         <Providers>
           {children}
           <AiChatOverlay />

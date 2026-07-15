@@ -50,9 +50,9 @@ export function getStatusStyle(status: string): StatusStyle {
   return (
     STATUS_CONFIG[status.toLowerCase()] ?? {
       label: status.replace(/_/g, " "),
-      text: "text-gray-500",
-      bg: "bg-gray-100",
-      bgBorder: "bg-gray-100 border-gray-200",
+      text: "text-muted-foreground",
+      bg: "bg-muted",
+      bgBorder: "bg-muted border-border",
     }
   )
 }

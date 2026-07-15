@@ -75,6 +75,14 @@ const kcClientId = optionalEnv("KEYCLOAK_CLIENT_ID", "afrotransact-web")
 const kcClientSecret = requireEnv("KEYCLOAK_CLIENT_SECRET")
 const kcScope = "openid email profile offline_access"
 
+// Cross-subdomain SSO: the session cookie must be scoped to the parent
+// domain (`.afrotransact.com`) so it is sent to sibling apps such as
+// www.inventory.afrotransact.com. Prod runs over HTTPS and uses the
+// `__Secure-` cookie prefix; local dev over http must use the plain name
+// with secure:false, otherwise the browser rejects the cookie.
+const useSecureCookies = (process.env.NEXTAUTH_URL ?? "").startsWith("https://")
+const cookiePrefix = useSecureCookies ? "__Secure-" : ""
+
 if (!process.env.NEXTAUTH_SECRET) {
   console.error(
     "[auth] NEXTAUTH_SECRET is not set. NextAuth cannot sign session cookies.",
@@ -203,6 +211,28 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+
+  // Share the session cookie across every *.afrotransact.com subdomain so a
+  // single sign-in works on both the main web app and the inventory app
+  // (www.inventory.afrotransact.com). Both apps use an IDENTICAL cookie name
+  // pattern + secret + Keycloak client, so they read the same cookie.
+  //
+  // In prod (HTTPS) the browser requires the `__Secure-` prefix and secure:true;
+  // in local dev (http://localhost) it requires the plain name, secure:false,
+  // and no cross-site domain (a `.afrotransact.com` Domain would be rejected on
+  // localhost), so the parent-domain scope is only applied when secure.
+  cookies: {
+    sessionToken: {
+      name: `${cookiePrefix}next-auth.session-token`,
+      options: {
+        domain: useSecureCookies ? ".afrotransact.com" : undefined,
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: useSecureCookies,
+      },
+    },
   },
 
   callbacks: {

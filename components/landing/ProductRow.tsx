@@ -23,10 +23,11 @@ import { useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight, Loader2, Star } from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { getProductById, type SearchResult } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
+import { StarRating } from "@/components/products/StarRating"
 
 interface ProductRowProps {
   title: string
@@ -37,28 +38,6 @@ interface ProductRowProps {
   badge?: string
   /** Default true: render null when products is empty. */
   emptyHide?: boolean
-}
-
-function StarRow({ rating, count }: { rating: number; count: number }) {
-  // Render 5 stars; fill `Math.round(rating)` of them with brand gold.
-  const filled = Math.max(0, Math.min(5, Math.round(rating)))
-  return (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          className={`h-3.5 w-3.5 ${
-            i < filled
-              ? "fill-primary text-foreground"
-              : "fill-muted text-muted-foreground/40"
-          }`}
-        />
-      ))}
-      <span className="text-[11px] text-muted-foreground ml-1">
-        ({count.toLocaleString()})
-      </span>
-    </div>
-  )
 }
 
 function MiniProductCard({ product }: { product: SearchResult }) {
@@ -122,7 +101,7 @@ function MiniProductCard({ product }: { product: SearchResult }) {
   return (
     <div className="min-w-[240px] max-w-[240px] flex flex-col gap-2 group">
       <Link href={href} className="block">
-        <div className="aspect-square bg-muted relative overflow-hidden rounded">
+        <div className="aspect-square bg-muted relative overflow-hidden rounded-lg">
           {product.image_url ? (
             <Image
               src={product.image_url}
@@ -132,7 +111,9 @@ function MiniProductCard({ product }: { product: SearchResult }) {
               className="object-cover transition-transform group-hover:scale-105"
             />
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-orange-100" />
+            <div className="absolute inset-0 bg-woven flex items-center justify-center">
+              <img src="/brand/logo-mark.svg" alt="" aria-hidden className="h-10 w-10 opacity-50" />
+            </div>
           )}
           {!product.in_stock && (
             <span className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-1 uppercase rounded-sm">
@@ -149,7 +130,7 @@ function MiniProductCard({ product }: { product: SearchResult }) {
           </h4>
         </Link>
 
-        <StarRow rating={product.avg_rating} count={product.review_count} />
+        <StarRating rating={product.avg_rating} count={product.review_count} />
 
         <div className="flex items-baseline gap-2">
           <span className="text-lg font-bold text-foreground">
@@ -200,20 +181,21 @@ export function ProductRow({
   }
 
   return (
-    <section className="max-w-[1440px] mx-auto px-4 sm:px-5">
-      <div className="bg-card border border-border p-4 rounded-md">
-        <div className="flex items-center justify-between mb-6">
+    <section className="max-w-page mx-auto px-4 sm:px-5">
+      <div className="bg-card border border-border p-4 sm:p-5 rounded-xl">
+        <div className="flex items-end justify-between mb-6 gap-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl md:text-2xl font-bold text-foreground">{title}</h2>
+            <h2 className="font-display text-2xl md:text-[1.7rem] font-semibold tracking-tight text-foreground">{title}</h2>
             {badge && (
-              <span className="text-destructive font-bold text-[11px] px-2 py-0.5 bg-destructive/10 rounded">
+              <span className="inline-flex items-center gap-1 text-destructive font-semibold text-[11px] px-2 py-0.5 bg-destructive/10 rounded-full">
                 {badge}
               </span>
             )}
           </div>
           {viewAllHref && (
-            <Link href={viewAllHref} className="text-foreground font-bold text-sm hover:underline">
+            <Link href={viewAllHref} className="shrink-0 inline-flex items-center gap-1 text-brand-green font-semibold text-sm hover:underline">
               {viewAllLabel}
+              <ChevronRight className="h-4 w-4" />
             </Link>
           )}
         </div>

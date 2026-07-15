@@ -14,7 +14,7 @@ import { SellBandClientGate } from "./SellBandClientGate"
 export function SellOnAfrotransactStrip() {
   return (
     <SellBandClientGate>
-      <section className="max-w-[1440px] mx-auto px-4 sm:px-5">
+      <section className="max-w-page mx-auto px-4 sm:px-5">
         <Link
           href="/auth/register?role=seller&callbackUrl=/dashboard/onboarding"
           className="group flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 px-4 sm:px-6 py-3 transition-colors"

@@ -16,6 +16,11 @@ const badgeVariants = cva(
         outline: "text-foreground",
         proximity:
           "border-transparent bg-proximity-badge/15 text-secondary",
+        // Semantic status tints (soft fill), theme-aware via tokens.
+        success: "border-transparent bg-success/15 text-success",
+        warning: "border-transparent bg-warning/20 text-warning",
+        info: "border-transparent bg-info/15 text-info",
+        muted: "border-transparent bg-muted text-muted-foreground",
       },
     },
     defaultVariants: {
