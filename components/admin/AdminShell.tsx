@@ -184,7 +184,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-full p-4">
       <div className="flex items-center justify-between mb-6 px-2">
         <Image
-          src="/brand/logo-mark-dark.svg"
+          src="/brand/logo-mark.svg"
           alt="AfroTransact"
           width={32}
           height={37}

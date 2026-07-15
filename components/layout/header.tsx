@@ -325,11 +325,11 @@ export function Header() {
                   the rest of the UI and the mobile truncation of the SVG
                   lockup (last "t" was clipped). Mark only at xs to keep
                   room for the search bar. */}
-              {/* Brand lockup (brand-logo-2) — full yellow wordmark on the black
-                  header. Single SVG includes the mark + lowercase "afrotransact". */}
+              {/* Brand lockup — canonical all-white lockup on the black header.
+                  Single SVG includes the mark + wordmark + tagline. */}
               <Link href="/" className="flex items-center shrink-0 mr-1" aria-label="afrotransact home">
                 <Image
-                  src="/brand-logo-2/SVG/Yellow.svg"
+                  src="/brand/logo-white.svg"
                   alt="afrotransact"
                   width={476}
                   height={101}

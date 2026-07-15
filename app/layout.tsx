@@ -12,16 +12,13 @@ export const metadata: Metadata = {
   title: "AfroTransact - Your Community Marketplace",
   description:
     "Connecting immigrant communities with fresh food, authentic products, and trusted local vendors. Shop from your community, support your neighbors.",
-  icons: {
-    icon: [
-      { url: "/favicon.png", type: "image/png" },
-    ],
-    apple: "/favicon.png",
-  },
+  // Favicons are served via the Next App Router file conventions
+  // (app/favicon.ico, app/icon.svg, app/apple-icon.png) — no explicit
+  // `icons` metadata needed.
   openGraph: {
     title: "AfroTransact - Your Community Marketplace",
     description: "Authentic food, spices, fashion, and cultural goods from immigrant-owned stores.",
-    images: [{ url: "/logo.png", width: 512, height: 512 }],
+    images: [{ url: "/brand/email-logo.png", width: 600, height: 183 }],
   },
   // Google Merchant Center / Search Console site verification. Renders
   // <meta name="google-site-verification" content="…"> into <head> on every
