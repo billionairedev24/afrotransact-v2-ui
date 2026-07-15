@@ -248,7 +248,7 @@ export default async function HomePage() {
             thesis + photographic slides). Always renders, so the homepage is
             never an empty void. A live campaign still shows via PromoSlot. */}
         <HeroCarousel slides={heroSlides} />
-        <PromoSlot placement="HERO" className="mx-4 md:mx-6 lg:mx-8 mt-4" />
+        <PromoSlot placement="HERO" className="max-w-page mx-auto px-4 sm:px-5 mt-4" />
 
         {/* 2. Categories Bento Grid */}
         <CategoriesBentoGrid
@@ -301,7 +301,7 @@ export default async function HomePage() {
           interstitial that sells to sellers on top of that spends buyer
           attention against the page's actual job. */}
 
-      <PromoSlot placement="FOOTER" className="mx-4 md:mx-6 lg:mx-8 mb-6" />
+      <PromoSlot placement="FOOTER" className="max-w-page mx-auto px-4 sm:px-5 mb-6" />
       <Footer />
     </div>
   )

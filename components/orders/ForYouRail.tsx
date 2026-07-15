@@ -93,58 +93,64 @@ export function ForYouRail() {
   }
 
   return (
-    <section className="mx-4 md:mx-6 lg:mx-8">
-      <h2 className="text-lg md:text-xl font-semibold mb-3">{title}</h2>
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
-        {items.map((p) => {
-          const isBuyAgain = p.source === "BUY_AGAIN"
-          // Per-card chip copy. CATEGORY is the soft fallback; chipping it
-          // would feel noisy because the buyer hasn't asked for it explicitly.
-          const chip =
-            p.source === "BUY_AGAIN"
-              ? "Bought before"
-              : p.source === "SEMANTIC"
-                ? "You might like"
-                : p.source === "CO_PURCHASE"
-                  ? "Often bought together"
-                  : null
-          return (
-            <div
-              key={`${p.productId}-${p.variantId ?? ""}-${p.source}`}
-              className="snap-start shrink-0 w-40 md:w-44 rounded-lg border border-border bg-card p-3 flex flex-col gap-2"
-            >
-              <div className="relative w-full aspect-square overflow-hidden rounded-md bg-muted">
-                {p.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.imageUrl}
-                    alt={p.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                ) : null}
-                {chip ? (
-                  <span className="absolute top-1 left-1 text-[10px] font-medium rounded-sm bg-background/90 text-foreground px-1.5 py-0.5 border border-border">
-                    {chip}
-                  </span>
-                ) : null}
-              </div>
-              <div className="text-xs line-clamp-2 min-h-[2.2rem]" title={p.name}>
-                {p.name}
-              </div>
-              <div className="text-sm font-medium">
-                ${((p.currentPriceCents ?? 0) / 100).toFixed(2)}
-              </div>
-              <button
-                type="button"
-                onClick={() => handleAddToCart(p)}
-                className="text-xs rounded-md bg-primary text-primary-foreground py-1.5 hover:bg-primary/90"
+    <section className="max-w-page mx-auto px-4 sm:px-5">
+      <div className="bg-card border border-border p-4 sm:p-5 rounded-xl">
+        <h2 className="font-display text-2xl md:text-[1.7rem] font-semibold tracking-tight text-foreground mb-6">{title}</h2>
+        <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 snap-x">
+          {items.map((p) => {
+            const isBuyAgain = p.source === "BUY_AGAIN"
+            // Per-card chip copy. CATEGORY is the soft fallback; chipping it
+            // would feel noisy because the buyer hasn't asked for it explicitly.
+            const chip =
+              p.source === "BUY_AGAIN"
+                ? "Bought before"
+                : p.source === "SEMANTIC"
+                  ? "You might like"
+                  : p.source === "CO_PURCHASE"
+                    ? "Often bought together"
+                    : null
+            return (
+              <div
+                key={`${p.productId}-${p.variantId ?? ""}-${p.source}`}
+                className="snap-start shrink-0 w-[240px] flex flex-col gap-2"
               >
-                {isBuyAgain ? "Buy Again" : "Add to cart"}
-              </button>
-            </div>
-          )
-        })}
+                <div className="relative w-full aspect-square overflow-hidden rounded-lg bg-muted">
+                  {p.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-woven flex items-center justify-center">
+                      <img src="/brand/logo-mark.svg" alt="" aria-hidden className="h-10 w-10 opacity-50" />
+                    </div>
+                  )}
+                  {chip ? (
+                    <span className="absolute top-2 left-2 text-[10px] font-semibold rounded-full bg-background/90 text-foreground px-2 py-0.5 border border-border">
+                      {chip}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="text-sm line-clamp-2 min-h-[2.2rem] text-foreground" title={p.name}>
+                  {p.name}
+                </div>
+                <div className="text-lg font-bold text-foreground">
+                  ${((p.currentPriceCents ?? 0) / 100).toFixed(2)}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAddToCart(p)}
+                  className="mt-2 w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover transition-colors"
+                >
+                  {isBuyAgain ? "Buy Again" : "Add to cart"}
+                </button>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </section>
   )

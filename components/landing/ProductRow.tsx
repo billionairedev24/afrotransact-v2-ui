@@ -181,7 +181,7 @@ export function ProductRow({
   }
 
   return (
-    <section className="max-w-[1440px] mx-auto px-4 sm:px-5">
+    <section className="max-w-page mx-auto px-4 sm:px-5">
       <div className="bg-card border border-border p-4 sm:p-5 rounded-xl">
         <div className="flex items-end justify-between mb-6 gap-4">
           <div className="flex items-center gap-3">

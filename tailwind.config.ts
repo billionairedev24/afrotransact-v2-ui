@@ -109,6 +109,12 @@ const config: Config = {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
         display: ['var(--font-display)', 'Georgia', 'Times New Roman', 'serif'],
       },
+      maxWidth: {
+        // Single source of truth for the storefront content width so every
+        // home section stays edge-aligned. Wider than the old 1440 so the
+        // catalog uses more of the screen on large displays.
+        page: '1600px',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

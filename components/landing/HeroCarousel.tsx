@@ -71,7 +71,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
   if (count === 0) return null
 
   return (
-    <section className="max-w-[1440px] mx-auto px-4 sm:px-5">
+    <section className="max-w-page mx-auto px-4 sm:px-5">
       <div
         className="group relative overflow-hidden rounded-2xl border border-border"
         onMouseEnter={() => setPaused(true)}
