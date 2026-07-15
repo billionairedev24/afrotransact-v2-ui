@@ -6,7 +6,7 @@ export default function HomeLoading() {
 
       <main className="flex-1 space-y-10 pb-12">
         {/* Hero — woven band, matches components/landing/Hero.tsx */}
-        <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <section className="max-w-[1440px] mx-auto px-4 sm:px-5 pt-4">
           <div className="relative overflow-hidden rounded-2xl border border-border bg-woven-strong">
             <div className="absolute inset-0 bg-gradient-to-r from-sand/95 via-sand/80 to-sand/40 dark:from-background/95 dark:via-background/85 dark:to-background/50" />
             <div className="relative px-6 py-10 sm:px-10 sm:py-14 max-w-xl space-y-5">

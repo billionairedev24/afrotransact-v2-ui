@@ -9,7 +9,7 @@ import { GeoGate } from "@/components/geo/GeoGate"
 // import { FeaturedCategories } from "@/components/landing/FeaturedCategories"
 // import { ForYouSection } from "@/components/home/ForYouSection"
 import { ForYouRail } from "@/components/orders/ForYouRail"
-import { Hero } from "@/components/landing/Hero"
+import { HeroCarousel } from "@/components/landing/HeroCarousel"
 import { CategoriesBentoGrid } from "@/components/landing/CategoriesBentoGrid"
 import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
 import { ProductRow } from "@/components/landing/ProductRow"
@@ -202,10 +202,10 @@ export default async function HomePage() {
             still see the full landing page and only hit the gate after
             clicking into Cart or another (main) route. */}
         <GeoGate>
-        {/* 1. Editorial hero — always renders (brand thesis + buyer CTAs), so
-            the homepage is never an empty void on a cold catalog. A live
-            campaign still shows via the admin-managed PromoSlot below. */}
-        <Hero categories={roots} />
+        {/* 1. Editorial hero carousel — several auto-advancing banners (brand
+            thesis + photographic slides). Always renders, so the homepage is
+            never an empty void. A live campaign still shows via PromoSlot. */}
+        <HeroCarousel categories={roots} />
         <PromoSlot placement="HERO" className="mx-4 md:mx-6 lg:mx-8 mt-4" />
 
         {/* 2. Categories Bento Grid */}

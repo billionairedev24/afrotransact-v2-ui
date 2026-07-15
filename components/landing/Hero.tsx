@@ -31,7 +31,7 @@ export function Hero({ categories = [] }: { categories?: CategoryRef[] }) {
   const quickLinks = chips.length >= 3 ? chips : FALLBACK_CHIPS
 
   return (
-    <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="max-w-[1440px] mx-auto px-4 sm:px-5">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-woven-strong">
         {/* Warm scrim so text stays legible over the motif in both themes. */}
         <div className="absolute inset-0 bg-gradient-to-r from-sand/95 via-sand/80 to-sand/40 dark:from-background/95 dark:via-background/85 dark:to-background/50" />
@@ -61,10 +61,10 @@ export function Hero({ categories = [] }: { categories?: CategoryRef[] }) {
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
               <Link
-                href="/stores"
+                href="/search"
                 className="inline-flex items-center gap-2 rounded-full border border-brand-green bg-transparent px-6 py-3 text-sm font-bold text-brand-green transition-colors hover:bg-brand-green hover:text-brand-green-foreground"
               >
-                Browse stores
+                Browse all products
               </Link>
             </div>
 
