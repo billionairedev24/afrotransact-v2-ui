@@ -15,12 +15,13 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Star, ShoppingCart, Loader2, Timer, Package, MapPin } from "lucide-react"
+import { ShoppingCart, Loader2, Timer, Package, MapPin } from "lucide-react"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { getProductById } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
+import { StarRating } from "@/components/products/StarRating"
 
 export interface BrandProductCardItem {
   productId: string
@@ -90,28 +91,6 @@ function Countdown({ endsAt, compact = false }: { endsAt: string; compact?: bool
   )
 }
 
-function StarRow({ rating, count }: { rating: number; count?: number }) {
-  const filled = Math.max(0, Math.min(5, Math.round(rating)))
-  return (
-    <div className="flex items-center gap-1 mt-auto">
-      <div className="flex">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Star
-            key={i}
-            className={cn(
-              "h-4 w-4",
-              i < filled ? "fill-brand-gold text-brand-gold" : "fill-gray-200 text-gray-200",
-            )}
-          />
-        ))}
-      </div>
-      {typeof count === "number" && count > 0 && (
-        <span className="text-xs font-semibold text-gray-500">({count.toLocaleString()})</span>
-      )}
-    </div>
-  )
-}
-
 interface Props {
   item: BrandProductCardItem
 }
@@ -124,7 +103,7 @@ export function BrandProductCard({ item }: Props) {
     item.originalPrice > item.price
 
   return (
-    <div className="group bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col relative">
+    <div className="group bg-card rounded-lg border border-border overflow-hidden hover:shadow-md transition-shadow flex flex-col relative">
       {/* Discount badge — mockup deals.html lines 265-267 */}
       {typeof item.discountPercent === "number" && item.discountPercent > 0 && (
         <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold uppercase px-2 py-1 rounded z-10">
@@ -133,7 +112,7 @@ export function BrandProductCard({ item }: Props) {
       )}
 
       <Link href={href} className="block">
-        <div className="relative aspect-square overflow-hidden bg-gray-100">
+        <div className="relative aspect-square overflow-hidden bg-muted">
           {item.imageUrl ? (
             <Image
               src={item.imageUrl}
@@ -144,7 +123,7 @@ export function BrandProductCard({ item }: Props) {
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <Package className="h-12 w-12 text-gray-300" />
+              <Package className="h-12 w-12 text-muted-foreground/40" />
             </div>
           )}
           {item.inStock === false && (
@@ -159,7 +138,7 @@ export function BrandProductCard({ item }: Props) {
         {/* Deal-of-the-day pill or countdown timer above title, per mockup */}
         {item.dealOfTheDay && (
           <div className="flex items-center gap-1">
-            <span className="bg-gray-100 text-red-600 font-bold text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded">
+            <span className="bg-muted text-red-600 font-bold text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded">
               Deal of the Day
             </span>
           </div>
@@ -173,7 +152,9 @@ export function BrandProductCard({ item }: Props) {
         </Link>
 
         {typeof item.avgRating === "number" && item.avgRating > 0 && (
-          <StarRow rating={item.avgRating} count={item.reviewCount} />
+          <div className="mt-auto">
+            <StarRating rating={item.avgRating} count={item.reviewCount || undefined} size="md" />
+          </div>
         )}
 
         <div className="flex items-baseline gap-2 mt-1">
@@ -181,7 +162,7 @@ export function BrandProductCard({ item }: Props) {
             ${item.price.toFixed(2)}
           </span>
           {hasOriginal && (
-            <span className="text-sm text-gray-400 line-through">
+            <span className="text-sm text-muted-foreground line-through">
               ${(item.originalPrice as number).toFixed(2)}
             </span>
           )}
@@ -190,10 +171,10 @@ export function BrandProductCard({ item }: Props) {
         {(item.storeName || (typeof item.distanceMiles === "number" && item.distanceMiles >= 0)) && (
           <div className="flex items-center justify-between gap-1">
             {item.storeName ? (
-              <p className="text-xs text-gray-500 truncate">{item.storeName}</p>
+              <p className="text-xs text-muted-foreground truncate">{item.storeName}</p>
             ) : <span />}
             {typeof item.distanceMiles === "number" && item.distanceMiles >= 0 && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 shrink-0">
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
                 <MapPin className="h-2.5 w-2.5" />
                 {item.distanceMiles.toFixed(1)} mi
               </span>
@@ -223,8 +204,8 @@ export function BrandProductRow({ item }: { item: BrandProductCardItem }) {
     item.originalPrice > item.price
 
   return (
-    <div className="group flex bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-      <Link href={href} className="relative block shrink-0 w-32 sm:w-40 aspect-square bg-gray-100 overflow-hidden">
+    <div className="group flex bg-card rounded-lg border border-border overflow-hidden hover:shadow-md transition-shadow">
+      <Link href={href} className="relative block shrink-0 w-32 sm:w-40 aspect-square bg-muted overflow-hidden">
         {typeof item.discountPercent === "number" && item.discountPercent > 0 && (
           <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded z-10">
             {item.discountPercent}% Off
@@ -240,7 +221,7 @@ export function BrandProductRow({ item }: { item: BrandProductCardItem }) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <Package className="h-10 w-10 text-gray-300" />
+            <Package className="h-10 w-10 text-muted-foreground/40" />
           </div>
         )}
         {item.inStock === false && (
@@ -252,7 +233,7 @@ export function BrandProductRow({ item }: { item: BrandProductCardItem }) {
 
       <div className="flex-1 min-w-0 p-4 flex flex-col gap-2">
         {item.dealOfTheDay && (
-          <span className="self-start bg-gray-100 text-red-600 font-bold text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded">
+          <span className="self-start bg-muted text-red-600 font-bold text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded">
             Deal of the Day
           </span>
         )}
@@ -265,20 +246,22 @@ export function BrandProductRow({ item }: { item: BrandProductCardItem }) {
         </Link>
 
         {typeof item.avgRating === "number" && item.avgRating > 0 && (
-          <StarRow rating={item.avgRating} count={item.reviewCount} />
+          <div className="mt-auto">
+            <StarRating rating={item.avgRating} count={item.reviewCount || undefined} size="md" />
+          </div>
         )}
 
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-bold text-foreground">${item.price.toFixed(2)}</span>
           {hasOriginal && (
-            <span className="text-sm text-gray-400 line-through">
+            <span className="text-sm text-muted-foreground line-through">
               ${(item.originalPrice as number).toFixed(2)}
             </span>
           )}
         </div>
 
         {item.storeName && (
-          <p className="text-xs text-gray-500 truncate">{item.storeName}</p>
+          <p className="text-xs text-muted-foreground truncate">{item.storeName}</p>
         )}
 
         <div className="mt-auto sm:max-w-[200px]">
@@ -344,7 +327,7 @@ function CardAddToCart({ item }: { item: BrandProductCardItem }) {
     return (
       <button
         disabled
-        className="flex w-full items-center justify-center gap-1.5 rounded-full bg-gray-100 px-3 py-2 text-xs font-bold text-gray-400 cursor-not-allowed uppercase tracking-wider"
+        className="flex w-full items-center justify-center gap-1.5 rounded-full bg-muted px-3 py-2 text-xs font-bold text-muted-foreground cursor-not-allowed uppercase tracking-wider"
       >
         Out of Stock
       </button>

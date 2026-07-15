@@ -23,10 +23,22 @@ const config: Config = {
           DEFAULT: 'hsl(var(--brand-gold))',
           hover: 'hsl(var(--brand-gold-hover))',
           foreground: 'hsl(var(--brand-gold-foreground))',
+          ink: 'hsl(var(--brand-gold-ink))',
+        },
+        'brand-green': {
+          DEFAULT: 'hsl(var(--brand-green))',
+          hover: 'hsl(var(--brand-green-hover))',
+          foreground: 'hsl(var(--brand-green-foreground))',
+          soft: 'hsl(var(--brand-green-soft))',
         },
         'brand-dark': {
           DEFAULT: 'hsl(var(--brand-dark))',
           foreground: 'hsl(var(--brand-dark-foreground))',
+        },
+        sand: {
+          DEFAULT: 'hsl(var(--sand))',
+          strong: 'hsl(var(--sand-strong))',
+          foreground: 'hsl(var(--sand-foreground))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
@@ -92,6 +104,10 @@ const config: Config = {
         chart3: 'hsl(var(--chart-3))',
         chart4: 'hsl(var(--chart-4))',
         chart5: 'hsl(var(--chart-5))',
+      },
+      fontFamily: {
+        sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'Times New Roman', 'serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',

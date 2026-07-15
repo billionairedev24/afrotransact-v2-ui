@@ -18,7 +18,7 @@ import type { CategoryRef } from "@/lib/api"
  * pure server component with zero client JS.
  */
 
-const TILE_BG = "bg-gradient-to-br from-amber-50 to-orange-100"
+const TILE_BG = "bg-woven"
 
 export type BentoTile = {
   label: string
@@ -43,12 +43,12 @@ function Tile({ tile }: { tile: BentoTile }) {
   return (
     <Link
       href={href}
-      className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold rounded"
+      className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold rounded-lg"
       aria-label={tile.label}
       title={tile.label}
     >
       <div
-        className={`relative aspect-square rounded overflow-hidden ${TILE_BG} hover:ring-2 hover:ring-brand-gold transition-shadow`}
+        className={`relative aspect-square rounded-lg overflow-hidden ${TILE_BG} hover:ring-2 hover:ring-brand-gold transition-shadow`}
       >
         <Image
           src={tile.image}
@@ -121,17 +121,17 @@ function CategoryCard({
   }
 
   return (
-    <div className="bg-card p-5 border border-border flex flex-col rounded-md hover:shadow-md transition-shadow">
+    <div className="bg-card p-5 border border-border flex flex-col rounded-xl hover:shadow-md transition-shadow">
       <Link
         href={href}
-        className="text-lg font-bold mb-4 text-foreground hover:text-foreground transition-colors"
+        className="mb-4 hover:text-foreground transition-colors"
       >
-        <h3>{category.name}</h3>
+        <h3 className="font-display text-xl font-semibold tracking-tight text-foreground">{category.name}</h3>
       </Link>
       {grid}
       <Link
         href={href}
-        className="text-foreground font-bold mt-auto flex items-center gap-1 text-sm hover:underline"
+        className="text-brand-green font-semibold mt-auto flex items-center gap-1 text-sm hover:underline"
       >
         {ctaLabel} <ChevronRight className="h-4 w-4" />
       </Link>

@@ -9,11 +9,11 @@ import { GeoGate } from "@/components/geo/GeoGate"
 // import { FeaturedCategories } from "@/components/landing/FeaturedCategories"
 // import { ForYouSection } from "@/components/home/ForYouSection"
 import { ForYouRail } from "@/components/orders/ForYouRail"
+import { Hero } from "@/components/landing/Hero"
 import { CategoriesBentoGrid } from "@/components/landing/CategoriesBentoGrid"
 import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
 import { ProductRow } from "@/components/landing/ProductRow"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
-import { SellOnAfrotransactModal } from "@/components/landing/SellOnAfrotransactModal"
 import { fetchCategoryTiles } from "@/lib/category-tiles"
 import {
   getCategories,
@@ -202,7 +202,10 @@ export default async function HomePage() {
             still see the full landing page and only hit the gate after
             clicking into Cart or another (main) route. */}
         <GeoGate>
-        {/* 1. Hero — promotions module (admin-managed) */}
+        {/* 1. Editorial hero — always renders (brand thesis + buyer CTAs), so
+            the homepage is never an empty void on a cold catalog. A live
+            campaign still shows via the admin-managed PromoSlot below. */}
+        <Hero categories={roots} />
         <PromoSlot placement="HERO" className="mx-4 md:mx-6 lg:mx-8 mt-4" />
 
         {/* 2. Categories Bento Grid */}
@@ -250,10 +253,11 @@ export default async function HomePage() {
 
       </main>
 
-      {/* Auto-pops once per visitor after engagement signals (delay + scroll).
-          Hidden for admins + existing sellers; respects a "dismissed" flag in
-          localStorage so it never nags. */}
-      <SellOnAfrotransactModal />
+      {/* Removed the auto-popping seller modal from the buyer homepage: the
+          buyer surface already carries an AI pill, WhatsApp FAB, and the
+          <SellOnAfrotransactStrip> as the single seller entry point. An
+          interstitial that sells to sellers on top of that spends buyer
+          attention against the page's actual job. */}
 
       <PromoSlot placement="FOOTER" className="mx-4 md:mx-6 lg:mx-8 mb-6" />
       <Footer />

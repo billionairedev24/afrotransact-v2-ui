@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ChevronRight, Grid3X3, LayoutList, Loader2, Star, Tag } from "lucide-react"
+import { ChevronRight, Grid3X3, LayoutList, Loader2, Tag } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   getActiveDeals,
@@ -25,6 +25,7 @@ import {
   type CategoryRef,
 } from "@/lib/api"
 import { BrandProductCard, BrandProductRow, type BrandProductCardItem } from "@/components/products/BrandProductCard"
+import { StarRating } from "@/components/products/StarRating"
 import { Pagination } from "@/components/products/Pagination"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 
@@ -155,7 +156,7 @@ export default function DealsPageClient() {
   return (
     <main className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 py-10">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6 text-sm text-gray-500">
+      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground transition-colors">
           Home
         </Link>
@@ -232,17 +233,7 @@ export default function DealsPageClient() {
                     onSelect={() => { setRatingMin(stars); setPage(1) }}
                     ariaLabel={`${stars} stars and up`}
                   />
-                  <span className="flex items-center">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={cn(
-                          "h-4 w-4",
-                          i < stars ? "fill-brand-gold text-brand-gold" : "fill-gray-200 text-gray-200",
-                        )}
-                      />
-                    ))}
-                  </span>
+                  <StarRating rating={stars} size="md" />
                   <span className="text-foreground">&amp; Up</span>
                 </FilterRow>
               ))}
@@ -253,10 +244,10 @@ export default function DealsPageClient() {
         {/* Main content */}
         <div className="flex-1 min-w-0">
           {/* Header & view toggle — mockup lines 246-260 */}
-          <div className="flex justify-between items-end mb-6 pb-4 border-b border-gray-200">
+          <div className="flex justify-between items-end mb-6 pb-4 border-b border-border">
             <div>
-              <h1 className="text-3xl font-bold text-brand-gold">Today&apos;s Deals</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">Today&apos;s Deals</h1>
+              <p className="text-sm text-muted-foreground mt-1">
                 {loading
                   ? "Finding the best deals…"
                   : total === 0
@@ -265,10 +256,10 @@ export default function DealsPageClient() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 mr-1 hidden sm:inline">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-1 hidden sm:inline">
                 View:
               </span>
-              <div className="flex items-center rounded-lg bg-gray-100 p-1">
+              <div className="flex items-center rounded-lg bg-muted p-1">
                 <button
                   aria-label="Grid view"
                   onClick={() => setViewMode("grid")}
@@ -276,7 +267,7 @@ export default function DealsPageClient() {
                     "rounded p-1.5 transition-colors",
                     viewMode === "grid"
                       ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
-                      : "text-gray-500 hover:text-foreground",
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <Grid3X3 className="h-4 w-4" />
@@ -288,7 +279,7 @@ export default function DealsPageClient() {
                     "rounded p-1.5 transition-colors",
                     viewMode === "list"
                       ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
-                      : "text-gray-500 hover:text-foreground",
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <LayoutList className="h-4 w-4" />
@@ -299,17 +290,17 @@ export default function DealsPageClient() {
 
           {/* States */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-3 text-gray-500">
+            <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin text-foreground" />
               <p className="text-sm">Loading deals…</p>
             </div>
           ) : total === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="rounded-2xl bg-gray-50 p-6 mb-5">
-                <Tag className="h-10 w-10 text-gray-300" />
+              <div className="rounded-2xl bg-muted p-6 mb-5">
+                <Tag className="h-10 w-10 text-muted-foreground/40" />
               </div>
               <h2 className="text-xl font-semibold text-foreground mb-2">No deals right now</h2>
-              <p className="max-w-md text-gray-500 text-sm">
+              <p className="max-w-md text-muted-foreground text-sm">
                 Check back daily — new deals drop every morning.
               </p>
             </div>
@@ -384,7 +375,7 @@ function FilterRadioDot({
       onClick={onSelect}
       className={cn(
         "h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold",
-        checked ? "border-brand-gold" : "border-gray-300 hover:border-gray-400",
+        checked ? "border-brand-gold" : "border-border hover:border-border",
       )}
     >
       {checked && <span className="h-2 w-2 rounded-full bg-brand-gold" />}
@@ -410,7 +401,7 @@ function FilterCheckboxDot({
       onClick={onToggle}
       className={cn(
         "h-4 w-4 shrink-0 rounded border-2 flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold",
-        checked ? "bg-brand-gold border-brand-gold" : "border-gray-300 hover:border-gray-400",
+        checked ? "bg-brand-gold border-brand-gold" : "border-border hover:border-border",
       )}
     >
       {checked && (
