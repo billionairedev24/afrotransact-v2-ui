@@ -258,6 +258,16 @@
       repeating-linear-gradient(-45deg,
         hsl(var(--brand-green) / 0.16) 0 8px, transparent 8px 20px);
   }
+  /* Dark woven ground — for hero slides that carry no photo, so every slide in
+     the carousel shares the same dark, white-on-gold look. */
+  .bg-woven-dark {
+    background-color: hsl(var(--brand-dark));
+    background-image:
+      repeating-linear-gradient(45deg,
+        hsl(var(--brand-gold) / 0.18) 0 7px, transparent 7px 20px),
+      repeating-linear-gradient(-45deg,
+        hsl(var(--brand-green) / 0.16) 0 7px, transparent 7px 20px);
+  }
 }
 
 /* Safari backdrop-filter fallback: if backdrop-filter isn't supported, use opaque bg */

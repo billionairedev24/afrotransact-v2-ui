@@ -191,6 +191,48 @@ export default async function HomePage() {
     }))
   }
 
+  // Build the hero carousel from REAL data: a brand slide on the woven motif,
+  // then one slide per root category that actually has product imagery — each
+  // links to its real /category/{slug} page and uses a real product photo. The
+  // carousel shuffles these client-side so the order varies per visit.
+  function catCopy(name: string): { title: string; sub: string } {
+    const n = name.toLowerCase()
+    if (n.includes("food") || n.includes("grocer"))
+      return { title: "Fresh groceries & pantry staples, sorted.", sub: "Rice, flours, spices and the everyday essentials — delivered close to you." }
+    if (n.includes("beauty") || n.includes("health") || n.includes("hair"))
+      return { title: "Beauty & care, curated for you.", sub: "Skincare, hair and wellness picks from brands you trust." }
+    if (n.includes("fashion") || n.includes("cloth") || n.includes("apparel"))
+      return { title: "Style that tells your story.", sub: "Fabrics, fits and finds for every occasion." }
+    if (n.includes("home") || n.includes("garden") || n.includes("kitchen"))
+      return { title: "Make every room feel like home.", sub: "Cookware, decor and homeware to bring the culture indoors." }
+    if (n.includes("electronic") || n.includes("gadget") || n.includes("tech"))
+      return { title: "Gadgets & essentials for every home.", sub: "Reliable everyday tech, ready to ship." }
+    return { title: `Explore ${name}.`, sub: `Curated ${n} picks — delivered close to you.` }
+  }
+  const heroSlides = [
+    {
+      id: "brand",
+      eyebrow: "Your community market",
+      title: "African & diaspora treasures, from your neighborhood.",
+      sub: "Fresh groceries, spices, beauty, and homeware — curated for the diaspora and delivered close to you.",
+      cta: { label: "Shop today’s deals", href: "/search?is_deal=true" },
+    },
+    ...roots
+      .map((cat) => ({ cat, image: tilesByRoot[cat.id]?.find((t) => t.image)?.image ?? undefined }))
+      .filter((x): x is { cat: typeof roots[number]; image: string } => Boolean(x.image))
+      .map(({ cat, image }) => {
+        const copy = catCopy(cat.name)
+        return {
+          id: `cat-${cat.slug}`,
+          eyebrow: cat.name,
+          title: copy.title,
+          sub: copy.sub,
+          cta: { label: `Shop ${cat.name}`, href: `/category/${cat.slug}` },
+          image,
+        }
+      }),
+  ]
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -205,7 +247,7 @@ export default async function HomePage() {
         {/* 1. Editorial hero carousel — several auto-advancing banners (brand
             thesis + photographic slides). Always renders, so the homepage is
             never an empty void. A live campaign still shows via PromoSlot. */}
-        <HeroCarousel categories={roots} />
+        <HeroCarousel slides={heroSlides} />
         <PromoSlot placement="HERO" className="mx-4 md:mx-6 lg:mx-8 mt-4" />
 
         {/* 2. Categories Bento Grid */}
