@@ -1,12 +1,20 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Fraunces } from "next/font/google"
 import { Providers } from "@/components/providers"
 import { AiChatOverlay } from "@/components/ai/AiWidget"
 import { WhatsAppFab } from "@/components/support/WhatsAppFab"
 import { Toaster } from "sonner"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"] })
+// Body / UI voice.
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" })
+// Display voice — a warm optical serif used with restraint for headings.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+})
 
 export const metadata: Metadata = {
   title: "AfroTransact - Your Community Marketplace",
@@ -41,7 +49,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-background text-foreground antialiased`}>
+      <body className={`${inter.variable} ${fraunces.variable} font-sans bg-background text-foreground antialiased`}>
         <Providers>
           {children}
           <AiChatOverlay />

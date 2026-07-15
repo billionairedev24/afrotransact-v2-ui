@@ -4,14 +4,16 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    /* Neutrals carry a faint warm bias (hue ~40) so the canvas reads as a
+       chosen sand-white rather than an unconsidered pure grey. */
+    --background: 40 33% 99%;
+    --foreground: 30 12% 9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 30 12% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
+    --popover-foreground: 30 12% 9%;
 
     /* Brand primary: Afrotransact Gold #F5C518 (HSL 47 92% 53%) — used for
        buttons, badges, focus rings, brand accents. Do NOT use `text-primary`
@@ -24,14 +26,28 @@
     --brand-gold: 50 100% 50%;            /* #FFD400 — brand primary */
     --brand-gold-hover: 50 100% 45%;      /* darker #FFD400 for hover */
     --brand-gold-foreground: 0 0% 4%;     /* near-black text on gold */
+    /* A readable gold for text/icons on light grounds (#FFD400 fails contrast). */
+    --brand-gold-ink: 42 96% 30%;         /* deep amber-gold, ~5:1 on white */
     --brand-dark: 0 0% 0%;                /* #000000 — brand black */
     --brand-dark-foreground: 0 0% 98%;    /* near-white text on black */
 
-    --secondary: 142 71% 35%;
-    --secondary-foreground: 0 0% 100%;
+    /* Brand green #067457 — the deck's second hue, promoted from a stray
+       status dot into a real token for section accents + secondary CTAs. */
+    --brand-green: 164 90% 24%;           /* #067457 */
+    --brand-green-hover: 164 90% 19%;
+    --brand-green-foreground: 0 0% 98%;
+    --brand-green-soft: 164 44% 94%;      /* tinted ground */
 
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 32%;
+    /* Earth/sand — warm ground for the woven motif + image placeholders. */
+    --sand: 40 46% 93%;
+    --sand-strong: 38 42% 86%;
+    --sand-foreground: 30 26% 30%;
+
+    --secondary: 164 90% 24%;             /* now the brand green */
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 40 20% 96%;
+    --muted-foreground: 30 8% 38%;
 
     --accent: 47 92% 48%;
     --accent-foreground: 0 0% 4%;
@@ -39,9 +55,9 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 47 92% 53%;
+    --border: 38 18% 90%;
+    --input: 38 18% 90%;
+    --ring: 42 96% 40%;
 
     --radius: 0.625rem;
 
@@ -90,23 +106,34 @@
   }
 
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 40 9% 6%;
+    --foreground: 40 20% 96%;
 
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 98%;
+    --card: 40 8% 9%;
+    --card-foreground: 40 20% 96%;
 
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 40 8% 9%;
+    --popover-foreground: 40 20% 96%;
 
     --primary: 50 100% 52%;
     --primary-foreground: 0 0% 4%;
 
-    --secondary: 142 71% 35%;
-    --secondary-foreground: 0 0% 100%;
+    --brand-gold-ink: 46 96% 62%;         /* readable gold on dark grounds */
 
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 70%;
+    --brand-green: 164 52% 46%;           /* brighter green for dark grounds */
+    --brand-green-hover: 164 52% 40%;
+    --brand-green-foreground: 0 0% 8%;
+    --brand-green-soft: 164 30% 15%;
+
+    --sand: 40 8% 14%;
+    --sand-strong: 40 8% 20%;
+    --sand-foreground: 40 18% 80%;
+
+    --secondary: 164 52% 46%;
+    --secondary-foreground: 0 0% 8%;
+
+    --muted: 40 6% 15%;
+    --muted-foreground: 40 8% 68%;
 
     --accent: 47 92% 50%;
     --accent-foreground: 0 0% 4%;
@@ -114,9 +141,9 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 47 92% 56%;
+    --border: 40 6% 18%;
+    --input: 40 6% 18%;
+    --ring: 46 96% 55%;
 
     --sidebar: 0 0% 5%;
     --sidebar-foreground: 0 0% 92%;
@@ -173,6 +200,31 @@
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Display type — Fraunces, loaded in app/layout.tsx via next/font. */
+  .font-display {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-optical-sizing: auto;
+  }
+
+  /* Consistent, always-visible keyboard focus floor across the storefront.
+     Uses foreground (near-black on light, near-white on dark) so the ring is
+     legible on any ground — gold #FFD400 would be near-invisible on white. */
+  :where(a, button, input, select, textarea, summary, [tabindex], [role="button"]):focus-visible {
+    outline: 2px solid hsl(var(--foreground));
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  /* Respect reduced-motion: neutralise decorative animation + smooth scroll. */
+  @media (prefers-reduced-motion: reduce) {
+    html, body { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
 }
 
 @layer utilities {
@@ -182,6 +234,39 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Woven-textile motif — kente/mudcloth-inspired, in brand gold + green on a
+     warm sand ground. The storefront's signature surface: used behind the hero
+     and as the fallback for missing product/category imagery, replacing the
+     generic amber→orange gradient. */
+  .bg-woven {
+    background-color: hsl(var(--sand));
+    background-image:
+      repeating-linear-gradient(45deg,
+        hsl(var(--brand-gold) / 0.14) 0 6px, transparent 6px 18px),
+      repeating-linear-gradient(-45deg,
+        hsl(var(--brand-green) / 0.10) 0 6px, transparent 6px 18px),
+      repeating-linear-gradient(90deg,
+        hsl(var(--brand-dark) / 0.05) 0 1px, transparent 1px 22px);
+  }
+  .bg-woven-strong {
+    background-color: hsl(var(--sand-strong));
+    background-image:
+      repeating-linear-gradient(45deg,
+        hsl(var(--brand-gold) / 0.22) 0 8px, transparent 8px 20px),
+      repeating-linear-gradient(-45deg,
+        hsl(var(--brand-green) / 0.16) 0 8px, transparent 8px 20px);
+  }
+  /* Dark woven ground — for hero slides that carry no photo, so every slide in
+     the carousel shares the same dark, white-on-gold look. */
+  .bg-woven-dark {
+    background-color: hsl(var(--brand-dark));
+    background-image:
+      repeating-linear-gradient(45deg,
+        hsl(var(--brand-gold) / 0.18) 0 7px, transparent 7px 20px),
+      repeating-linear-gradient(-45deg,
+        hsl(var(--brand-green) / 0.16) 0 7px, transparent 7px 20px);
   }
 }
 

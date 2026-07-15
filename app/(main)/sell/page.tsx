@@ -11,19 +11,19 @@ const STEPS = [
 
 const FEATURES = [
   { icon: <TrendingUp className="h-5 w-5 text-foreground" />, title: "Reach thousands of buyers", desc: "AfroTransact is the go-to marketplace for immigrant-owned businesses expanding their reach nationwide." },
-  { icon: <ShieldCheck className="h-5 w-5 text-emerald-400" />, title: "Secure, fast payouts", desc: "Stripe Connect deposits your earnings directly to your bank — no delays." },
-  { icon: <Sparkles className="h-5 w-5 text-yellow-400" />, title: "First month always free", desc: "Start selling with zero commitment. No subscription fee until your trial ends." },
-  { icon: <Users className="h-5 w-5 text-sky-400" />, title: "Community-first platform", desc: "Built for immigrant entrepreneurs. Our support team understands your business." },
-  { icon: <Zap className="h-5 w-5 text-violet-400" />, title: "Easy store management", desc: "Manage products, orders, payouts, and analytics from one clean dashboard." },
-  { icon: <Gift className="h-5 w-5 text-pink-400" />, title: "Free onboarding support", desc: "Our team will personally help you set up your store if you need assistance." },
+  { icon: <ShieldCheck className="h-5 w-5 text-brand-green" />, title: "Secure, fast payouts", desc: "Stripe Connect deposits your earnings directly to your bank — no delays." },
+  { icon: <Sparkles className="h-5 w-5 text-brand-gold-ink" />, title: "First month always free", desc: "Start selling with zero commitment. No subscription fee until your trial ends." },
+  { icon: <Users className="h-5 w-5 text-brand-green" />, title: "Community-first platform", desc: "Built for immigrant entrepreneurs. Our support team understands your business." },
+  { icon: <Zap className="h-5 w-5 text-brand-gold-ink" />, title: "Easy store management", desc: "Manage products, orders, payouts, and analytics from one clean dashboard." },
+  { icon: <Gift className="h-5 w-5 text-brand-green" />, title: "Free onboarding support", desc: "Our team will personally help you set up your store if you need assistance." },
 ]
 
 export default function SellPage() {
   return (
     <main className="min-h-screen">
       {/* Hero */}
-      <section className="relative overflow-hidden py-20 px-4 sm:px-6 text-center bg-gradient-to-br from-[#0d1f0d] via-background to-background">
-        <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(212,168,83,0.1) 0%, transparent 60%)" }} />
+      <section className="relative overflow-hidden py-20 px-4 sm:px-6 text-center bg-gradient-to-br from-brand-dark via-background to-background">
+        <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 0%, hsl(var(--brand-gold) / 0.1) 0%, transparent 60%)" }} />
         <div className="relative max-w-3xl mx-auto">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-foreground uppercase tracking-wider mb-6">
             <Store className="h-3 w-3" /> For Sellers
@@ -90,7 +90,7 @@ export default function SellPage() {
         <div className="flex flex-wrap gap-4 justify-center mb-6">
           {["No credit card to start", "Setup in under 10 min", "Cancel anytime"].map((t) => (
             <span key={t} className="flex items-center gap-1.5 text-sm text-gray-600">
-              <Check className="h-4 w-4 text-emerald-400" />{t}
+              <Check className="h-4 w-4 text-brand-green" />{t}
             </span>
           ))}
         </div>

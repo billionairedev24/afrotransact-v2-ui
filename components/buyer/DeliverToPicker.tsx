@@ -189,7 +189,7 @@ export function DeliverToPicker() {
         <span className="flex flex-col items-start leading-tight">
           <span className="text-[10px] text-white/60">Deliver to</span>
           <span className="font-semibold text-white">
-            {location ? (locationLabel(location)) : "Select"}
+            {location ? locationLabel(location) : "Set location"}
           </span>
         </span>
       </button>

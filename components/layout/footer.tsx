@@ -74,7 +74,7 @@ export function Footer() {
               Serving immigrant communities nationwide
             </span>
             <span className="text-[11px] text-white/50">
-              Delivery options vary by seller and are confirmed at checkout.
+              Delivery options are confirmed at checkout.
             </span>
           </div>
         </div>
