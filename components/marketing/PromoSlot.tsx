@@ -148,7 +148,7 @@ function HeroSlot({ items, className }: { items: Promotion[]; className?: string
 
   return (
     <section
-      className={cn("relative w-full overflow-hidden rounded-2xl bg-gray-100", className)}
+      className={cn("relative w-full overflow-hidden rounded-2xl bg-muted", className)}
       aria-roledescription="carousel"
       aria-label="Featured promotions"
       onTouchStart={(e) => setTouchX(e.touches[0].clientX)}
@@ -195,7 +195,7 @@ function HeroSlot({ items, className }: { items: Promotion[]; className?: string
               aria-current={i === index}
               className={cn(
                 "h-2 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2",
-                i === index ? "w-6 bg-white" : "w-2 bg-white/50 hover:bg-white/80",
+                i === index ? "w-6 bg-card" : "w-2 bg-white/50 hover:bg-white/80",
               )}
             />
           ))}
@@ -219,7 +219,7 @@ function StripTopSlot({ items, className }: { items: Promotion[]; className?: st
 
   return (
     <section
-      className={cn("relative w-full overflow-hidden rounded-xl bg-gray-100", className)}
+      className={cn("relative w-full overflow-hidden rounded-xl bg-muted", className)}
       aria-label="Promotional banner"
     >
       <div className="relative aspect-[8/1]">
@@ -265,7 +265,7 @@ function SidebarSlot({ items, className }: { items: Promotion[]; className?: str
       {items.map((promo) => (
         <div
           key={promo.id}
-          className="relative overflow-hidden rounded-xl bg-gray-100 border border-input"
+          className="relative overflow-hidden rounded-xl bg-muted border border-input"
         >
           <div className="relative aspect-[4/5]">
             <Image
@@ -290,7 +290,7 @@ function FooterSlot({ items, className }: { items: Promotion[]; className?: stri
   if (!promo) return null
   return (
     <section
-      className={cn("relative w-full overflow-hidden rounded-xl bg-gray-100", className)}
+      className={cn("relative w-full overflow-hidden rounded-xl bg-muted", className)}
       aria-label="Promotional footer"
     >
       <div className="relative aspect-[6/1]">

@@ -329,15 +329,15 @@ function DeliverToModal({
       <button aria-label="Close" onClick={onClose} className="absolute inset-0 bg-black/50" />
       <form
         onSubmit={save}
-        className="relative w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-md bg-card rounded-xl shadow-2xl overflow-hidden"
       >
-        <header className="flex items-start justify-between gap-3 px-6 py-5 border-b border-gray-200">
+        <header className="flex items-start justify-between gap-3 px-6 py-5 border-b border-border">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-orange-600">
               <MapPin className="h-3 w-3" /> Deliver to
             </div>
-            <h2 className="text-lg font-bold text-gray-900">Choose your delivery location</h2>
-            <p className="text-sm text-gray-600">
+            <h2 className="text-lg font-bold text-foreground">Choose your delivery location</h2>
+            <p className="text-sm text-muted-foreground">
               We use this to show only items that ship to you and to give you
               accurate delivery dates at checkout.
             </p>
@@ -345,7 +345,7 @@ function DeliverToModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+            className="p-1 rounded-full hover:bg-muted text-muted-foreground"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -357,18 +357,18 @@ function DeliverToModal({
             type="button"
             onClick={useCurrentLocation}
             disabled={submitting}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-50"
           >
             {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
             Use my current location
           </button>
-          <div className="text-center text-[11px] uppercase tracking-wider text-gray-400">or enter a ZIP</div>
+          <div className="text-center text-[11px] uppercase tracking-wider text-muted-foreground">or enter a ZIP</div>
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Country</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Country</label>
             <select
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm"
+              className="w-full border border-border rounded-md px-3 py-2 bg-card text-sm"
             >
               {COUNTRIES.map((c) => (
                 <option key={c.code} value={c.code}>{c.label}</option>
@@ -377,7 +377,7 @@ function DeliverToModal({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
                 {country === "US" ? "ZIP code" : "Postal code"}
               </label>
               <input
@@ -385,12 +385,12 @@ function DeliverToModal({
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
                 placeholder={country === "US" ? "78701" : "Postal"}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono"
+                className="w-full border border-border rounded-md px-3 py-2 text-sm font-mono"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
-                State <span className="font-medium normal-case text-gray-500">(opt.)</span>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                State <span className="font-medium normal-case text-muted-foreground">(opt.)</span>
               </label>
               <input
                 type="text"
@@ -398,7 +398,7 @@ function DeliverToModal({
                 onChange={(e) => setState(e.target.value.toUpperCase())}
                 maxLength={3}
                 placeholder="TX"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono"
+                className="w-full border border-border rounded-md px-3 py-2 text-sm font-mono"
               />
             </div>
           </div>
@@ -408,11 +408,11 @@ function DeliverToModal({
           )}
         </div>
 
-        <footer className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+        <footer className="px-6 py-4 border-t border-border bg-muted flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-100"
+            className="px-4 py-2 rounded-full text-sm font-semibold text-muted-foreground hover:bg-muted"
           >
             Skip
           </button>
@@ -420,7 +420,7 @@ function DeliverToModal({
             type="submit"
             disabled={submitting || !postalCode.trim()}
             className={cn(
-              "px-5 py-2 rounded-full text-sm font-bold bg-[#F5C518] hover:bg-[#E5B100] text-gray-900 disabled:opacity-50",
+              "px-5 py-2 rounded-full text-sm font-bold bg-[#F5C518] hover:bg-[#E5B100] text-foreground disabled:opacity-50",
               submitting && "inline-flex items-center gap-2",
             )}
           >

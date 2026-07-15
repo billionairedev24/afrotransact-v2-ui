@@ -93,7 +93,7 @@ function AiProductCard({ product }: { product: ProductCard }) {
 
       <div className="px-2.5 pb-2.5 mt-auto">
         {!product.in_stock ? (
-          <button disabled className="w-full flex items-center justify-center rounded-lg bg-gray-100 py-1.5 text-[10px] font-medium text-gray-400 cursor-not-allowed">
+          <button disabled className="w-full flex items-center justify-center rounded-lg bg-muted py-1.5 text-[10px] font-medium text-muted-foreground cursor-not-allowed">
             Out of stock
           </button>
         ) : quantity > 0 ? (

@@ -157,7 +157,7 @@ function FulfillmentStepper({
   return (
     <div className="relative w-full">
       {/* connecting line */}
-      <div className="absolute top-5 left-5 right-5 h-1 bg-gray-200 z-0 -translate-y-1/2" />
+      <div className="absolute top-5 left-5 right-5 h-1 bg-muted z-0 -translate-y-1/2" />
       {!isCancelled && activeIdx > 0 && (
         <div
           className="absolute top-5 left-5 h-1 bg-brand-gold z-0 -translate-y-1/2"
@@ -178,18 +178,18 @@ function FulfillmentStepper({
                 "h-10 w-10 rounded-full flex items-center justify-center transition-colors",
                 done
                   ? "bg-brand-gold text-brand-gold-foreground"
-                  : "bg-gray-100 text-gray-400 border border-gray-200",
+                  : "bg-muted text-muted-foreground border border-border",
                 active && "ring-4 ring-brand-gold/25",
               )}>
                 <Icon className="h-5 w-5" strokeWidth={2} />
               </div>
               <span className={cn(
                 "mt-3 text-xs text-center px-1 leading-tight",
-                done ? "text-foreground font-semibold" : "text-gray-500",
+                done ? "text-foreground font-semibold" : "text-muted-foreground",
               )}>
                 {STEP_LABEL[step]}
               </span>
-              <span className="mt-1 text-[10px] text-gray-500 text-center">{dateText}</span>
+              <span className="mt-1 text-[10px] text-muted-foreground text-center">{dateText}</span>
             </div>
           )
         })}
@@ -219,7 +219,7 @@ function InteractiveStars({
             size={size}
             className={cn(
               "cursor-pointer transition-colors",
-              filled ? "fill-brand-gold text-brand-gold" : "fill-gray-200 text-gray-200",
+              filled ? "fill-brand-gold text-brand-gold" : "fill-muted text-gray-200",
             )}
             onMouseEnter={() => setHover(i)}
             onClick={() => onSelect(i)}
@@ -275,7 +275,7 @@ function InlineReviewForm({
   return (
     <div className="mt-3 rounded-xl border border-brand-gold/30 bg-brand-gold/5 p-4 space-y-3">
       <div>
-        <p className="text-xs text-gray-600 mb-1.5">
+        <p className="text-xs text-muted-foreground mb-1.5">
           Rate <span className="font-semibold text-foreground">{productTitle}</span>
         </p>
         <InteractiveStars rating={rating} onSelect={setRating} />
@@ -286,7 +286,7 @@ function InlineReviewForm({
         onChange={(e) => setTitle(e.target.value)}
         maxLength={120}
         placeholder="Headline (optional)"
-        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+        className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
       />
       <textarea
         value={body}
@@ -294,13 +294,13 @@ function InlineReviewForm({
         rows={3}
         maxLength={2000}
         placeholder="What did you like or dislike? (optional)"
-        className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+        className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
       />
       <div className="flex items-center gap-2 justify-end">
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-foreground transition-colors"
+          className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           Cancel
         </button>
@@ -378,12 +378,12 @@ function OrderItem({
   }
 
   const eachLabel = item.quantity > 1
-    ? <span className="text-sm font-normal text-gray-500"> ({formatCents(item.unitPriceCents)} ea)</span>
+    ? <span className="text-sm font-normal text-muted-foreground"> ({formatCents(item.unitPriceCents)} ea)</span>
     : null
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 border-b border-gray-100 pb-6 last:border-0 last:pb-0">
-      <div className="w-full sm:w-28 h-28 bg-gray-100 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200">
+    <div className="flex flex-col sm:flex-row gap-4 border-b border-border pb-6 last:border-0 last:pb-0">
+      <div className="w-full sm:w-28 h-28 bg-muted flex-shrink-0 rounded-lg overflow-hidden border border-border">
         {item.imageUrl ? (
           <Image
             src={item.imageUrl}
@@ -394,7 +394,7 @@ function OrderItem({
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center">
-            <Package className="h-7 w-7 text-gray-400" />
+            <Package className="h-7 w-7 text-muted-foreground" />
           </div>
         )}
       </div>
@@ -407,9 +407,9 @@ function OrderItem({
             {item.productTitle || "Product"}
           </Link>
           {item.variantName && item.variantName.toLowerCase() !== "default" && (
-            <p className="text-xs text-gray-500 mt-1">{item.variantName}</p>
+            <p className="text-xs text-muted-foreground mt-1">{item.variantName}</p>
           )}
-          <p className="text-xs text-gray-500 mt-1">Qty: {item.quantity}</p>
+          <p className="text-xs text-muted-foreground mt-1">Qty: {item.quantity}</p>
           <p className="text-lg font-bold text-foreground mt-1.5">
             {formatCents(item.totalPriceCents)}
             {eachLabel}
@@ -427,7 +427,7 @@ function OrderItem({
               type="button"
               onClick={handleBuyAgain}
               disabled={adding}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-200 text-foreground bg-white hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-border text-foreground bg-card hover:bg-muted rounded-lg transition-colors disabled:opacity-60"
             >
               {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingBag className="h-3 w-3" />}
               Buy Again
@@ -473,14 +473,14 @@ function SubOrderBlock({
 
   return (
     <div className="space-y-6">
-      <section className="bg-white rounded-xl border border-gray-200 p-6">
+      <section className="bg-card rounded-xl border border-border p-6">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div>
             <h2 className="text-lg font-bold text-foreground">
               {single ? "Delivery Status" : "Shipment"}
             </h2>
             {!single && (
-              <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                 <Store className="h-3 w-3" /> {storeDisplayName(sub.storeId)}
               </p>
             )}
@@ -489,21 +489,21 @@ function SubOrderBlock({
         <p className="text-lg font-bold text-foreground mb-6">{headline}</p>
         <FulfillmentStepper status={sub.fulfillmentStatus} placedAt={placedAt} />
         {sub.trackingNumber && (
-          <div className="mt-6 flex items-center justify-between rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
+          <div className="mt-6 flex items-center justify-between rounded-lg bg-muted border border-border px-4 py-3">
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-gray-500">Tracking number</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Tracking number</p>
               <p className="text-sm font-mono font-semibold text-foreground mt-0.5">
                 {sub.trackingNumber}
               </p>
             </div>
             {sub.shippingCarrier && (
-              <span className="text-xs text-gray-500">{sub.shippingCarrier}</span>
+              <span className="text-xs text-muted-foreground">{sub.shippingCarrier}</span>
             )}
           </div>
         )}
       </section>
 
-      <section className="bg-white rounded-xl border border-gray-200 p-6">
+      <section className="bg-card rounded-xl border border-border p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-foreground">
             Items {single ? "in Order" : "in this Shipment"}
@@ -558,7 +558,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
     return (
       <main className="mx-auto max-w-[1280px] px-4 sm:px-6 py-20 flex flex-col items-center gap-3">
         <Loader2 className="h-7 w-7 animate-spin text-foreground" />
-        <span className="text-sm text-gray-500">Loading order…</span>
+        <span className="text-sm text-muted-foreground">Loading order…</span>
       </main>
     )
   }
@@ -569,7 +569,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
         <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
           <XCircle className="mx-auto h-10 w-10 text-red-500" />
           <p className="mt-3 text-sm text-red-700">{error || "Order not found"}</p>
-          <Link href="/orders" className="inline-block mt-4 rounded-lg bg-white border border-red-200 px-4 py-2 text-xs font-medium text-foreground hover:bg-red-50 transition-colors">
+          <Link href="/orders" className="inline-block mt-4 rounded-lg bg-card border border-red-200 px-4 py-2 text-xs font-medium text-foreground hover:bg-red-50 transition-colors">
             Back to orders
           </Link>
         </div>
@@ -587,14 +587,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   const trackingHref = `/orders/${order.orderNumber}#tracking`
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted">
       {/* Compact top bar — mockup lines 108-118. Pure back/title; no share
           button since the order is private. */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+      <header className="sticky top-0 z-40 bg-card border-b border-border">
         <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <Link
             href="/orders"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Orders
           </Link>
@@ -607,10 +607,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
         {/* Order header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <p className="text-sm text-gray-500 mb-1">
+            <p className="text-sm text-muted-foreground mb-1">
               Order <span className="font-mono text-foreground font-semibold">#{order.orderNumber}</span>
             </p>
-            <p className="text-xs text-gray-500">Placed on {formatDate(placedAt)}</p>
+            <p className="text-xs text-muted-foreground">Placed on {formatDate(placedAt)}</p>
           </div>
           <div className="flex gap-2">
             {isShipped && (
@@ -635,9 +635,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
 
           {/* Right: order summary + shipping + payment */}
           <aside className="lg:col-span-4 flex flex-col gap-6 lg:sticky lg:top-20">
-            <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <section className="bg-card rounded-xl border border-border p-6 shadow-sm">
               <h2 className="text-lg font-bold text-foreground mb-4">Order Summary</h2>
-              <div className="space-y-3 mb-4 pb-4 border-b border-gray-200 text-sm">
+              <div className="space-y-3 mb-4 pb-4 border-b border-border text-sm">
                 <div className="flex justify-between text-foreground">
                   <span>Item{totalItems === 1 ? "" : "s"} subtotal ({totalItems}):</span>
                   <span>{formatCents(order.subtotalCents, order.currency)}</span>
@@ -670,15 +670,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
               const pay = paymentLabel(order.paymentMethod, order.last4)
               if (!ship && !pay) return null
               return (
-                <section className="bg-white rounded-xl border border-gray-200 p-6">
+                <section className="bg-card rounded-xl border border-border p-6">
                   <>
                     {ship && (
                       <div className={pay ? "mb-5" : ""}>
                         <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-3">
-                          <MapPin className="h-4 w-4 text-gray-500" />
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
                           Shipping address
                         </h3>
-                        <div className="pl-6 text-sm text-gray-600 leading-relaxed">
+                        <div className="pl-6 text-sm text-muted-foreground leading-relaxed">
                           {ship.fullName && (
                             <p className="text-foreground font-semibold">{ship.fullName}</p>
                           )}
@@ -692,20 +692,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
                           )}
                           {ship.country && <p>{ship.country}</p>}
                           {ship.phone && (
-                            <p className="text-xs text-gray-500 mt-2">{ship.phone}</p>
+                            <p className="text-xs text-muted-foreground mt-2">{ship.phone}</p>
                           )}
                         </div>
                       </div>
                     )}
                     {pay && (
-                      <div className={ship ? "pt-5 border-t border-gray-200" : ""}>
+                      <div className={ship ? "pt-5 border-t border-border" : ""}>
                         <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-3">
-                          <CreditCard className="h-4 w-4 text-gray-500" />
+                          <CreditCard className="h-4 w-4 text-muted-foreground" />
                           Payment method
                         </h3>
-                        <div className="pl-6 text-sm text-gray-600 flex items-center gap-3">
-                          <div className="h-6 w-10 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
-                            <CreditCard className="h-3 w-3 text-gray-500" />
+                        <div className="pl-6 text-sm text-muted-foreground flex items-center gap-3">
+                          <div className="h-6 w-10 bg-muted border border-border rounded flex items-center justify-center">
+                            <CreditCard className="h-3 w-3 text-muted-foreground" />
                           </div>
                           <p>{pay}</p>
                         </div>

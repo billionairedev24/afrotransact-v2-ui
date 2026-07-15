@@ -37,7 +37,7 @@ export function Pagination({ page, totalPages, onPageChange, maxVisible = 5 }: P
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
         aria-label="Previous page"
-        className="h-10 w-10 rounded-lg flex items-center justify-center border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        className="h-10 w-10 rounded-lg flex items-center justify-center border border-border bg-card text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
         <ChevronRight className="h-4 w-4 rotate-180" />
       </button>
@@ -45,7 +45,7 @@ export function Pagination({ page, totalPages, onPageChange, maxVisible = 5 }: P
       {startPage > 1 && (
         <>
           <PageButton onClick={() => onPageChange(1)} active={false}>1</PageButton>
-          {startPage > 2 && <span className="px-1 text-sm text-gray-400">&hellip;</span>}
+          {startPage > 2 && <span className="px-1 text-sm text-muted-foreground">&hellip;</span>}
         </>
       )}
 
@@ -57,7 +57,7 @@ export function Pagination({ page, totalPages, onPageChange, maxVisible = 5 }: P
 
       {endPage < totalPages && (
         <>
-          {endPage < totalPages - 1 && <span className="px-1 text-sm text-gray-400">&hellip;</span>}
+          {endPage < totalPages - 1 && <span className="px-1 text-sm text-muted-foreground">&hellip;</span>}
           <PageButton onClick={() => onPageChange(totalPages)} active={false}>
             {totalPages}
           </PageButton>
@@ -68,7 +68,7 @@ export function Pagination({ page, totalPages, onPageChange, maxVisible = 5 }: P
         disabled={page >= totalPages}
         onClick={() => onPageChange(page + 1)}
         aria-label="Next page"
-        className="h-10 w-10 rounded-lg flex items-center justify-center border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        className="h-10 w-10 rounded-lg flex items-center justify-center border border-border bg-card text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
         <ChevronRight className="h-4 w-4" />
       </button>
@@ -92,7 +92,7 @@ function PageButton({
         "h-10 w-10 rounded-lg text-sm font-semibold transition-colors",
         active
           ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
-          : "border border-gray-200 bg-white text-foreground hover:border-brand-gold hover:bg-gray-50",
+          : "border border-border bg-card text-foreground hover:border-brand-gold hover:bg-muted",
       )}
     >
       {children}

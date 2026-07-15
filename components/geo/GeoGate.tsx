@@ -64,7 +64,7 @@ function WaitlistForm({ countryCode, subdivisionCode, countryLabel, onDone }: Wa
 
   if (done) {
     return (
-      <p className="text-sm text-gray-700">
+      <p className="text-sm text-muted-foreground">
         {done.existing
           ? `You're already on the list for ${countryLabel}. We'll email you when we go live.`
           : `Thanks — we'll email you when we go live in ${countryLabel}.`}
@@ -74,7 +74,7 @@ function WaitlistForm({ countryCode, subdivisionCode, countryLabel, onDone }: Wa
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-      <label className="text-sm font-medium text-gray-800" htmlFor="waitlist-email">
+      <label className="text-sm font-medium text-foreground" htmlFor="waitlist-email">
         Your email
       </label>
       <input
@@ -84,7 +84,7 @@ function WaitlistForm({ countryCode, subdivisionCode, countryLabel, onDone }: Wa
         autoComplete="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary/60"
+        className="w-full rounded-xl border border-input bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60"
         placeholder="you@example.com"
       />
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
@@ -153,7 +153,7 @@ export function GeoGate({ children }: { children: ReactNode }) {
         <Dialog open={modalOpen} onClose={() => setModalOpen(false)} className="max-w-md w-full">
           <DialogHeader onClose={() => setModalOpen(false)}>Join the {label} waitlist</DialogHeader>
           <DialogBody>
-            <p className="mb-4 text-sm text-gray-700">
+            <p className="mb-4 text-sm text-muted-foreground">
               We&apos;ll email you the moment AfroTransact goes live in {label}.
             </p>
             <WaitlistForm
@@ -166,7 +166,7 @@ export function GeoGate({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="rounded-xl border border-input bg-white px-4 py-2 text-sm font-medium text-gray-700"
+              className="rounded-xl border border-input bg-card px-4 py-2 text-sm font-medium text-muted-foreground"
             >
               Close
             </button>
@@ -191,13 +191,13 @@ function DisabledZonePanel({
   const [submitted, setSubmitted] = useState(false)
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-background flex items-center justify-center px-6 py-16">
-      <div className="max-w-md w-full rounded-2xl border border-input bg-white p-8 shadow-sm text-center">
+      <div className="max-w-md w-full rounded-2xl border border-input bg-card p-8 shadow-sm text-center">
         {!submitted ? (
           <>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h1 className="text-2xl font-semibold text-foreground mb-2">
               AfroTransact is not yet available in {label}.
             </h1>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Drop your email and we&apos;ll let you know the moment we launch in your area.
             </p>
             <WaitlistForm
@@ -209,10 +209,10 @@ function DisabledZonePanel({
           </>
         ) : (
           <>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h1 className="text-2xl font-semibold text-foreground mb-2">
               You&apos;re on the list.
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               We&apos;ll email you the moment AfroTransact goes live in {label}.
             </p>
           </>

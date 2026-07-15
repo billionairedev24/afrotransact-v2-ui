@@ -89,7 +89,7 @@ function AddToCartButton({ item }: { item: SearchResult }) {
 
   if (!item.in_stock) {
     return (
-      <button disabled className="mt-1 flex w-full items-center justify-center rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-400 cursor-not-allowed">
+      <button disabled className="mt-1 flex w-full items-center justify-center rounded-lg bg-muted px-3 py-2 text-xs font-medium text-muted-foreground cursor-not-allowed">
         Out of Stock
       </button>
     )
@@ -320,19 +320,19 @@ export default function CategoryPageClient() {
   return (
     <main className="mx-auto max-w-[1440px] px-4 sm:px-6 py-10">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-1 text-sm text-gray-500">
-        <Link href="/" className="hover:text-gray-700 transition-colors">Home</Link>
+      <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
+        <Link href="/" className="hover:text-muted-foreground transition-colors">Home</Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/categories" className="hover:text-gray-700 transition-colors">Categories</Link>
+        <Link href="/categories" className="hover:text-muted-foreground transition-colors">Categories</Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-gray-900 font-medium">{name}</span>
+        <span className="text-foreground font-medium">{name}</span>
       </div>
 
       {/* Header */}
       <div className="mb-6 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900">{name}</h1>
-          <p className="text-gray-500 mt-1 text-sm">
+          <h1 className="text-3xl font-black text-foreground">{name}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
             {loading
               ? "Loading…"
               : `${total.toLocaleString()} product${total !== 1 ? "s" : ""} from local stores`}
@@ -364,7 +364,7 @@ export default function CategoryPageClient() {
           ))}
         </div>
       ) : error ? (
-        <div className="text-center py-20 bg-white rounded-lg border border-red-100 p-6">
+        <div className="text-center py-20 bg-card rounded-lg border border-red-100 p-6">
           <p className="text-red-800 font-medium mb-2">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -375,8 +375,8 @@ export default function CategoryPageClient() {
         </div>
       ) : displayedProducts.length === 0 ? (
         <div className="text-center py-20">
-          <Leaf className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">No products in this category yet.</p>
+          <Leaf className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium">No products in this category yet.</p>
           <Link href="/" className="text-foreground text-sm mt-2 inline-block hover:text-foreground">
             Browse all products →
           </Link>
@@ -395,7 +395,7 @@ export default function CategoryPageClient() {
               <button
                 disabled={page <= 1}
                 onClick={() => updatePage(page - 1)}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
@@ -419,7 +419,7 @@ export default function CategoryPageClient() {
                     className={`h-10 min-w-[2.5rem] rounded-xl px-3 text-sm font-medium transition-colors ${
                       p === page
                         ? "bg-primary text-[#0f0f10] font-bold"
-                        : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                        : "border border-border bg-card text-muted-foreground hover:bg-muted"
                     }`}
                   >
                     {p}
@@ -430,7 +430,7 @@ export default function CategoryPageClient() {
               <button
                 disabled={page >= totalPages}
                 onClick={() => updatePage(page + 1)}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>

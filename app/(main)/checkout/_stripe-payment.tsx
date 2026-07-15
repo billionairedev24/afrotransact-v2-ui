@@ -161,7 +161,7 @@ function StripePaymentForm({
         <>
           <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
             <ShieldCheck className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-gray-600 leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               <span className="text-emerald-400 font-semibold">
                 Card data never touches our servers.
               </span>{" "}
@@ -171,8 +171,8 @@ function StripePaymentForm({
           </div>
 
           {savedCards.length > 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+            <div className="rounded-xl border border-border bg-card p-5 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 Pay with a saved card
               </p>
               {savedCards.map((card) => {
@@ -183,7 +183,7 @@ function StripePaymentForm({
                     className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors ${
                       checked
                         ? "border-brand-gold bg-brand-gold/10"
-                        : "border-gray-200 hover:bg-gray-50"
+                        : "border-border hover:bg-muted"
                     }`}
                   >
                     <input
@@ -194,15 +194,15 @@ function StripePaymentForm({
                       disabled={processing}
                       className="h-4 w-4 accent-brand-gold"
                     />
-                    <CreditCard className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-900 capitalize">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground capitalize">
                       {card.brand ?? "card"}
                     </span>
-                    <span className="text-sm text-gray-600 font-mono">
+                    <span className="text-sm text-muted-foreground font-mono">
                       •••• {card.last4 ?? "????"}
                     </span>
                     {card.expMonth && card.expYear && (
-                      <span className="ml-auto text-xs text-gray-500 tabular-nums">
+                      <span className="ml-auto text-xs text-muted-foreground tabular-nums">
                         {String(card.expMonth).padStart(2, "0")}/{String(card.expYear).slice(-2)}
                       </span>
                     )}
@@ -218,7 +218,7 @@ function StripePaymentForm({
                 className={`flex items-center gap-3 rounded-lg border border-dashed px-3 py-2.5 cursor-pointer transition-colors ${
                   selectedSavedCardId === null
                     ? "border-brand-gold bg-brand-gold/5"
-                    : "border-gray-300 hover:bg-gray-50"
+                    : "border-border hover:bg-muted"
                 }`}
               >
                 <input
@@ -229,17 +229,17 @@ function StripePaymentForm({
                   disabled={processing}
                   className="h-4 w-4 accent-brand-gold"
                 />
-                <Plus className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-900">Use a different card</span>
+                <Plus className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">Use a different card</span>
               </label>
             </div>
           )}
 
           {!usingSaved && (
-            <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Lock className="h-3.5 w-3.5 text-foreground" />
-                <span className="text-xs text-gray-500 font-medium">
+                <span className="text-xs text-muted-foreground font-medium">
                   Secured by Stripe
                 </span>
               </div>
@@ -256,7 +256,7 @@ function StripePaymentForm({
                   checked={saveCard}
                   onChange={(e) => onSaveCardChange(e.target.checked)}
                   disabled={processing}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                  className="h-4 w-4 rounded border-border text-brand-gold focus:ring-brand-gold accent-brand-gold"
                 />
                 <span className="text-sm text-foreground group-hover:text-brand-gold-hover transition-colors">
                   Remember this card for next time
@@ -274,8 +274,8 @@ function StripePaymentForm({
             </p>
           </div>
           {paymentMethods.length > 0 ? (
-            <div className="text-xs text-gray-700 space-y-1">
-              <p className="font-semibold text-gray-800">
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p className="font-semibold text-foreground">
                 Configured payment providers for this region:
               </p>
               <ul className="list-disc list-inside">
@@ -293,7 +293,7 @@ function StripePaymentForm({
               </p>
             </div>
           ) : (
-            <p className="text-xs text-gray-700">
+            <p className="text-xs text-muted-foreground">
               No payment methods are configured for this region yet. Please
               contact support or try again later.
             </p>
@@ -302,8 +302,8 @@ function StripePaymentForm({
       )}
 
       <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 flex justify-between text-sm">
-        <span className="text-gray-600 font-medium">Total to be charged</span>
-        <span className="text-gray-900 font-bold">
+        <span className="text-muted-foreground font-medium">Total to be charged</span>
+        <span className="text-foreground font-bold">
           {formatCents(totalCents)}
         </span>
       </div>
@@ -318,7 +318,7 @@ function StripePaymentForm({
         <button
           onClick={onBack}
           disabled={processing}
-          className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
+          className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
         >
           Back
         </button>
@@ -340,13 +340,13 @@ function StripePaymentForm({
         </button>
       </div>
 
-      <p className="text-center text-[11px] text-gray-600">
+      <p className="text-center text-[11px] text-muted-foreground">
         By completing payment you agree to our{" "}
-        <a href="/terms" className="underline hover:text-gray-500">
+        <a href="/terms" className="underline hover:text-muted-foreground">
           Terms of Service
         </a>{" "}
         and{" "}
-        <a href="/privacy" className="underline hover:text-gray-500">
+        <a href="/privacy" className="underline hover:text-muted-foreground">
           Privacy Policy
         </a>
         .

@@ -33,23 +33,23 @@ export default async function CategoriesPage() {
   return (
     <main className="min-h-[60vh] bg-[#eaeded]">
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-6 sm:py-10">
-        <div className="flex items-center gap-2 mb-1 text-sm text-gray-600">
-          <Link href="/" className="hover:text-gray-900 transition-colors">
+        <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
+          <Link href="/" className="hover:text-foreground transition-colors">
             Home
           </Link>
           <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-gray-900 font-medium">Categories</span>
+          <span className="text-foreground font-medium">Categories</span>
         </div>
 
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900">Shop by category</h1>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base">
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground">Shop by category</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Browse products from immigrant-owned stores near you
           </p>
         </div>
 
         {categories.length === 0 ? (
-          <p className="text-center text-gray-600 py-20 bg-white rounded-lg border border-gray-200">
+          <p className="text-center text-muted-foreground py-20 bg-card rounded-lg border border-border">
             No categories available yet.
           </p>
         ) : (

@@ -144,26 +144,26 @@ export function SellOnAfrotransactModal() {
       />
 
       {/* Card */}
-      <div className="relative w-full max-w-lg bg-white rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg bg-card rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Close */}
         <button
           type="button"
           onClick={() => dismiss(false)}
           aria-label="Close"
-          className="absolute top-3 right-3 z-10 p-1.5 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+          className="absolute top-3 right-3 z-10 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
 
         {/* Header strip */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 px-6 sm:px-8 pt-8 pb-6 border-b border-gray-100">
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 px-6 sm:px-8 pt-8 pb-6 border-b border-border">
           <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-orange-600 mb-1.5">
             For sellers
           </p>
-          <h2 id="sell-modal-title" className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight">
+          <h2 id="sell-modal-title" className="text-xl sm:text-2xl font-bold text-foreground leading-tight">
             Turn what you make into income
           </h2>
-          <p className="text-sm text-gray-700 mt-2">
+          <p className="text-sm text-muted-foreground mt-2">
             AfroTransact is a marketplace for authentic African and Black-owned products.
             Set up your storefront today and reach customers already shopping for what you sell.
           </p>
@@ -186,7 +186,7 @@ export function SellOnAfrotransactModal() {
               // Persist as permanently dismissed — the user is in the funnel.
               writePersisted({ ...readPersisted(), dontShowAgain: true })
             }}
-            className="flex items-center justify-center gap-2 w-full h-12 rounded-full bg-[#F5C518] hover:bg-[#E5B100] text-gray-900 font-bold text-[15px] transition-colors"
+            className="flex items-center justify-center gap-2 w-full h-12 rounded-full bg-[#F5C518] hover:bg-[#E5B100] text-foreground font-bold text-[15px] transition-colors"
           >
             Start selling
             <ArrowRight className="h-4 w-4" />
@@ -195,14 +195,14 @@ export function SellOnAfrotransactModal() {
             <Link
               href="/sell"
               onClick={() => dismiss(false)}
-              className="font-semibold text-gray-700 hover:text-orange-600"
+              className="font-semibold text-muted-foreground hover:text-orange-600"
             >
               Learn more
             </Link>
             <button
               type="button"
               onClick={() => dismiss(true)}
-              className="text-gray-500 hover:text-gray-900"
+              className="text-muted-foreground hover:text-foreground"
             >
               Don't show this again
             </button>
@@ -219,7 +219,7 @@ function Benefit({ text }: { text: string }) {
       <span className="shrink-0 mt-0.5 flex items-center justify-center h-5 w-5 rounded-full bg-emerald-100">
         <Check className="h-3 w-3 text-emerald-700" strokeWidth={3} />
       </span>
-      <span className="text-sm text-gray-800 leading-relaxed">{text}</span>
+      <span className="text-sm text-foreground leading-relaxed">{text}</span>
     </li>
   )
 }

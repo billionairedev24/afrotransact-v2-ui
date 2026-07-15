@@ -108,7 +108,7 @@ function statusBadge(status: string) {
   if (STATUS_GROUPS.delivered.has(s)) {
     return { label: "Delivered", Icon: CheckCircle, tone: "bg-green-50 text-green-700 border-green-200" }
   }
-  return { label: status, Icon: Clock, tone: "bg-gray-100 text-foreground border-gray-200" }
+  return { label: status, Icon: Clock, tone: "bg-muted text-foreground border-border" }
 }
 
 /* ──────────────────────── Formatters ────────────────────────────────── */
@@ -321,18 +321,18 @@ function OrderCard({ order }: { order: OrderDto }) {
   const reviewItem = reviewableItems.find((i) => i.id === reviewItemId) ?? reviewableItems[0]
 
   return (
-    <article className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+    <article className="overflow-hidden rounded-lg border border-border bg-card">
       {/* Compact gray header strip — Amazon-style.
           Order placed | Total | Ship to (left) · Order # + status (right). */}
-      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-xs">
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border bg-muted px-4 py-2.5 text-xs">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
           <div>
-            <p className="font-semibold uppercase tracking-wide text-[10px] text-gray-500">Order placed</p>
-            <p className="text-gray-900">{formatDate(placedDate)}</p>
+            <p className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground">Order placed</p>
+            <p className="text-foreground">{formatDate(placedDate)}</p>
           </div>
           <div>
-            <p className="font-semibold uppercase tracking-wide text-[10px] text-gray-500">Total</p>
-            <p className="text-gray-900 font-semibold tabular-nums">{formatCents(order.totalCents, order.currency)}</p>
+            <p className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground">Total</p>
+            <p className="text-foreground font-semibold tabular-nums">{formatCents(order.totalCents, order.currency)}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -340,7 +340,7 @@ function OrderCard({ order }: { order: OrderDto }) {
             <badge.Icon className="h-3 w-3" />
             {badge.label}
           </span>
-          <span className="text-[11px] text-gray-600 font-mono">#{order.orderNumber}</span>
+          <span className="text-[11px] text-muted-foreground font-mono">#{order.orderNumber}</span>
         </div>
       </header>
 
@@ -354,7 +354,7 @@ function OrderCard({ order }: { order: OrderDto }) {
         detailsHref={detailsHref}
       />
       {order.subOrders.length > 1 && (
-        <p className="border-t border-gray-100 bg-gray-50/60 px-4 py-2 text-[11px] text-gray-500">
+        <p className="border-t border-border bg-gray-50/60 px-4 py-2 text-[11px] text-muted-foreground">
           Shipped from {order.subOrders.length} stores
         </p>
       )}
@@ -401,18 +401,18 @@ function OrderBody({
   return (
     <div className="p-4 sm:p-5">
       {helper && (
-        <p className="mb-3 flex items-center gap-1.5 text-xs text-gray-600">
+        <p className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
           <helper.Icon className="h-3.5 w-3.5 text-brand-gold" />
           {helper.text}
         </p>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 sm:gap-6">
-        <ul className="flex flex-col divide-y divide-gray-100">
+        <ul className="flex flex-col divide-y divide-border">
           {visible.map((it, idx) => (
             <li key={it.id ?? idx} className="flex gap-3 py-3 first:pt-0 last:pb-0">
               <Link
                 href={it.slug ? `/product/${it.slug}` : detailsHref}
-                className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-gray-100 sm:h-20 sm:w-20"
+                className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted sm:h-20 sm:w-20"
               >
                 {it.imageUrl ? (
                   <Image
@@ -424,7 +424,7 @@ function OrderBody({
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
-                    <Package className="h-5 w-5 text-gray-300" />
+                    <Package className="h-5 w-5 text-muted-foreground" />
                   </div>
                 )}
               </Link>
@@ -436,9 +436,9 @@ function OrderBody({
                   {it.productTitle ?? "Item"}
                 </Link>
                 {it.variantName && (
-                  <p className="mt-0.5 text-xs text-gray-500">{it.variantName}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{it.variantName}</p>
                 )}
-                <p className="mt-0.5 text-xs text-gray-500">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   Qty {it.quantity}
                   {it.totalPriceCents != null && (
                     <span className="ml-2 tabular-nums">
@@ -543,14 +543,14 @@ function WriteReviewModal({
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+      <div className="bg-card rounded-xl border border-border shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card">
           <h3 className="text-lg font-bold text-foreground">Write a review</h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-gray-400 hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -560,13 +560,13 @@ function WriteReviewModal({
           {/* Item picker for multi-item orders */}
           {allItems.length > 1 && (
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Which item are you reviewing?
               </label>
               <select
                 value={activeItemId}
                 onChange={(e) => onPickItem(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
               >
                 {allItems.map((it) => (
                   <option key={it.id} value={it.id}>{it.productTitle || "Product"}</option>
@@ -576,14 +576,14 @@ function WriteReviewModal({
           )}
 
           {/* Item summary */}
-          <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-            <div className="h-12 w-12 shrink-0 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
+            <div className="h-12 w-12 shrink-0 rounded-md overflow-hidden bg-muted border border-border">
               {imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={imageUrl} alt="" className="h-full w-full object-cover" />
               ) : (
                 <div className="h-full w-full flex items-center justify-center">
-                  <Package className="h-5 w-5 text-gray-400" />
+                  <Package className="h-5 w-5 text-muted-foreground" />
                 </div>
               )}
             </div>
@@ -592,7 +592,7 @@ function WriteReviewModal({
 
           {/* Star rating */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-2">Your rating</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">Your rating</label>
             <div className="flex items-center gap-1" onMouseLeave={() => setHover(0)}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
@@ -606,47 +606,47 @@ function WriteReviewModal({
                   <Star
                     className={cn(
                       "h-7 w-7 transition-colors",
-                      (hover || rating) >= n ? "fill-brand-gold text-brand-gold" : "fill-gray-200 text-gray-200",
+                      (hover || rating) >= n ? "fill-brand-gold text-brand-gold" : "fill-muted text-gray-200",
                     )}
                   />
                 </button>
               ))}
               {rating > 0 && (
-                <span className="ml-2 text-sm text-gray-500">{rating} / 5</span>
+                <span className="ml-2 text-sm text-muted-foreground">{rating} / 5</span>
               )}
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Title <span className="text-gray-400">(optional)</span></label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Title <span className="text-muted-foreground">(optional)</span></label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={100}
               placeholder="Sums up your experience"
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Details <span className="text-gray-400">(optional)</span></label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Details <span className="text-muted-foreground">(optional)</span></label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               maxLength={2000}
               rows={4}
               placeholder="What did you like or dislike? How would you describe the quality?"
-              className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+              className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
             />
           </div>
         </form>
 
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 sticky bottom-0">
+        <div className="px-6 py-4 border-t border-border bg-muted flex justify-end gap-3 sticky bottom-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+            className="px-5 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
           >
             Cancel
           </button>
@@ -667,15 +667,15 @@ function WriteReviewModal({
 function OrderThumb({ items }: { items: OrderDto["subOrders"][number]["items"] }) {
   if (items.length === 0) {
     return (
-      <div className="h-24 w-24 shrink-0 rounded-lg bg-gray-100 flex items-center justify-center">
-        <Package className="h-6 w-6 text-gray-400" />
+      <div className="h-24 w-24 shrink-0 rounded-lg bg-muted flex items-center justify-center">
+        <Package className="h-6 w-6 text-muted-foreground" />
       </div>
     )
   }
   if (items.length === 1) {
     const item = items[0]
     return (
-      <div className="h-24 w-24 shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+      <div className="h-24 w-24 shrink-0 rounded-lg overflow-hidden bg-muted border border-border">
         {item.imageUrl ? (
           <Image
             src={item.imageUrl}
@@ -686,7 +686,7 @@ function OrderThumb({ items }: { items: OrderDto["subOrders"][number]["items"] }
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center">
-            <Package className="h-6 w-6 text-gray-400" />
+            <Package className="h-6 w-6 text-muted-foreground" />
           </div>
         )}
       </div>
@@ -696,25 +696,25 @@ function OrderThumb({ items }: { items: OrderDto["subOrders"][number]["items"] }
   const visible = items.slice(0, 3)
   const remaining = items.length - 3
   return (
-    <div className="h-24 w-24 shrink-0 rounded-lg overflow-hidden grid grid-cols-2 grid-rows-2 gap-0.5 bg-gray-200">
+    <div className="h-24 w-24 shrink-0 rounded-lg overflow-hidden grid grid-cols-2 grid-rows-2 gap-0.5 bg-muted">
       {visible.map((it) => (
-        <div key={it.id} className="bg-white">
+        <div key={it.id} className="bg-card">
           {it.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={it.imageUrl} alt="" className="h-full w-full object-cover" />
           ) : (
-            <div className="h-full w-full bg-gray-100 flex items-center justify-center">
-              <Package className="h-3.5 w-3.5 text-gray-400" />
+            <div className="h-full w-full bg-muted flex items-center justify-center">
+              <Package className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
           )}
         </div>
       ))}
       {remaining > 0 ? (
-        <div className="bg-gray-50 flex items-center justify-center text-xs font-semibold text-foreground">
+        <div className="bg-muted flex items-center justify-center text-xs font-semibold text-foreground">
           +{remaining}
         </div>
       ) : (
-        <div className="bg-white">
+        <div className="bg-card">
           {items[3]?.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={items[3].imageUrl} alt="" className="h-full w-full object-cover" />
@@ -867,24 +867,24 @@ export default function OrdersPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Your Orders</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {totalLabel ? `${totalLabel} placed` : "Manage and track your recent purchases."}
           </p>
         </div>
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by order ID or product…"
-            className="w-full rounded-lg border border-gray-200 bg-white pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 shadow-sm"
+            className="w-full rounded-lg border border-border bg-card pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 shadow-sm"
           />
         </div>
       </div>
 
       {/* Tabs — order-1 lines 147-153 */}
-      <nav className="flex overflow-x-auto -mb-px border-b border-gray-200 gap-2 sm:gap-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="flex overflow-x-auto -mb-px border-b border-border gap-2 sm:gap-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {([
           { key: "all",              label: "All Orders" },
           { key: "placed",           label: "Order Placed" },
@@ -903,12 +903,12 @@ export default function OrdersPage() {
                 "shrink-0 px-1 pb-3 pt-1 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
                 active
                   ? "text-foreground border-brand-gold"
-                  : "text-gray-500 border-transparent hover:text-foreground",
+                  : "text-muted-foreground border-transparent hover:text-foreground",
               )}
             >
               {label}
               {n > 0 && (
-                <span className={cn("ml-1.5 text-xs font-normal", active ? "text-gray-500" : "text-gray-400")}>
+                <span className={cn("ml-1.5 text-xs font-normal", active ? "text-muted-foreground" : "text-muted-foreground")}>
                   ({n})
                 </span>
               )}
@@ -933,14 +933,14 @@ export default function OrdersPage() {
           </button>
         </div>
       ) : visibleOrders.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-          <ReceiptText className="mx-auto h-14 w-14 text-gray-300" />
+        <div className="rounded-xl border border-border bg-card px-6 py-16 text-center">
+          <ReceiptText className="mx-auto h-14 w-14 text-muted-foreground" />
           <h2 className="text-lg font-semibold text-foreground mt-5">
             {searchActive
               ? `No orders match "${debouncedSearch}"`
               : orders.length === 0 ? "No orders yet" : "No matching orders"}
           </h2>
-          <p className="text-gray-500 text-sm mt-2 max-w-sm mx-auto">
+          <p className="text-muted-foreground text-sm mt-2 max-w-sm mx-auto">
             {searchActive
               ? "Try a different order number or product name."
               : orders.length === 0
@@ -971,15 +971,15 @@ export default function OrdersPage() {
           {hasMore ? (
             <div className="flex items-center justify-center py-6">
               {appending ? (
-                <span className="inline-flex items-center gap-2 text-sm text-gray-500">
+                <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading more orders…
                 </span>
               ) : (
-                <span className="text-xs text-gray-400">Scroll for more</span>
+                <span className="text-xs text-muted-foreground">Scroll for more</span>
               )}
             </div>
           ) : orders.length > 0 ? (
-            <p className="text-center text-xs text-gray-400 py-6">
+            <p className="text-center text-xs text-muted-foreground py-6">
               That&rsquo;s all your orders.
             </p>
           ) : null}

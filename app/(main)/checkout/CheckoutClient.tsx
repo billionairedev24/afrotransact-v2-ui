@@ -163,12 +163,12 @@ function ShippingRatePicker({
   return (
     <div className="mb-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-gray-900">Choose delivery speed</p>
+        <p className="text-sm font-semibold text-foreground">Choose delivery speed</p>
         <div className="flex items-center gap-3">
           {quoteData.packageCount && quoteData.packageCount > 1 && (
-            <span className="text-xs text-gray-500">{quoteData.packageCount} packages</span>
+            <span className="text-xs text-muted-foreground">{quoteData.packageCount} packages</span>
           )}
-          <div className="flex items-center rounded-full border border-gray-200 p-0.5 text-xs">
+          <div className="flex items-center rounded-full border border-border p-0.5 text-xs">
             {(["cheapest", "fastest"] as const).map((s) => (
               <button
                 key={s}
@@ -176,7 +176,7 @@ function ShippingRatePicker({
                 onClick={() => setSortBy(s)}
                 className={cn(
                   "px-3 py-1 rounded-full font-semibold capitalize transition-colors",
-                  sortBy === s ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100",
+                  sortBy === s ? "bg-gray-900 text-white" : "text-muted-foreground hover:bg-muted",
                 )}
               >
                 {s}
@@ -186,7 +186,7 @@ function ShippingRatePicker({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100 overflow-hidden">
+      <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
         {sorted.map((opt) => {
           const isSelected = selectedQuoteId === opt.quoteId
           const isCheapest = opt.quoteId === cheapestId
@@ -196,7 +196,7 @@ function ShippingRatePicker({
               key={opt.quoteId}
               className={cn(
                 "relative flex cursor-pointer items-center gap-4 px-4 py-3 transition-colors",
-                isSelected ? "bg-amber-50/50" : "hover:bg-gray-50",
+                isSelected ? "bg-amber-50/50" : "hover:bg-muted",
               )}
             >
               <input
@@ -208,13 +208,13 @@ function ShippingRatePicker({
               />
               <div className={cn(
                 "shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center",
-                isSelected ? "border-brand-gold" : "border-gray-300",
+                isSelected ? "border-brand-gold" : "border-border",
               )}>
                 {isSelected && <div className="h-2.5 w-2.5 rounded-full bg-brand-gold" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-gray-900 truncate">{opt.serviceName}</span>
+                  <span className="text-sm font-semibold text-foreground truncate">{opt.serviceName}</span>
                   {isCheapest && (
                     <span className="text-[10px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
                       Cheapest
@@ -226,7 +226,7 @@ function ShippingRatePicker({
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {opt.carrier}
                   {opt.estimatedDays != null && ` · ${opt.estimatedDays} day${opt.estimatedDays !== 1 ? "s" : ""}`}
                 </p>
@@ -235,7 +235,7 @@ function ShippingRatePicker({
                 {opt.amountCents === 0 ? (
                   <span className="text-sm font-bold text-green-600">FREE</span>
                 ) : (
-                  <span className="text-sm font-bold text-gray-900">{formatCents(opt.amountCents)}</span>
+                  <span className="text-sm font-bold text-foreground">{formatCents(opt.amountCents)}</span>
                 )}
               </div>
             </label>
@@ -427,13 +427,13 @@ function AddressStep({
 
   const field = (label: string, key: keyof typeof form, placeholder = "", inputMode?: "numeric" | "tel" | "email" | "text" | "decimal" | "search" | "url" | "none") => (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
+      <label className="block text-xs font-medium text-muted-foreground mb-1.5">{label}</label>
       <input
         value={form[key]}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
         placeholder={placeholder}
         inputMode={inputMode}
-        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+        className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
       />
     </div>
   )
@@ -441,11 +441,11 @@ function AddressStep({
   if (loading) {
     return (
       <div className="space-y-3">
-        <div className="h-5 w-48 bg-gray-100 rounded animate-pulse" />
+        <div className="h-5 w-48 bg-muted rounded animate-pulse" />
         {[1, 2].map((i) => (
-          <div key={i} className="h-[88px] rounded-2xl border border-gray-100 bg-gray-50 animate-pulse" />
+          <div key={i} className="h-[88px] rounded-2xl border border-border bg-muted animate-pulse" />
         ))}
-        <div className="h-12 rounded-xl bg-gray-100 animate-pulse" />
+        <div className="h-12 rounded-xl bg-muted animate-pulse" />
       </div>
     )
   }
@@ -469,13 +469,13 @@ function AddressStep({
         if (e.target === e.currentTarget) dismissNewAddress()
       }}
     >
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+      <div className="bg-card rounded-xl border border-border shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
           <h3 className="text-lg font-bold text-foreground">{editingId ? "Edit Address" : "Add New Address"}</h3>
           <button
             type="button"
             onClick={dismissNewAddress}
-            className="text-gray-400 hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -484,7 +484,7 @@ function AddressStep({
         <div className="p-6 space-y-4">
           {field("Full name", "fullName", "Jane Doe")}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Phone</label>
             <PhoneInput
               value={form.phone}
               onChange={(e164) => setForm({ ...form, phone: e164 })}
@@ -492,7 +492,7 @@ function AddressStep({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Street address</label>
             <AddressAutocomplete
               value={addressQuery}
               onChange={setAddressQuery}
@@ -517,7 +517,7 @@ function AddressStep({
           </div>
           {field("ZIP code", "zip", "ZIP", "numeric")}
           <label className="flex items-center gap-2.5 cursor-pointer group pt-1">
-            <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${makeDefault ? "bg-brand-gold border-brand-gold" : "border-gray-300 group-hover:border-brand-gold/50"}`}>
+            <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors ${makeDefault ? "bg-brand-gold border-brand-gold" : "border-border group-hover:border-brand-gold/50"}`}>
               {makeDefault && <Check className="h-3 w-3 text-brand-gold-foreground" strokeWidth={3} />}
             </div>
             <input
@@ -526,14 +526,14 @@ function AddressStep({
               onChange={(e) => setMakeDefault(e.target.checked)}
               className="sr-only"
             />
-            <span className="text-sm text-gray-600">Set as my default address</span>
+            <span className="text-sm text-muted-foreground">Set as my default address</span>
           </label>
         </div>
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 sticky bottom-0">
+        <div className="px-6 py-4 border-t border-border bg-muted flex justify-end gap-3 sticky bottom-0">
           <button
             type="button"
             onClick={dismissNewAddress}
-            className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+            className="px-6 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
           >
             Cancel
           </button>
@@ -555,7 +555,7 @@ function AddressStep({
     <div className="space-y-6">
       {newAddressModal}
 
-      <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100 overflow-hidden">
+      <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
         {savedAddresses.map((addr) => {
           const isSelected = selectedId === addr.id
           return (
@@ -563,7 +563,7 @@ function AddressStep({
               key={addr.id}
               className={cn(
                 "relative cursor-pointer flex items-start gap-4 px-4 py-4 transition-colors",
-                isSelected ? "bg-amber-50/40" : "bg-white hover:bg-gray-50",
+                isSelected ? "bg-amber-50/40" : "bg-card hover:bg-muted",
               )}
             >
               <input
@@ -575,7 +575,7 @@ function AddressStep({
               />
               <div className={cn(
                 "mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                isSelected ? "border-brand-gold" : "border-gray-300",
+                isSelected ? "border-brand-gold" : "border-border",
               )}>
                 {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-brand-gold" />}
               </div>
@@ -584,7 +584,7 @@ function AddressStep({
                   <p className="text-sm font-bold text-foreground">
                     {form.fullName || sessionName || "Saved address"}
                   </p>
-                  <p className="text-sm text-gray-600 truncate mt-0.5" title={[
+                  <p className="text-sm text-muted-foreground truncate mt-0.5" title={[
                     addr.line1,
                     addr.line2,
                     `${addr.city}, ${addr.state} ${addr.postalCode}`,
@@ -653,14 +653,14 @@ function AddressStep({
             <button
               type="button"
               onClick={() => setShipToOther(true)}
-              className="text-sm text-gray-500 hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Ship to someone else?
             </button>
           ) : (
-            <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
+            <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-900">Ship to someone else</p>
+                <p className="text-sm font-semibold text-foreground">Ship to someone else</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -670,7 +670,7 @@ function AddressStep({
                     setRecipientAddressQuery("")
                     setRecipientAddress({ line1: "", line2: "", city: "", state: "", zip: "" })
                   }}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-xs text-muted-foreground hover:text-muted-foreground transition-colors"
                 >
                   Cancel
                 </button>
@@ -678,32 +678,32 @@ function AddressStep({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Recipient name</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Recipient name</label>
                   <input
                     value={recipientName}
                     onChange={(e) => setRecipientName(e.target.value)}
                     placeholder="Jane Doe"
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+                    className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone (optional)</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Phone (optional)</label>
                   <input
                     value={recipientPhone}
                     onChange={(e) => setRecipientPhone(e.target.value)}
                     placeholder="+1 (555) 000-0000"
                     inputMode="tel"
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+                    className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-3 space-y-3">
-                <p className="text-xs font-medium text-gray-500">Delivery address</p>
-                <p className="text-xs text-gray-400 -mt-2">Leave blank to use the selected address above</p>
+              <div className="border-t border-border pt-3 space-y-3">
+                <p className="text-xs font-medium text-muted-foreground">Delivery address</p>
+                <p className="text-xs text-muted-foreground -mt-2">Leave blank to use the selected address above</p>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Street address</label>
                   <AddressAutocomplete
                     value={recipientAddressQuery}
                     onChange={setRecipientAddressQuery}
@@ -723,25 +723,25 @@ function AddressStep({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Apt, suite, unit (optional)</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Apt, suite, unit (optional)</label>
                   <input
                     value={recipientAddress.line2}
                     onChange={(e) => setRecipientAddress((prev) => ({ ...prev, line2: e.target.value }))}
                     placeholder="Apt 4B"
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+                    className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
                   {(["city", "state", "zip"] as const).map((k) => (
                     <div key={k}>
-                      <label className="block text-xs font-medium text-gray-500 mb-1.5 capitalize">{k === "zip" ? "ZIP" : k}</label>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5 capitalize">{k === "zip" ? "ZIP" : k}</label>
                       <input
                         value={recipientAddress[k]}
                         onChange={(e) => setRecipientAddress((prev) => ({ ...prev, [k]: e.target.value }))}
                         placeholder={k === "zip" ? "ZIP" : k === "state" ? "TX" : "City"}
                         inputMode={k === "zip" ? "numeric" : undefined}
-                        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
+                        className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/10 transition-all"
                       />
                     </div>
                   ))}
@@ -794,9 +794,9 @@ function DeliveryOptions({
   if (quotesLoading && !freeShippingApplies) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-gray-500">Fetching live carrier rates…</p>
+        <p className="text-sm text-muted-foreground">Fetching live carrier rates…</p>
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse" />
+          <div key={i} className="h-14 rounded-2xl bg-muted animate-pulse" />
         ))}
       </div>
     )
@@ -841,7 +841,7 @@ function DeliveryOptions({
         </p>
       )}
       <div
-        className="flex items-center justify-between p-4 border-2 border-brand-gold rounded-lg bg-white"
+        className="flex items-center justify-between p-4 border-2 border-brand-gold rounded-lg bg-card"
       >
         <div className="flex items-center gap-4 min-w-0">
           <div className="w-5 h-5 shrink-0 rounded-full border-2 border-brand-gold flex items-center justify-center">
@@ -849,7 +849,7 @@ function DeliveryOptions({
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">Standard delivery</p>
-            <p className="text-xs text-gray-500 mt-0.5">Delivery in 3-5 business days</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Delivery in 3-5 business days</p>
           </div>
         </div>
         <span className="text-sm font-semibold whitespace-nowrap ml-3">
@@ -911,34 +911,34 @@ function ReviewStep({
   const effectiveTotal = freeShippingApplies ? total : selectedQuote ? total + (selectedQuote.amountCents - shipping) : total
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-bold text-gray-900">Review Your Order</h2>
+      <h2 className="text-lg font-bold text-foreground">Review Your Order</h2>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4">
+      <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center gap-2 mb-2">
           <MapPin className="h-4 w-4 text-foreground" />
-          <span className="text-sm font-semibold text-gray-900">Delivering to</span>
+          <span className="text-sm font-semibold text-foreground">Delivering to</span>
         </div>
-        <p className="text-sm font-semibold text-gray-900">{address.fullName}</p>
-        <p className="text-sm text-gray-500 mt-0.5">{address.line1}{address.line2 ? `, ${address.line2}` : ""}</p>
-        <p className="text-sm text-gray-500">{address.city}, {address.state} {address.zip}</p>
+        <p className="text-sm font-semibold text-foreground">{address.fullName}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">{address.line1}{address.line2 ? `, ${address.line2}` : ""}</p>
+        <p className="text-sm text-muted-foreground">{address.city}, {address.state} {address.zip}</p>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
-        <p className="text-sm font-semibold text-gray-900 mb-3">Items</p>
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+        <p className="text-sm font-semibold text-foreground mb-3">Items</p>
         {items.map((item) => (
           <div key={item.variantId} className="flex justify-between text-sm">
-            <span className="text-gray-600 truncate max-w-[220px]">{item.title} x {item.quantity}</span>
-            <span className="text-gray-900 font-medium shrink-0 ml-2">{formatCents(item.price * item.quantity)}</span>
+            <span className="text-muted-foreground truncate max-w-[220px]">{item.title} x {item.quantity}</span>
+            <span className="text-foreground font-medium shrink-0 ml-2">{formatCents(item.price * item.quantity)}</span>
           </div>
         ))}
       </div>
 
       {/* Coupon code */}
       {couponsEnabled && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Tag className="h-4 w-4 text-foreground" />
-            <span className="text-sm font-semibold text-gray-900">Promo Code</span>
+            <span className="text-sm font-semibold text-foreground">Promo Code</span>
           </div>
           {couponResult ? (
             <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3">
@@ -955,7 +955,7 @@ function ReviewStep({
                 value={couponCode}
                 onChange={(e) => onCouponCodeChange(e.target.value.toUpperCase())}
                 placeholder="Enter promo code"
-                className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-primary/60 transition-colors"
+                className="min-w-0 flex-1 rounded-xl border border-border bg-muted px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 transition-colors"
               />
               <button
                 onClick={onApplyCoupon}
@@ -975,16 +975,16 @@ function ReviewStep({
         <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-foreground" />
-            <span className="text-sm font-semibold text-gray-900">Available Deals</span>
+            <span className="text-sm font-semibold text-foreground">Available Deals</span>
           </div>
           <div className="space-y-2">
             {availableDeals.map((deal: DealData) => {
               const isApplied = appliedDeal?.id === deal.id
               return (
-                <div key={deal.id} className="flex items-center justify-between rounded-xl border border-primary/20 bg-white p-3">
+                <div key={deal.id} className="flex items-center justify-between rounded-xl border border-primary/20 bg-card p-3">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{deal.title}</p>
-                    <p className="text-xs text-gray-500">{deal.description || "Limited time offer"}</p>
+                    <p className="text-sm font-semibold text-foreground">{deal.title}</p>
+                    <p className="text-xs text-muted-foreground">{deal.description || "Limited time offer"}</p>
                     <p className="text-xs font-bold text-foreground mt-0.5">
                       {deal.discountPercent ? `${deal.discountPercent}% OFF` : deal.dealPriceCents ? `Special Price: ${formatCents(deal.dealPriceCents)}` : "Special Deal"}
                     </p>
@@ -1006,7 +1006,7 @@ function ReviewStep({
         </div>
       )}
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
         {freeShippingApplies && (
           <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
             <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
@@ -1034,16 +1034,16 @@ function ReviewStep({
             <span className="text-xs text-amber-700">{quoteData.message}</span>
           </div>
         )}
-        <div className="flex justify-between text-sm text-gray-600">
+        <div className="flex justify-between text-sm text-muted-foreground">
           <span>Subtotal</span><span>{formatCents(subtotal)}</span>
         </div>
-        <div className="flex justify-between text-sm text-gray-600">
+        <div className="flex justify-between text-sm text-muted-foreground">
           <span>Shipping</span>
           <span className="text-green-400">
             {effectiveShipping === 0 ? "Free" : formatCents(effectiveShipping)}
           </span>
         </div>
-        <div className="flex justify-between text-sm text-gray-600">
+        <div className="flex justify-between text-sm text-muted-foreground">
           <span>Tax</span><span>{formatCents(tax)}</span>
         </div>
         {discount > 0 && (
@@ -1066,8 +1066,8 @@ function ReviewStep({
             </span>
           </div>
         )}
-        <div className="my-2 border-t border-gray-200" />
-        <div className="flex justify-between text-gray-900 font-bold">
+        <div className="my-2 border-t border-border" />
+        <div className="flex justify-between text-foreground font-bold">
           <span>Total</span><span>{formatCents(effectiveTotal)}</span>
         </div>
       </div>
@@ -1080,7 +1080,7 @@ function ReviewStep({
       )}
 
       <div className="flex gap-3">
-        <button onClick={onBack} disabled={placing} className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40">
+        <button onClick={onBack} disabled={placing} className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40">
           Back
         </button>
         <button
@@ -1115,15 +1115,15 @@ function SuccessStep({ orderNumber }: { orderNumber: string }) {
         <CheckCircle className="h-10 w-10 text-green-400" />
       </div>
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Order placed!</h2>
-        <p className="text-gray-500 text-sm mt-1">Order #{orderNumber}</p>
-        <p className="text-gray-500 text-sm mt-1">You&apos;ll receive a confirmation email shortly.</p>
+        <h2 className="text-xl font-bold text-foreground">Order placed!</h2>
+        <p className="text-muted-foreground text-sm mt-1">Order #{orderNumber}</p>
+        <p className="text-muted-foreground text-sm mt-1">You&apos;ll receive a confirmation email shortly.</p>
       </div>
       <div className="flex gap-3 mt-2">
         <button onClick={() => router.push("/orders")} className="rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors">
           View Orders
         </button>
-        <button onClick={() => router.push("/")} className="rounded-xl border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+        <button onClick={() => router.push("/")} className="rounded-xl border border-border px-6 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors">
           Continue Shopping
         </button>
       </div>
@@ -1607,9 +1607,9 @@ export default function CheckoutClient({
   if (!mounted) {
     return (
       <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-10">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
-          <div className="h-32 flex items-center justify-center text-gray-500">Loading…</div>
+        <h1 className="text-2xl font-bold text-foreground mb-6">Checkout</h1>
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="h-32 flex items-center justify-center text-muted-foreground">Loading…</div>
         </div>
       </main>
     )
@@ -1618,9 +1618,9 @@ export default function CheckoutClient({
   if (status === "unauthenticated") {
     return (
       <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-16 text-center">
-        <Lock className="mx-auto h-12 w-12 text-gray-500" />
-        <h1 className="text-xl font-bold text-gray-900 mt-4">Sign in to checkout</h1>
-        <p className="text-gray-500 text-sm mt-2">Your cart items will be preserved.</p>
+        <Lock className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h1 className="text-xl font-bold text-foreground mt-4">Sign in to checkout</h1>
+        <p className="text-muted-foreground text-sm mt-2">Your cart items will be preserved.</p>
         <button
           onClick={() => router.push("/auth/login?callbackUrl=/checkout")}
           className="mt-6 inline-block rounded-xl bg-primary px-6 py-3 text-sm font-bold text-brand-gold-foreground"
@@ -1684,7 +1684,7 @@ export default function CheckoutClient({
   if (step === "success") {
     return (
       <main className="mx-auto max-w-[680px] px-4 sm:px-6 py-10">
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <SuccessStep orderNumber={checkoutResult?.orderNumber ?? ""} />
         </div>
       </main>
@@ -1712,7 +1712,7 @@ export default function CheckoutClient({
       className={cn(
         "flex w-full items-center justify-between gap-3 px-6 py-5 text-left transition-colors",
         // Bottom border only when expanded — acts as the section separator.
-        open && "border-b border-gray-200",
+        open && "border-b border-border",
       )}
     >
       <h2 className="flex items-center gap-3 text-lg font-bold">
@@ -1721,7 +1721,7 @@ export default function CheckoutClient({
             "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors",
             active
               ? "bg-brand-gold text-brand-gold-foreground"
-              : "border-2 border-brand-gold/40 text-brand-gold/70 bg-white",
+              : "border-2 border-brand-gold/40 text-brand-gold/70 bg-card",
           )}
         >
           {n}
@@ -1738,17 +1738,17 @@ export default function CheckoutClient({
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted">
       {/* Sticky brand header — mockup image: back arrow + "Checkout" left,
           lock icon + "SECURE CHECKOUT" gold right. */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+      <header className="sticky top-0 z-40 bg-card border-b border-border">
         <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => router.back()}
               aria-label="Back"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-gray-100 transition-colors"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-muted transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
@@ -1774,14 +1774,14 @@ export default function CheckoutClient({
 
       {availableRegions.length > 1 && (
         <div className="mb-6 flex items-center gap-2">
-          <MapPin className="h-4 w-4 shrink-0 text-gray-500" />
+          <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
           <select
             value={region?.id ?? ""}
             onChange={(e) => {
               const r = availableRegions.find((r) => r.id === e.target.value)
               if (r) setRegion(r)
             }}
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-brand-gold/60 transition-colors"
+            className="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-brand-gold/60 transition-colors"
           >
             {availableRegions.map((r) => (
               <option key={r.id} value={r.id}>{r.name}</option>
@@ -1794,7 +1794,7 @@ export default function CheckoutClient({
         {/* Left column: section cards */}
         <div className="flex-1 w-full flex flex-col gap-6">
           {/* Step 1: Shipping Address */}
-          <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
             <SectionHeader
               n={1}
               title="Shipping address"
@@ -1814,19 +1814,19 @@ export default function CheckoutClient({
               ) : (
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100">
-                      <MapPin className="h-4 w-4 text-gray-500" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">{address.fullName}</p>
-                      <p className="text-sm text-gray-600 leading-snug mt-0.5">
+                      <p className="text-sm text-muted-foreground leading-snug mt-0.5">
                         {address.line1}{address.line2 ? `, ${address.line2}` : ""}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         {address.city}, {address.state} {address.zip}
                       </p>
                       {address.phone && (
-                        <p className="text-xs text-gray-500 mt-1">{address.phone}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{address.phone}</p>
                       )}
                     </div>
                   </div>
@@ -1834,7 +1834,7 @@ export default function CheckoutClient({
                     type="button"
                     onClick={() => { setStep("address"); resetCheckoutSession() }}
                     disabled={placing}
-                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
+                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
                   >
                     <Edit2 className="h-3.5 w-3.5" /> Edit
                   </button>
@@ -1847,7 +1847,7 @@ export default function CheckoutClient({
           {/* Step 2: Delivery Method & Review */}
           <section
             className={cn(
-              "overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-opacity",
+              "overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-opacity",
               step === "address" && "opacity-60",
             )}
           >
@@ -1861,7 +1861,7 @@ export default function CheckoutClient({
             {expanded.delivery && (
             <div className="p-6">
               {step === "address" ? (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Select a shipping address above to see delivery options.
                 </p>
               ) : step === "review" ? (
@@ -1878,14 +1878,14 @@ export default function CheckoutClient({
               ) : (
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100">
-                      <Truck className="h-4 w-4 text-gray-500" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">
                         {freeShippingApplies ? "Standard Shipping" : "Selected shipping method"}
                       </p>
-                      <p className="text-sm text-gray-500 mt-0.5">
+                      <p className="text-sm text-muted-foreground mt-0.5">
                         {displayShipping === 0 ? (
                           <span className="text-brand-gold font-medium">Free</span>
                         ) : (
@@ -1898,7 +1898,7 @@ export default function CheckoutClient({
                     type="button"
                     onClick={() => { setStep("review"); resetCheckoutSession() }}
                     disabled={placing}
-                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors disabled:opacity-40"
+                    className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
                   >
                     <Edit2 className="h-3.5 w-3.5" /> Edit
                   </button>
@@ -1911,7 +1911,7 @@ export default function CheckoutClient({
           {/* Step 3: Payment */}
           <section
             className={cn(
-              "overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-opacity",
+              "overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-opacity",
               step !== "payment" && !paymentComplete && "opacity-60",
             )}
           >
@@ -1942,7 +1942,7 @@ export default function CheckoutClient({
                   onSelectedSavedCardChangeAction={setSelectedSavedCardId}
                 />
               ) : (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Confirm your delivery method to enter payment details.
                 </p>
               )}
@@ -1953,7 +1953,7 @@ export default function CheckoutClient({
 
         {/* Right column: Order Summary — image-faithful */}
         <aside className="w-full lg:w-[380px] xl:w-[400px] shrink-0 lg:sticky lg:top-24 space-y-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-5">
+          <div className="rounded-xl border border-border bg-card p-6 space-y-5">
             {/* No right-side CTA. The inline advance buttons on each step
                 are the only forward actions:
                   - Address step: "Use this address" (in AddressStep)
@@ -1988,14 +1988,14 @@ export default function CheckoutClient({
               </div>
             </div>
 
-            <div className="border-t border-gray-200" />
+            <div className="border-t border-border" />
 
             <div className="flex items-end justify-between">
               <p className="text-lg font-bold text-red-700">Order total:</p>
               <p className="text-2xl font-bold text-red-700">{formatCents(displayTotal)}</p>
             </div>
 
-            <div className="border-t border-gray-200" />
+            <div className="border-t border-border" />
 
             {/* Gift card / promo code — collapsible link expands into the
                 existing coupon UI. Wired to existing handlers. */}
@@ -2006,7 +2006,7 @@ export default function CheckoutClient({
                   <button
                     type="button"
                     onClick={handleRemoveCoupon}
-                    className="text-xs font-medium text-gray-500 hover:text-foreground transition-colors"
+                    className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Remove
                   </button>
@@ -2036,7 +2036,7 @@ export default function CheckoutClient({
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value)}
                           placeholder="Enter code"
-                          className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+                          className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
                         />
                         <button
                           type="button"

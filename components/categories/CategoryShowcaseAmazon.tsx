@@ -204,8 +204,8 @@ function CategoryMegaCard({
   loading: boolean
 }) {
   return (
-    <article className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="text-base font-bold text-gray-900 leading-tight mb-3 line-clamp-2 min-h-[2.5rem]">
+    <article className="rounded-lg border border-border bg-card p-4 shadow-sm">
+      <h2 className="text-base font-bold text-foreground leading-tight mb-3 line-clamp-2 min-h-[2.5rem]">
         {parent.name}
       </h2>
 
@@ -213,8 +213,8 @@ function CategoryMegaCard({
         <div className="grid grid-cols-2 gap-2 mb-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="rounded-md overflow-hidden">
-              <div className="aspect-square bg-gray-100 animate-pulse" />
-              <div className="h-3 bg-gray-100 rounded mt-1.5 mx-1 animate-pulse" />
+              <div className="aspect-square bg-muted animate-pulse" />
+              <div className="h-3 bg-muted rounded mt-1.5 mx-1 animate-pulse" />
             </div>
           ))}
         </div>
@@ -248,7 +248,7 @@ function CategoryMegaCard({
               </Link>
               <Link
                 href={cell.categoryHref}
-                className="block text-[11px] sm:text-xs text-gray-800 mt-1.5 leading-snug line-clamp-2 px-0.5 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                className="block text-[11px] sm:text-xs text-foreground mt-1.5 leading-snug line-clamp-2 px-0.5 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                 aria-label={`Browse ${cell.label} category`}
               >
                 {cell.label}

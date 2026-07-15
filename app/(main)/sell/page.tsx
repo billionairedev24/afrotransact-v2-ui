@@ -28,37 +28,37 @@ export default function SellPage() {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-foreground uppercase tracking-wider mb-6">
             <Store className="h-3 w-3" /> For Sellers
           </span>
-          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-black text-foreground leading-tight">
             Sell to your community.<br />
             <span className="text-foreground">Earn on your terms.</span>
           </h1>
-          <p className="mt-4 text-lg text-gray-500 max-w-xl mx-auto">
+          <p className="mt-4 text-lg text-muted-foreground max-w-xl mx-auto">
             Join 200+ immigrant entrepreneurs already selling food, fashion, and cultural goods on AfroTransact.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 justify-center">
             <StartSellingLink variant="button">
               Start Selling — Free <ChevronRight className="h-4 w-4" />
             </StartSellingLink>
-            <Link href="/sell/pricing" className="inline-flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-gray-50 px-8 text-[15px] font-semibold text-gray-900 hover:bg-gray-100 transition-all">
+            <Link href="/sell/pricing" className="inline-flex h-12 items-center gap-2 rounded-xl border border-border bg-muted px-8 text-[15px] font-semibold text-foreground hover:bg-muted transition-all">
               View Pricing
             </Link>
           </div>
-          <p className="text-xs text-gray-600 mt-4">First month free · No credit card required · Cancel anytime</p>
+          <p className="text-xs text-muted-foreground mt-4">First month free · No credit card required · Cancel anytime</p>
         </div>
       </section>
 
       {/* Features */}
       <section className="px-4 sm:px-6 py-16 bg-card/40 border-y border-border">
         <div className="mx-auto max-w-5xl">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">Everything you need to succeed</h2>
+          <h2 className="text-2xl font-bold text-foreground text-center mb-10">Everything you need to succeed</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map((f) => (
               <div key={f.title} className="rounded-2xl border border-border bg-card p-5 space-y-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 border border-gray-200">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted border border-border">
                   {f.icon}
                 </div>
-                <h3 className="font-semibold text-gray-900">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
+                <h3 className="font-semibold text-foreground">{f.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -68,14 +68,14 @@ export default function SellPage() {
       {/* How it works */}
       <section className="px-4 sm:px-6 py-16">
         <div className="mx-auto max-w-4xl">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-10">How it works</h2>
+          <h2 className="text-2xl font-bold text-foreground text-center mb-10">How it works</h2>
           <div className="space-y-4">
             {STEPS.map((step) => (
               <div key={step.n} className="flex gap-5 rounded-2xl border border-border bg-card p-5">
                 <span className="text-3xl font-black text-foreground/30 leading-none shrink-0">{step.n}</span>
                 <div>
-                  <h3 className="font-bold text-gray-900">{step.title}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{step.desc}</p>
+                  <h3 className="font-bold text-foreground">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{step.desc}</p>
                 </div>
               </div>
             ))}
@@ -85,11 +85,11 @@ export default function SellPage() {
 
       {/* CTA */}
       <section className="border-t border-border bg-gradient-to-br from-primary/10 to-transparent px-4 sm:px-6 py-16 text-center">
-        <h2 className="text-3xl font-black text-gray-900 mb-4">Ready to start?</h2>
-        <p className="text-gray-500 max-w-md mx-auto mb-6 text-sm">Your first month is completely free. No hidden fees, no lock-in.</p>
+        <h2 className="text-3xl font-black text-foreground mb-4">Ready to start?</h2>
+        <p className="text-muted-foreground max-w-md mx-auto mb-6 text-sm">Your first month is completely free. No hidden fees, no lock-in.</p>
         <div className="flex flex-wrap gap-4 justify-center mb-6">
           {["No credit card to start", "Setup in under 10 min", "Cancel anytime"].map((t) => (
-            <span key={t} className="flex items-center gap-1.5 text-sm text-gray-600">
+            <span key={t} className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Check className="h-4 w-4 text-brand-green" />{t}
             </span>
           ))}
@@ -97,10 +97,10 @@ export default function SellPage() {
         <StartSellingLink variant="button">
           Create Seller Account <ChevronRight className="h-4 w-4" />
         </StartSellingLink>
-        <p className="text-xs text-gray-600 mt-4">
+        <p className="text-xs text-muted-foreground mt-4">
           By signing up you agree to our{" "}
-          <Link href="/seller-agreement" className="underline hover:text-gray-400">Seller Agreement</Link> and{" "}
-          <Link href="/terms" className="underline hover:text-gray-400">Terms of Service</Link>.
+          <Link href="/seller-agreement" className="underline hover:text-muted-foreground">Seller Agreement</Link> and{" "}
+          <Link href="/terms" className="underline hover:text-muted-foreground">Terms of Service</Link>.
         </p>
       </section>
     </main>

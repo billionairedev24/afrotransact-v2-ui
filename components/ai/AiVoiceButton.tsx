@@ -73,7 +73,7 @@ export function AiVoiceButton({
             <span
               key={i}
               ref={(el) => { if (el) barsRef.current[i] = el }}
-              className="block w-[3px] rounded-full bg-white origin-bottom transition-transform"
+              className="block w-[3px] rounded-full bg-card origin-bottom transition-transform"
               style={{
                 height: size === "sm" ? "10px" : "14px",
                 transform: "scaleY(0.3)",
