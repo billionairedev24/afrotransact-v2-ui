@@ -410,7 +410,7 @@ export function Header() {
                     value={query}
                     onChange={(e) => handleQueryChange(e.target.value)}
                     onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                    placeholder="Search products, stores, spices…"
+                    placeholder="Search products, brands, spices…"
                     className="flex-1 min-w-0 bg-card px-4 text-sm text-foreground placeholder:text-muted-foreground outline-none"
                     autoComplete="off"
                   />
@@ -908,7 +908,7 @@ export function Header() {
                 type="text"
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
-                placeholder="Search products, stores, spices…"
+                placeholder="Search products, brands, spices…"
                 className="flex-1 px-4 text-sm text-foreground placeholder:text-muted-foreground bg-card outline-none"
                 autoComplete="off"
               />

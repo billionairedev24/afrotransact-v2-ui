@@ -168,17 +168,14 @@ export function BrandProductCard({ item }: Props) {
           )}
         </div>
 
-        {(item.storeName || (typeof item.distanceMiles === "number" && item.distanceMiles >= 0)) && (
-          <div className="flex items-center justify-between gap-1">
-            {item.storeName ? (
-              <p className="text-xs text-muted-foreground truncate">{item.storeName}</p>
-            ) : <span />}
-            {typeof item.distanceMiles === "number" && item.distanceMiles >= 0 && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
-                <MapPin className="h-2.5 w-2.5" />
-                {item.distanceMiles.toFixed(1)} mi
-              </span>
-            )}
+        {/* Single-seller: no per-store label on cards. Distance (a delivery
+            signal, not a seller) is kept. */}
+        {typeof item.distanceMiles === "number" && item.distanceMiles >= 0 && (
+          <div className="flex items-center justify-end">
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
+              <MapPin className="h-2.5 w-2.5" />
+              {item.distanceMiles.toFixed(1)} mi
+            </span>
           </div>
         )}
 
@@ -259,10 +256,6 @@ export function BrandProductRow({ item }: { item: BrandProductCardItem }) {
             </span>
           )}
         </div>
-
-        {item.storeName && (
-          <p className="text-xs text-muted-foreground truncate">{item.storeName}</p>
-        )}
 
         <div className="mt-auto sm:max-w-[200px]">
           <CardAddToCart item={item} />

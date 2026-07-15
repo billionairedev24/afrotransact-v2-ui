@@ -292,25 +292,7 @@ function FilterSidebar({
         </button>
       )}
 
-      {/* Stores */}
-      {facets.stores.length > 0 && (
-        <FilterSection title="Stores">
-          <div className="space-y-1.5">
-            {facets.stores.map((f) => (
-              <button
-                key={f.key}
-                className="flex w-full items-center justify-between rounded-xl border border-border bg-muted px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
-              >
-                <span className="flex items-center gap-2">
-                  <Store className="h-3.5 w-3.5 text-muted-foreground" />
-                  {f.label || f.key}
-                </span>
-                <span className="text-xs text-muted-foreground">{f.count}</span>
-              </button>
-            ))}
-          </div>
-        </FilterSection>
-      )}
+      {/* Single-seller: no Stores facet — the catalog is first-party. */}
     </div>
   )
 }
