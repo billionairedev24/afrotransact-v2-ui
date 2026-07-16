@@ -75,6 +75,24 @@ const kcClientId = optionalEnv("KEYCLOAK_CLIENT_ID", "afrotransact-web")
 const kcClientSecret = requireEnv("KEYCLOAK_CLIENT_SECRET")
 const kcScope = "openid email profile offline_access"
 
+/**
+ * Keycloak-internal realm roles that carry no application meaning. They bloat
+ * the session JWT (contributing to the >4KB cookie chunking that makes
+ * getServerSession() return null and bounce logged-in users to sign-in), and
+ * no app guard ever checks them. Strip them so token.roles holds only the
+ * actual application roles (admin/seller/buyer/…).
+ */
+const KEYCLOAK_INTERNAL_ROLES = new Set(["offline_access", "uma_authorization"])
+
+function appRolesOnly(roles: string[] | undefined | null): string[] {
+  if (!roles) return []
+  return roles.filter(
+    (r) => typeof r === "string" && r.length > 0 &&
+      !KEYCLOAK_INTERNAL_ROLES.has(r) &&
+      !r.startsWith("default-roles-"),
+  )
+}
+
 // Cross-subdomain SSO: the session cookie must be scoped to the parent
 // domain (`.afrotransact.com`) so it is sent to sibling apps such as
 // www.inventory.afrotransact.com. Prod runs over HTTPS and uses the
@@ -253,7 +271,9 @@ export const authOptions: NextAuthOptions = {
         const claims = profile as Record<string, unknown> | undefined
         const flatRoles = claims?.realm_roles as string[] | undefined
         const nestedRoles = (claims?.realm_access as { roles?: string[] })?.roles
-        token.roles = flatRoles ?? nestedRoles ?? []
+        // Only the actual application roles — strip Keycloak-internal roles so
+        // the session cookie stays small enough not to chunk.
+        token.roles = appRolesOnly(flatRoles ?? nestedRoles)
 
         token.registrationRole = claims?.registration_role as string | undefined
 
@@ -394,7 +414,8 @@ async function refreshAccessToken(token: {
       )
       const flatRoles = payload.realm_roles as string[] | undefined
       const nestedRoles = (payload.realm_access as { roles?: string[] })?.roles
-      roles = flatRoles ?? nestedRoles ?? roles
+      const fresh = flatRoles ?? nestedRoles
+      if (fresh) roles = appRolesOnly(fresh)
       if (payload.registration_role) {
         registrationRole = payload.registration_role as string
       }
