@@ -32,6 +32,7 @@ import {
   BoxesIcon,
   RefreshCw,
   AlertTriangle,
+  Trash2,
 } from "lucide-react"
 import { revalidateStorefronts } from "@/lib/revalidate-actions"
 import {
@@ -39,6 +40,7 @@ import {
   approveProduct,
   rejectProduct,
   triggerSearchReindex,
+  triggerSearchPurge,
   ApiError,
   type Product,
   type Page as ApiPage,
@@ -111,6 +113,8 @@ export default function AdminProductsPage() {
 
   const [reindexModal, setReindexModal] = useState(false)
   const [reindexLoading, setReindexLoading] = useState(false)
+  const [purgeModal, setPurgeModal] = useState(false)
+  const [purgeLoading, setPurgeLoading] = useState(false)
 
   async function handleReindex() {
     const token = await getAccessToken()
@@ -125,6 +129,22 @@ export default function AdminProductsPage() {
       toast.error("Reindex failed")
     } finally {
       setReindexLoading(false)
+    }
+  }
+
+  async function handlePurge() {
+    const token = await getAccessToken()
+    if (!token) return
+    setPurgeLoading(true)
+    try {
+      const res = await triggerSearchPurge(token)
+      toast.success(`Purge complete — ${res.deleted ?? 0} products removed from Elasticsearch. Run Sync to rebuild.`)
+      setPurgeModal(false)
+    } catch (e) {
+      logError(e, "purging search index")
+      toast.error("Purge failed")
+    } finally {
+      setPurgeLoading(false)
     }
   }
 
@@ -412,6 +432,15 @@ export default function AdminProductsPage() {
             Sync to Search
           </button>
 
+          <button
+            onClick={() => setPurgeModal(true)}
+            title="Delete all products from Elasticsearch (keeps the index)"
+            className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+            Purge Search
+          </button>
+
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPageIndex(0) }}
@@ -546,6 +575,56 @@ export default function AdminProductsPage() {
               <>
                 <RefreshCw className="h-3.5 w-3.5" />
                 Start Sync
+              </>
+            )}
+          </button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* ── Elasticsearch Purge Confirmation Dialog ────────────────── */}
+      <Dialog open={purgeModal} onClose={() => !purgeLoading && setPurgeModal(false)}>
+        <DialogHeader onClose={() => !purgeLoading && setPurgeModal(false)}>
+          Purge Elasticsearch
+        </DialogHeader>
+        <DialogBody>
+          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 mb-4">
+            <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-red-800">
+              <p className="font-semibold mb-1">This deletes every product from search</p>
+              <p className="text-red-700">
+                All product documents are removed from Elasticsearch (the index and its
+                analyzers are kept). <strong>Search will return no results</strong> until you
+                run <strong>Sync to Search</strong> to rebuild from the catalog.
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500">
+            Use this to clear a corrupt or stale index before a fresh sync. This does not touch
+            the product catalog database — only the search index.
+          </p>
+        </DialogBody>
+        <DialogFooter>
+          <button
+            onClick={() => setPurgeModal(false)}
+            disabled={purgeLoading}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handlePurge}
+            disabled={purgeLoading}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {purgeLoading ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Purging…
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-3.5 w-3.5" />
+                Purge Index
               </>
             )}
           </button>

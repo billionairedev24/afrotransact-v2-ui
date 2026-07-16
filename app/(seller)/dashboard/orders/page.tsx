@@ -350,7 +350,14 @@ function OrderDetailModal({
   // is agnostic to what the URL is later attached to.
   const { startUpload } = useUploadThing("productImage", {
     onClientUploadComplete: async (res) => {
-      const url = res?.[0]?.url
+      // uploadthing v7 dropped the top-level `url` field (now `ufsUrl`, echoed
+      // as serverData.url by our router). Reading `.url` alone returned
+      // undefined, silently early-returning before attachDeliveryProof — the
+      // proof looked uploaded but never persisted. Match the product uploads.
+      const first = res?.[0]
+      const url = (first?.serverData as Record<string, string> | undefined)?.url
+        || (first as unknown as Record<string, string> | undefined)?.ufsUrl
+        || first?.url
       if (!url || !subOrderId) { setUploadingProof(false); return }
       try {
         const token = await getAccessToken()

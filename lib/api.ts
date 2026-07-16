@@ -1843,10 +1843,13 @@ export function toggleAdminCoupon(token: string, id: string) {
   return api<CouponData>(`/api/v1/admin/coupons/${id}/toggle`, { method: "POST", token })
 }
 
-export function validateCoupon(token: string, code: string, subtotalCents: number, regionId?: string, shippingCents?: number) {
+export function validateCoupon(token: string, code: string, subtotalCents: number, regionId?: string, shippingCents?: number, zoneId?: string) {
   return api<ValidateCouponResponse>("/api/v1/coupons/validate", {
     method: "POST",
-    body: { code, subtotalCents, shippingCents, regionId },
+    // Backend prefers zoneId (coupons_enabled lives on service zones); regionId
+    // is a legacy fallback. Send both when we have them — the backend picks
+    // zoneId first. Mirrors the shipping-quote path.
+    body: { code, subtotalCents, shippingCents, regionId, zoneId },
     token,
   })
 }
@@ -3079,6 +3082,10 @@ export interface DealData {
       fan-out fetch. */
   avgRating?: number | null
   reviewCount?: number | null
+  /** Whether the linked product has any sellable stock. Populated by
+      enrichWithProduct so deal cards can gate Add-to-Cart. Undefined when the
+      deal has no linked product — treat undefined as out of stock. */
+  inStock?: boolean | null
 }
 
 export interface PlatformDealDto {
@@ -3214,6 +3221,13 @@ export function getPublicPlatformDeals(audience?: string, opts?: { revalidate?: 
  */
 export function triggerSearchReindex(token: string) {
   return api<{ message: string; indexed: number }>("/api/v1/search/reindex", {
+    method: "POST",
+    token,
+  })
+}
+
+export function triggerSearchPurge(token: string) {
+  return api<{ message: string; deleted: number }>("/api/v1/search/purge", {
     method: "POST",
     token,
   })

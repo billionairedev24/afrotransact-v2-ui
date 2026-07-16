@@ -247,7 +247,15 @@ function AdminOrderDetailSheet({
 
   const { startUpload: startProofUpload } = useUploadThing("productImage", {
     onClientUploadComplete: async (res) => {
-      const url = res?.[0]?.url
+      // uploadthing v7 dropped the top-level `url` field; the URL now lives on
+      // `ufsUrl` (and our router echoes it as serverData.url). Reading `.url`
+      // alone returned undefined, so this handler silently early-returned and
+      // never called attachDeliveryProof — the proof appeared to upload but was
+      // never saved. Match the extraction used by the product-image uploads.
+      const first = res?.[0]
+      const url = (first?.serverData as Record<string, string> | undefined)?.url
+        || (first as unknown as Record<string, string> | undefined)?.ufsUrl
+        || first?.url
       const subId = uploadingProofFor
       if (!url || !subId) { setUploadingProofFor(null); return }
       try {

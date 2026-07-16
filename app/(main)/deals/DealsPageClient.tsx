@@ -62,7 +62,9 @@ function dealToCardItem(deal: DealData): BrandProductCardItem | null {
     price,
     originalPrice: original,
     discountPercent: deal.discountPercent ?? null,
-    inStock: true,
+    // Real stock from the deal's linked product (enrichWithProduct). Fail safe:
+    // unknown/absent → out of stock, never a live button on a sold-out item.
+    inStock: deal.inStock ?? false,
     endsAt: deal.endAt,
   }
 }
