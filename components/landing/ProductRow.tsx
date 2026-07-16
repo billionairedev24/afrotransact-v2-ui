@@ -145,15 +145,25 @@ function MiniProductCard({ product }: { product: SearchResult }) {
 
         <p className="text-[11px] text-muted-foreground">Get it by Tomorrow</p>
 
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={adding || !product.in_stock}
-          className="mt-2 w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
-        >
-          {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-          {adding ? "Adding…" : "Add to Cart"}
-        </button>
+        {!product.in_stock ? (
+          <button
+            type="button"
+            disabled
+            className="mt-2 w-full bg-muted text-muted-foreground py-1.5 rounded-full text-xs font-bold text-center cursor-not-allowed uppercase tracking-wider"
+          >
+            Out of Stock
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={adding}
+            className="mt-2 w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+          >
+            {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+            {adding ? "Adding…" : "Add to Cart"}
+          </button>
+        )}
       </div>
     </div>
   )

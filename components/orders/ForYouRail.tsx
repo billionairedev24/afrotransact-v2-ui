@@ -140,13 +140,23 @@ export function ForYouRail() {
                 <div className="text-lg font-bold text-foreground">
                   ${((p.currentPriceCents ?? 0) / 100).toFixed(2)}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleAddToCart(p)}
-                  className="mt-2 w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover transition-colors"
-                >
-                  {isBuyAgain ? "Buy Again" : "Add to cart"}
-                </button>
+                {p.inStock === false ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-2 w-full bg-muted text-muted-foreground py-1.5 rounded-full text-xs font-bold text-center cursor-not-allowed uppercase tracking-wider"
+                  >
+                    Out of Stock
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleAddToCart(p)}
+                    className="mt-2 w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover transition-colors"
+                  >
+                    {isBuyAgain ? "Buy Again" : "Add to cart"}
+                  </button>
+                )}
               </div>
             )
           })}
