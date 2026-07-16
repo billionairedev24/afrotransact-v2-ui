@@ -570,9 +570,13 @@ export default function CheckoutClientV2({
   const globalShippingOn = quotes?.realtimeEnabled ?? Boolean(effectiveFeatures["realtime_shipping_enabled"])
   const shipNoun = globalShippingOn ? "Shipping" : "Delivery"
   const shipNounLower = globalShippingOn ? "shipping" : "delivery"
-  // Coupons are a platform-wide capability, not a per-location one. Admin
-  // creates coupons; buyers can apply them anywhere. No zone/region gate.
-  const couponsEnabled = true
+  // Coupons are zone-gated on the backend (`coupons_enabled` feature flag
+  // resolved from the buyer's region → zone tree). Hide the input entirely
+  // when the flag is off so buyers don't waste time entering a code just to
+  // get "Coupons are not available in your region" back. Default to `true`
+  // when the flag is missing so a broken feature fetch doesn't hide a
+  // working coupon system.
+  const couponsEnabled = effectiveFeatures["coupons_enabled"] !== false
   const [couponCode, setCouponCode] = useState("")
   const [couponInput, setCouponInput] = useState("")
   const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
@@ -589,8 +593,10 @@ export default function CheckoutClientV2({
 
   const runValidateCoupon = useCallback(async (code: string): Promise<ValidateCouponResponse | null> => {
     if (!authToken) return null
-    return await validateCoupon(authToken, code, subtotal, region?.id)
-  }, [authToken, subtotal, region?.id])
+    // Pass shippingCents so a shipping-target coupon can compute its discount
+    // against the actual quoted shipping fee.
+    return await validateCoupon(authToken, code, subtotal, region?.id, shippingCents)
+  }, [authToken, subtotal, region?.id, shippingCents])
 
   async function handleApplyCoupon() {
     if (!couponsEnabled || !couponInput.trim() || !authToken) return
@@ -644,9 +650,17 @@ export default function CheckoutClientV2({
   // ─── totals ────────────────────────────────────────────────────────
   const taxRate = region?.taxRate ?? 0.0825
   const discountCents = couponResult?.discountCents ?? 0
-  const taxableSubtotal = Math.max(0, subtotal - discountCents)
+  const couponTargetsShipping = couponResult?.discountTarget === "shipping"
+  // Shipping-target coupons reduce shipping (never below 0); items-target
+  // coupons reduce the taxable subtotal. Backend applies the same split.
+  const itemsDiscountCents = couponTargetsShipping ? 0 : discountCents
+  const shippingDiscountCents = couponTargetsShipping
+    ? Math.min(discountCents, shippingCents)
+    : 0
+  const taxableSubtotal = Math.max(0, subtotal - itemsDiscountCents)
   const tax = Math.round(taxableSubtotal * taxRate)
-  const total = taxableSubtotal + tax + shippingCents
+  const effectiveShippingCents = Math.max(0, shippingCents - shippingDiscountCents)
+  const total = taxableSubtotal + tax + effectiveShippingCents
 
   const stripeFeatureEnabled = features.stripeEnabled()
   const stripeRow = paymentMethods.find((m) => m.provider.toLowerCase() === "stripe")
@@ -788,8 +802,13 @@ export default function CheckoutClientV2({
     // hydrate (cartReady) before treating an empty cart as real — otherwise a
     // checkout refresh redirects to /cart on the transient empty state.
     if (!mounted || !cartReady) return
+    // Also bail while a payment is in-flight: handlePaymentComplete() calls
+    // clearCart() *before* router.push('/checkout/complete'), and without this
+    // guard the resulting empty-cart transition races the push and lands the
+    // buyer on /cart instead of the acknowledgement page.
+    if (paying || placingRef.current) return
     if (cartItems.length === 0) router.replace("/cart")
-  }, [mounted, cartReady, cartItems.length, router])
+  }, [mounted, cartReady, cartItems.length, router, paying])
 
   if (!mounted) {
     return (
@@ -1147,7 +1166,7 @@ export default function CheckoutClientV2({
                 <dt className="text-gray-600">Items ({cartItems.length})</dt>
                 <dd className="text-gray-900 tabular-nums">{formatCents(subtotal)}</dd>
               </div>
-              {couponResult && discountCents > 0 && (
+              {couponResult && discountCents > 0 && !couponTargetsShipping && (
                 <div className="flex justify-between italic text-green-700">
                   <dt>Discount ({couponResult.code})</dt>
                   <dd className="tabular-nums">-{formatCents(discountCents)}</dd>
@@ -1159,12 +1178,26 @@ export default function CheckoutClientV2({
                   {/* The badge must reflect what we actually charge — never
                       contradict the line total. Show "free" when the buyer has
                       met the free-shipping threshold or the quote is genuinely $0. */}
-                  {shippingCents === 0 && (freeShippingApplies || selectedQuote) && (
+                  {effectiveShippingCents === 0 && (freeShippingApplies || selectedQuote) && !couponTargetsShipping && (
                     <span className="ml-2 text-[11px] font-semibold text-green-700">Free {shipNounLower} applied</span>
+                  )}
+                  {couponTargetsShipping && shippingDiscountCents > 0 && (
+                    <span className="ml-2 text-[11px] font-semibold text-green-700">
+                      {effectiveShippingCents === 0 ? "Waived" : "Discounted"} by {couponResult?.code}
+                    </span>
                   )}
                 </dt>
                 <dd className="text-gray-900 tabular-nums">
-                  {freeShippingApplies || selectedQuote ? fmtShip(shippingCents) : "—"}
+                  {freeShippingApplies || selectedQuote ? (
+                    couponTargetsShipping && shippingDiscountCents > 0 ? (
+                      <>
+                        <span className="text-gray-400 line-through mr-1">{fmtShip(shippingCents)}</span>
+                        {fmtShip(effectiveShippingCents)}
+                      </>
+                    ) : (
+                      fmtShip(shippingCents)
+                    )
+                  ) : "—"}
                 </dd>
               </div>
               <div className="flex justify-between">
