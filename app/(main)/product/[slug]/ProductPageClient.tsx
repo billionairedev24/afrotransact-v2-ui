@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils"
 import ProductReviews from "@/components/reviews/ProductReviews"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 import { useCartStore } from "@/stores/cart-store"
+import { useBuyerLocation } from "@/stores/buyer-location"
 import { useWishlistStore } from "@/stores/wishlist-store"
 import { useWishlist } from "@/hooks/use-wishlist"
 import { getProductReviews } from "@/lib/api"
@@ -67,6 +68,7 @@ export default function ProductPageClient() {
   const params = useParams()
   const router = useRouter()
   const slug = params.slug as string
+  const resolvedZone = useBuyerLocation((s) => s.resolvedZone)
 
   const [product, setProduct] = useState<Product | null>(null)
   const [storeName, setStoreName] = useState<string>("")
@@ -168,6 +170,17 @@ export default function ProductPageClient() {
 
   const variant = selectedVariant ?? product?.variants[0] ?? null
   const inStock = variant ? variant.stockQuantity > 0 : false
+
+  // Honest delivery line: only claim "Free" when the buyer's resolved zone is
+  // actually always-free (freeShippingThresholdCents === -1). House products
+  // price by the resolved service zone; a flat-rate zone (e.g. Georgetown at
+  // $7.99) is NOT free.
+  const deliveryZone = product && isHouseStore(product.storeId) ? resolvedZone?.effectiveSettings : undefined
+  const deliveryAlwaysFree = deliveryZone?.freeShippingThresholdCents === -1
+  const deliveryFlatCents =
+    deliveryZone?.shippingMode === "flat" && deliveryZone.flatShippingCents && deliveryZone.flatShippingCents > 0
+      ? deliveryZone.flatShippingCents
+      : null
 
   const cartItem = variant ? items.find((i) => i.variantId === variant.id) : null
   const isInCart = !!cartItem
@@ -565,7 +578,15 @@ export default function ProductPageClient() {
 
             <p className="text-sm text-gray-600 flex items-start gap-1.5">
               <Truck className="h-4 w-4 mt-0.5 shrink-0 text-gray-500" />
-              <span>FREE delivery <span className="font-bold text-foreground">in 3-5 business days</span></span>
+              <span>
+                {deliveryAlwaysFree ? (
+                  <><span className="font-bold text-foreground">Free delivery</span> to your area</>
+                ) : deliveryFlatCents != null ? (
+                  <><span className="font-bold text-foreground">${(deliveryFlatCents / 100).toFixed(2)} delivery</span> to your area</>
+                ) : (
+                  <>Delivery <span className="font-bold text-foreground">calculated at checkout</span></>
+                )}
+              </span>
             </p>
 
             <p className={cn("text-lg font-bold", stockBadge.tone)}>
