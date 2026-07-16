@@ -2,27 +2,34 @@ import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 import { kcIssuerPublic } from "@/lib/keycloak-issuers"
 
+// In production the session cookie is set with Domain=.afrotransact.com
+// (lib/auth.ts, to share auth across subdomains). A cookie set with a Domain
+// is a DISTINCT cookie from a host-only one of the same name, and can only be
+// deleted by an expiring Set-Cookie carrying the SAME Domain. Keep this in sync
+// with lib/auth.ts.
+const useSecureCookies = (process.env.NEXTAUTH_URL ?? "").startsWith("https://")
+const cookieDomain = useSecureCookies ? ".afrotransact.com" : undefined
+
+/** Append a raw expiring Set-Cookie so we can emit multiple deletions for the
+ *  same cookie name (host-only AND domain-scoped) — the NextResponse cookie
+ *  jar is keyed by name and would otherwise overwrite. */
+function appendExpiredCookie(response: NextResponse, name: string, domain?: string) {
+  // __Host- cookies are host-only by spec and MUST NOT carry a Domain.
+  if (domain && name.startsWith("__Host-")) return
+  const parts = [`${name}=`, "Path=/", "Max-Age=0", "Expires=Thu, 01 Jan 1970 00:00:00 GMT", "SameSite=Lax"]
+  if (domain) parts.push(`Domain=${domain}`)
+  if (useSecureCookies) parts.push("Secure")
+  parts.push("HttpOnly")
+  response.headers.append("Set-Cookie", parts.join("; "))
+}
+
 /**
- * Clears all NextAuth-related cookies on the response.
+ * Clears all NextAuth-related cookies on the response — both host-only AND the
+ * domain-scoped (.afrotransact.com) variant, since the session cookie is set
+ * with a Domain in production.
  */
 function clearNextAuthCookies(req: NextRequest, response: NextResponse) {
-  for (const cookie of req.cookies.getAll()) {
-    if (
-      cookie.name.startsWith("next-auth") ||
-      cookie.name.startsWith("__Secure-next-auth") ||
-      cookie.name.startsWith("__Host-next-auth")
-    ) {
-      response.cookies.set(cookie.name, "", {
-        maxAge: 0,
-        path: "/",
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-      })
-    }
-  }
-
-  const KNOWN_COOKIES = [
+  const names = new Set<string>([
     "next-auth.session-token",
     "next-auth.csrf-token",
     "next-auth.callback-url",
@@ -30,13 +37,18 @@ function clearNextAuthCookies(req: NextRequest, response: NextResponse) {
     "__Secure-next-auth.csrf-token",
     "__Secure-next-auth.callback-url",
     "__Host-next-auth.csrf-token",
-  ]
-  for (const name of KNOWN_COOKIES) {
-    response.cookies.set(name, "", {
-      maxAge: 0,
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
-    })
+  ])
+  for (const cookie of req.cookies.getAll()) {
+    if (cookie.name.startsWith("next-auth") || cookie.name.startsWith("__Secure-next-auth") || cookie.name.startsWith("__Host-next-auth")) {
+      names.add(cookie.name)
+    }
+  }
+  for (const name of names) {
+    // Host-only deletion (covers dev + any host-scoped cookie).
+    appendExpiredCookie(response, name)
+    // Domain-scoped deletion — this is what actually removes the live
+    // production session cookie set with Domain=.afrotransact.com.
+    if (cookieDomain) appendExpiredCookie(response, name, cookieDomain)
   }
 }
 

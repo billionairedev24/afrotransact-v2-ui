@@ -106,7 +106,11 @@ const config: Config = {
         chart5: 'hsl(var(--chart-5))',
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        // Inter is the primary UI face — loaded via next/font as --font-sans in
+        // app/layout.tsx. It's also named explicitly here so the stack still
+        // resolves to Inter if a client already has it, with a graceful system
+        // fallback after.
+        sans: ['var(--font-sans)', 'Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
         display: ['var(--font-display)', 'Georgia', 'Times New Roman', 'serif'],
       },
       maxWidth: {
