@@ -359,12 +359,17 @@ export default function CheckoutClientV2({
     if (!confirm("Delete this address?")) return
     try {
       await deleteAddress(authToken, id)
-      const next = addresses.filter((a) => a.id !== id)
-      setAddresses(next)
-      if (selectedAddressId === id) setSelectedAddressId(next[0]?.id ?? null)
     } catch (e) {
-      toast.error(friendlyMessage(e, "Could not delete that address."))
+      // A 404 means the address is already gone server-side (e.g. a stale
+      // list) — treat it as deleted and drop it from the UI anyway.
+      if (!(e instanceof ApiError && e.status === 404)) {
+        toast.error(friendlyMessage(e, "Could not delete that address."))
+        return
+      }
     }
+    const next = addresses.filter((a) => a.id !== id)
+    setAddresses(next)
+    if (selectedAddressId === id) setSelectedAddressId(next[0]?.id ?? null)
   }
 
   // Push the client cart to the server so cart-dependent endpoints (shipping
@@ -435,7 +440,10 @@ export default function CheckoutClientV2({
       }
     })()
     return () => { cancelled = true }
-  }, [authToken, region?.id, selectedAddress?.id])  // eslint-disable-line react-hooks/exhaustive-deps
+    // activeZoneId is included so the quote RE-FIRES once the destination zone
+    // finishes resolving — otherwise a just-changed address quotes against the
+    // previous address's zone and the shipping cost never updates.
+  }, [authToken, region?.id, selectedAddress?.id, activeZoneId])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const flatQuotes: FlatQuote[] = useMemo(() => {
     const out: FlatQuote[] = []
@@ -569,8 +577,9 @@ export default function CheckoutClientV2({
       if (requoteTimerRef.current) clearTimeout(requoteTimerRef.current)
     }
     // We deliberately depend on cartItems (not items by ref): qty + composition.
+    // activeZoneId included so a resolved zone change triggers a re-quote.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartItems, authToken, region?.id, selectedAddress?.id])
+  }, [cartItems, authToken, region?.id, selectedAddress?.id, activeZoneId])
 
   // ─── saved cards (Section 3) ───────────────────────────────────────
   const [savedCards, setSavedCards] = useState<SavedPaymentMethod[]>([])
