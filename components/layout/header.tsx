@@ -520,7 +520,9 @@ export function Header() {
                   aria-expanded={userMenuOpen}
                 >
                   <CircleUser className="h-6 w-6" strokeWidth={1.75} />
-                  <span className="text-[12px] font-semibold tracking-[0.02em] leading-none mt-0.5">Account</span>
+                  <span className="text-[12px] font-semibold tracking-[0.02em] leading-none mt-0.5 max-w-[7rem] truncate">
+                    {isAuthenticated && firstName ? `Hi, ${firstName}` : "Account"}
+                  </span>
                 </button>
 
                 {userMenuOpen && (
