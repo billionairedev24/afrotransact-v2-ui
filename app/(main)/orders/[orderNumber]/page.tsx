@@ -501,6 +501,21 @@ function SubOrderBlock({
             )}
           </div>
         )}
+        {isDelivered && sub.deliveryProofImageUrl && (
+          <div className="mt-6">
+            <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">
+              Delivery photo{sub.deliveryProofUploadedAt ? ` · ${new Date(sub.deliveryProofUploadedAt).toLocaleString()}` : ""}
+            </p>
+            {/* Native <img> — proof photos come from external CDN (uploadthing/etc.);
+                skip next/image so we don't need every possible host in remotePatterns. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={sub.deliveryProofImageUrl}
+              alt="Delivery photo"
+              className="max-h-80 rounded-lg border border-gray-200 object-contain bg-gray-50"
+            />
+          </div>
+        )}
       </section>
 
       <section className="bg-white rounded-xl border border-gray-200 p-6">

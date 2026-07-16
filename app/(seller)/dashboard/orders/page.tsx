@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { ClipboardList, Loader2, Truck, Package, CheckCircle2, AlertTriangle } from "lucide-react"
@@ -16,10 +16,12 @@ import {
   getSellerStores,
   getSellerOrders,
   updateSubOrderStatus,
+  attachDeliveryProof,
   type OrderDto,
   type SubOrderDto,
   type Page as ApiPage,
 } from "@/lib/api"
+import { useUploadThing } from "@/lib/uploadthing"
 import { useSelectedStoreId } from "@/hooks/useSelectedStoreId"
 import { formatShippingAddressLines } from "@/lib/format-address"
 
@@ -311,9 +313,14 @@ function OrderDetailModal({
 }) {
   const [updating, setUpdating] = useState(false)
   const [trackingInput, setTrackingInput] = useState("")
+  const [uploadingProof, setUploadingProof] = useState(false)
+  // Ref on the hidden file input so we can auto-open the picker the moment
+  // the seller marks the sub delivered — proof photo is required for buyer trust.
+  const proofFileInputRef = useRef<HTMLInputElement | null>(null)
   const allItems = order ? order.relevantSubs.flatMap((sub) => sub.items) : []
   const currentFulfillment = order?.relevantSubs[0]?.fulfillmentStatus ?? "pending"
   const subOrderId = order?.relevantSubs[0]?.id
+  const existingProof = order?.relevantSubs[0]?.deliveryProofImageUrl ?? null
 
   async function handleUpdateStatus(newStatus: string) {
     if (!subOrderId) return
@@ -324,11 +331,49 @@ function OrderDetailModal({
       const updated = await updateSubOrderStatus(token, subOrderId, newStatus, trackingInput || undefined)
       toast.success(`Status updated to ${newStatus}`)
       onStatusUpdated(updated)
+      // Just marked delivered and no proof photo yet? Nudge the seller and
+      // pop the file picker automatically so the buyer gets their proof.
+      if (newStatus === "delivered" && !existingProof) {
+        toast("Please upload a delivery photo", {
+          description: "Buyers can see this on their order to confirm the drop-off.",
+        })
+        setTimeout(() => proofFileInputRef.current?.click(), 200)
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update status")
     } finally {
       setUpdating(false)
     }
+  }
+
+  // Uploadthing endpoint reused from product-image uploads — the media pipeline
+  // is agnostic to what the URL is later attached to.
+  const { startUpload } = useUploadThing("productImage", {
+    onClientUploadComplete: async (res) => {
+      const url = res?.[0]?.url
+      if (!url || !subOrderId) { setUploadingProof(false); return }
+      try {
+        const token = await getAccessToken()
+        if (!token) throw new Error("Not signed in")
+        const updated = await attachDeliveryProof(token, subOrderId, url)
+        toast.success("Delivery photo saved")
+        onStatusUpdated(updated)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Couldn't attach the photo")
+      } finally {
+        setUploadingProof(false)
+      }
+    },
+    onUploadError: (err) => {
+      setUploadingProof(false)
+      toast.error(err?.message || "Upload failed")
+    },
+  })
+
+  function handleProofFile(file: File | null | undefined) {
+    if (!file || !subOrderId) return
+    setUploadingProof(true)
+    void startUpload([file])
   }
 
   return (
@@ -497,6 +542,33 @@ function OrderDetailModal({
                 className="h-9 w-full rounded-lg border border-input bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none"
               />
             )}
+          </div>
+        )}
+
+        {/* Delivery-proof upload. Visible once the order is out for delivery
+            or delivered — sellers can attach the photo either right before
+            marking delivered or after. Buyers only see the photo once the
+            sub-order status is 'delivered' (backend gates the DTO field). */}
+        {subOrderId && ["out_for_delivery", "delivered", "completed"].includes(currentFulfillment) && (
+          <div className="rounded-xl border border-input bg-gray-50 p-4 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Delivery photo</p>
+            {existingProof && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={existingProof} alt="Delivery photo" className="max-h-40 rounded-lg border border-gray-200 object-contain bg-white" />
+            )}
+            <label className="inline-flex items-center gap-2 rounded-lg border border-input bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
+              {uploadingProof
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</>
+                : <>{existingProof ? "Replace photo" : "Upload photo"}</>}
+              <input
+                ref={proofFileInputRef}
+                type="file"
+                accept="image/*"
+                disabled={uploadingProof}
+                onChange={(e) => handleProofFile(e.target.files?.[0])}
+                className="hidden"
+              />
+            </label>
           </div>
         )}
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import {
@@ -13,6 +13,7 @@ import {
   Truck,
 } from "lucide-react"
 import { getStatusStyle } from "@/lib/status-config"
+import { isHouseStore } from "@/lib/house-store"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions, type RowAction } from "@/components/ui/RowActions"
@@ -24,9 +25,11 @@ import {
   ApiError,
   getAdminOrders,
   updateSubOrderStatus,
+  attachDeliveryProof,
   type OrderDto,
   type Page as ApiPage,
 } from "@/lib/api"
+import { useUploadThing } from "@/lib/uploadthing"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { useStoreNameMap } from "@/hooks/use-stores"
 import { formatShippingAddressLines } from "@/lib/format-address"
@@ -66,7 +69,7 @@ interface FlatOrder {
 
 const col = createColumnHelper<FlatOrder>()
 
-// Statuses only the admin/delivery team can set.
+// Statuses only the admin/delivery team can set on external-seller sub-orders.
 // "processing" and "packaged" are seller-only — they are shown read-only here.
 const ADMIN_STATUSES = [
   { value: "dispatched",         label: "Dispatched",         variant: "normal"  },
@@ -74,6 +77,14 @@ const ADMIN_STATUSES = [
   { value: "delivered",          label: "Delivered",          variant: "normal"  },
   { value: "delivery_exception", label: "Delivery Exception", variant: "danger"  },
   { value: "returned",           label: "Returned",           variant: "danger"  },
+] as const
+
+// House-store sub-orders (AfroTransact-fulfilled) have no external seller —
+// admins own the whole lifecycle, so they see the seller-side steps too.
+const HOUSE_STORE_STATUSES = [
+  { value: "processing",         label: "Processing",         variant: "normal"  },
+  { value: "packaged",           label: "Packaged",           variant: "normal"  },
+  ...ADMIN_STATUSES,
 ] as const
 
 const ADMIN_ORDERS_KEY = "admin-orders"
@@ -228,7 +239,40 @@ function AdminOrderDetailSheet({
   const [trackingInput, setTrackingInput] = useState("")
   const [exceptionNoteInput, setExceptionNoteInput] = useState("")
   const [pendingExceptionSubId, setPendingExceptionSubId] = useState<string | null>(null)
+  const [uploadingProofFor, setUploadingProofFor] = useState<string | null>(null)
+  // Per-sub file input refs so we can auto-open the correct picker after a
+  // sub is marked delivered (admin sheet renders one panel per sub-order).
+  const proofInputRefs = useRef<Map<string, HTMLInputElement | null>>(new Map())
   const { nameFor: storeNameFor } = useStoreNameMap()
+
+  const { startUpload: startProofUpload } = useUploadThing("productImage", {
+    onClientUploadComplete: async (res) => {
+      const url = res?.[0]?.url
+      const subId = uploadingProofFor
+      if (!url || !subId) { setUploadingProofFor(null); return }
+      try {
+        const token = await getAccessToken()
+        if (!token) throw new Error("Not signed in")
+        const updated = await attachDeliveryProof(token, subId, url)
+        toast.success("Delivery photo saved")
+        onUpdated(updated)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Couldn't attach the photo")
+      } finally {
+        setUploadingProofFor(null)
+      }
+    },
+    onUploadError: (err) => {
+      setUploadingProofFor(null)
+      toast.error(err?.message || "Upload failed")
+    },
+  })
+
+  function handleProofFile(subId: string, file: File | null | undefined) {
+    if (!file) return
+    setUploadingProofFor(subId)
+    void startProofUpload([file])
+  }
 
   async function handleUpdateStatus(subOrderId: string, newStatus: string) {
     if (newStatus === "delivery_exception" && !exceptionNoteInput.trim()) {
@@ -248,6 +292,17 @@ function AdminOrderDetailSheet({
       setExceptionNoteInput("")
       setPendingExceptionSubId(null)
       onUpdated(updated)
+      // Admin acts as delivery ops until we split the role — nudge for the
+      // proof photo the moment they mark delivered, matching the seller flow.
+      if (newStatus === "delivered") {
+        const existing = order?.raw.subOrders?.find((s) => s.id === subOrderId)?.deliveryProofImageUrl
+        if (!existing) {
+          toast("Please upload a delivery photo", {
+            description: "Buyers will see this on their order to confirm the drop-off.",
+          })
+          setTimeout(() => proofInputRefs.current.get(subOrderId)?.click(), 200)
+        }
+      }
     } catch (err) {
       logError(err, "adminOrders.updateStatus")
       if (err instanceof ApiError && err.status === 401) {
@@ -406,8 +461,10 @@ function AdminOrderDetailSheet({
                   </table>
                 </div>
 
-                {/* Seller-managed steps — read-only for admin */}
-                {(sub.fulfillmentStatus === "pending" || sub.fulfillmentStatus === "processing" || sub.fulfillmentStatus === "packaged") && (
+                {/* Seller-managed steps — read-only for admin.
+                    Skipped entirely for house-store sub-orders (AfroTransact-
+                    fulfilled) because admin owns the whole lifecycle there. */}
+                {!isHouseStore(sub.storeId) && (sub.fulfillmentStatus === "pending" || sub.fulfillmentStatus === "processing" || sub.fulfillmentStatus === "packaged") && (
                   <div className="flex items-start gap-2 rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2.5">
                     <Package className="h-3.5 w-3.5 shrink-0 text-indigo-400 mt-0.5" />
                     <p className="text-xs text-indigo-700">
@@ -417,16 +474,20 @@ function AdminOrderDetailSheet({
                   </div>
                 )}
 
-                {/* Admin delivery controls */}
+                {/* Fulfillment controls. House-store subs get the full lifecycle
+                    (processing → returned); external-seller subs only get the
+                    delivery-team scope (dispatched onwards). */}
                 {sub.fulfillmentStatus !== "delivered" && sub.fulfillmentStatus !== "returned" &&
-                  sub.fulfillmentStatus !== "pending" && sub.fulfillmentStatus !== "processing" && sub.fulfillmentStatus !== "packaged" && (
+                  (isHouseStore(sub.storeId) || (sub.fulfillmentStatus !== "pending" && sub.fulfillmentStatus !== "processing" && sub.fulfillmentStatus !== "packaged")) && (
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2">
                       <Truck className="h-3.5 w-3.5 text-gray-400" />
-                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Delivery Controls</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        {isHouseStore(sub.storeId) ? "Fulfillment Controls (AfroTransact)" : "Delivery Controls"}
+                      </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {ADMIN_STATUSES.map((s) => (
+                      {(isHouseStore(sub.storeId) ? HOUSE_STORE_STATUSES : ADMIN_STATUSES).map((s) => (
                         <button
                           key={s.value}
                           disabled={!!updating || s.value === sub.fulfillmentStatus}
@@ -484,6 +545,33 @@ function AdminOrderDetailSheet({
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Delivery-proof upload. Admin is currently the delivery ops
+                    until we split the role — same UX as the seller sheet:
+                    panel shows once the sub is out for delivery/delivered/completed
+                    and the file picker auto-opens when admin marks delivered. */}
+                {["out_for_delivery", "delivered", "completed"].includes(sub.fulfillmentStatus) && (
+                  <div className="rounded-lg border border-input bg-gray-50 p-3 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Delivery photo</p>
+                    {sub.deliveryProofImageUrl && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={sub.deliveryProofImageUrl} alt="Delivery photo" className="max-h-40 rounded-md border border-gray-200 object-contain bg-white" />
+                    )}
+                    <label className="inline-flex items-center gap-2 rounded-lg border border-input bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
+                      {uploadingProofFor === sub.id
+                        ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</>
+                        : <>{sub.deliveryProofImageUrl ? "Replace photo" : "Upload photo"}</>}
+                      <input
+                        ref={(el) => { proofInputRefs.current.set(sub.id, el) }}
+                        type="file"
+                        accept="image/*"
+                        disabled={uploadingProofFor === sub.id}
+                        onChange={(e) => handleProofFile(sub.id, e.target.files?.[0])}
+                        className="hidden"
+                      />
+                    </label>
                   </div>
                 )}
               </div>
