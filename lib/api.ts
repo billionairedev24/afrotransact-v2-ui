@@ -2803,22 +2803,49 @@ export async function loadCheckoutShippingContext(token: string): Promise<Checko
   }
 }
 
-export function createAddress(token: string, data: {
+/**
+ * Drop the cached checkout shipping context so the next load refetches. MUST be
+ * called after any address mutation — otherwise the 30s cache keeps serving a
+ * stale list (a deleted address reappears and gets submitted as the shipping
+ * address id, producing a 404 at checkout).
+ */
+export function invalidateCheckoutShippingContext(token: string) {
+  checkoutCtxCache.delete(token)
+}
+
+export async function createAddress(token: string, data: {
   label?: string; line1: string; line2?: string; city: string; state: string; postalCode: string; countryCode: string; isDefault?: boolean
 }) {
-  return api<UserAddress>("/api/v1/users/me/addresses", { method: "POST", body: data, token })
+  try {
+    return await api<UserAddress>("/api/v1/users/me/addresses", { method: "POST", body: data, token })
+  } finally {
+    invalidateCheckoutShippingContext(token)
+  }
 }
 
-export function updateAddress(token: string, id: string, data: Record<string, unknown>) {
-  return api<UserAddress>(`/api/v1/users/me/addresses/${id}`, { method: "PUT", body: data, token })
+export async function updateAddress(token: string, id: string, data: Record<string, unknown>) {
+  try {
+    return await api<UserAddress>(`/api/v1/users/me/addresses/${id}`, { method: "PUT", body: data, token })
+  } finally {
+    invalidateCheckoutShippingContext(token)
+  }
 }
 
-export function deleteAddress(token: string, id: string) {
-  return api<void>(`/api/v1/users/me/addresses/${id}`, { method: "DELETE", token })
+export async function deleteAddress(token: string, id: string) {
+  try {
+    return await api<void>(`/api/v1/users/me/addresses/${id}`, { method: "DELETE", token })
+  } finally {
+    // Clear even on 404 (already gone) — the cached list is stale either way.
+    invalidateCheckoutShippingContext(token)
+  }
 }
 
-export function setDefaultAddress(token: string, id: string) {
-  return api<UserAddress>(`/api/v1/users/me/addresses/${id}/default`, { method: "PUT", token })
+export async function setDefaultAddress(token: string, id: string) {
+  try {
+    return await api<UserAddress>(`/api/v1/users/me/addresses/${id}/default`, { method: "PUT", token })
+  } finally {
+    invalidateCheckoutShippingContext(token)
+  }
 }
 
 // ── Media ──
