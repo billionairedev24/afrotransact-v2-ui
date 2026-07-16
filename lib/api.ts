@@ -919,6 +919,80 @@ export function adminLedgerSellerBalance(token: string, sellerId: string) {
   return api<SellerLedgerBalanceDto>(`/api/v1/admin/ledger/seller/${sellerId}/balance`, { token })
 }
 
+// ── Admin: ledger journal + trial balance ─────────────────────────────────────
+export interface JournalLineDto {
+  accountCode: string | null
+  accountType: string | null
+  direction: "DR" | "CR"
+  amountCents: number
+  currency: string
+  orderId: string | null
+  sellerId: string | null
+  refundId: string | null
+}
+export interface JournalEntryRow {
+  id: string
+  postedAt: string
+  eventType: string
+  eventId: string
+  description: string | null
+  orderId: string | null
+  totalDebitsCents: number
+  totalCreditsCents: number
+  balanced: boolean
+  lines: JournalLineDto[]
+}
+export interface JournalPage {
+  total: number
+  limit: number
+  offset: number
+  entries: JournalEntryRow[]
+}
+export function adminLedgerJournal(
+  token: string,
+  params: { from?: string; to?: string; eventType?: string; account?: string; limit?: number; offset?: number } = {},
+) {
+  const q = new URLSearchParams()
+  if (params.from) q.set("from", params.from)
+  if (params.to) q.set("to", params.to)
+  if (params.eventType) q.set("eventType", params.eventType)
+  if (params.account) q.set("account", params.account)
+  q.set("limit", String(params.limit ?? 50))
+  q.set("offset", String(params.offset ?? 0))
+  return api<JournalPage>(`/api/v1/admin/ledger/journal?${q.toString()}`, { token })
+}
+
+export interface TrialBalanceRow {
+  code: string
+  name: string
+  type: string
+  partyId: string | null
+  debitCents: number
+  creditCents: number
+}
+export interface TrialBalance {
+  asOf: string | null
+  currency: string
+  rows: TrialBalanceRow[]
+  byType: Record<string, { debitCents: number; creditCents: number }>
+  totalDebitsCents: number
+  totalCreditsCents: number
+  balanced: boolean
+  outOfBalanceCents: number
+  incomeStatement: { revenueCents: number; expenseCents: number; netIncomeCents: number }
+  house: {
+    salesRevenueCents: number
+    cogsCents: number
+    grossProfitCents: number
+    grossMarginPct: number
+    inventoryBookValueCents: number
+  }
+}
+export function adminLedgerTrialBalance(token: string, asOf?: string) {
+  const q = asOf ? `?asOf=${encodeURIComponent(asOf)}` : ""
+  return api<TrialBalance>(`/api/v1/admin/ledger/trial-balance${q}`, { token })
+}
+
 export interface LedgerAdjustmentLine {
   accountCode: string
   direction: "DR" | "CR"
