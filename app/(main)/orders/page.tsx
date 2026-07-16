@@ -248,11 +248,8 @@ function OrderCard({ order }: { order: OrderDto }) {
       if (res.checkoutSessionId) {
         router.push(`/checkout/complete?session=${encodeURIComponent(res.checkoutSessionId)}`)
       } else {
-        // Legacy fork: the order is pending and needs Stripe Elements to
-        // confirm. The /checkout page reuses the user's cart + payment
-        // selection logic; the recent-pending dedup in OrderService.checkout
-        // resumes the same order rather than minting a new one.
-        toast.success("Order created — finish payment to confirm")
+        // Defensive fallback: if no session came back (e.g. defaults couldn't
+        // be resolved), send the buyer to checkout with the cart repopulated.
         router.push("/checkout")
       }
     } finally {
