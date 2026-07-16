@@ -62,10 +62,31 @@ export function ShippingEligibilityBadge({ storeId }: { storeId: string }) {
         </p>
       )
     }
+    // Only claim "Free delivery" when the zone actually ships free — i.e. it
+    // has the always-free override (freeShippingThresholdCents === -1). A
+    // flat-rate / per-lb zone (e.g. Georgetown at $7.99) is serviceable but NOT
+    // free, so it shows "Delivers to …" with the flat rate when known.
+    const settings = resolvedZone?.effectiveSettings
+    const cityLabel = location.city?.trim() || location.postalCode
+    if (settings?.freeShippingThresholdCents === -1) {
+      return (
+        <p className="text-xs text-emerald-700 inline-flex items-center gap-1.5">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Free delivery to <span className="font-semibold">{cityLabel}</span>
+        </p>
+      )
+    }
+    const flatCents =
+      settings?.shippingMode === "flat" && settings.flatShippingCents && settings.flatShippingCents > 0
+        ? settings.flatShippingCents
+        : null
     return (
       <p className="text-xs text-emerald-700 inline-flex items-center gap-1.5">
         <CheckCircle2 className="h-3.5 w-3.5" />
-        Free delivery to <span className="font-semibold">{location.city?.trim() || location.postalCode}</span>
+        Delivers to <span className="font-semibold">{cityLabel}</span>
+        {flatCents != null && (
+          <span className="text-gray-500">· ${(flatCents / 100).toFixed(2)} shipping</span>
+        )}
       </p>
     )
   }
