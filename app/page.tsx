@@ -108,7 +108,10 @@ export default async function HomePage() {
           min_price: price,
           max_price: original,
           currency: "USD",
-          in_stock: true,
+          // Real stock from the deal's linked product (enrichWithProduct).
+          // Fail safe: an unknown/absent flag renders as out-of-stock rather
+          // than a live Add-to-Cart button on a sold-out item.
+          in_stock: d.inStock ?? false,
           image_url: d.productImageUrl,
           avg_rating: 0,
           review_count: 0,

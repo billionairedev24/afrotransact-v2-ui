@@ -77,6 +77,7 @@ import {
   getShippingQuotes,
   listSavedPaymentMethods,
   validateCoupon,
+  resolveServiceZone,
   ApiError,
   type CheckoutResponse,
   type CheckoutShippingContext,
@@ -87,6 +88,7 @@ import {
   type ShippingQuoteResponse,
   type UserAddress,
   type ValidateCouponResponse,
+  type ResolvedZone,
 } from "@/lib/api"
 
 // Module-local Stripe singleton. We don't reuse the one inside
@@ -264,6 +266,31 @@ export default function CheckoutClientV2({
     [addresses, selectedAddressId],
   )
 
+  // Resolve the SELECTED SHIPPING ADDRESS to a service zone. Shipping pricing,
+  // the free-shipping threshold, and coupon eligibility are all zone-scoped and
+  // must follow the destination the buyer ships to — NOT the geocoded browsing
+  // location (buyerResolvedZone). Re-resolves whenever the selected address (or
+  // its geography) changes, so switching address recomputes everything.
+  const [addressZone, setAddressZone] = useState<ResolvedZone | null>(null)
+  useEffect(() => {
+    if (!selectedAddress) { setAddressZone(null); return }
+    let cancelled = false
+    resolveServiceZone(
+      selectedAddress.countryCode || "US",
+      selectedAddress.state ?? undefined,
+      selectedAddress.postalCode ?? undefined,
+      selectedAddress.city ?? undefined,
+    )
+      .then((z) => { if (!cancelled) setAddressZone(z) })
+      .catch(() => { if (!cancelled) setAddressZone(null) })
+    return () => { cancelled = true }
+  }, [selectedAddress?.id, selectedAddress?.countryCode, selectedAddress?.state, selectedAddress?.postalCode, selectedAddress?.city])
+
+  // Zone that drives all pricing + eligibility: the destination address's zone,
+  // falling back to the geocoded location only until the address resolves.
+  const activeZone = addressZone ?? buyerResolvedZone
+  const activeZoneId = activeZone?.zone?.id
+
   function openNewAddress() {
     setAddrEditingId(null)
     setForm({ fullName: profileName || sessionName, line1: "", line2: "", city: "", state: "", zip: "", phone: profilePhone })
@@ -387,7 +414,7 @@ export default function CheckoutClientV2({
         // Backend expects EXACTLY one of zoneId / regionId (XOR). Prefer the
         // resolved service-zone id; only fall back to regionId if no zone
         // is resolved yet. Sending both fails validation with a 400.
-        const zoneId = buyerResolvedZone?.zone?.id
+        const zoneId = activeZoneId
         const q = await getShippingQuotes(authToken, {
           ...(zoneId ? { zoneId } : { regionId: region.id }),
           state: selectedAddress.state ?? "",
@@ -464,7 +491,7 @@ export default function CheckoutClientV2({
   // means "not configured" — free shipping does NOT apply by threshold, so we
   // don't make everything free by accident.
   const freeShippingThresholdCents =
-    buyerResolvedZone?.effectiveSettings?.freeShippingThresholdCents ?? region?.freeShippingThresholdCents ?? 0
+    activeZone?.effectiveSettings?.freeShippingThresholdCents ?? region?.freeShippingThresholdCents ?? 0
   const freeShippingApplies = freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents
   const shippingCents = freeShippingApplies ? 0 : (selectedQuote?.amountCents ?? 0)
   // A $0 shipping charge means free shipping (global switch or threshold met) —
@@ -502,7 +529,7 @@ export default function CheckoutClientV2({
         try {
           // Re-sync the (now-changed) cart before re-quoting.
           await syncServerCart()
-          const zoneId = buyerResolvedZone?.zone?.id
+          const zoneId = activeZoneId
           const q = await getShippingQuotes(authToken, {
             ...(zoneId ? { zoneId } : { regionId: region.id }),
             state: selectedAddress.state ?? "",
@@ -594,9 +621,12 @@ export default function CheckoutClientV2({
   const runValidateCoupon = useCallback(async (code: string): Promise<ValidateCouponResponse | null> => {
     if (!authToken) return null
     // Pass shippingCents so a shipping-target coupon can compute its discount
-    // against the actual quoted shipping fee.
-    return await validateCoupon(authToken, code, subtotal, region?.id, shippingCents)
-  }, [authToken, subtotal, region?.id, shippingCents])
+    // against the actual quoted shipping fee. Prefer the resolved service-zone
+    // id (that's where coupons_enabled is configured); region.id stays as the
+    // legacy fallback — same XOR-preference the shipping-quote call uses.
+    const zoneId = activeZoneId
+    return await validateCoupon(authToken, code, subtotal, region?.id, shippingCents, zoneId)
+  }, [authToken, subtotal, region?.id, shippingCents, activeZoneId])
 
   async function handleApplyCoupon() {
     if (!couponsEnabled || !couponInput.trim() || !authToken) return
@@ -625,7 +655,10 @@ export default function CheckoutClientV2({
     setCouponError(null)
   }
 
-  // Re-validate the applied coupon whenever the cart changes (min-spend may now fail).
+  // Re-validate the applied coupon whenever the cart changes (min-spend may now
+  // fail) OR the destination address's zone changes (coupons_enabled and any
+  // shipping-target discount are zone-scoped, so a coupon valid in one zone may
+  // not apply in another — clear it if it no longer holds).
   useEffect(() => {
     if (!couponResult || !couponCode || !authToken) return
     let cancelled = false
@@ -645,7 +678,7 @@ export default function CheckoutClientV2({
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotal, cartItems.length, region?.id])
+  }, [subtotal, cartItems.length, region?.id, activeZoneId])
 
   // ─── totals ────────────────────────────────────────────────────────
   const taxRate = region?.taxRate ?? 0.0825
