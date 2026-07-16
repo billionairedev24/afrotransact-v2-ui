@@ -83,7 +83,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
         aria-label="Featured"
       >
         <div
-          className="flex transition-transform duration-700 ease-out motion-reduce:transition-none"
+          className="flex items-stretch transition-transform duration-700 ease-out motion-reduce:transition-none"
           style={{ transform: `translateX(-${index * 100}%)` }}
         >
           {ordered.map((s, i) => (
@@ -141,7 +141,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
 /** One uniform slide: dark ground (photo or woven), left scrim, left content. */
 function Slide({ slide, priority }: { slide: HeroSlide; priority?: boolean }) {
   return (
-    <div className={"relative min-h-[340px] sm:min-h-[400px] " + (slide.image ? "bg-brand-dark" : "bg-woven-dark")}>
+    <div className={"relative h-full min-h-[340px] sm:min-h-[400px] " + (slide.image ? "bg-brand-dark" : "bg-woven-dark")}>
       {slide.image && (
         <Image
           src={slide.image}
@@ -154,7 +154,7 @@ function Slide({ slide, priority }: { slide: HeroSlide; priority?: boolean }) {
       )}
       {/* Left-anchored scrim keeps the copy legible over any ground. */}
       <div className="absolute inset-0 bg-gradient-to-r from-brand-dark/90 via-brand-dark/65 to-brand-dark/15" />
-      <div className="relative flex min-h-[340px] sm:min-h-[400px] flex-col justify-center px-6 py-10 sm:px-10 sm:py-14">
+      <div className="relative flex h-full min-h-[340px] sm:min-h-[400px] flex-col justify-center px-6 py-10 sm:px-10 sm:py-14">
         <div className="max-w-xl">
           <p className="inline-flex items-center gap-1.5 rounded-full border border-brand-gold/40 bg-brand-dark/50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-gold">
             {slide.eyebrow}

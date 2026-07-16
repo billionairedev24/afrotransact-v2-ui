@@ -136,30 +136,22 @@ export default async function HomePage() {
 
   // Build productsByCategoryId by matching the product's leaf categories
   // against the ROOT category AND all of its descendants (case-insensitive
-  // on both name and slug). The previous version only matched the root
-  // name, so a product tagged with a leaf like "Beans" under "Groceries"
-  // never showed up in the Groceries tile.
-  const childrenByParent = new Map<string, string[]>()
-  for (const c of categories) {
-    if (c.parentId) {
-      const list = childrenByParent.get(c.parentId) ?? []
-      list.push(c.name.toLowerCase(), c.slug.toLowerCase())
-      childrenByParent.set(c.parentId, list)
+  // on both name and slug). Products are only ever tagged with their leaf
+  // sub-category, so a parent card like "Grocery" must borrow images from
+  // its children — otherwise it renders empty.
+  //
+  // GET /api/v1/categories returns a NESTED tree: sub-categories live under
+  // `.children`, never as flat top-level entries. We therefore recurse the
+  // tree. (A flat `parentId` scan finds nothing here, which is exactly why
+  // the "Grocery" parent showed no thumbnails.)
+  function collectDescendantTokens(root: CategoryRef): Set<string> {
+    const tokens = new Set<string>()
+    const walk = (node: CategoryRef) => {
+      tokens.add(node.name.toLowerCase())
+      tokens.add(node.slug.toLowerCase())
+      for (const child of node.children ?? []) walk(child)
     }
-  }
-  function collectDescendantTokens(rootId: string, rootName: string, rootSlug: string): Set<string> {
-    const tokens = new Set<string>([rootName.toLowerCase(), rootSlug.toLowerCase()])
-    const queue = [rootId]
-    while (queue.length) {
-      const id = queue.shift()!
-      for (const c of categories) {
-        if (c.parentId === id) {
-          tokens.add(c.name.toLowerCase())
-          tokens.add(c.slug.toLowerCase())
-          queue.push(c.id)
-        }
-      }
-    }
+    walk(root)
     return tokens
   }
   // Up to 4 product images per root card — pulled from any descendant of
@@ -182,7 +174,7 @@ export default async function HomePage() {
   }
   const tilesByRoot: Record<string, BentoTile[]> = {}
   for (const cat of roots) {
-    const tokens = collectDescendantTokens(cat.id, cat.name, cat.slug)
+    const tokens = collectDescendantTokens(cat)
     const pool = featuredRating.results
       .filter((p) => p.image_url)
       .filter((p) => p.categories?.some((c) => tokens.has(c.toLowerCase())))

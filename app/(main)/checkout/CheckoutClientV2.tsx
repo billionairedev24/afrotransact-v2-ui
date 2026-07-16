@@ -997,23 +997,6 @@ export default function CheckoutClientV2({
               <p className="text-sm text-gray-500">No delivery options available for this address.</p>
             ) : (
               <>
-                <div className="flex items-center justify-end mb-3">
-                  <div className="flex items-center rounded-full border border-gray-200 p-0.5 text-xs">
-                    {(["cheapest", "fastest"] as const).map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setSortBy(s)}
-                        className={cn(
-                          "px-3 py-1 rounded-full font-semibold capitalize transition-colors",
-                          sortBy === s ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100",
-                        )}
-                      >
-                        Sort: {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 {/* Amazon-style flat ranked list. Carrier brand (USPS/UPS/
                     FedEx) is intentionally hidden — the buyer chooses by
                     speed and price; the carrier is a backstage detail. */}
@@ -1037,8 +1020,10 @@ export default function CheckoutClientV2({
                             <p className="text-sm font-semibold text-gray-900">
                               {q.serviceName}
                             </p>
+                            {/* Delivery ETA is a flat 24h placeholder until we
+                                model real speed by location/carrier. */}
                             <p className="text-xs text-gray-500">
-                              {q.estimatedDays != null ? `Arrives in ${q.estimatedDays} day${q.estimatedDays === 1 ? "" : "s"}` : "Delivery estimate unavailable"}
+                              Arrives in 24 hours
                             </p>
                           </div>
                           {/* Once the free-delivery threshold is met we never
