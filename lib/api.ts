@@ -1914,34 +1914,6 @@ export function getForYouProducts(token: string, limit = 12) {
   return api<ForYouProduct[]>(`/api/v1/orders/for-you?limit=${limit}`, { token })
 }
 
-/**
- * Phase 3 of the cart/checkout rewrite: after stripe.confirmPayment succeeds,
- * the order row doesn't exist yet — payment-service's webhook to order-service
- * (Kafka payment.completed) materializes it. UI polls /orders/by-id/{id} until
- * the row appears (typically <2s) or gives up after ~10s and shows a generic
- * "payment received, your order will appear shortly" success state.
- *
- * Backoff: 500ms, 1s, 1.5s, 2s, 2.5s, 3s. Returns the OrderDto on success,
- * null on timeout.
- */
-export async function pollOrderUntilExists(
-  token: string,
-  orderId: string,
-): Promise<OrderDto | null> {
-  const delays = [500, 1000, 1500, 2000, 2500, 3000]
-  for (const ms of delays) {
-    await new Promise((r) => setTimeout(r, ms))
-    try {
-      const res = await api<OrderDto>(`/api/v1/orders/by-id/${orderId}`, { token })
-      if (res) return res
-    } catch (e: unknown) {
-      // 404 while the webhook is still in flight is expected; anything else
-      // we still want to retry — the polling window is bounded.
-    }
-  }
-  return null
-}
-
 // ── Saved payment methods (Backlog #40) ──
 
 export interface SavedPaymentMethod {
