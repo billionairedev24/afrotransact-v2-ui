@@ -393,6 +393,9 @@ function CouponForm({
   const [usageLimit, setUsageLimit] = useState(coupon?.usageLimit ? String(coupon.usageLimit) : "")
   const [perUserLimit, setPerUserLimit] = useState(coupon?.perUserLimit ? String(coupon.perUserLimit) : "1")
   const [scope, setScope] = useState(coupon?.scope || "site_wide")
+  const [discountTarget, setDiscountTarget] = useState<"items" | "shipping">(
+    (coupon?.discountTarget as "items" | "shipping" | undefined) || "items",
+  )
   const [expiresAt, setExpiresAt] = useState(coupon?.expiresAt ? coupon.expiresAt.slice(0, 16) : "")
   const [submitting, setSubmitting] = useState(false)
 
@@ -410,6 +413,7 @@ function CouponForm({
         usageLimit: usageLimit ? parseInt(usageLimit) : undefined,
         perUserLimit: perUserLimit ? parseInt(perUserLimit) : 1,
         scope,
+        discountTarget,
         expiresAt: new Date(expiresAt).toISOString(),
       })
     } catch (e) {
@@ -457,6 +461,13 @@ function CouponForm({
             <option value="product">Product</option>
             <option value="store">Store</option>
             <option value="category">Category</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">Applies to</label>
+          <select value={discountTarget} onChange={e => setDiscountTarget(e.target.value as "items" | "shipping")} className={inputCls} {...selectAttrs}>
+            <option value="items">Order items</option>
+            <option value="shipping">Shipping fee</option>
           </select>
         </div>
         <div>
