@@ -38,6 +38,31 @@ function productToSearchResult(p: Product): SearchResult {
   }
 }
 
+/** Find a category node by slug anywhere in the nested tree. */
+function findCategoryNode(list: CategoryRef[], slug: string): CategoryRef | null {
+  for (const c of list) {
+    if (c.slug === slug) return c
+    if (c.children) {
+      const found = findCategoryNode(c.children, slug)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+/** A category's own slug plus every descendant slug. Products are only tagged
+ *  with their leaf category, so a parent must query all of its children to
+ *  surface their products. */
+function collectCategorySlugs(node: CategoryRef): string[] {
+  const out: string[] = []
+  const walk = (n: CategoryRef) => {
+    out.push(n.slug)
+    for (const child of n.children ?? []) walk(child)
+  }
+  walk(node)
+  return out
+}
+
 function AddToCartButton({ item }: { item: SearchResult }) {
   const addItem = useCartStore((s) => s.addItem)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
@@ -219,6 +244,10 @@ export default function CategoryPageClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
+  // The category slugs to actually query: this category + all descendants, so
+  // a parent category surfaces every product across its sub-categories. null
+  // until resolved from the tree (gates the search so we don't flash "empty").
+  const [querySlugs, setQuerySlugs] = useState<string[] | null>(null)
 
   // Category browse is intentionally NOT geo-filtered: buyers want to see
   // every product in a category regardless of where the seller ships from
@@ -230,25 +259,24 @@ export default function CategoryPageClient() {
   const hasGeo = false
 
   useEffect(() => {
+    let cancelled = false
+    // Gate the product search until we've resolved this category's descendant
+    // slugs from the tree (a parent must query all its children).
+    setQuerySlugs(null)
     getCategories()
       .then((cats) => {
-        const findName = (list: CategoryRef[]): string | null => {
-          for (const c of list) {
-            if (c.slug === slug) return c.name
-            if (c.children) {
-              const childName = findName(c.children)
-              if (childName) return childName
-            }
-          }
-          return null
-        }
-        const found = findName(cats)
-        if (found) setName(found)
+        if (cancelled) return
+        const node = findCategoryNode(cats, slug)
+        if (node) setName(node.name)
+        setQuerySlugs(node ? collectCategorySlugs(node) : [slug])
       })
-      .catch(() => {})
+      .catch(() => { if (!cancelled) setQuerySlugs([slug]) })
+    return () => { cancelled = true }
   }, [slug])
 
   useEffect(() => {
+    // Wait until we know which slugs to query (this category + descendants).
+    if (!querySlugs) { setLoading(true); return }
     setLoading(true)
     setError(null)
     setFeaturedProduct(null)
@@ -267,10 +295,11 @@ export default function CategoryPageClient() {
     Promise.all([
       fetchFeatured,
       searchProducts({
-        // Backend expects the category SLUG (e.g. "food-grocery"), not the
-        // display name. Passing name here made every category page look
-        // empty even when 100+ products existed.
-        category: slug,
+        // Backend expects category SLUGS (e.g. "food-grocery"), not the
+        // display name. We send this category plus every descendant slug
+        // (comma-separated) so a PARENT category surfaces all of its
+        // sub-categories' products instead of coming back empty.
+        category: querySlugs.join(","),
         size: String(pageSize),
         page: String(page),
         ...(hasGeo
@@ -296,7 +325,7 @@ export default function CategoryPageClient() {
         if (err instanceof Error) setError(err.message)
       })
       .finally(() => setLoading(false))
-  }, [slug, page, featuredId])
+  }, [querySlugs, page, featuredId])
 
   function updatePage(nextPage: number) {
     const next = Math.max(1, nextPage)
