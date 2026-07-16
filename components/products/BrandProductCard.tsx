@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils"
 import { getProductById } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { StarRating } from "@/components/products/StarRating"
+import { supportWhatsAppLink } from "@/lib/support-whatsapp"
 
 export interface BrandProductCardItem {
   productId: string
@@ -50,6 +51,13 @@ export interface BrandProductCardItem {
    * from non-geo contexts (homepage strips), so the badge stays absent there.
    */
   distanceMiles?: number | null
+  /**
+   * True when the backend flags this product as farther than the configured
+   * shipping-distance limit. Storefront swaps the Add-to-Cart CTA for a
+   * "Chat about shipping" WhatsApp link so buyers outside our usual range
+   * can still connect with support instead of hitting a dead-end.
+   */
+  beyondShipLimit?: boolean
 }
 
 /**
@@ -126,7 +134,7 @@ export function BrandProductCard({ item }: Props) {
               <Package className="h-12 w-12 text-muted-foreground/40" />
             </div>
           )}
-          {item.inStock === false && (
+          {!item.inStock && (
             <span className="absolute left-3 top-3 rounded-md bg-red-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
               Out of Stock
             </span>
@@ -221,7 +229,7 @@ export function BrandProductRow({ item }: { item: BrandProductCardItem }) {
             <Package className="h-10 w-10 text-muted-foreground/40" />
           </div>
         )}
-        {item.inStock === false && (
+        {!item.inStock && (
           <span className="absolute left-2 bottom-2 rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
             Out of Stock
           </span>
@@ -277,7 +285,7 @@ function CardAddToCart({ item }: { item: BrandProductCardItem }) {
   async function handleAdd(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (item.inStock === false || loading) return
+    if (!item.inStock || loading) return
     setLoading(true)
     try {
       const product = await getProductById(item.productId)
@@ -316,7 +324,7 @@ function CardAddToCart({ item }: { item: BrandProductCardItem }) {
     updateQuantity(cartItem.variantId, quantity + delta)
   }
 
-  if (item.inStock === false) {
+  if (!item.inStock) {
     return (
       <button
         disabled
@@ -325,6 +333,26 @@ function CardAddToCart({ item }: { item: BrandProductCardItem }) {
         Out of Stock
       </button>
     )
+  }
+
+  // Backend flagged the product as beyond the configured shipping-distance
+  // limit for the buyer's location. Rather than block the sale, route them
+  // to support so we can arrange shipping manually.
+  if (item.beyondShipLimit) {
+    const href = supportWhatsAppLink(`Hi AfroTransact, I'd like to order "${item.title}" but I'm outside your usual delivery range. Can you help?`)
+    if (href) {
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex w-full items-center justify-center gap-1.5 rounded-full border border-amber-500/60 bg-amber-50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-amber-800 hover:bg-amber-100 transition-colors"
+        >
+          Chat about shipping
+        </a>
+      )
+    }
   }
 
   if (quantity > 0) {

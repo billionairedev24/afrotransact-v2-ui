@@ -2,26 +2,21 @@
 
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-
-// AfroTransact buyer-support WhatsApp number. Hardcoded as the build-time
-// fallback so the FAB just works without an env config in prod. Override
-// per-env by setting NEXT_PUBLIC_WHATSAPP_SUPPORT_NUMBER in Vercel/.env.local
-// (e.g. for staging routing to a different number). E.164 format expected.
-const DEFAULT_WHATSAPP_NUMBER = "+15125088885"
+import { supportWhatsAppLink } from "@/lib/support-whatsapp"
 
 /**
- * Floating WhatsApp chat FAB.
+ * Floating WhatsApp chat FAB. Number + link building come from
+ * `lib/support-whatsapp` so this and the search "beyond shipping range"
+ * affordance never drift on env handling.
  *
- * Reads NEXT_PUBLIC_WHATSAPP_SUPPORT_NUMBER (E.164, e.g. "+15551234567").
- * Falls back to DEFAULT_WHATSAPP_NUMBER when unset so the widget is always live.
  * Hidden on /checkout to avoid competing with the purchase CTA.
  */
 export function WhatsAppFab() {
   const pathname = usePathname()
   const [hovered, setHovered] = useState(false)
 
-  const raw = (process.env.NEXT_PUBLIC_WHATSAPP_SUPPORT_NUMBER?.trim() || DEFAULT_WHATSAPP_NUMBER)
-  if (!raw) return null
+  const href = supportWhatsAppLink()
+  if (!href) return null
 
   // Surface gate — buyer-facing pages only. WhatsApp is mounted in the root
   // layout so the homepage (which lives at app/page.tsx, NOT under (main))
@@ -39,13 +34,6 @@ export function WhatsAppFab() {
   if (pathname && HIDDEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return null
   }
-
-  // wa.me expects digits only, no leading "+".
-  const digits = raw.replace(/[^\d]/g, "")
-  if (!digits) return null
-
-  const prefill = encodeURIComponent("Hi AfroTransact, I need help with...")
-  const href = `https://wa.me/${digits}?text=${prefill}`
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 pointer-events-none">

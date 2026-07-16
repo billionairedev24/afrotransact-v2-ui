@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { friendlyMessage } from "@/lib/errors"
+import { supportWhatsAppLink } from "@/lib/support-whatsapp"
 import {
   searchProducts,
   getProductById,
@@ -56,6 +57,7 @@ function searchResultToCard(item: SearchResult): BrandProductCardItem {
     reviewCount: item.review_count,
     inStock: item.in_stock,
     distanceMiles: item.distance_miles,
+    beyondShipLimit: item.beyond_ship_limit === true,
   }
 }
 
@@ -534,6 +536,24 @@ function AddToCartButton({ item }: { item: SearchResult }) {
     )
   }
 
+  // Beyond the configured shipping-distance limit — swap CTA for a support link.
+  if (item.beyond_ship_limit) {
+    const href = supportWhatsAppLink(`Hi AfroTransact, I'd like to order "${item.title}" but I'm outside your usual delivery range. Can you help?`)
+    if (href) {
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex w-full items-center justify-center gap-1.5 rounded-full border border-amber-500/60 bg-amber-50 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-amber-800 hover:bg-amber-100 transition-colors"
+        >
+          Chat about shipping
+        </a>
+      )
+    }
+  }
+
   if (quantity > 0) {
     return (
       <div
@@ -763,28 +783,30 @@ function SearchContent() {
   const minRating = searchParams.get("min_rating") || ""
   const page = parseInt(searchParams.get("page") || "1", 10)
 
-  // Buyer Deliver-to location → geo-filtered + distance-decorated results.
-  // The store is client-only (zustand+localStorage); we surface it via two
-  // URL params (lat, lon) plus a `radius` selector below. URL params win
-  // over the store when both are present so a shared link stays reproducible.
+  // Buyer Deliver-to location → geo-decorated results (distance + shipping-limit
+  // flag). Backend as of baa1d8c1 returns products from every supported area
+  // when radius is omitted, sorted closest-first. lat/lon stay in the request
+  // even when no radius is chosen — that's what unlocks distance and the
+  // beyond_ship_limit flag on cards from farther zones.
   const buyerLocation = useBuyerLocation((s) => s.location)
   const urlLat = searchParams.get("lat")
   const urlLon = searchParams.get("lon")
   const urlRadius = searchParams.get("radius")
-  // "any" disables geo filtering entirely (no lat/lon/radius sent).
-  const radiusDisabled = urlRadius === "any"
   const effectiveLat =
     urlLat != null ? parseFloat(urlLat) : (buyerLocation?.lat ?? null)
   const effectiveLon =
     urlLon != null ? parseFloat(urlLon) : (buyerLocation?.lng ?? null)
   const hasGeo =
-    !radiusDisabled &&
     typeof effectiveLat === "number" &&
     !Number.isNaN(effectiveLat) &&
     typeof effectiveLon === "number" &&
     !Number.isNaN(effectiveLon)
-  // Default radius matches backend (25 mi).
-  const radius = !radiusDisabled && urlRadius ? urlRadius : "25"
+  // Selected radius. Default now = "all" (empty) → backend returns products
+  // from every supported area, closest-first. "any" is kept as a legacy alias
+  // for the same "no hard radius filter" behavior so shared links still work.
+  const numericRadius =
+    urlRadius && urlRadius !== "all" && urlRadius !== "any" ? urlRadius : null
+  const radiusSelectValue = numericRadius ?? "all"
 
   const hasActiveFilters = !!(category || minPrice || maxPrice || minRating)
 
@@ -839,7 +861,10 @@ function SearchContent() {
       // ES service uses `lon` (not `lng`); buyer-location store uses `lng`.
       params.lat = String(effectiveLat)
       params.lon = String(effectiveLon)
-      params.radius = radius
+      // Only send `radius` when the buyer picked a numeric one. Omitting it
+      // triggers the backend's "all supported areas, closest-first" behavior
+      // and lets it flag distant results as beyond_ship_limit.
+      if (numericRadius) params.radius = numericRadius
     }
 
     searchProducts(params)
@@ -872,7 +897,7 @@ function SearchContent() {
     return () => {
       cancelled = true
     }
-  }, [query, category, sortBy, minPrice, maxPrice, minRating, page, flagsLoaded, marketplaceEnabled, categoryList, hasGeo, effectiveLat, effectiveLon, radius])
+  }, [query, category, sortBy, minPrice, maxPrice, minRating, page, flagsLoaded, marketplaceEnabled, categoryList, hasGeo, effectiveLat, effectiveLon, numericRadius])
 
   const results = data?.results ?? []
   const totalResults = data?.total ?? 0
@@ -1019,9 +1044,10 @@ function SearchContent() {
             </button>
           )}
 
-          {/* Distance radius — only when buyer has a location. Persists via
-              URL params (?radius=...); "any" strips lat/lon/radius so the
-              server returns global results. */}
+          {/* Distance radius. Default = "All areas" (no radius param sent) so
+              the backend returns products from every supported area sorted
+              closest-first. Picking a numeric radius hard-filters to that
+              distance. lat/lon are always sent when the buyer has a location. */}
           {(buyerLocation?.lat != null && buyerLocation?.lng != null) && (
             <div className="relative flex items-center gap-2">
               <label htmlFor="radius-select" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden sm:inline">
@@ -1029,28 +1055,27 @@ function SearchContent() {
               </label>
               <select
                 id="radius-select"
-                value={radiusDisabled ? "any" : radius}
+                value={radiusSelectValue}
                 onChange={(e) => {
                   const v = e.target.value
                   const params = new URLSearchParams(searchParams.toString())
-                  if (v === "any") {
-                    params.set("radius", "any")
-                    params.delete("lat")
-                    params.delete("lon")
+                  if (v === "all") {
+                    // Omit the radius param entirely — backend returns all supported areas.
+                    params.delete("radius")
                   } else {
                     params.set("radius", v)
-                    params.delete("page")
                   }
+                  params.delete("page")
                   router.push(`${pathname}?${params.toString()}`)
                 }}
                 className="appearance-none rounded-lg border border-border bg-card px-3 py-1.5 pr-7 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-brand-gold focus:border-brand-gold"
               >
+                <option value="all">All areas</option>
                 <option value="10">10 mi</option>
                 <option value="25">25 mi</option>
                 <option value="50">50 mi</option>
                 <option value="100">100 mi</option>
                 <option value="250">250 mi</option>
-                <option value="any">Any distance</option>
               </select>
             </div>
           )}
@@ -1211,6 +1236,34 @@ function SearchContent() {
             </div>
           ) : (
             <>
+              {/* Beyond-ship-range banner: when the buyer has geo AND every
+                  visible result is beyond the configured shipping-distance
+                  limit, we don't have a close-by seller. Route them straight
+                  to support so we can arrange shipping instead of leaving
+                  them to click each "Chat about shipping" pill individually. */}
+              {hasGeo && results.length > 0 && results.every((r) => r.beyond_ship_limit === true) && (() => {
+                const href = supportWhatsAppLink(`Hi AfroTransact, I searched for "${query || "products"}" but there are no sellers near me. Can you help arrange shipping?`)
+                if (!href) return null
+                return (
+                  <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <div className="flex-1">
+                      <p className="font-semibold">No sellers close to you for this.</p>
+                      <p className="text-amber-800/90 mt-0.5">
+                        We can still get it to you — chat with support and we&apos;ll arrange shipping.
+                      </p>
+                    </div>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 rounded-lg bg-amber-800 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-amber-900 transition-colors"
+                    >
+                      Chat support
+                    </a>
+                  </div>
+                )
+              })()}
+
               <div
                 className={cn(
                   viewMode === "grid"

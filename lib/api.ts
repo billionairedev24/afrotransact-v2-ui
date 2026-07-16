@@ -265,6 +265,10 @@ export interface SearchResult {
   avg_rating: number
   review_count: number
   distance_miles: number | null
+  /** True when the product's store is farther than the configured SHIP_DISTANCE_LIMIT_MILES.
+   *  Nationwide / no-location products are never flagged. Storefront routes flagged
+   *  results through a "chat support to arrange shipping" affordance. */
+  beyond_ship_limit?: boolean
   highlight_title: string | null
   highlight_description: string | null
   score: number | null
@@ -1601,6 +1605,8 @@ export interface SubOrderDto {
   shippingShipmentId?: string | null
   trackingUpdatedAt?: string | null
   exceptionNote: string | null
+  deliveryProofImageUrl?: string | null
+  deliveryProofUploadedAt?: string | null
   items: OrderItemDto[]
 }
 
@@ -1651,6 +1657,18 @@ export function updateSubOrderStatus(
   if (trackingNumber) params.set("trackingNumber", trackingNumber)
   if (exceptionNote) params.set("exceptionNote", exceptionNote)
   return api<OrderDto>(`/api/v1/orders/sub-orders/${subOrderId}/status?${params}`, { method: "PUT", token })
+}
+
+/**
+ * Attach a delivery-proof photo URL to a sub-order. Backend stores the pointer;
+ * the buyer only sees the image once the sub-order is marked delivered.
+ */
+export function attachDeliveryProof(token: string, subOrderId: string, imageUrl: string) {
+  return api<OrderDto>(`/api/v1/orders/sub-orders/${subOrderId}/delivery-proof`, {
+    method: "POST",
+    body: { imageUrl },
+    token,
+  })
 }
 
 export interface CheckoutRequest {
@@ -1756,6 +1774,7 @@ export interface CouponData {
   perUserLimit: number
   scope: "site_wide" | "product" | "store" | "category"
   scopeId: string | null
+  discountTarget: "items" | "shipping"
   sellerId: string | null
   regionId: string | null
   startsAt: string
@@ -1775,6 +1794,7 @@ export interface CouponCreateRequest {
   perUserLimit?: number
   scope?: string
   scopeId?: string
+  discountTarget?: "items" | "shipping"
   regionId?: string
   startsAt?: string
   expiresAt: string
@@ -1787,6 +1807,7 @@ export interface ValidateCouponResponse {
   type: string
   value: number
   discountCents: number
+  discountTarget?: "items" | "shipping"
   error: string | null
 }
 
@@ -1822,10 +1843,10 @@ export function toggleAdminCoupon(token: string, id: string) {
   return api<CouponData>(`/api/v1/admin/coupons/${id}/toggle`, { method: "POST", token })
 }
 
-export function validateCoupon(token: string, code: string, subtotalCents: number, regionId?: string) {
+export function validateCoupon(token: string, code: string, subtotalCents: number, regionId?: string, shippingCents?: number) {
   return api<ValidateCouponResponse>("/api/v1/coupons/validate", {
     method: "POST",
-    body: { code, subtotalCents, regionId },
+    body: { code, subtotalCents, shippingCents, regionId },
     token,
   })
 }
@@ -1874,6 +1895,8 @@ export interface ForYouProduct {
   currency?: string | null
   slug?: string | null
   lastOrderedAt?: string | null
+  /** Live stock — UI hides the Add/Buy CTA when false. Defaults to true if omitted for backward compat. */
+  inStock?: boolean
   /** Discriminator: which composer source surfaced this row. */
   source: "BUY_AGAIN" | "CO_PURCHASE" | "SEMANTIC" | "CATEGORY"
 }
@@ -2169,6 +2192,8 @@ export interface ServiceZone {
   taxRate: number | null
   shippingRateCentsPerLb: number | null
   freeShippingThresholdCents: number | null
+  shippingMode: "per_lb" | "flat" | null
+  flatShippingCents: number | null
 }
 
 export interface ResolvedZoneSettings {
@@ -2177,6 +2202,8 @@ export interface ResolvedZoneSettings {
   taxRate: number | null
   shippingRateCentsPerLb: number | null
   freeShippingThresholdCents: number | null
+  shippingMode: "per_lb" | "flat" | null
+  flatShippingCents: number | null
 }
 
 export interface ZoneFeature {
@@ -2212,6 +2239,8 @@ interface RawServiceZone {
   tax_rate?: number | null
   shipping_rate_cents_per_lb?: number | null
   free_shipping_threshold_cents?: number | null
+  shipping_mode?: "per_lb" | "flat" | null
+  flat_shipping_cents?: number | null
 }
 
 interface RawResolvedSettings {
@@ -2220,6 +2249,8 @@ interface RawResolvedSettings {
   tax_rate?: number | null
   shipping_rate_cents_per_lb?: number | null
   free_shipping_threshold_cents?: number | null
+  shipping_mode?: "per_lb" | "flat" | null
+  flat_shipping_cents?: number | null
 }
 
 interface RawZoneFeature {
@@ -2247,6 +2278,8 @@ function mapZone(z: RawServiceZone): ServiceZone {
     taxRate: z.tax_rate ?? null,
     shippingRateCentsPerLb: z.shipping_rate_cents_per_lb ?? null,
     freeShippingThresholdCents: z.free_shipping_threshold_cents ?? null,
+    shippingMode: z.shipping_mode ?? null,
+    flatShippingCents: z.flat_shipping_cents ?? null,
   }
 }
 
@@ -2257,6 +2290,8 @@ function mapSettings(s: RawResolvedSettings | null | undefined): ResolvedZoneSet
     taxRate: s?.tax_rate ?? null,
     shippingRateCentsPerLb: s?.shipping_rate_cents_per_lb ?? null,
     freeShippingThresholdCents: s?.free_shipping_threshold_cents ?? null,
+    shippingMode: s?.shipping_mode ?? null,
+    flatShippingCents: s?.flat_shipping_cents ?? null,
   }
 }
 
@@ -2285,6 +2320,8 @@ export interface ZoneInput {
   tax_rate?: number | null
   shipping_rate_cents_per_lb?: number | null
   free_shipping_threshold_cents?: number | null
+  shipping_mode?: "per_lb" | "flat" | null
+  flat_shipping_cents?: number | null
 }
 
 // Public list of Service Zones. The `level` filter narrows to a single tier

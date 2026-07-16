@@ -98,22 +98,34 @@ export function BuyBoxClient({
           </p>
         )}
         <div className="mt-4 flex flex-col gap-2">
-          <button
-            type="button"
-            disabled={adding === bb.offerId}
-            onClick={() => add(bb)}
-            className="w-full rounded-xl bg-brand-gold py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-60"
-          >
-            {adding === bb.offerId ? "Adding…" : "Add to cart"}
-          </button>
-          <button
-            type="button"
-            disabled={adding === bb.offerId}
-            onClick={() => buyNow(bb)}
-            className="w-full rounded-xl border border-border bg-card py-3 text-sm font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-60"
-          >
-            Buy now
-          </button>
+          {bb.stockQuantity <= 0 ? (
+            <button
+              type="button"
+              disabled
+              className="w-full rounded-xl bg-muted py-3 text-sm font-bold text-muted-foreground cursor-not-allowed uppercase tracking-wider"
+            >
+              Out of Stock
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={adding === bb.offerId}
+                onClick={() => add(bb)}
+                className="w-full rounded-xl bg-brand-gold py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-60"
+              >
+                {adding === bb.offerId ? "Adding…" : "Add to cart"}
+              </button>
+              <button
+                type="button"
+                disabled={adding === bb.offerId}
+                onClick={() => buyNow(bb)}
+                className="w-full rounded-xl border border-border bg-card py-3 text-sm font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-60"
+              >
+                Buy now
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -161,7 +173,7 @@ export function BuyBoxClient({
                   onClick={() => add(o)}
                   className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {adding === o.offerId ? "Adding…" : "Add"}
+                  {o.stockQuantity === 0 ? "Sold out" : adding === o.offerId ? "Adding…" : "Add"}
                 </button>
               </li>
               )

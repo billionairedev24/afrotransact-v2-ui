@@ -450,6 +450,12 @@ function SettingsPanel({
   const [shippingRate, setShippingRate] = useState(
     zone.shippingRateCentsPerLb !== null ? String(zone.shippingRateCentsPerLb / 100) : "",
   )
+  const [shippingMode, setShippingMode] = useState<"per_lb" | "flat">(
+    zone.shippingMode ?? "per_lb",
+  )
+  const [flatShipping, setFlatShipping] = useState(
+    zone.flatShippingCents !== null ? String(zone.flatShippingCents / 100) : "",
+  )
   const [freeThreshold, setFreeThreshold] = useState(
     zone.freeShippingThresholdCents === null
       ? ""
@@ -458,6 +464,26 @@ function SettingsPanel({
         : String(zone.freeShippingThresholdCents / 100),
   )
   const [saving, setSaving] = useState(false)
+
+  // After a save, the parent re-fetches zones and passes an updated zone prop
+  // to this same component instance. useState only takes the initial value,
+  // so without this the panel would silently keep showing pre-save values
+  // (e.g. mode = per_lb after saving flat). Re-sync every field to the prop.
+  useEffect(() => {
+    setCurrency(zone.currency ?? "")
+    setTimezone(zone.timezone ?? "")
+    setTaxRate(zone.taxRate !== null ? String(zone.taxRate) : "")
+    setShippingRate(zone.shippingRateCentsPerLb !== null ? String(zone.shippingRateCentsPerLb / 100) : "")
+    setShippingMode(zone.shippingMode ?? "per_lb")
+    setFlatShipping(zone.flatShippingCents !== null ? String(zone.flatShippingCents / 100) : "")
+    setFreeThreshold(
+      zone.freeShippingThresholdCents === null
+        ? ""
+        : zone.freeShippingThresholdCents === -1
+          ? "-1"
+          : String(zone.freeShippingThresholdCents / 100),
+    )
+  }, [zone.id, zone.currency, zone.timezone, zone.taxRate, zone.shippingRateCentsPerLb, zone.shippingMode, zone.flatShippingCents, zone.freeShippingThresholdCents])
 
   // For each field find the closest ancestor that has it set.
   function inheritedFrom<K extends keyof ServiceZone>(key: K): ServiceZone | null {
@@ -484,6 +510,9 @@ function SettingsPanel({
         tax_rate: taxRate === "" ? null : Number(taxRate),
         shipping_rate_cents_per_lb:
           shippingRate === "" ? null : Math.round(Number(shippingRate) * 100),
+        shipping_mode: shippingMode,
+        flat_shipping_cents:
+          flatShipping === "" ? null : Math.round(Number(flatShipping) * 100),
         free_shipping_threshold_cents:
           freeThreshold === ""
             ? null
@@ -524,12 +553,34 @@ function SettingsPanel({
           placeholder="0.0825"
           hint={hint("taxRate", taxRate)}
         />
-        <SettingsField
-          label="Shipping rate ($/lb)"
-          value={shippingRate}
-          onChange={setShippingRate}
-          placeholder="5.99"
-        />
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            Shipping mode
+          </label>
+          <select
+            value={shippingMode}
+            onChange={(e) => setShippingMode(e.target.value as "per_lb" | "flat")}
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="per_lb">Weight-based ($/lb)</option>
+            <option value="flat">Flat rate</option>
+          </select>
+        </div>
+        {shippingMode === "flat" ? (
+          <SettingsField
+            label="Flat shipping ($ per order)"
+            value={flatShipping}
+            onChange={setFlatShipping}
+            placeholder="9.99"
+          />
+        ) : (
+          <SettingsField
+            label="Shipping rate ($/lb)"
+            value={shippingRate}
+            onChange={setShippingRate}
+            placeholder="5.99"
+          />
+        )}
         <SettingsField
           label="Free-shipping threshold ($)"
           value={freeThreshold}

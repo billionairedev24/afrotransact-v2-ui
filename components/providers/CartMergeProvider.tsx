@@ -92,13 +92,6 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
   const roles = (session?.user as { roles?: string[] } | undefined)?.roles
   const isBuyerCapable = isBuyerCapableRoles(roles)
 
-  // Cart is server-only now — purge any legacy sessionStorage/localStorage
-  // entries left behind by the retired guest-cart path so a returning
-  // buyer never sees a stale "previous session" merge again.
-  useEffect(() => {
-    clearGuestCart()
-  }, [])
-
   useEffect(() => {
     // Treat non-buyer (admin/seller-only) sessions as "not authenticated" for
     // cart purposes: subscriber below persists to sessionStorage as guest.

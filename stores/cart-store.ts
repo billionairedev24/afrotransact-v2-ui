@@ -50,18 +50,35 @@ interface CartState {
   getItemsByStore: () => Map<string, CartItem[]>
 }
 
-// Cart is server-only. Guest persistence retired: no sessionStorage, no
-// localStorage, no cross-session merges. Callers must be authenticated to
-// mutate the cart. These shims stay callable so existing imports compile
-// and any stale storage entries get purged on first invocation.
-const LEGACY_GUEST_CART_KEY = "afrotransact-guest-cart"
+// Guest cart persistence lives in sessionStorage so items survive the
+// sign-in navigation (NextAuth redirects reset in-memory zustand state).
+// On sign-in, CartMergeProvider drains this store into mergeCart() and
+// then clears it. Session-scoped (not localStorage) so it doesn't linger
+// across browser sessions.
+const GUEST_CART_KEY = "afrotransact-guest-cart"
 
-export function saveGuestCart(_items: CartItem[]) { /* no-op */ }
-export function loadGuestCart(): CartItem[] { return [] }
+export function saveGuestCart(items: CartItem[]) {
+  try {
+    if (items.length === 0) sessionStorage.removeItem(GUEST_CART_KEY)
+    else sessionStorage.setItem(GUEST_CART_KEY, JSON.stringify(items))
+  } catch {
+    // storage unavailable (private mode, quota, SSR) — cart still lives in memory
+  }
+}
+export function loadGuestCart(): CartItem[] {
+  try {
+    const raw = sessionStorage.getItem(GUEST_CART_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as CartItem[]) : []
+  } catch {
+    return []
+  }
+}
 export function clearGuestCart() {
   try {
-    sessionStorage.removeItem(LEGACY_GUEST_CART_KEY)
-    localStorage.removeItem(LEGACY_GUEST_CART_KEY)
+    sessionStorage.removeItem(GUEST_CART_KEY)
+    localStorage.removeItem(GUEST_CART_KEY)
     sessionStorage.removeItem("at:cart:merge-notice")
   } catch {
     // storage unavailable
