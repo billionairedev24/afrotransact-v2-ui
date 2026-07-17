@@ -6,6 +6,7 @@ import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { friendlyMessage } from "@/lib/errors"
 import {
   Package,
   ShoppingCart,
@@ -166,7 +167,7 @@ export default function DashboardOverview() {
             router.replace("/dashboard/onboarding")
             return
           }
-          setError(msg || "Failed to load dashboard")
+          setError(friendlyMessage(err, "Failed to load dashboard"))
         }
       } finally {
         if (!cancelled) setLoading(false)

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ChevronLeft, AlertTriangle, CheckCircle2, Clock, XCircle } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
+import { friendlyMessage } from "@/lib/errors"
 import {
   getOpenBusinessTypeChange,
   submitBusinessTypeChange,
@@ -57,7 +58,7 @@ export default function BusinessTypeChangePage() {
         const r = await getOpenBusinessTypeChange(token)
         if (!cancelled) setOpen(r)
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load request status")
+        if (!cancelled) setError(friendlyMessage(e, "Failed to load request status"))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -91,7 +92,7 @@ export default function BusinessTypeChangePage() {
       setNewBusinessType("")
       setNewEntityType("")
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not submit request.")
+      setError(friendlyMessage(e, "Could not submit request."))
     } finally {
       setSubmitting(false)
     }
@@ -107,7 +108,7 @@ export default function BusinessTypeChangePage() {
       await withdrawBusinessTypeChange(token, open.id)
       setOpen(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not withdraw request.")
+      setError(friendlyMessage(e, "Could not withdraw request."))
     } finally {
       setSubmitting(false)
     }
