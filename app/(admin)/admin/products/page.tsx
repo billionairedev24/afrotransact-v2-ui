@@ -41,6 +41,7 @@ import {
   approveProduct,
   rejectProduct,
   updateVariantPrice,
+  updateProduct,
   triggerSearchReindex,
   triggerSearchPurge,
   ApiError,
@@ -107,6 +108,7 @@ export default function AdminProductsPage() {
   const [viewProduct, setViewProduct] = useState<Product | null>(null)
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [priceEdit, setPriceEdit] = useState<{ product: Product; variant: ProductVariant } | null>(null)
+  const [detailsEdit, setDetailsEdit] = useState<Product | null>(null)
 
   const [rejectModal, setRejectModal] = useState<{
     open: boolean
@@ -493,7 +495,23 @@ export default function AdminProductsPage() {
         onApprove={handleApprove}
         onReject={openRejectModal}
         onEditPrice={(p, v) => setPriceEdit({ product: p, variant: v })}
+        onEditDetails={(p) => setDetailsEdit(p)}
       />
+
+      {detailsEdit && (
+        <DetailsEditDialog
+          product={detailsEdit}
+          onClose={() => setDetailsEdit(null)}
+          onSaved={(title, description) => {
+            const updated: Product = { ...detailsEdit, title, description }
+            applyProductUpdate(updated)
+            if (viewProduct?.id === updated.id) setViewProduct(updated)
+            void revalidateStorefronts().catch(() => {})
+            setDetailsEdit(null)
+            toast.success("Product updated — syncing to the storefront.")
+          }}
+        />
+      )}
 
       {priceEdit && (
         <PriceEditDialog
@@ -671,6 +689,7 @@ function ProductDetailPanel({
   onApprove,
   onReject,
   onEditPrice,
+  onEditDetails,
 }: {
   product: Product | null
   galleryIndex: number
@@ -680,6 +699,7 @@ function ProductDetailPanel({
   onApprove: (p: Product) => void
   onReject: (p: Product) => void
   onEditPrice: (p: Product, v: ProductVariant) => void
+  onEditDetails: (p: Product) => void
 }) {
   const st = product?.status.toLowerCase()
   const canAct = st === "pending_review"
@@ -782,6 +802,12 @@ function ProductDetailPanel({
                   </p>
                 </div>
               )}
+              <button
+                onClick={() => onEditDetails(product)}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-green hover:underline"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit title &amp; description
+              </button>
             </Section>
 
             <Section title={`Variants (${product.variants.length})`}>
@@ -1031,6 +1057,80 @@ function PriceEditDialog({
           className="rounded-lg bg-brand-dark px-4 py-2 text-sm font-semibold text-brand-gold hover:opacity-90 disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save price"}
+        </button>
+      </DialogFooter>
+    </Dialog>
+  )
+}
+
+/* ─── Product details editor (title + description) ────────────────────────── */
+function DetailsEditDialog({
+  product,
+  onClose,
+  onSaved,
+}: {
+  product: Product
+  onClose: () => void
+  onSaved: (title: string, description: string) => void
+}) {
+  const [title, setTitle] = useState(product.title)
+  const [description, setDescription] = useState(product.description ?? "")
+  const [saving, setSaving] = useState(false)
+
+  async function save() {
+    if (!title.trim()) {
+      toast.error("Title can't be empty.")
+      return
+    }
+    setSaving(true)
+    try {
+      const token = await getAccessToken()
+      if (!token) throw new Error("No token")
+      await updateProduct(token, product.id, { title: title.trim(), description })
+      onSaved(title.trim(), description)
+    } catch (e) {
+      logError(e, "admin.updateProduct")
+      toast.error("Could not save. Please try again.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open onClose={() => !saving && onClose()}>
+      <DialogHeader onClose={() => !saving && onClose()}>Edit product details</DialogHeader>
+      <DialogBody>
+        <label className="block mb-4">
+          <span className="mb-1 block text-xs font-medium text-gray-600">Title</span>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-gray-600">Description</span>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={6}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+          />
+        </label>
+      </DialogBody>
+      <DialogFooter>
+        <button
+          onClick={() => !saving && onClose()}
+          className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="rounded-lg bg-brand-dark px-4 py-2 text-sm font-semibold text-brand-gold hover:opacity-90 disabled:opacity-50"
+        >
+          {saving ? "Saving…" : "Save"}
         </button>
       </DialogFooter>
     </Dialog>
