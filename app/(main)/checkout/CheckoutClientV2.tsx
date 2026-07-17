@@ -59,7 +59,7 @@ import { useCartStore, clearGuestCart } from "@/stores/cart-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
-import { PhoneInput } from "@/components/ui/PhoneInput"
+import { PhoneInput, normalizeToE164 } from "@/components/ui/PhoneInput"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
 import { resolveDefaultRegion } from "@/lib/regions"
@@ -293,7 +293,7 @@ export default function CheckoutClientV2({
 
   function openNewAddress() {
     setAddrEditingId(null)
-    setForm({ fullName: profileName || sessionName, line1: "", line2: "", city: "", state: "", zip: "", phone: profilePhone })
+    setForm({ fullName: profileName || sessionName, line1: "", line2: "", city: "", state: "", zip: "", phone: normalizeToE164(profilePhone, "US") })
     setAddressQuery("")
     setMakeDefault(addresses.length === 0)
     setAddrModalOpen(true)
@@ -304,7 +304,9 @@ export default function CheckoutClientV2({
       fullName: profileName || sessionName,
       line1: a.line1, line2: a.line2 ?? "",
       city: a.city, state: a.state ?? "",
-      zip: a.postalCode ?? "", phone: a.phone ?? profilePhone,
+      // Upgrade a legacy bare phone to E.164 using the address country so the
+      // input shows +country and a plain re-save persists it correctly.
+      zip: a.postalCode ?? "", phone: normalizeToE164(a.phone ?? profilePhone ?? "", a.countryCode || "US"),
     })
     setAddressQuery(a.line1)
     setMakeDefault(a.isDefault)
@@ -314,6 +316,14 @@ export default function CheckoutClientV2({
   async function handleSaveAddress() {
     if (!authToken) { toast.error("Please sign in to save addresses."); return }
     if (!form.line1 || !form.city || !form.zip) return
+    // Never store a bare phone — persist E.164 (with country code) or nothing.
+    // A number that can't be validated for the country is rejected with a clear
+    // message instead of being saved in a form checkout will later reject.
+    const phoneE164 = normalizeToE164(form.phone ?? "", "US")
+    if ((form.phone ?? "").trim() && !phoneE164) {
+      toast.error("Enter a valid phone number including area code (e.g. +1 512 555 1234).")
+      return
+    }
     setAddrSaving(true)
     try {
       const basePayload = {
@@ -324,7 +334,7 @@ export default function CheckoutClientV2({
         state: form.state?.trim() || "",
         postalCode: form.zip.trim(),
         countryCode: "US",
-        phone: form.phone?.trim() || undefined,
+        phone: phoneE164 || undefined,
       }
       const saved = addrEditingId
         ? await updateAddress(authToken, addrEditingId, basePayload)
@@ -749,6 +759,15 @@ export default function CheckoutClientV2({
         heightIn: item.heightIn ?? null,
       }))
       await mergeCart(authToken, items)
+      // Normalize the address phone to E.164 (respecting the address country)
+      // so a legacy bare number doesn't fail the order service. Block with a
+      // clear message when a stored number can't be validated for its country.
+      const rawPhone = selectedAddress.phone ?? profilePhone ?? ""
+      const phoneE164 = normalizeToE164(rawPhone, selectedAddress.countryCode || "US")
+      if (rawPhone.trim() && !phoneE164) {
+        setPlaceError("The phone number on this address isn't valid for its country. Edit the address and re-enter your phone number.")
+        return null
+      }
       if (!idempotencyKeyRef.current) idempotencyKeyRef.current = crypto.randomUUID()
       const result = await apiCheckout(authToken, {
         regionId: region.id,
@@ -759,7 +778,7 @@ export default function CheckoutClientV2({
         city: selectedAddress.city,
         state: selectedAddress.state ?? "",
         zip: selectedAddress.postalCode ?? "",
-        phone: selectedAddress.phone ?? profilePhone ?? undefined,
+        phone: phoneE164 || undefined,
         saveAddress: false,
         // When free shipping applies we don't assert a paid carrier quote — the
         // order service bills $0 shipping above the threshold, and this keeps the
@@ -1300,7 +1319,8 @@ export default function CheckoutClientV2({
               <Field label="Full name" value={form.fullName} onChange={(v) => setForm({ ...form, fullName: v })} />
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
-                <PhoneInput value={form.phone} onChange={(e164) => setForm({ ...form, phone: e164 })} className="w-full" />
+                <PhoneInput value={form.phone} onChange={(e164) => setForm({ ...form, phone: e164 })} defaultCountry="US" className="w-full" />
+                <p className="mt-1 text-[11px] text-gray-500">Include your country and area code — used for delivery updates.</p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>

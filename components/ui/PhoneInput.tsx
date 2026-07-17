@@ -172,3 +172,16 @@ export function isValidE164(value: string): boolean {
   if (!value) return false
   return isValidPhoneNumber(value)
 }
+
+/**
+ * Normalize a possibly-bare number to E.164, using `country` as the default
+ * region. A legacy phone saved without a country ("5125551234") becomes
+ * "+15125551234" under country "US" — i.e. we respect the address country as
+ * the phone's country code. An already-E.164 value ("+44…") keeps its own
+ * country. Returns "" when the number can't be parsed to a valid one.
+ */
+export function normalizeToE164(value: string, country: string = DEFAULT_COUNTRY): string {
+  if (!value) return ""
+  const parsed = parsePhoneNumberFromString(value.trim(), country as CountryCode)
+  return parsed && parsed.isValid() ? parsed.number : ""
+}
