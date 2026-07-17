@@ -690,8 +690,11 @@ export default function CheckoutClientV2({
   }, [subtotal, cartItems.length, region?.id, activeZoneId])
 
   // ─── totals ────────────────────────────────────────────────────────
-  // Never fabricate a rate — the server charges 0 where none is configured.
-  const taxRate = region?.taxRate ?? 0
+  // Tax comes from the resolved destination zone — the same source the server
+  // charges from (resolveZoneByAddress). region.taxRate is the LEGACY source
+  // and can diverge (e.g. still 8.25% after a zone is set to 0), so we never
+  // use it here. Unconfigured zone → 0, matching the server.
+  const taxRate = activeZone?.effectiveSettings?.taxRate ?? 0
   const discountCents = couponResult?.discountCents ?? 0
   const couponTargetsShipping = couponResult?.discountTarget === "shipping"
   // Shipping-target coupons reduce shipping (never below 0); items-target
