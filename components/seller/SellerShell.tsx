@@ -74,7 +74,7 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
   return (
     <div className="min-h-screen min-w-0 bg-gray-50">
       {/* Mobile header */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-input bg-white px-4 lg:hidden">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-input bg-white px-4 md:hidden">
         <button
           onClick={() => setSidebarOpen(true)}
           className="text-muted-foreground hover:text-foreground transition-colors"
@@ -95,7 +95,7 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
             inactive items in light-gray text, active item = solid gold pill,
             footer = avatar + name/"Verified Merchant" subtitle, then a 2-col
             Help / Logout row. */}
-        <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 bg-brand-dark p-4 z-50">
+        <aside className="hidden md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 bg-brand-dark p-4 z-50">
           <div className="flex items-center gap-2 mb-6 px-2">
             <Link href="/dashboard" className="flex items-center">
               <span className="text-xl font-bold text-brand-gold">AfroTransact</span>
@@ -171,7 +171,7 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
 
         {/* Mobile sidebar overlay */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 z-50 md:hidden">
             <div
               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
               onClick={() => setSidebarOpen(false)}
@@ -258,13 +258,13 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
         )}
 
         {/* Main content */}
-        <main className="min-w-0 flex-1 lg:pl-72">
+        <main className="min-w-0 flex-1 md:pl-72">
           {/* Slim top bar for desktop with store switcher. Mobile keeps the
               sticky header above, and we mirror the switcher there too. */}
-          <div className="hidden lg:flex sticky top-0 z-30 bg-white border-b border-gray-200 px-6 lg:px-8 h-14 items-center">
+          <div className="hidden md:flex sticky top-0 z-30 bg-white border-b border-gray-200 px-6 lg:px-8 h-14 items-center">
             <StoreSwitcher />
           </div>
-          <div className="lg:hidden border-b border-gray-200 bg-white px-4 py-2">
+          <div className="md:hidden border-b border-gray-200 bg-white px-4 py-2">
             <StoreSwitcher />
           </div>
           <div className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

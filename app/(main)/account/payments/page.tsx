@@ -12,6 +12,8 @@ import {
   type SavedPaymentMethod,
 } from "@/lib/api"
 import { AccountShell } from "@/components/account/AccountShell"
+import { getAccessToken } from "@/lib/auth-helpers"
+import { friendlyMessage } from "@/lib/errors"
 
 function formatBrand(brand: string | null): string {
   if (!brand) return "Card"
@@ -26,8 +28,7 @@ function formatExpiry(month: number | null, year: number | null): string {
 }
 
 export function PaymentsSection() {
-  const { data: session, status } = useSession()
-  const token = (session as { accessToken?: string } | null)?.accessToken
+  const { status } = useSession()
   const [methods, setMethods] = useState<SavedPaymentMethod[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,6 +40,7 @@ export function PaymentsSection() {
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
+    const token = await getAccessToken()
     if (!token) return
     setLoading(true)
     setError(null)
@@ -50,20 +52,21 @@ export function PaymentsSection() {
       setMethods(list)
       setDefaultPmId(profile.defaultPaymentMethodId ?? null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load saved cards.")
+      setError(friendlyMessage(e, "Failed to load saved cards."))
     } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [])
 
   useEffect(() => {
-    if (status === "authenticated" && token) {
+    if (status === "authenticated") {
       void refresh()
     }
-  }, [status, token, refresh])
+  }, [status, refresh])
 
   const handleSetDefault = useCallback(
     async (pmId: string) => {
+      const token = await getAccessToken()
       if (!token) return
       setSettingDefaultId(pmId)
       const prev = defaultPmId
@@ -72,16 +75,17 @@ export function PaymentsSection() {
         await updateUserDefaults(token, { defaultPaymentMethodId: pmId })
       } catch (e) {
         setDefaultPmId(prev)
-        setError(e instanceof Error ? e.message : "Could not set default card.")
+        setError(friendlyMessage(e, "Could not set default card."))
       } finally {
         setSettingDefaultId(null)
       }
     },
-    [token, defaultPmId],
+    [defaultPmId],
   )
 
   const handleDelete = useCallback(
     async (id: string) => {
+      const token = await getAccessToken()
       if (!token) return
       setDeletingId(id)
       // Optimistic remove — restore on failure.
@@ -98,12 +102,12 @@ export function PaymentsSection() {
         }
       } catch (e) {
         setMethods(prev)
-        setError(e instanceof Error ? e.message : "Could not remove that card.")
+        setError(friendlyMessage(e, "Could not remove that card."))
       } finally {
         setDeletingId(null)
       }
     },
-    [token, methods, defaultPmId],
+    [methods, defaultPmId],
   )
 
   if (status !== "authenticated") {

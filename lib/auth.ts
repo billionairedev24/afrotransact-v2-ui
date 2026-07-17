@@ -292,12 +292,17 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Return token early if it hasn't expired
-      if (token.expiresAt && Date.now() < token.expiresAt * 1000) {
+      // Refresh ~60s BEFORE expiry so an active user's requests always carry a
+      // valid token — they should never surface a 401. (An idle user whose
+      // refresh token has expired past Keycloak's SSO idle TTL falls through to
+      // the refresh below, which fails and sets error=RefreshTokenError → the
+      // SessionGuard performs a full sign-out.)
+      const EXPIRY_BUFFER_MS = 60_000
+      if (token.expiresAt && Date.now() < token.expiresAt * 1000 - EXPIRY_BUFFER_MS) {
         return token
       }
 
-      // Access token has expired, try to refresh it
+      // Access token expired (or within the refresh buffer) — try to refresh it
       if (token.refreshToken) {
         try {
           return await refreshAccessToken(token)

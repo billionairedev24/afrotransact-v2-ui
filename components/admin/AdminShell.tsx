@@ -234,7 +234,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen min-w-0 bg-gray-50">
       {/* Mobile header */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-input px-4 lg:hidden bg-white">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-input px-4 md:hidden bg-white">
         <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-foreground transition-colors">
           <Menu className="h-5 w-5" />
         </button>
@@ -250,13 +250,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0">
         {/* Desktop sidebar — wider (72) + white surface to match seller dashboard chrome */}
-        <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 bg-brand-dark">
+        <aside className="hidden md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 bg-brand-dark">
           {sidebar()}
         </aside>
 
         {/* Mobile overlay */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 z-50 md:hidden">
             <div
               className="absolute inset-0 bg-black/50 backdrop-blur-sm"
               onClick={() => setSidebarOpen(false)}
@@ -268,7 +268,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Content */}
-        <main className="min-w-0 flex-1 lg:pl-72">
+        <main className="min-w-0 flex-1 md:pl-72">
           <div className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>
