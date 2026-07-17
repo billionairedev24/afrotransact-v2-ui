@@ -17,7 +17,7 @@ const POLL_TIMEOUT_MS = 30_000
 
 type SessionResult =
   | { status: "initiated" }
-  | { status: "converted"; orderId: string }
+  | { status: "converted"; orderId: string; orderNumber?: string }
   | { status: "failed"; reason?: string }
   | { status: "abandoned" }
 
@@ -27,7 +27,7 @@ type SessionResult =
  * dump the buyer on an empty cart). `orderId` is optional — the legacy inline
  * flow doesn't have one yet; the session flow does once conversion confirms.
  */
-function OrderPlaced({ orderId }: { orderId?: string | null }) {
+function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
   return (
     <main className="mx-auto max-w-5xl px-4 py-16">
       <div className="text-center">
@@ -40,10 +40,10 @@ function OrderPlaced({ orderId }: { orderId?: string | null }) {
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link
-            href={orderId ? `/orders/${orderId}` : "/orders"}
+            href={orderNumber ? `/orders/${orderNumber}` : "/orders"}
             className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold/90 transition-colors"
           >
-            <Package className="h-4 w-4" /> {orderId ? "View your order" : "View orders"}
+            <Package className="h-4 w-4" /> {orderNumber ? "View your order" : "View orders"}
           </Link>
           <Link
             href="/"
@@ -72,7 +72,7 @@ function CheckoutCompleteContent() {
   const [pollState, setPollState] = useState<"idle" | "polling" | "timeout" | "failed">(
     sessionId ? "polling" : "idle",
   )
-  const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null)
+  const [confirmed, setConfirmed] = useState<{ orderNumber?: string } | null>(null)
 
   const legacyStatus = redirectStatus === "failed" ? "failed" : "success"
 
@@ -107,7 +107,7 @@ function CheckoutCompleteContent() {
             // to the order detail (which can race materialization → empty cart).
             clearCart()
             try { clearGuestCart() } catch { /* non-fatal */ }
-            setConfirmedOrderId(data.orderId)
+            setConfirmed({ orderNumber: data.orderNumber })
             return
           }
           if (data.status === "failed" || data.status === "abandoned") {
@@ -134,8 +134,8 @@ function CheckoutCompleteContent() {
 
   // ── Session-mode rendering ────────────────────────────────────────────
   if (sessionId) {
-    if (confirmedOrderId) {
-      return <OrderPlaced orderId={confirmedOrderId} />
+    if (confirmed) {
+      return <OrderPlaced orderNumber={confirmed.orderNumber} />
     }
     if (pollState === "polling") {
       return (
