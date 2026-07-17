@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { friendlyMessage } from "@/lib/errors"
 import {
   getSellerProducts,
   getReviewsByProducts,
@@ -104,8 +105,7 @@ export default function SellerReviewsPage() {
       setReplyDraft("")
     },
     onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : "Failed to post reply"
-      toast.error(msg)
+      toast.error(friendlyMessage(err, "Failed to post reply"))
     },
   })
 
