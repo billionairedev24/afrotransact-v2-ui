@@ -33,16 +33,19 @@ import {
   RefreshCw,
   AlertTriangle,
   Trash2,
+  Pencil,
 } from "lucide-react"
 import { revalidateStorefronts } from "@/lib/revalidate-actions"
 import {
   getAdminProducts,
   approveProduct,
   rejectProduct,
+  updateVariantPrice,
   triggerSearchReindex,
   triggerSearchPurge,
   ApiError,
   type Product,
+  type ProductVariant,
   type Page as ApiPage,
 } from "@/lib/api"
 import { logError } from "@/lib/errors"
@@ -103,6 +106,7 @@ export default function AdminProductsPage() {
 
   const [viewProduct, setViewProduct] = useState<Product | null>(null)
   const [galleryIndex, setGalleryIndex] = useState(0)
+  const [priceEdit, setPriceEdit] = useState<{ product: Product; variant: ProductVariant } | null>(null)
 
   const [rejectModal, setRejectModal] = useState<{
     open: boolean
@@ -488,7 +492,29 @@ export default function AdminProductsPage() {
         onClose={() => setViewProduct(null)}
         onApprove={handleApprove}
         onReject={openRejectModal}
+        onEditPrice={(p, v) => setPriceEdit({ product: p, variant: v })}
       />
+
+      {priceEdit && (
+        <PriceEditDialog
+          product={priceEdit.product}
+          variant={priceEdit.variant}
+          onClose={() => setPriceEdit(null)}
+          onSaved={(price, compareAtPrice) => {
+            const updated: Product = {
+              ...priceEdit.product,
+              variants: priceEdit.product.variants.map((vv) =>
+                vv.id === priceEdit.variant.id ? { ...vv, price, compareAtPrice } : vv,
+              ),
+            }
+            applyProductUpdate(updated)
+            if (viewProduct?.id === updated.id) setViewProduct(updated)
+            void revalidateStorefronts().catch(() => {})
+            setPriceEdit(null)
+            toast.success("Price updated — syncing to storefront & inventory.")
+          }}
+        />
+      )}
 
       {/* ── Reject Reason Dialog ───────────────────────────────────── */}
       <Dialog open={rejectModal.open} onClose={closeRejectModal}>
@@ -644,6 +670,7 @@ function ProductDetailPanel({
   onClose,
   onApprove,
   onReject,
+  onEditPrice,
 }: {
   product: Product | null
   galleryIndex: number
@@ -652,6 +679,7 @@ function ProductDetailPanel({
   onClose: () => void
   onApprove: (p: Product) => void
   onReject: (p: Product) => void
+  onEditPrice: (p: Product, v: ProductVariant) => void
 }) {
   const st = product?.status.toLowerCase()
   const canAct = st === "pending_review"
@@ -768,7 +796,16 @@ function ProductDetailPanel({
                     >
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-medium text-gray-900">{v.name || "Default"}</p>
-                        <span className="text-sm font-semibold text-emerald-700">{formatPrice(v.price)}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold text-emerald-700">{formatPrice(v.price)}</span>
+                          <button
+                            onClick={() => onEditPrice(product, v)}
+                            className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-foreground"
+                            aria-label="Edit price"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                         <div className="flex items-center gap-1.5 text-gray-500">
@@ -899,5 +936,103 @@ function InfoRow({
         {value}
       </span>
     </div>
+  )
+}
+
+/* ─── Variant price editor ────────────────────────────────────────────────── */
+function PriceEditDialog({
+  product,
+  variant,
+  onClose,
+  onSaved,
+}: {
+  product: Product
+  variant: ProductVariant
+  onClose: () => void
+  onSaved: (price: number, compareAtPrice: number | null) => void
+}) {
+  const [price, setPrice] = useState(String(variant.price))
+  const [compareAt, setCompareAt] = useState(
+    variant.compareAtPrice != null ? String(variant.compareAtPrice) : "",
+  )
+  const [saving, setSaving] = useState(false)
+
+  async function save() {
+    const p = parseFloat(price)
+    if (!(p > 0)) {
+      toast.error("Enter a price greater than 0.")
+      return
+    }
+    const c = compareAt.trim() === "" ? null : parseFloat(compareAt)
+    if (c != null && (isNaN(c) || c < 0)) {
+      toast.error("Compare-at price is invalid.")
+      return
+    }
+    setSaving(true)
+    try {
+      const token = await getAccessToken()
+      if (!token) throw new Error("No token")
+      await updateVariantPrice(token, { id: variant.id, sku: variant.sku }, p, c)
+      onSaved(p, c)
+    } catch (e) {
+      logError(e, "admin.updateVariantPrice")
+      toast.error("Could not update the price. Please try again.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open onClose={() => !saving && onClose()}>
+      <DialogHeader onClose={() => !saving && onClose()}>Edit price</DialogHeader>
+      <DialogBody>
+        <p className="mb-4 text-sm text-gray-500">
+          {product.title} — <span className="font-mono text-xs">{variant.sku}</span>. Saving updates
+          the storefront and inventory. Stock is managed in the inventory app.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-gray-600">
+              Price ({variant.currency})
+            </span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-gray-600">Compare-at (optional)</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={compareAt}
+              onChange={(e) => setCompareAt(e.target.value)}
+              placeholder="—"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+            />
+          </label>
+        </div>
+      </DialogBody>
+      <DialogFooter>
+        <button
+          onClick={() => !saving && onClose()}
+          className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="rounded-lg bg-brand-dark px-4 py-2 text-sm font-semibold text-brand-gold hover:opacity-90 disabled:opacity-50"
+        >
+          {saving ? "Saving…" : "Save price"}
+        </button>
+      </DialogFooter>
+    </Dialog>
   )
 }

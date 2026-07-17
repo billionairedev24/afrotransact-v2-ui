@@ -1570,6 +1570,27 @@ export function createProduct(
   return api<Product>("/api/v1/products", { method: "POST", body: data, token })
 }
 
+/** Update a variant's price (+ optional compare-at). The catalog owns price and
+ *  republishes product.updated → storefront + inventory. Omits stockQuantity on
+ *  purpose so an admin price edit never clobbers inventory's stock (catalog
+ *  stock is synced FROM inventory). */
+export function updateVariantPrice(
+  token: string,
+  variant: { id: string; sku: string },
+  price: number,
+  compareAtPrice?: number | null,
+) {
+  return api<void>(`/api/v1/products/variants/${variant.id}`, {
+    method: "PUT",
+    body: {
+      sku: variant.sku,
+      price,
+      ...(compareAtPrice != null ? { compareAtPrice } : {}),
+    },
+    token,
+  })
+}
+
 export function addProductImage(
   token: string,
   productId: string,
