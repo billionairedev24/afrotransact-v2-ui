@@ -22,6 +22,7 @@ function isPublicBetaPath(pathname: string): boolean {
     "/sitemap.xml",
     "/terms",
     "/privacy",
+    "/refund-policy",
     "/seller-agreement",
     "/cookies",
     "/help",
