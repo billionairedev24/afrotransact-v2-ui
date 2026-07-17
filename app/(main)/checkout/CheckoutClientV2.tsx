@@ -690,7 +690,8 @@ export default function CheckoutClientV2({
   }, [subtotal, cartItems.length, region?.id, activeZoneId])
 
   // ─── totals ────────────────────────────────────────────────────────
-  const taxRate = region?.taxRate ?? 0.0825
+  // Never fabricate a rate — the server charges 0 where none is configured.
+  const taxRate = region?.taxRate ?? 0
   const discountCents = couponResult?.discountCents ?? 0
   const couponTargetsShipping = couponResult?.discountTarget === "shipping"
   // Shipping-target coupons reduce shipping (never below 0); items-target
@@ -1229,7 +1230,11 @@ export default function CheckoutClientV2({
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-600">Tax</dt>
-                <dd className="text-gray-900 tabular-nums">{formatCents(tax)}</dd>
+                {taxRate === 0 ? (
+                  <dd className="font-medium text-green-600">No tax</dd>
+                ) : (
+                  <dd className="text-gray-900 tabular-nums">{formatCents(tax)}</dd>
+                )}
               </div>
               <div className="flex justify-between border-t border-gray-200 pt-2 mt-2">
                 <dt className="text-base font-bold text-gray-900">Order total</dt>
