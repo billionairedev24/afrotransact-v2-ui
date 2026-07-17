@@ -42,12 +42,12 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
   // without importing next-auth itself.
   useEffect(() => {
     setOn401Handler(() => {
-      // A 401 on any authenticated API call means the access token was
-      // rejected AND the silent refresh in lib/auth.ts already failed
-      // (otherwise we'd have a fresh token). Don't gate on path — the
-      // session is dead regardless of where the user happens to be.
+      // lib/api.ts only calls this AFTER a transparent refresh-and-retry has
+      // already failed — so the refresh token is expired (idle past Keycloak's
+      // SSO idle TTL) or revoked. The session is genuinely dead; sign out and
+      // tell the user it was for inactivity/security.
       if (status === "authenticated" || isProtectedPath(pathname)) {
-        bailOut("token_rejected")
+        bailOut("inactive")
       }
     })
     return () => setOn401Handler(null)
@@ -59,7 +59,10 @@ export function SessionGuard({ children }: { children: React.ReactNode }) {
     const hasRefreshError = (session as { error?: string } | null)?.error === "RefreshTokenError"
     const isUnauthOnProtected = status === "unauthenticated" && isProtectedPath(pathname)
 
-    if (hasRefreshError || isUnauthOnProtected) {
+    if (hasRefreshError) {
+      // Refresh token expired past Keycloak's SSO idle TTL → signed out for inactivity.
+      bailOut("inactive")
+    } else if (isUnauthOnProtected) {
       bailOut("session_expired")
     }
   }, [session, status, pathname])

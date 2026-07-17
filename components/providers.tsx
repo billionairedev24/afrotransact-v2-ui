@@ -7,7 +7,6 @@ import { CartMergeProvider } from "@/components/providers/CartMergeProvider"
 import { WishlistSyncProvider } from "@/components/providers/WishlistSyncProvider"
 import { SessionGuard } from "@/components/providers/SessionGuard"
 import { PostLoginRedirect } from "@/components/providers/PostLoginRedirect"
-import { IdleTimeoutProvider } from "@/components/providers/IdleTimeoutProvider"
 import { Toaster } from "sonner"
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -27,9 +26,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <SessionProvider refetchInterval={10 * 60} refetchOnWindowFocus={false}>
+    <SessionProvider refetchInterval={4 * 60} refetchOnWindowFocus={true}>
       <SessionGuard>
-        <IdleTimeoutProvider>
         <PostLoginRedirect>
           <QueryClientProvider client={queryClient}>
             <CartMergeProvider>
@@ -50,7 +48,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
             </CartMergeProvider>
           </QueryClientProvider>
         </PostLoginRedirect>
-        </IdleTimeoutProvider>
       </SessionGuard>
     </SessionProvider>
   )

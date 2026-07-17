@@ -17,6 +17,9 @@ interface FetchOptions extends Omit<RequestInit, "body"> {
   next?: { revalidate?: number | false; tags?: string[] }
   /** Override the default request timeout. Pass 0 to disable. */
   timeoutMs?: number
+  /** Internal: set on the single automatic retry after a transparent token
+   *  refresh, so a still-401 response doesn't loop. Callers never set this. */
+  __retried?: boolean
 }
 
 /**
@@ -98,10 +101,25 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
       }
     }
 
-    // 401 from the API means our access token is no longer accepted (revoked,
-    // expired beyond refresh, key rotated). Hand off to the session guard.
-    if (res.status === 401 && on401Handler && typeof window !== "undefined") {
-      try { on401Handler() } catch { /* don't mask the original failure */ }
+    // 401: an ACTIVE session should never surface a 401 to the user. The access
+    // token most likely just lapsed between the session read and this request —
+    // so transparently refresh it and retry the request ONCE. Only when the
+    // refresh itself fails (idle past Keycloak's SSO idle TTL, or the token was
+    // revoked) do we hand off to the session guard for a full sign-out.
+    if (res.status === 401 && typeof window !== "undefined" && !opts.__retried) {
+      let fresh: string | null = null
+      try {
+        const { getAccessToken } = await import("@/lib/auth-helpers")
+        fresh = await getAccessToken()
+      } catch { /* refresh threw → treat as unrecoverable below */ }
+      if (fresh && fresh !== token) {
+        // Fresh token in hand — retry once. The user perceives nothing.
+        return api<T>(path, { ...opts, token: fresh, __retried: true })
+      }
+      // Refresh failed → the session is genuinely dead (idle/revoked). Sign out.
+      if (on401Handler) {
+        try { on401Handler() } catch { /* don't mask the original failure */ }
+      }
     }
     // Log every API error at source so it's always captured regardless of how
     // the caller handles it. Silence during `next build`: pre-render on the

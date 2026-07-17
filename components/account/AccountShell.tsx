@@ -62,14 +62,14 @@ export function AccountShell({ title, subtitle, variant = "subpage", children }:
       {variant === "subpage" && (
         <Link
           href="/account"
-          className="lg:hidden inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-3"
+          className="md:hidden inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-3"
         >
           <ChevronLeft className="h-4 w-4" /> Your Account
         </Link>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="hidden lg:block">
+      <div className="grid gap-6 md:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="hidden md:block">
           <nav
             aria-label="Account navigation"
             className="sticky top-6 rounded-2xl border border-border bg-card p-2 shadow-sm"
