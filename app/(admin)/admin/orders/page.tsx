@@ -243,6 +243,11 @@ function AdminOrderDetailSheet({
   // Per-sub file input refs so we can auto-open the correct picker after a
   // sub is marked delivered (admin sheet renders one panel per sub-order).
   const proofInputRefs = useRef<Map<string, HTMLInputElement | null>>(new Map())
+  // Which sub-order the in-flight proof upload is for. A REF (not just state)
+  // because the useUploadThing onClientUploadComplete callback can capture a
+  // stale `uploadingProofFor`, dropping the save so the proof uploads to the
+  // CDN but is never attached to the order.
+  const uploadingProofForRef = useRef<string | null>(null)
   const { nameFor: storeNameFor } = useStoreNameMap()
 
   const { startUpload: startProofUpload } = useUploadThing("productImage", {
@@ -256,8 +261,13 @@ function AdminOrderDetailSheet({
       const url = (first?.serverData as Record<string, string> | undefined)?.url
         || (first as unknown as Record<string, string> | undefined)?.ufsUrl
         || first?.url
-      const subId = uploadingProofFor
-      if (!url || !subId) { setUploadingProofFor(null); return }
+      const subId = uploadingProofForRef.current ?? uploadingProofFor
+      if (!url || !subId) {
+        console.warn("[deliveryProof] skipped save — missing data", { url, subId, res })
+        toast.error("Photo uploaded but couldn't be attached — please try again")
+        setUploadingProofFor(null)
+        return
+      }
       try {
         const token = await getAccessToken()
         if (!token) throw new Error("Not signed in")
@@ -278,6 +288,7 @@ function AdminOrderDetailSheet({
 
   function handleProofFile(subId: string, file: File | null | undefined) {
     if (!file) return
+    uploadingProofForRef.current = subId
     setUploadingProofFor(subId)
     void startProofUpload([file])
   }

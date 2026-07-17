@@ -358,7 +358,12 @@ function OrderDetailModal({
       const url = (first?.serverData as Record<string, string> | undefined)?.url
         || (first as unknown as Record<string, string> | undefined)?.ufsUrl
         || first?.url
-      if (!url || !subOrderId) { setUploadingProof(false); return }
+      if (!url || !subOrderId) {
+        console.warn("[deliveryProof] skipped save — missing data", { url, subOrderId, res })
+        toast.error("Photo uploaded but couldn't be attached — please try again")
+        setUploadingProof(false)
+        return
+      }
       try {
         const token = await getAccessToken()
         if (!token) throw new Error("Not signed in")
