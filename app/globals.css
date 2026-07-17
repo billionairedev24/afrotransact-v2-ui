@@ -183,6 +183,14 @@
 }
 
 @layer base {
+  /* Light only, always. Forces the browser to paint UA-styled surfaces
+     (form controls, scrollbars, un-backgrounded elements) with light defaults
+     even on a dark-OS device — otherwise they inherit the dark Canvas and read
+     as random black blocks. The app is a class-based (never OS-driven) theme. */
+  :root {
+    color-scheme: light;
+  }
+
   * {
     @apply border-border;
   }

@@ -84,9 +84,9 @@ export default function RefundPolicyPage() {
               website) within 7 days of receiving your order.
             </li>
             <li>
-              You can get in touch through your{" "}
+              You can start a return from your{" "}
               <Link href="/orders" className="text-primary underline underline-offset-2 hover:no-underline">
-                account dashboard
+                orders
               </Link>{" "}
               or by emailing us at{" "}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary underline underline-offset-2 hover:no-underline">

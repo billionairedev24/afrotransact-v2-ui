@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter, Fraunces } from "next/font/google"
 import { Providers } from "@/components/providers"
 import { AiChatOverlay } from "@/components/ai/AiWidget"
@@ -15,6 +15,12 @@ const fraunces = Fraunces({
   weight: ["400", "500", "600", "700"],
   display: "swap",
 })
+
+// Light only — never render the OS dark theme. Emits <meta name="color-scheme"
+// content="light"> so the browser paints UA surfaces light on dark-OS devices.
+export const viewport: Viewport = {
+  colorScheme: "light",
+}
 
 export const metadata: Metadata = {
   title: "AfroTransact - Your Community Marketplace",
