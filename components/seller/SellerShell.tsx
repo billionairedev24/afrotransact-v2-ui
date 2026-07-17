@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -74,19 +75,13 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
   return (
     <div className="min-h-screen min-w-0 bg-gray-50">
       {/* Mobile header */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-input bg-white px-4 md:hidden">
+      <header className="sticky top-0 z-40 flex h-14 items-center border-b border-input bg-white px-4 md:hidden">
         <button
           onClick={() => setSidebarOpen(true)}
           className="text-muted-foreground hover:text-foreground transition-colors"
         >
           <Menu className="h-5 w-5" />
         </button>
-        <Link href="/dashboard" className="flex items-center gap-1">
-          <span className="text-lg font-bold text-foreground">Afro</span>
-          <span className="text-lg font-bold text-foreground">Transact</span>
-          <span className="ml-1 text-xs text-muted-foreground">Seller</span>
-        </Link>
-        <div className="w-5" />
       </header>
 
       <div className="flex min-w-0">
@@ -98,7 +93,14 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
         <aside className="hidden md:flex md:w-72 md:flex-col md:fixed md:inset-y-0 bg-brand-dark p-4 z-50">
           <div className="flex items-center gap-2 mb-6 px-2">
             <Link href="/dashboard" className="flex items-center">
-              <span className="text-xl font-bold text-brand-gold">AfroTransact</span>
+              <Image
+                src="/brand/logo-gold.svg"
+                alt="afrotransact"
+                width={476}
+                height={101}
+                className="h-8 w-auto"
+                priority
+              />
             </Link>
             <span className="rounded-sm bg-brand-gold px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-gold-foreground">
               Seller
@@ -180,7 +182,14 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
               <div className="flex items-center justify-between mb-6 px-2">
                 <div className="flex items-center gap-2">
                   <Link href="/dashboard" className="flex items-center" onClick={() => setSidebarOpen(false)}>
-                    <span className="text-xl font-bold text-brand-gold">AfroTransact</span>
+                    <Image
+                src="/brand/logo-gold.svg"
+                alt="afrotransact"
+                width={476}
+                height={101}
+                className="h-8 w-auto"
+                priority
+              />
                   </Link>
                   <span className="rounded-sm bg-brand-gold px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-gold-foreground">
                     Seller

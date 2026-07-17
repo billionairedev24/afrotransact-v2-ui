@@ -751,12 +751,12 @@ export function Header() {
                 {/* Avatar — gold square w/ user icon (signed out) or initials (signed in) */}
                 <div
                   className={cn(
-                    "flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2 border-white",
+                    "flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-white",
                     isAuthenticated ? "bg-brand-dark text-brand-gold" : "bg-brand-gold text-brand-gold-foreground",
                   )}
                 >
                   {isAuthenticated && firstName ? (
-                    <span className="text-xl font-bold uppercase">{firstName.charAt(0)}</span>
+                    <span className="text-xl font-bold uppercase">{getInitials(userName)}</span>
                   ) : (
                     <User className="h-6 w-6" strokeWidth={2} />
                   )}

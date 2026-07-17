@@ -184,10 +184,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-full p-4">
       <div className="flex items-center justify-between mb-6 px-2">
         <Image
-          src="/brand/logo-mark.svg"
-          alt="AfroTransact"
-          width={32}
-          height={37}
+          src="/brand/logo-gold.svg"
+          alt="afrotransact"
+          width={476}
+          height={101}
           className="h-8 w-auto"
           priority
         />
@@ -234,18 +234,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen min-w-0 bg-gray-50">
       {/* Mobile header */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-input px-4 md:hidden bg-white">
+      <header className="sticky top-0 z-40 flex h-14 items-center border-b border-input px-4 md:hidden bg-white">
         <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-foreground transition-colors">
           <Menu className="h-5 w-5" />
         </button>
-        <Image
-          src="/brand/logo-mark.svg"
-          alt="AfroTransact"
-          width={28}
-          height={32}
-          className="h-7 w-auto"
-        />
-        <div className="w-5" />
       </header>
 
       <div className="flex min-w-0">
