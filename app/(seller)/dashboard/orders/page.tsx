@@ -11,6 +11,7 @@ import { Sheet, SheetHeader, SheetBody } from "@/components/ui/Sheet"
 import { createColumnHelper } from "@tanstack/react-table"
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { friendlyMessage } from "@/lib/errors"
 import {
   getCurrentSeller,
   getSellerStores,
@@ -340,7 +341,7 @@ function OrderDetailModal({
         setTimeout(() => proofFileInputRef.current?.click(), 200)
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update status")
+      toast.error(friendlyMessage(err, "Failed to update status"))
     } finally {
       setUpdating(false)
     }
@@ -371,14 +372,14 @@ function OrderDetailModal({
         toast.success("Delivery photo saved")
         onStatusUpdated(updated)
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Couldn't attach the photo")
+        toast.error(friendlyMessage(err, "Couldn't attach the photo"))
       } finally {
         setUploadingProof(false)
       }
     },
     onUploadError: (err) => {
       setUploadingProof(false)
-      toast.error(err?.message || "Upload failed")
+      toast.error(friendlyMessage(err, "Upload failed"))
     },
   })
 
