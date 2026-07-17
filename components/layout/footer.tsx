@@ -36,7 +36,7 @@ const footerSections: { title: string; links: FooterLink[] }[] = [
     links: [
       { label: "Help Center", href: "/help" },
       { label: "Track Your Order", href: "/orders" },
-      { label: "Return Policy", href: "/coming-soon?feature=Return Policy", comingSoon: true },
+      { label: "Refund Policy", href: "/refund-policy" },
       { label: "Contact Us", href: "/coming-soon?feature=Contact Us", comingSoon: true },
       { label: "Report an Issue", href: "/coming-soon?feature=Report an Issue", comingSoon: true },
     ],
