@@ -210,7 +210,7 @@ function CouponForm({
   const [minOrder, setMinOrder] = useState(coupon?.minOrderCents ? String(coupon.minOrderCents / 100) : "")
   const [maxDiscount, setMaxDiscount] = useState(coupon?.maxDiscountCents ? String(coupon.maxDiscountCents / 100) : "")
   const [usageLimit, setUsageLimit] = useState(coupon?.usageLimit ? String(coupon.usageLimit) : "")
-  const [perUserLimit, setPerUserLimit] = useState(coupon?.perUserLimit ? String(coupon.perUserLimit) : "1")
+  const [perUserLimit, setPerUserLimit] = useState(coupon?.perUserLimit ? String(coupon.perUserLimit) : "")
   const [scope, setScope] = useState(coupon?.scope || "product")
   const [discountTarget, setDiscountTarget] = useState<"items" | "shipping">(
     (coupon?.discountTarget as "items" | "shipping" | undefined) || "items",
@@ -231,7 +231,7 @@ function CouponForm({
         minOrderCents: minOrder ? Math.round(parseFloat(minOrder) * 100) : undefined,
         maxDiscountCents: maxDiscount ? Math.round(parseFloat(maxDiscount) * 100) : undefined,
         usageLimit: usageLimit ? parseInt(usageLimit) : undefined,
-        perUserLimit: perUserLimit ? parseInt(perUserLimit) : 1,
+        perUserLimit: perUserLimit ? parseInt(perUserLimit) : undefined,
         scope,
         discountTarget,
         expiresAt: new Date(expiresAt).toISOString(),
@@ -292,12 +292,12 @@ function CouponForm({
           <input type="number" step="0.01" value={maxDiscount} onChange={e => setMaxDiscount(e.target.value)} placeholder="No limit" className={inputCls} />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-gray-500">Usage Limit</label>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">Total uses (all customers)</label>
           <input type="number" value={usageLimit} onChange={e => setUsageLimit(e.target.value)} placeholder="Unlimited" className={inputCls} />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-gray-500">Per-User Limit</label>
-          <input type="number" value={perUserLimit} onChange={e => setPerUserLimit(e.target.value)} placeholder="1" className={inputCls} />
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">Uses per customer</label>
+          <input type="number" value={perUserLimit} onChange={e => setPerUserLimit(e.target.value)} placeholder="Unlimited" className={inputCls} />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Expires At *</label>
