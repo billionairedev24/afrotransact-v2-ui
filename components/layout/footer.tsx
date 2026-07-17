@@ -56,6 +56,7 @@ const footerSections: { title: string; links: FooterLink[] }[] = [
     links: [
       { label: "Terms of Service", href: "/terms" },
       { label: "Privacy Policy", href: "/privacy" },
+      { label: "Refund Policy", href: "/refund-policy" },
       { label: "Seller Agreement", href: "/seller-agreement" },
       { label: "Cookie Policy", href: "/privacy#cookies" },
     ],
