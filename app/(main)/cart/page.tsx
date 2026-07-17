@@ -66,10 +66,16 @@ export default function CartPage() {
   const resolvedZoneThreshold = useBuyerLocation(
     (s) => s.resolvedZone?.effectiveSettings?.freeShippingThresholdCents ?? null,
   )
+  const resolvedZoneTaxRate = useBuyerLocation(
+    (s) => s.resolvedZone?.effectiveSettings?.taxRate ?? null,
+  )
   const freeShippingThresholdCents: number | null = mounted ? resolvedZoneThreshold : null
   const subtotal = mounted ? getSubtotal() : 0
   const totalQty = mounted ? getItemCount() : 0
-  const estimatedTax = Math.round(subtotal * 0.0825) // 8.25% TX
+  // Estimate from the resolved zone's configured rate — never a hardcoded
+  // fallback. An unconfigured / zero-rate zone shows $0.00, matching what
+  // checkout actually charges.
+  const estimatedTax = mounted ? Math.round(subtotal * (resolvedZoneTaxRate ?? 0)) : 0
   const total = subtotal + estimatedTax
 
   // Non-operational zones: block cart entirely. RegionBlock handles its own
@@ -329,7 +335,13 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Estimated tax</span>
-                <span>{formatCents(estimatedTax)}</span>
+                {resolvedZoneTaxRate == null ? (
+                  <span className="text-green-400">Calculated at checkout</span>
+                ) : resolvedZoneTaxRate === 0 ? (
+                  <span className="font-medium text-green-600">No tax</span>
+                ) : (
+                  <span>{formatCents(estimatedTax)}</span>
+                )}
               </div>
             </div>
 
