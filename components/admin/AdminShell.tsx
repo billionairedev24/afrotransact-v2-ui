@@ -28,6 +28,7 @@ import {
   Sparkles,
   BarChart2,
   Settings,
+  Layers,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSignOut } from "@/hooks/useSignOut"
@@ -115,6 +116,7 @@ const NAV_GROUPS: NavGroup[] = [
       // location feature toggles all live here. Legacy /admin/regions
       // is hidden; /admin/zones remains reachable via URL only.
       { href: "/admin/zones",                label: "Service Locations", icon: MapPin },
+      { href: "/admin/zone-overrides",       label: "Override Groups", icon: Layers },
       { href: "/admin/subscription",         label: "Plans",           icon: ShieldCheck },
       { href: "/admin/email-templates",      label: "Email Templates", icon: Mail },
       { href: "/admin/notification-routing", label: "Alert Routing",   icon: Bell },
