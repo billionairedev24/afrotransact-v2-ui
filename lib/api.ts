@@ -2425,6 +2425,87 @@ export function deleteAdminZone(token: string, id: string): Promise<void> {
   return api<void>(`/api/v1/admin/zones/${id}`, { method: "DELETE", token })
 }
 
+// ── Zone override groups ─────────────────────────────────────────────────────
+// A named tax/shipping override bound to a set of zones. Any field it sets wins
+// over the normal city→state→country inheritance for its member zones.
+export interface ZoneOverrideGroup {
+  id: string
+  name: string
+  taxRate: number | null
+  shippingMode: string | null
+  shippingRateCentsPerLb: number | null
+  flatShippingCents: number | null
+  freeShippingThresholdCents: number | null
+  zoneIds: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+interface RawZoneOverrideGroup {
+  id: string
+  name: string
+  tax_rate: number | null
+  shipping_mode: string | null
+  shipping_rate_cents_per_lb: number | null
+  flat_shipping_cents: number | null
+  free_shipping_threshold_cents: number | null
+  zone_ids: string[] | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ZoneOverrideGroupInput {
+  name: string
+  tax_rate: number | null
+  shipping_mode: string | null
+  shipping_rate_cents_per_lb: number | null
+  flat_shipping_cents: number | null
+  free_shipping_threshold_cents: number | null
+}
+
+function mapOverrideGroup(g: RawZoneOverrideGroup): ZoneOverrideGroup {
+  return {
+    id: g.id,
+    name: g.name,
+    taxRate: g.tax_rate,
+    shippingMode: g.shipping_mode,
+    shippingRateCentsPerLb: g.shipping_rate_cents_per_lb,
+    flatShippingCents: g.flat_shipping_cents,
+    freeShippingThresholdCents: g.free_shipping_threshold_cents,
+    zoneIds: g.zone_ids ?? [],
+    createdAt: g.created_at,
+    updatedAt: g.updated_at,
+  }
+}
+
+export async function listOverrideGroups(token: string): Promise<ZoneOverrideGroup[]> {
+  const res = await api<{ groups: RawZoneOverrideGroup[] | null }>("/api/v1/admin/zone-override-groups", { token })
+  return (res.groups ?? []).map(mapOverrideGroup)
+}
+
+export async function createOverrideGroup(token: string, data: ZoneOverrideGroupInput): Promise<ZoneOverrideGroup> {
+  const raw = await api<RawZoneOverrideGroup>("/api/v1/admin/zone-override-groups", { method: "POST", body: data, token })
+  return mapOverrideGroup(raw)
+}
+
+export async function updateOverrideGroup(token: string, id: string, data: ZoneOverrideGroupInput): Promise<ZoneOverrideGroup> {
+  const raw = await api<RawZoneOverrideGroup>(`/api/v1/admin/zone-override-groups/${id}`, { method: "PUT", body: data, token })
+  return mapOverrideGroup(raw)
+}
+
+export function deleteOverrideGroup(token: string, id: string): Promise<void> {
+  return api<void>(`/api/v1/admin/zone-override-groups/${id}`, { method: "DELETE", token })
+}
+
+export async function setOverrideGroupMembers(token: string, id: string, zoneIds: string[]): Promise<ZoneOverrideGroup> {
+  const raw = await api<RawZoneOverrideGroup>(`/api/v1/admin/zone-override-groups/${id}/members`, {
+    method: "PUT",
+    body: { zone_ids: zoneIds },
+    token,
+  })
+  return mapOverrideGroup(raw)
+}
+
 export async function listZoneFeatures(token: string, zoneId: string): Promise<ZoneFeature[]> {
   const res = await api<{ zone_id: string; features: RawZoneFeature[] | null }>(
     `/api/v1/admin/zones/${zoneId}/features`,
