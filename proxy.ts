@@ -60,8 +60,22 @@ function bypassBuyerBetaGate(pathname: string): boolean {
 
 /**
  * Next.js 16+ server proxy (replaces `middleware.ts`): seller routing + optional closed-beta gate.
+ *
+ * The exported entry wraps the logic in a try/catch that FAILS OPEN. A decode
+ * hiccup or cold-start race inside getToken (or any unexpected edge error) must
+ * never surface as "MIDDLEWARE_INVOCATION_FAILED" and take the whole site down.
+ * Worst case we let the request through — the app's own route guards still
+ * enforce auth/authz, so nothing sensitive is exposed by failing open.
  */
-export async function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
+  try {
+    return await runProxy(request)
+  } catch {
+    return NextResponse.next()
+  }
+}
+
+async function runProxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl
 
   // Closed-beta "buyer gate" — DISABLED by default.
