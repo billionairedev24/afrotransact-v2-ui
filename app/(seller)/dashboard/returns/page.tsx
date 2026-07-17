@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react"
 import { RotateCcw, AlertTriangle, CheckCircle2, Clock, XCircle, Package, ChevronRight } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
-import { friendlyMessage } from "@/lib/errors"
 import {
   sellerListReturns,
   sellerDecideReturn,
@@ -53,7 +52,7 @@ export default function SellerReturnsPage() {
       const res = await sellerListReturns(token, sid, tab === "open" ? OPEN_STATUSES : undefined, 0, 50)
       setReturns(res.content)
     } catch (e) {
-      setErr(friendlyMessage(e, "Could not load returns"))
+      setErr(e instanceof Error ? e.message : "Could not load returns")
     } finally {
       setLoading(false)
     }
@@ -230,7 +229,7 @@ function ReturnDetailModal({
       await sellerDecideReturn(token, storeId, ret.id, body)
       onChange()
     } catch (e) {
-      setErr(friendlyMessage(e, "Action failed"))
+      setErr(e instanceof Error ? e.message : "Action failed")
     } finally {
       setSubmitting(false)
     }
@@ -244,7 +243,7 @@ function ReturnDetailModal({
       await sellerMarkReturnReceived(token, storeId, ret.id)
       onChange()
     } catch (e) {
-      setErr(friendlyMessage(e, "Action failed"))
+      setErr(e instanceof Error ? e.message : "Action failed")
     } finally {
       setSubmitting(false)
     }
@@ -274,7 +273,7 @@ function ReturnDetailModal({
       })
       onChange()
     } catch (e) {
-      setErr(friendlyMessage(e, "Action failed"))
+      setErr(e instanceof Error ? e.message : "Action failed")
     } finally {
       setSubmitting(false)
     }

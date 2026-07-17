@@ -12,7 +12,6 @@ import { normalizeInt, normalizeDecimal } from "@/lib/inputs"
 import { useUploadThing } from "@/lib/uploadthing"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { createMediaItem, type MediaItem, type CategoryRef } from "@/lib/api"
-import { friendlyMessage } from "@/lib/errors"
 import {
   importRows, flattenCategories, collectCategoryOptions,
   type ValidatedRow, type RawRow, type ImportResult,
@@ -421,7 +420,7 @@ export default function GridEditor({ categories, mediaItems, storeId }: {
       })
     } catch (err) {
       console.error("[GridEditor] importRows failed:", err)
-      setImportError(friendlyMessage(err, "Import failed. Check console for details."))
+      setImportError(err instanceof Error ? err.message : "Import failed. Check console for details.")
     } finally {
       setPhase("done") // always reach done, even on error
     }

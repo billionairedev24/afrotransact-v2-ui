@@ -71,10 +71,6 @@ export function NotificationsSection() {
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  // If the initial load fails we must NOT show the default toggles as if they
-  // were the user's real prefs — a save would then overwrite their real
-  // settings with defaults. Surface an error and block editing until reload.
-  const [loadError, setLoadError] = useState(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -98,9 +94,7 @@ export function NotificationsSection() {
           if (parsed?.notifications) setPrefs((p) => ({ ...p, ...parsed.notifications }))
         }
       } catch {
-        // Do NOT silently fall back to defaults — flag the failure so we don't
-        // let the user save default toggles over their real preferences.
-        if (!cancelled) setLoadError(true)
+        // fall back to defaults
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -152,19 +146,6 @@ export function NotificationsSection() {
         {loading ? (
           <div className="flex items-center gap-2 px-5 py-8 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading your preferences…
-          </div>
-        ) : loadError ? (
-          <div className="px-5 py-8 text-center space-y-3">
-            <p className="text-sm text-muted-foreground">
-              We couldn&apos;t load your notification preferences right now. Please try again — we don&apos;t want a save to overwrite your saved settings.
-            </p>
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
-            >
-              Try again
-            </button>
           </div>
         ) : (
           <ul className="divide-y divide-border">

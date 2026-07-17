@@ -21,7 +21,6 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getAccessToken } from "@/lib/auth-helpers"
-import { friendlyMessage } from "@/lib/errors"
 import {
   getCurrentSeller,
   getSellerStores,
@@ -341,7 +340,7 @@ function ReviewStep({
       const validated = validateRows(raw, catMap, mediaItems)
       setRows(validated)
     } catch (e) {
-      setParseError(friendlyMessage(e, "Failed to parse file"))
+      setParseError(e instanceof Error ? e.message : "Failed to parse file")
     } finally {
       setParsing(false)
     }
@@ -671,7 +670,7 @@ function ImportStep({
         })
         onDone(final)
       } catch (err) {
-        setRuntimeError(friendlyMessage(err, "Import failed unexpectedly. Please retry."))
+        setRuntimeError(err instanceof Error ? err.message : "Import failed unexpectedly. Please retry.")
       } finally {
         setDone(true)
       }

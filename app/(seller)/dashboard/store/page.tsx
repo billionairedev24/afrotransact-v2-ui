@@ -12,7 +12,6 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
-import { friendlyMessage } from "@/lib/errors"
 import { useActiveStore } from "@/stores/active-store"
 import {
   Store,
@@ -189,7 +188,7 @@ function ImageUploadField({
       }
     },
     onUploadError: (err) => {
-      setUploadError(friendlyMessage(err, "Upload failed"))
+      setUploadError(err.message || "Upload failed")
     },
   })
 
@@ -402,7 +401,7 @@ export default function StoreSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["seller"] })
       queryClient.invalidateQueries({ queryKey: ["seller", "stores", seller?.id] })
     } catch (err) {
-      setError(friendlyMessage(err, "Failed to save store"))
+      setError(err instanceof Error ? err.message : "Failed to save store")
     } finally {
       setSaving(false)
     }
