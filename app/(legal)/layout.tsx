@@ -20,6 +20,7 @@ export default function LegalLayout({
           <nav className="flex items-center gap-4 text-xs text-gray-500">
             <Link href="/terms" className="hover:text-gray-900 transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-gray-900 transition-colors">Privacy</Link>
+            <Link href="/refund-policy" className="hover:text-gray-900 transition-colors">Refund Policy</Link>
             <Link href="/seller-agreement" className="hover:text-gray-900 transition-colors">Seller Agreement</Link>
           </nav>
         </div>
