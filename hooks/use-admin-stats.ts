@@ -5,6 +5,7 @@ import {
   getAdminSellers,
   getAdminSellerStats,
   getAdminRegions,
+  listAdminZones,
   getAdminPlans,
   getAdminReviews,
   getAdminSellerDetail,
@@ -97,6 +98,22 @@ export function useAdminRegions() {
       const token = await getAccessToken();
       if (!token) throw new Error("No token");
       return getAdminRegions(token);
+    },
+  });
+}
+
+/**
+ * Returns all service zones for the admin dashboard. This is the source of
+ * truth for enabled locations (the regions table is legacy) — the overview's
+ * active-locations count reads from here so activating a zone reflects.
+ */
+export function useAdminZones() {
+  return useQuery({
+    queryKey: ["admin", "zones"],
+    queryFn: async () => {
+      const token = await getAccessToken();
+      if (!token) throw new Error("No token");
+      return listAdminZones(token);
     },
   });
 }
