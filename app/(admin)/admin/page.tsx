@@ -39,7 +39,7 @@ import { getAccessToken } from "@/lib/auth-helpers"
 import { 
   useAdminOverviewStats,
   useAdminRecentSellers,
-  useAdminRegions,
+  useAdminZones,
   useAdminPlans,
   useWorkQueueCounts,
   useAdminRecentReviews
@@ -60,12 +60,12 @@ const QUICK_LINKS = [
 export default function AdminOverviewPage() {
   const { data: sellerStats, isLoading: statsLoading } = useAdminOverviewStats()
   const { data: pendingApps = [], isLoading: appsLoading } = useAdminRecentSellers()
-  const { data: regions = [], isLoading: regionsLoading } = useAdminRegions()
+  const { data: zones = [], isLoading: zonesLoading } = useAdminZones()
   const { data: plans = [], isLoading: plansLoading } = useAdminPlans()
   const { data: qCounts, isLoading: countsLoading } = useWorkQueueCounts()
   const { data: reviews, isLoading: reviewsLoading } = useAdminRecentReviews()
 
-  const loading = statsLoading || appsLoading || regionsLoading || plansLoading || countsLoading || reviewsLoading
+  const loading = statsLoading || appsLoading || zonesLoading || plansLoading || countsLoading || reviewsLoading
 
   if (loading) {
     return (
@@ -79,7 +79,9 @@ export default function AdminOverviewPage() {
   const reviewCount = reviews?.review_count ?? reviews?.total ?? 0
   const avgRating = reviews?.avg_rating ?? 0
   const totalProducts = qCounts?.products ?? 0 // Note: This could be expanded to total products if needed
-  const regionCount = regions.length
+  // Active locations = enabled cities (localities). Reads service zones — the
+  // regions table is legacy — so activating a location on /admin/zones reflects.
+  const activeLocationCount = zones.filter((z) => z.status === "enabled" && z.level === "locality").length
   const planCount = plans.length
 
   const totalSellers = sellerStats?.totalSellers ?? 0
@@ -95,7 +97,7 @@ export default function AdminOverviewPage() {
     { label: "Submitted", value: submittedSellers, icon: Clock, color: "text-yellow-400", bgColor: "bg-yellow-500/10" },
     { label: "Approved", value: approvedSellers, icon: CheckCircle2, color: "text-emerald-400", bgColor: "bg-emerald-500/10" },
     { label: "Total Products", value: totalProducts ?? 0, icon: Package, color: "text-blue-400", bgColor: "bg-blue-500/10" },
-    { label: "Active Regions", value: regionCount ?? 0, icon: Globe, color: "text-violet-400", bgColor: "bg-violet-500/10" },
+    { label: "Active Cities", value: activeLocationCount, icon: Globe, color: "text-violet-400", bgColor: "bg-violet-500/10" },
     { label: "Reviews", value: reviewCount ?? 0, icon: Star, color: "text-amber-400", bgColor: "bg-amber-500/10" },
   ]
 
