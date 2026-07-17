@@ -24,6 +24,7 @@ import {
   type StoreInfo,
   type Product,
 } from "@/lib/api"
+import { friendlyMessage } from "@/lib/errors"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
 
@@ -374,7 +375,7 @@ export default function StorePageClient() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Store not found")
+          setError(friendlyMessage(err, "Store not found"))
         }
       } finally {
         if (!cancelled) setLoading(false)

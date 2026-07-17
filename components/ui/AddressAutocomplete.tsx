@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import { MapPin } from "lucide-react"
+import { friendlyMessage } from "@/lib/errors"
 
 // `google` namespace comes from @types/google.maps, surfaced via the
 // `types: ["google.maps"]` entry in tsconfig.json so all *.tsx files can
@@ -138,7 +139,7 @@ export function AddressAutocomplete({
 
     loadGoogleMapsScript()
       .then(() => setLoaded(true))
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(friendlyMessage(err, "Could not load address autocomplete.")))
   }, [])
 
   const initAutocomplete = useCallback(() => {

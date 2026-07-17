@@ -6,6 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { ChevronRight, Star, MapPin, Leaf, Loader2, ShoppingCart, Sparkles } from "lucide-react"
 import { searchProducts, getCategories, getProductById, getProductBySlug, type SearchResult, type CategoryRef, type Product } from "@/lib/api"
+import { friendlyMessage } from "@/lib/errors"
 import { useCartStore } from "@/stores/cart-store"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { toast } from "sonner"
@@ -322,7 +323,7 @@ export default function CategoryPageClient() {
         setTotal(res.total)
       })
       .catch((err) => {
-        if (err instanceof Error) setError(err.message)
+        setError(friendlyMessage(err, "Could not load products."))
       })
       .finally(() => setLoading(false))
   }, [querySlugs, page, featuredId])

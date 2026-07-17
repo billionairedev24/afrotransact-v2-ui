@@ -7,6 +7,7 @@ import { MapPin, X, Loader2 } from "lucide-react"
    key) with BigDataCloud/Zippopotam.us as key-free fallbacks. No backend
    round-trip needed. */
 import { useBuyerLocation, type BuyerLocation } from "@/stores/buyer-location"
+import { friendlyMessage } from "@/lib/errors"
 
 const GOOGLE_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
 
@@ -273,7 +274,7 @@ function DeliverToModal({
         lng,
       })
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Could not save location.")
+      setErr(friendlyMessage(e, "Could not save location."))
     } finally {
       setSubmitting(false)
     }

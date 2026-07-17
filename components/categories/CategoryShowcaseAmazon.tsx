@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
 import { searchProducts, type CategoryRef, type SearchResult } from "@/lib/api"
+import { friendlyMessage } from "@/lib/errors"
 
 const TINT_LIME = "bg-[#e8f5c8]"
 const TINT_PEACH = "bg-[#fce5cc]"
@@ -355,7 +356,7 @@ export function CategoryShowcaseAmazon({
         setTilesByParentId(map)
       } catch (err) {
         if (cancelled) return
-        if (err instanceof Error) setError(err.message)
+        setError(friendlyMessage(err, "Could not load categories."))
       } finally {
         if (!cancelled) setLoadingIds(new Set())
       }
