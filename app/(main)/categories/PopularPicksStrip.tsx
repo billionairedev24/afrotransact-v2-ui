@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Package } from "lucide-react"
 import { searchProducts, type SearchResult } from "@/lib/api"
+import { friendlyMessage } from "@/lib/errors"
 
 /**
  * Horizontal "Popular picks" strip shown below the category grid.
@@ -24,7 +25,7 @@ export function PopularPicksStrip() {
     searchProducts({ size: "20", sort_by: "rating" })
       .then((r) => setItems(r.results))
       .catch((err) => {
-        if (err instanceof Error) setError(err.message)
+        setError(friendlyMessage(err, "Could not load popular picks."))
       })
       .finally(() => setLoading(false))
   }, [])

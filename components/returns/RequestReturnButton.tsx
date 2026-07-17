@@ -5,6 +5,7 @@ import { Package, X, AlertTriangle, CheckCircle2 } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
 import { requestReturn, type ReturnReason } from "@/lib/api"
+import { friendlyMessage } from "@/lib/errors"
 
 interface SubOrderItem {
   id: string
@@ -106,7 +107,7 @@ function ReturnRequestModal({
       })
       setDone(true)
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Could not submit return.")
+      setErr(friendlyMessage(e, "Could not submit return."))
     } finally {
       setSubmitting(false)
     }
