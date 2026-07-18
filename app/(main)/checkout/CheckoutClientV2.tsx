@@ -134,6 +134,10 @@ function formatCents(v: number) {
 
 type FlatQuote = ShippingQuoteOption & { carrier: string }
 
+// Delivery ETA shown on shipping options. Configurable via env (build-time)
+// so ops can tune it without a code change; defaults to 48 hours.
+const DELIVERY_ETA_HOURS = Number(process.env.NEXT_PUBLIC_DELIVERY_ETA_HOURS) || 48
+
 export default function CheckoutClientV2({
   initialContext,
 }: {
@@ -1052,16 +1056,21 @@ export default function CheckoutClientV2({
                             <p className="text-sm font-semibold text-gray-900">
                               {q.serviceName}
                             </p>
-                            {/* Delivery ETA is a flat 24h placeholder until we
-                                model real speed by location/carrier. */}
+                            {/* Delivery ETA — configurable via NEXT_PUBLIC_DELIVERY_ETA_HOURS. */}
                             <p className="text-xs text-gray-500">
-                              Arrives in 24 hours
+                              Arrives in {DELIVERY_ETA_HOURS} hours
                             </p>
                           </div>
-                          {/* Once the free-delivery threshold is met we never
-                              show a price — the carrier fee is waived. */}
+                          {/* Waived either by the free-delivery threshold or by a
+                              shipping-target (free-shipping) coupon — in the coupon
+                              case we strike the original fee so the saving is clear. */}
                           {freeShippingApplies ? (
                             <p className="text-sm font-bold text-green-700 tabular-nums">Free</p>
+                          ) : couponTargetsShipping ? (
+                            <p className="text-sm tabular-nums">
+                              <span className="mr-1.5 text-gray-400 line-through">{fmtShip(q.amountCents)}</span>
+                              <span className="font-bold text-green-700">Free</span>
+                            </p>
                           ) : (
                             <p className="text-sm font-bold text-gray-900 tabular-nums">{fmtShip(q.amountCents)}</p>
                           )}
