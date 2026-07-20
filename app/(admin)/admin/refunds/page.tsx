@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import {
-  Banknote, Search, AlertTriangle, CheckCircle2, Clock, XCircle, RefreshCcw,
+  Banknote, Search, AlertTriangle, CheckCircle2, Clock, XCircle, RefreshCcw, Camera,
   ChevronRight, Package, ArrowLeft,
 } from "lucide-react"
 
@@ -209,9 +209,10 @@ function RefundQueueView({
             className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors flex items-center justify-between gap-4"
           >
             <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <code className="text-sm font-medium">{o.orderNumber}</code>
                 <StatusPill status={o.status} />
+                <ProofPill subOrders={o.subOrders} />
               </div>
               <div className="text-xs text-muted-foreground">
                 {o.recipientName ?? "Unknown recipient"} ·{" "}
@@ -230,6 +231,21 @@ function RefundQueueView({
         </li>
       ))}
     </ul>
+  )
+}
+
+function ProofPill({ subOrders }: { subOrders?: AdminOrderLookup["subOrders"] }) {
+  const hasProof = (subOrders ?? []).some((s) => !!s.deliveryProofImageUrl)
+  return hasProof ? (
+    <span className="inline-flex items-center gap-1 text-[10px] font-medium border rounded px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border-emerald-200"
+      title="Delivery proof on file">
+      <Camera className="h-3 w-3" /> Proof
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 text-[10px] font-medium border rounded px-1.5 py-0.5 bg-amber-50 text-amber-700 border-amber-200"
+      title="No delivery proof uploaded">
+      <AlertTriangle className="h-3 w-3" /> No proof
+    </span>
   )
 }
 
@@ -297,6 +313,9 @@ function OrderDetailView({
         )}
       </section>
 
+      {/* Delivery proof — evidence for the refund investigation */}
+      <DeliveryProofSection subOrders={order.subOrders ?? []} />
+
       {/* Existing refunds */}
       {refunds.length > 0 && (
         <section>
@@ -319,6 +338,53 @@ function OrderDetailView({
         </div>
       )}
     </div>
+  )
+}
+
+function DeliveryProofSection({ subOrders }: { subOrders: NonNullable<AdminOrderLookup["subOrders"]> }) {
+  if (subOrders.length === 0) return null
+  return (
+    <section>
+      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+        Delivery proof{subOrders.length > 1 ? ` (${subOrders.length} shipments)` : ""}
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {subOrders.map((s) => (
+          <div key={s.id} className="rounded-lg border border-border p-3">
+            <div className="flex items-center justify-between mb-2 text-xs">
+              <span className="font-medium text-foreground">Shipment {s.id.slice(0, 8)}</span>
+              <span className="capitalize text-muted-foreground">
+                {(s.trackingStatus || s.fulfillmentStatus || "—").replace(/_/g, " ")}
+              </span>
+            </div>
+            {s.deliveryProofImageUrl ? (
+              <>
+                <a href={s.deliveryProofImageUrl} target="_blank" rel="noopener noreferrer" className="block" title="Open full-size proof">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={s.deliveryProofImageUrl}
+                    alt="Delivery proof"
+                    className="w-full h-40 object-cover rounded-md border border-border hover:opacity-90 transition-opacity"
+                  />
+                </a>
+                <div className="mt-2 text-[11px] text-muted-foreground">
+                  {s.deliveryProofUploadedAt
+                    ? `Proof uploaded ${new Date(s.deliveryProofUploadedAt).toLocaleString()}`
+                    : "Proof uploaded"}
+                  {s.trackingNumber && <> · Tracking <span className="font-mono">{s.trackingNumber}</span></>}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-1.5 h-40 rounded-md border border-dashed border-border text-xs text-muted-foreground text-center px-3">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <span>No delivery proof uploaded</span>
+                {s.trackingNumber && <span className="font-mono text-[10px]">Tracking {s.trackingNumber}</span>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
