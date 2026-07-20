@@ -1228,6 +1228,12 @@ export interface AdminOrderLookup {
     storeId: string
     fulfillmentStatus?: string | null
     subtotalCents: number
+    // Delivery evidence — surfaced in the refund flow so admins can verify a
+    // parcel was actually delivered before issuing a refund.
+    deliveryProofImageUrl?: string | null
+    deliveryProofUploadedAt?: string | null
+    trackingNumber?: string | null
+    trackingStatus?: string | null
   }>
 }
 
