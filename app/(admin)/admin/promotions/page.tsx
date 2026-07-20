@@ -29,6 +29,7 @@ const PLACEMENT_OPTIONS: { value: PromoPlacement; label: string; help: string }[
   { value: "STRIP_TOP", label: "Top strip", help: "Slim banner above search results and category lists." },
   { value: "SIDEBAR", label: "Sidebar", help: "Vertical card on the product detail page." },
   { value: "FOOTER", label: "Footer", help: "Wide banner above the global footer." },
+  { value: "POPUP", label: "Popup", help: "Auto-opening modal shown to shoppers within its schedule. Great for launches & limited-time offers." },
 ]
 
 const PLACEMENT_LABEL: Record<PromoPlacement, string> = {
@@ -36,6 +37,7 @@ const PLACEMENT_LABEL: Record<PromoPlacement, string> = {
   STRIP_TOP: "Top strip",
   SIDEBAR: "Sidebar",
   FOOTER: "Footer",
+  POPUP: "Popup",
 }
 
 function classifyStatus(p: Promotion): PromoStatus {
@@ -700,7 +702,25 @@ function PromoEditorSheet({
               <p className="text-xs font-semibold text-gray-600 mb-2">Live preview</p>
               <div className="rounded-xl border border-input bg-gray-50 p-3">
                 {previewPromos.length > 0 ? (
-                  <PromoSlot placement={editor.placement} promotions={previewPromos} />
+                  editor.placement === "POPUP" ? (
+                    <div className="mx-auto max-w-[280px] bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={previewPromos[0].imageUrl} alt="" className="w-full aspect-[16/9] object-cover" />
+                      <div className="px-4 pt-4 pb-5 text-center">
+                        <h3 className="text-base font-bold text-gray-900 leading-tight">{previewPromos[0].title}</h3>
+                        {previewPromos[0].subtitle && (
+                          <p className="text-xs text-gray-600 mt-1.5">{previewPromos[0].subtitle}</p>
+                        )}
+                        {previewPromos[0].ctaUrl && (
+                          <div className="mt-3 inline-flex items-center justify-center h-9 px-5 rounded-full bg-[#F5C518] text-gray-900 font-bold text-xs">
+                            {previewPromos[0].ctaLabel || "Shop now"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <PromoSlot placement={editor.placement} promotions={previewPromos} />
+                  )
                 ) : (
                   <div className="text-center text-xs text-gray-400 py-10">
                     Upload an image to see the preview.
