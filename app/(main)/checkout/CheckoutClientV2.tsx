@@ -1320,6 +1320,8 @@ export default function CheckoutClientV2({
               className="hidden lg:flex mt-4 w-full"
             />
 
+            <PoweredByStripe className="hidden lg:flex mt-2.5" />
+
             <p className="mt-3 text-[11px] text-gray-500 text-center">
               By placing your order, you agree to AfroTransact&apos;s{" "}
               <a href="/terms" className="underline">Terms</a> and{" "}
@@ -1344,6 +1346,7 @@ export default function CheckoutClientV2({
             className="flex-1"
           />
         </div>
+        <PoweredByStripe className="mt-2" />
       </div>
 
       {/* Address modal */}
@@ -1732,25 +1735,27 @@ function InlinePaymentForm({
         </div>
       )}
 
-      {/* Stripe trust badge — signals a secure, PCI-compliant transaction. */}
-      <div className="flex flex-col items-center gap-1.5 pt-1">
-        <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-          <Lock className="h-3 w-3 shrink-0" />
-          <span>Encrypted & processed securely — we never see your card details.</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-gray-400">
-          <span className="text-[11px]">Powered by</span>
-          <svg viewBox="0 0 60 25" width="45" height="19" role="img" aria-label="Stripe" fill="none">
-            <title>Stripe</title>
-            <path
-              fillRule="evenodd"
-              clipRule="evenodd"
-              fill="#635BFF"
-              d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.5 0 .4-.04 1.26-.06 1.48Zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.85-1.07-2.58-2.08-2.58ZM40.95 20.3c-1.44 0-2.32-.6-2.9-1.04l-.02 4.63-4.12.87V5.57h3.76l.08 1.02a4.7 4.7 0 0 1 3.23-1.29c2.9 0 5.62 2.6 5.62 7.4 0 5.23-2.7 7.6-5.65 7.6ZM40 8.95c-.95 0-1.54.34-1.97.81l.02 6.12c.4.44.98.78 1.95.78 1.52 0 2.54-1.65 2.54-3.87 0-2.15-1.04-3.84-2.54-3.84ZM28.24 5.57h4.13v14.44h-4.13V5.57Zm0-4.7L32.37 0v3.36l-4.13.88V.88ZM23.92 9.22v10.79H19.8V5.57h3.7l.12 1.22c1-1.77 3.07-1.41 3.62-1.22v3.79c-.52-.17-2.29-.43-3.32.86Zm-8.55 4.72c0 2.43 2.6 1.68 3.12 1.46v3.36c-.55.3-1.54.54-2.89.54a4.15 4.15 0 0 1-4.27-4.35l.02-13.56 4.02-.86v3.68h3.14V9.4h-3.14l-.01 5.53Zm-4.91.7c0 2.72-2.16 4.27-5.3 4.27a10.6 10.6 0 0 1-4.12-.86v-3.93c1.26.68 3.2 1.19 4.13 1.19.62 0 1.07-.17 1.07-.68 0-1.32-5.4-.83-5.4-4.76 0-2.68 2.05-4.28 5.11-4.28 1.31 0 2.62.2 3.94.72v3.88a9.3 9.3 0 0 0-3.94-1.02c-.58 0-.94.17-.94.6 0 1.24 5.42.65 5.42 4.75Z"
-            />
-          </svg>
-        </div>
-      </div>
+    </div>
+  )
+}
+
+/** "Powered by Stripe" wordmark — shown at the Pay button so the buyer sees who
+ *  processes the payment right where they commit. The mark alone signals a
+ *  secure, PCI-compliant transaction. */
+function PoweredByStripe({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex items-center justify-center gap-1.5 text-gray-400", className)}>
+      <Lock className="h-3 w-3 shrink-0" />
+      <span className="text-[11px]">Powered by</span>
+      <svg viewBox="0 0 60 25" width="42" height="18" role="img" aria-label="Stripe" fill="none">
+        <title>Stripe</title>
+        <path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          fill="#635BFF"
+          d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.5 0 .4-.04 1.26-.06 1.48Zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.85-1.07-2.58-2.08-2.58ZM40.95 20.3c-1.44 0-2.32-.6-2.9-1.04l-.02 4.63-4.12.87V5.57h3.76l.08 1.02a4.7 4.7 0 0 1 3.23-1.29c2.9 0 5.62 2.6 5.62 7.4 0 5.23-2.7 7.6-5.65 7.6ZM40 8.95c-.95 0-1.54.34-1.97.81l.02 6.12c.4.44.98.78 1.95.78 1.52 0 2.54-1.65 2.54-3.87 0-2.15-1.04-3.84-2.54-3.84ZM28.24 5.57h4.13v14.44h-4.13V5.57Zm0-4.7L32.37 0v3.36l-4.13.88V.88ZM23.92 9.22v10.79H19.8V5.57h3.7l.12 1.22c1-1.77 3.07-1.41 3.62-1.22v3.79c-.52-.17-2.29-.43-3.32.86Zm-8.55 4.72c0 2.43 2.6 1.68 3.12 1.46v3.36c-.55.3-1.54.54-2.89.54a4.15 4.15 0 0 1-4.27-4.35l.02-13.56 4.02-.86v3.68h3.14V9.4h-3.14l-.01 5.53Zm-4.91.7c0 2.72-2.16 4.27-5.3 4.27a10.6 10.6 0 0 1-4.12-.86v-3.93c1.26.68 3.2 1.19 4.13 1.19.62 0 1.07-.17 1.07-.68 0-1.32-5.4-.83-5.4-4.76 0-2.68 2.05-4.28 5.11-4.28 1.31 0 2.62.2 3.94.72v3.88a9.3 9.3 0 0 0-3.94-1.02c-.58 0-.94.17-.94.6 0 1.24 5.42.65 5.42 4.75Z"
+        />
+      </svg>
     </div>
   )
 }
