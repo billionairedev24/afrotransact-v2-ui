@@ -740,6 +740,19 @@ export default function CheckoutClientV2({
     setCheckoutResult(null)
   }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard, couponCode, discountCents])
 
+  // ── Amazon-way: the backend's minted order is the SINGLE source of truth for
+  //    what the card will be charged. Once `checkoutResult` exists we display
+  //    ITS numbers (never the frontend estimate), so the buyer always sees the
+  //    exact amount. Before it's minted we show a clearly-labelled estimate and
+  //    block payment. `handlePlaceOrder` + the confirm gate below refuse to
+  //    charge any amount other than the one on screen.
+  const totalsAreFinal = checkoutResult != null
+  const dSubtotal = checkoutResult?.subtotalCents ?? subtotal
+  const dDiscount = checkoutResult?.discountCents ?? discountCents
+  const dTax = checkoutResult?.taxCents ?? tax
+  const dShipping = checkoutResult?.shippingCostCents ?? effectiveShippingCents
+  const dTotal = checkoutResult?.totalCents ?? total
+
   const mintIntent = useCallback(async () => {
     if (placingRef.current) return null
     if (!authToken || !region || !selectedAddress) return null
@@ -836,9 +849,22 @@ export default function CheckoutClientV2({
 
   async function handlePlaceOrder() {
     setPlaceError(null)
+    // The exact number on the Place-order button at the instant it was clicked.
+    const shownTotalAtClick = dTotal
     let result = checkoutResult
     if (!result) result = await mintIntent()
     if (!result) return
+    // ── Amazon-way gate #1 ──────────────────────────────────────────────
+    // The freshly-minted order total MUST equal what the buyer just reviewed.
+    // If the cart/price drifted (e.g. a mint-on-click surfaced a different
+    // final total than the estimate), do NOT charge — show the real total and
+    // make them place the order again against the authoritative number.
+    if (result.totalCents !== shownTotalAtClick) {
+      setPlaceError(
+        `Your order total updated to ${formatCents(result.totalCents)}. Please review it above, then place your order again.`,
+      )
+      return
+    }
     const handle = paymentHandleRef.current
     if (!handle) {
       setPlaceError("Payment isn't ready yet. Please wait a moment and try again.")
@@ -1103,7 +1129,7 @@ export default function CheckoutClientV2({
                 ref={paymentHandleRef}
                 clientSecret={checkoutResult?.paymentClientSecret ?? null}
                 checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
-                totalCents={total}
+                totalCents={dTotal}
                 saveCard={saveCard}
                 onSaveCardChange={setSaveCard}
                 savedCards={savedCards}
@@ -1223,12 +1249,12 @@ export default function CheckoutClientV2({
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-gray-600">Items ({cartItems.length})</dt>
-                <dd className="text-gray-900 tabular-nums">{formatCents(subtotal)}</dd>
+                <dd className="text-gray-900 tabular-nums">{formatCents(dSubtotal)}</dd>
               </div>
-              {couponResult && discountCents > 0 && !couponTargetsShipping && (
+              {couponResult && dDiscount > 0 && !couponTargetsShipping && (
                 <div className="flex justify-between italic text-green-700">
                   <dt>Discount ({couponResult.code})</dt>
-                  <dd className="tabular-nums">-{formatCents(discountCents)}</dd>
+                  <dd className="tabular-nums">-{formatCents(dDiscount)}</dd>
                 </div>
               )}
               <div className="flex justify-between">
@@ -1251,27 +1277,34 @@ export default function CheckoutClientV2({
                     couponTargetsShipping && shippingDiscountCents > 0 ? (
                       <>
                         <span className="text-gray-400 line-through mr-1">{fmtShip(shippingCents)}</span>
-                        {fmtShip(effectiveShippingCents)}
+                        {fmtShip(dShipping)}
                       </>
                     ) : (
-                      fmtShip(shippingCents)
+                      fmtShip(dShipping)
                     )
                   ) : "—"}
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-600">Tax</dt>
-                {taxRate === 0 ? (
+                {dTax === 0 ? (
                   <dd className="font-medium text-green-600">No tax</dd>
                 ) : (
-                  <dd className="text-gray-900 tabular-nums">{formatCents(tax)}</dd>
+                  <dd className="text-gray-900 tabular-nums">{formatCents(dTax)}</dd>
                 )}
               </div>
               <div className="flex justify-between border-t border-gray-200 pt-2 mt-2">
-                <dt className="text-base font-bold text-gray-900">Order total</dt>
-                <dd className="text-base font-bold text-gray-900 tabular-nums">{formatCents(total)}</dd>
+                <dt className="text-base font-bold text-gray-900">{totalsAreFinal ? "Order total" : "Estimated total"}</dt>
+                <dd className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dTotal)}</dd>
               </div>
             </dl>
+            {!totalsAreFinal ? (
+              <p className="mt-2 text-[11px] text-gray-500">Final total is confirmed at payment. You&apos;ll never be charged more than the amount shown when you place your order.</p>
+            ) : (
+              <p className="mt-2 text-[11px] text-emerald-700 flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3 shrink-0" /> This is exactly what you&apos;ll be charged.
+              </p>
+            )}
 
             {placeError && (
               <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -1300,8 +1333,8 @@ export default function CheckoutClientV2({
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white p-3 lg:hidden">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-500">Order total</p>
-            <p className="text-base font-bold text-gray-900 tabular-nums">{formatCents(total)}</p>
+            <p className="text-xs text-gray-500">{totalsAreFinal ? "Order total" : "Estimated total"}</p>
+            <p className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dTotal)}</p>
           </div>
           <PlaceOrderButton
             disabled={placeDisabled}
@@ -1508,6 +1541,7 @@ const InlinePayment = forwardRef<PaymentHandle, InlinePaymentProps>(function Inl
 function InlinePaymentForm({
   clientSecret,
   checkoutSessionId,
+  totalCents,
   saveCard,
   onSaveCardChange,
   savedCards,
@@ -1530,6 +1564,21 @@ function InlinePaymentForm({
       }
       if (!clientSecret) {
         onError("Payment could not be initialized. Please try again or contact support.")
+        return false
+      }
+
+      // ── Amazon-way gate #2 ──────────────────────────────────────────────
+      // Verify the PaymentIntent on Stripe charges EXACTLY the amount the buyer
+      // reviewed, before confirming. Guards against a stale client_secret whose
+      // amount drifted from what's on screen — a surprise charge is impossible.
+      try {
+        const { paymentIntent: pi } = await stripe.retrievePaymentIntent(clientSecret)
+        if (pi && typeof pi.amount === "number" && pi.amount !== totalCents) {
+          onError("Your order total changed. Please review it before paying.")
+          return false
+        }
+      } catch {
+        onError("We couldn't verify your total. Please try again.")
         return false
       }
 
@@ -1573,7 +1622,7 @@ function InlinePaymentForm({
       }
       return true
     },
-  }), [stripe, elements, clientSecret, checkoutSessionId, usingSaved, selectedSavedCardId, onError])
+  }), [stripe, elements, clientSecret, checkoutSessionId, totalCents, usingSaved, selectedSavedCardId, onError])
 
   // Track the currently-selected payment-method type from Stripe's PaymentElement
   // so the "save for next time" checkbox can name the right thing (card / bank
@@ -1591,9 +1640,9 @@ function InlinePaymentForm({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+      <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-xs text-emerald-800">
         <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-        <span>Secure checkout</span>
+        <span>Your payment is secure and encrypted</span>
       </div>
 
       {savedCards.length > 0 && (
@@ -1682,6 +1731,26 @@ function InlinePaymentForm({
           </label>
         </div>
       )}
+
+      {/* Stripe trust badge — signals a secure, PCI-compliant transaction. */}
+      <div className="flex flex-col items-center gap-1.5 pt-1">
+        <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+          <Lock className="h-3 w-3 shrink-0" />
+          <span>Encrypted & processed securely — we never see your card details.</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-gray-400">
+          <span className="text-[11px]">Powered by</span>
+          <svg viewBox="0 0 60 25" width="45" height="19" role="img" aria-label="Stripe" fill="none">
+            <title>Stripe</title>
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              fill="#635BFF"
+              d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.5 0 .4-.04 1.26-.06 1.48Zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.85-1.07-2.58-2.08-2.58ZM40.95 20.3c-1.44 0-2.32-.6-2.9-1.04l-.02 4.63-4.12.87V5.57h3.76l.08 1.02a4.7 4.7 0 0 1 3.23-1.29c2.9 0 5.62 2.6 5.62 7.4 0 5.23-2.7 7.6-5.65 7.6ZM40 8.95c-.95 0-1.54.34-1.97.81l.02 6.12c.4.44.98.78 1.95.78 1.52 0 2.54-1.65 2.54-3.87 0-2.15-1.04-3.84-2.54-3.84ZM28.24 5.57h4.13v14.44h-4.13V5.57Zm0-4.7L32.37 0v3.36l-4.13.88V.88ZM23.92 9.22v10.79H19.8V5.57h3.7l.12 1.22c1-1.77 3.07-1.41 3.62-1.22v3.79c-.52-.17-2.29-.43-3.32.86Zm-8.55 4.72c0 2.43 2.6 1.68 3.12 1.46v3.36c-.55.3-1.54.54-2.89.54a4.15 4.15 0 0 1-4.27-4.35l.02-13.56 4.02-.86v3.68h3.14V9.4h-3.14l-.01 5.53Zm-4.91.7c0 2.72-2.16 4.27-5.3 4.27a10.6 10.6 0 0 1-4.12-.86v-3.93c1.26.68 3.2 1.19 4.13 1.19.62 0 1.07-.17 1.07-.68 0-1.32-5.4-.83-5.4-4.76 0-2.68 2.05-4.28 5.11-4.28 1.31 0 2.62.2 3.94.72v3.88a9.3 9.3 0 0 0-3.94-1.02c-.58 0-.94.17-.94.6 0 1.24 5.42.65 5.42 4.75Z"
+            />
+          </svg>
+        </div>
+      </div>
     </div>
   )
 }
