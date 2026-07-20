@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { PromoSlot } from "@/components/marketing/PromoSlot"
+import { PromoPopupModal } from "@/components/marketing/PromoPopupModal"
 import { GeoGate } from "@/components/geo/GeoGate"
 
 // WhatsAppFab is mounted in the ROOT app/layout.tsx (not here) so it also
@@ -20,6 +21,7 @@ export default function MainLayout({
       </main>
       <PromoSlot placement="FOOTER" className="mx-4 md:mx-6 lg:mx-8 mb-6" />
       <Footer />
+      <PromoPopupModal />
     </div>
   )
 }

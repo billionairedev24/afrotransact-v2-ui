@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
-export type PromoPlacement = "HERO" | "STRIP_TOP" | "SIDEBAR" | "FOOTER"
+export type PromoPlacement = "HERO" | "STRIP_TOP" | "SIDEBAR" | "FOOTER" | "POPUP"
 
 export interface Promotion {
   id: string
@@ -76,6 +76,11 @@ export function PromoSlot({ placement, className, promotions }: PromoSlotProps) 
       return <SidebarSlot items={items} className={className} />
     case "FOOTER":
       return <FooterSlot items={items} className={className} />
+    case "POPUP":
+      // Rendered by <PromoPopupModal/>, not inline.
+      return null
+    default:
+      return null
   }
 }
 
