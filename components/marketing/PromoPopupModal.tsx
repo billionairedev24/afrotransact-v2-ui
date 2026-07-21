@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, X } from "lucide-react"
 import type { Promotion } from "@/components/marketing/PromoSlot"
+import { EmailCaptureForm } from "@/components/marketing/EmailCaptureForm"
 
 /**
  * Auto-popping promotion modal — the "POPUP" placement. Mirrors the seller
@@ -105,12 +106,23 @@ export function PromoPopupModal() {
           {promo.subtitle && (
             <p className="text-sm text-gray-600 mt-2 leading-relaxed">{promo.subtitle}</p>
           )}
-          {promo.ctaUrl && (
-            <Link href={promo.ctaUrl} onClick={dismiss}
-              className="mt-5 flex items-center justify-center gap-2 w-full h-12 rounded-full bg-[#F5C518] hover:bg-[#E5B100] text-gray-900 font-bold text-[15px] transition-colors">
-              {promo.ctaLabel || "Shop now"}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+          {promo.captureEmail ? (
+            <div className="mt-5 text-left">
+              <EmailCaptureForm
+                promoId={promo.id}
+                headline={promo.captureHeadline}
+                ctaLabel={promo.captureCtaLabel}
+                variant="modal"
+              />
+            </div>
+          ) : (
+            promo.ctaUrl && (
+              <Link href={promo.ctaUrl} onClick={dismiss}
+                className="mt-5 flex items-center justify-center gap-2 w-full h-12 rounded-full bg-[#F5C518] hover:bg-[#E5B100] text-gray-900 font-bold text-[15px] transition-colors">
+                {promo.ctaLabel || "Shop now"}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            )
           )}
           <button type="button" onClick={dismiss} className="mt-3 text-xs font-medium text-gray-500 hover:text-gray-800">
             No thanks

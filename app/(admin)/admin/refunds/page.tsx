@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   Banknote, Search, AlertTriangle, CheckCircle2, Clock, XCircle, RefreshCcw, Camera,
-  ChevronRight, Package, ArrowLeft,
+  ChevronRight, Package, ArrowLeft, MessageSquare, Send, Undo2,
 } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -15,8 +15,13 @@ import {
   adminGetOrderByNumber,
   adminGetRefundQueue,
   adminListRefundsByOrderNumber,
+  adminListReturns,
+  adminListOrderMessages,
+  adminSendOrderMessage,
   type AdminOrderLookup,
   type RefundDto,
+  type ReturnDto,
+  type OrderMessageDto,
 } from "@/lib/api"
 
 const fmt = (cents: number, currency = "USD") =>
@@ -46,11 +51,17 @@ const STATUS_BADGE: Record<string, string> = {
 
 export default function AdminRefundsPage() {
   const [view, setView] = useState<"queue" | "order">("queue")
+  const [tab, setTab] = useState<"refunds" | "returns">("refunds")
 
   // Queue state
   const [queue, setQueue] = useState<AdminOrderLookup[]>([])
   const [queueLoading, setQueueLoading] = useState(true)
   const [queueErr, setQueueErr] = useState<string | null>(null)
+
+  // Returns state
+  const [returns, setReturns] = useState<ReturnDto[]>([])
+  const [returnsLoading, setReturnsLoading] = useState(true)
+  const [returnsErr, setReturnsErr] = useState<string | null>(null)
 
   // Search / detail state
   const [orderNumber, setOrderNumber] = useState("")
@@ -79,7 +90,28 @@ export default function AdminRefundsPage() {
     }
   }, [])
 
+  const loadReturns = useCallback(async () => {
+    setReturnsLoading(true)
+    setReturnsErr(null)
+    try {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not signed in")
+      const res = await adminListReturns(token, { page: 0 })
+      setReturns(res.content)
+    } catch (e) {
+      logError(e, "refunds.loadReturns")
+      if (e instanceof ApiError && e.status === 401) {
+        setReturnsErr("Your admin session has expired. Please sign in again.")
+      } else {
+        setReturnsErr(friendlyMessage(e, "Couldn't load the returns queue. Please try again."))
+      }
+    } finally {
+      setReturnsLoading(false)
+    }
+  }, [])
+
   useEffect(() => { void loadQueue() }, [loadQueue])
+  useEffect(() => { void loadReturns() }, [loadReturns])
 
   async function loadOrder(num: string) {
     const n = num.trim()
@@ -114,20 +146,47 @@ export default function AdminRefundsPage() {
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Banknote className="h-6 w-6" /> Refunds
+            <Banknote className="h-6 w-6" /> Refunds &amp; Returns
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {view === "queue"
-              ? "Orders waiting on refund action. Cancelled orders, customer refund requests, and failed payments appear here automatically."
-              : "Order detail & refund actions. Every refund routes through the canonical pipeline (durable record + Stripe idempotency + accounting event)."}
+            {view === "order"
+              ? "Order detail, refund actions & customer messaging. Every refund routes through the canonical pipeline (durable record + Stripe idempotency + accounting event)."
+              : tab === "refunds"
+                ? "Orders waiting on refund action. Cancelled orders, customer refund requests, and failed payments appear here automatically."
+                : "Return requests across all stores. Review buyer reasons and message customers directly."}
           </p>
         </div>
         {view === "queue" && (
-          <button onClick={() => void loadQueue()} className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+          <button
+            onClick={() => (tab === "refunds" ? void loadQueue() : void loadReturns())}
+            className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          >
             <RefreshCcw className="h-4 w-4" /> Refresh
           </button>
         )}
       </div>
+
+      {/* Segmented Refunds | Returns toggle */}
+      {view === "queue" && (
+        <div className="inline-flex items-center rounded-md border border-border bg-muted/40 p-0.5 mb-6">
+          <button
+            onClick={() => setTab("refunds")}
+            className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+              tab === "refunds" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Banknote className="h-4 w-4" /> Refunds
+          </button>
+          <button
+            onClick={() => setTab("returns")}
+            className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+              tab === "returns" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Undo2 className="h-4 w-4" /> Returns
+          </button>
+        </div>
+      )}
 
       {/* Quick search bar — always visible */}
       <div className="flex gap-2 mb-6">
@@ -153,7 +212,11 @@ export default function AdminRefundsPage() {
       )}
 
       {view === "queue" ? (
-        <RefundQueueView queue={queue} loading={queueLoading} err={queueErr} onOpen={(n) => loadOrder(n)} />
+        tab === "refunds" ? (
+          <RefundQueueView queue={queue} loading={queueLoading} err={queueErr} onOpen={(n) => loadOrder(n)} />
+        ) : (
+          <ReturnsQueueView returns={returns} loading={returnsLoading} err={returnsErr} onOpen={(n) => loadOrder(n)} />
+        )
       ) : order ? (
         <OrderDetailView
           order={order}
@@ -231,6 +294,213 @@ function RefundQueueView({
         </li>
       ))}
     </ul>
+  )
+}
+
+const RETURN_STATUS_BADGE: Record<string, string> = {
+  requested:              "bg-amber-50 text-amber-700 border-amber-200",
+  approved:               "bg-blue-50 text-blue-700 border-blue-200",
+  approved_partial:       "bg-blue-50 text-blue-700 border-blue-200",
+  denied:                 "bg-red-50 text-red-700 border-red-200",
+  label_issued:           "bg-indigo-50 text-indigo-700 border-indigo-200",
+  in_transit:             "bg-indigo-50 text-indigo-700 border-indigo-200",
+  received:               "bg-violet-50 text-violet-700 border-violet-200",
+  inspected:              "bg-violet-50 text-violet-700 border-violet-200",
+  completed:              "bg-emerald-50 text-emerald-700 border-emerald-200",
+  rejected_on_inspection: "bg-red-50 text-red-700 border-red-200",
+  cancelled:              "bg-gray-100 text-gray-600 border-gray-200",
+  expired:                "bg-gray-100 text-gray-600 border-gray-200",
+}
+
+function ReturnStatusPill({ status }: { status: string }) {
+  const cls = RETURN_STATUS_BADGE[status] ?? "bg-gray-100 text-gray-600 border-gray-200"
+  return (
+    <span className={`inline-flex items-center text-[10px] font-medium border rounded px-1.5 py-0.5 ${cls}`}>
+      {status.replace(/_/g, " ")}
+    </span>
+  )
+}
+
+function ReturnsQueueView({
+  returns, loading, err, onOpen,
+}: {
+  returns: ReturnDto[]
+  loading: boolean
+  err: string | null
+  onOpen: (orderNumber: string) => void
+}) {
+  if (loading) {
+    return <div className="text-sm text-muted-foreground">Loading returns…</div>
+  }
+  if (err) {
+    return <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">{err}</div>
+  }
+  if (returns.length === 0) {
+    return (
+      <div className="border border-dashed border-border rounded p-12 text-center">
+        <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-2" />
+        <div className="text-sm font-medium">No return requests.</div>
+        <div className="text-xs text-muted-foreground mt-1">
+          Return requests from buyers across all stores appear here.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <ul className="divide-y divide-border border border-border rounded-md bg-card">
+      {returns.map((r) => {
+        const itemCount = (r.items ?? []).reduce((n, it) => n + (it.quantity ?? 0), 0)
+        return (
+          <li key={r.id}>
+            <button
+              onClick={() => onOpen(r.orderNumber)}
+              className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors flex items-center justify-between gap-4"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <code className="text-sm font-medium">{r.orderNumber}</code>
+                  <ReturnStatusPill status={r.status} />
+                  <span className="text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
+                    {r.reason.replace(/_/g, " ")}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {itemCount} item{itemCount === 1 ? "" : "s"}
+                  {r.storeId ? ` · ${storeDisplayName(r.storeId)}` : ""}
+                  {r.buyerNotes ? ` · “${r.buyerNotes.slice(0, 80)}${r.buyerNotes.length > 80 ? "…" : ""}”` : ""}
+                </div>
+              </div>
+              <div className="text-right flex items-center gap-3 shrink-0">
+                <div>
+                  {typeof r.refundAmountCents === "number" && r.refundAmountCents > 0 && (
+                    <div className="text-sm font-semibold">{fmt(r.refundAmountCents)}</div>
+                  )}
+                  <div className="text-[10px] text-muted-foreground">
+                    {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—"}
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function CustomerMessagePanel({ orderNumber }: { orderNumber: string }) {
+  const [messages, setMessages] = useState<OrderMessageDto[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadErr, setLoadErr] = useState<string | null>(null)
+  const [draft, setDraft] = useState("")
+  const [sending, setSending] = useState(false)
+  const [sendErr, setSendErr] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true); setLoadErr(null)
+    try {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not signed in")
+      const res = await adminListOrderMessages(token, orderNumber)
+      setMessages(res)
+    } catch (e) {
+      logError(e, "refunds.loadMessages")
+      setLoadErr(friendlyMessage(e, "Couldn't load the message thread."))
+    } finally {
+      setLoading(false)
+    }
+  }, [orderNumber])
+
+  useEffect(() => { void load() }, [load])
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault()
+    const body = draft.trim()
+    if (!body) return
+    setSending(true); setSendErr(null)
+    try {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not signed in")
+      const created = await adminSendOrderMessage(token, orderNumber, body)
+      setMessages((prev) => [...prev, created])
+      setDraft("")
+    } catch (e) {
+      logError(e, "refunds.sendMessage")
+      setSendErr(friendlyMessage(e, "Couldn't send the message. Please try again."))
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <section className="border border-border rounded-md bg-card p-5">
+      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1 flex items-center gap-2">
+        <MessageSquare className="h-4 w-4" /> Message the customer
+      </h2>
+      <p className="text-xs text-muted-foreground mb-4">
+        Messages are delivered to the customer by email. Keep it professional — the buyer sees exactly what you send.
+      </p>
+
+      {/* Thread */}
+      <div className="mb-4">
+        {loading ? (
+          <div className="text-sm text-muted-foreground">Loading messages…</div>
+        ) : loadErr ? (
+          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">{loadErr}</div>
+        ) : messages.length === 0 ? (
+          <div className="text-sm text-muted-foreground border border-dashed border-border rounded p-4 text-center">
+            No messages yet. Start the conversation below.
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {messages.map((m) => (
+              <li key={m.id} className="rounded-lg border border-border bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+                    <span className="inline-flex items-center rounded bg-foreground text-background px-1.5 py-0.5 text-[10px] uppercase tracking-wide">Admin</span>
+                    {m.adminEmail && <span className="text-muted-foreground font-normal">{m.adminEmail}</span>}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                    {m.createdAt ? new Date(m.createdAt).toLocaleString() : ""}
+                  </span>
+                </div>
+                <div className="text-sm whitespace-pre-wrap">{m.body}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Composer */}
+      <form onSubmit={send} className="space-y-2">
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          maxLength={2000}
+          placeholder="Write a message to the customer…"
+          className="w-full border border-border rounded px-3 py-2 bg-background min-h-[80px] text-sm"
+        />
+        {sendErr && (
+          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3 flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" /><span>{sendErr}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={sending || !draft.trim()}
+            className="inline-flex items-center gap-1.5 bg-foreground text-background px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
+          >
+            <Send className="h-4 w-4" /> {sending ? "Sending…" : "Send message"}
+          </button>
+          <span className="text-xs text-muted-foreground">
+            Delivered to the customer&apos;s email.
+          </span>
+        </div>
+      </form>
+    </section>
   )
 }
 
@@ -315,6 +585,9 @@ function OrderDetailView({
 
       {/* Delivery proof — evidence for the refund investigation */}
       <DeliveryProofSection subOrders={order.subOrders ?? []} />
+
+      {/* Admin ↔ customer messaging */}
+      <CustomerMessagePanel orderNumber={order.orderNumber} />
 
       {/* Existing refunds */}
       {refunds.length > 0 && (

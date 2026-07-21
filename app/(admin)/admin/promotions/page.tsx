@@ -102,6 +102,8 @@ function fromLocalInput(v: string): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
 
+type OfferType = "percentage" | "fixed_amount"
+
 interface EditorState {
   id?: string
   title: string
@@ -113,6 +115,15 @@ interface EditorState {
   startsAt: string
   endsAt: string
   active: boolean
+  // Email-capture → coupon. Numeric fields are held as display strings
+  // (whole percent / dollars) and converted to bps / cents on save.
+  captureEmail: boolean
+  offerType: OfferType
+  offerValue: string
+  offerExpiryDays: string
+  offerMinOrder: string
+  captureHeadline: string
+  captureCtaLabel: string
 }
 
 const BLANK: EditorState = {
@@ -125,6 +136,13 @@ const BLANK: EditorState = {
   startsAt: "",
   endsAt: "",
   active: true,
+  captureEmail: false,
+  offerType: "percentage",
+  offerValue: "",
+  offerExpiryDays: "30",
+  offerMinOrder: "",
+  captureHeadline: "",
+  captureCtaLabel: "",
 }
 
 function toEditor(p: Promotion): EditorState {
@@ -139,6 +157,14 @@ function toEditor(p: Promotion): EditorState {
     startsAt: toLocalInput(p.startsAt),
     endsAt: toLocalInput(p.endsAt),
     active: p.active,
+    captureEmail: !!p.captureEmail,
+    offerType: p.offerType ?? "percentage",
+    // bps → whole percent, cents → whole dollars (both a /100 down-scale).
+    offerValue: p.offerValue != null ? String(p.offerValue / 100) : "",
+    offerExpiryDays: p.offerExpiryDays != null ? String(p.offerExpiryDays) : "30",
+    offerMinOrder: p.offerMinOrderCents != null ? String(p.offerMinOrderCents / 100) : "",
+    captureHeadline: p.captureHeadline ?? "",
+    captureCtaLabel: p.captureCtaLabel ?? "",
   }
 }
 
@@ -155,6 +181,13 @@ function toPromotion(e: EditorState): Promotion {
     endsAt: fromLocalInput(e.endsAt),
     sortOrder: 0,
     active: e.active,
+    captureEmail: e.captureEmail,
+    offerType: e.offerType,
+    offerValue: e.offerValue ? Math.round(Number(e.offerValue) * 100) : undefined,
+    offerExpiryDays: e.offerExpiryDays ? Number(e.offerExpiryDays) : undefined,
+    offerMinOrderCents: e.offerMinOrder ? Math.round(Number(e.offerMinOrder) * 100) : undefined,
+    captureHeadline: e.captureHeadline || undefined,
+    captureCtaLabel: e.captureCtaLabel || undefined,
   }
 }
 
@@ -223,6 +256,16 @@ export default function AdminPromotionsPage() {
       startsAt: fromLocalInput(e.startsAt),
       endsAt: fromLocalInput(e.endsAt),
       active: e.active,
+      captureEmail: e.captureEmail,
+      // Only send offer config when capture is on. Whole percent → bps and
+      // whole dollars → cents are both a ×100 up-scale (15 → 1500, $20 → 2000).
+      offerType: e.captureEmail ? e.offerType : null,
+      offerValue: e.captureEmail && e.offerValue ? Math.round(Number(e.offerValue) * 100) : null,
+      offerExpiryDays: e.captureEmail && e.offerExpiryDays ? Number(e.offerExpiryDays) : null,
+      offerMinOrderCents:
+        e.captureEmail && e.offerMinOrder ? Math.round(Number(e.offerMinOrder) * 100) : null,
+      captureHeadline: e.captureEmail ? e.captureHeadline.trim() || null : null,
+      captureCtaLabel: e.captureEmail ? e.captureCtaLabel.trim() || null : null,
     }
     try {
       const url = e.id ? `/api/admin/promotions/${e.id}` : "/api/admin/promotions"
@@ -695,6 +738,97 @@ function PromoEditorSheet({
               >
                 <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${editor.active ? "translate-x-5" : "translate-x-0.5"}`} />
               </button>
+            </div>
+
+            {/* Email capture → coupon */}
+            <div className="rounded-xl border border-input bg-gray-50 px-4 py-3 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Capture email</p>
+                  <p className="text-xs text-gray-500">
+                    Collect a visitor&apos;s email and auto-email them a unique single-use coupon.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...editor, captureEmail: !editor.captureEmail })}
+                  aria-pressed={editor.captureEmail}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editor.captureEmail ? "bg-brand-gold" : "bg-gray-300"}`}
+                >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${editor.captureEmail ? "translate-x-5" : "translate-x-0.5"}`} />
+                </button>
+              </div>
+
+              {editor.captureEmail && (
+                <div className="space-y-4 border-t border-gray-200 pt-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Offer type">
+                      <select
+                        value={editor.offerType}
+                        onChange={(e) => onChange({ ...editor, offerType: e.target.value as OfferType })}
+                        className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm outline-none focus:border-primary/60"
+                      >
+                        <option value="percentage">Percentage</option>
+                        <option value="fixed_amount">Fixed amount</option>
+                      </select>
+                    </Field>
+                    <Field label={editor.offerType === "percentage" ? "Percent off (%)" : "Amount off ($)"}>
+                      <input
+                        type="number"
+                        min="0"
+                        step={editor.offerType === "percentage" ? "1" : "0.01"}
+                        value={editor.offerValue}
+                        onChange={(e) => onChange({ ...editor, offerValue: e.target.value })}
+                        placeholder={editor.offerType === "percentage" ? "15" : "20"}
+                        className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm outline-none focus:border-primary/60"
+                      />
+                    </Field>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Expiry (days)">
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={editor.offerExpiryDays}
+                        onChange={(e) => onChange({ ...editor, offerExpiryDays: e.target.value })}
+                        placeholder="30"
+                        className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm outline-none focus:border-primary/60"
+                      />
+                    </Field>
+                    <Field label="Min. order ($, optional)">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editor.offerMinOrder}
+                        onChange={(e) => onChange({ ...editor, offerMinOrder: e.target.value })}
+                        placeholder="No minimum"
+                        className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm outline-none focus:border-primary/60"
+                      />
+                    </Field>
+                  </div>
+
+                  <Field label="Capture headline (optional)">
+                    <input
+                      value={editor.captureHeadline}
+                      onChange={(e) => onChange({ ...editor, captureHeadline: e.target.value })}
+                      placeholder="Enter your email for an exclusive code"
+                      className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm outline-none focus:border-primary/60"
+                    />
+                  </Field>
+
+                  <Field label="Capture button label (optional)">
+                    <input
+                      value={editor.captureCtaLabel}
+                      onChange={(e) => onChange({ ...editor, captureCtaLabel: e.target.value })}
+                      placeholder="Get my code"
+                      className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm outline-none focus:border-primary/60"
+                    />
+                  </Field>
+                </div>
+              )}
             </div>
 
             {/* Live preview */}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { EmailCaptureForm } from "@/components/marketing/EmailCaptureForm"
 
 export type PromoPlacement = "HERO" | "STRIP_TOP" | "SIDEBAR" | "FOOTER" | "POPUP"
 
@@ -19,6 +20,13 @@ export interface Promotion {
   endsAt?: string | null
   sortOrder: number
   active: boolean
+  captureEmail: boolean
+  offerType?: "percentage" | "fixed_amount"
+  offerValue?: number
+  offerExpiryDays?: number
+  offerMinOrderCents?: number
+  captureHeadline?: string
+  captureCtaLabel?: string
 }
 
 interface PromoSlotProps {
@@ -130,7 +138,18 @@ function PromoOverlay({
         <p className={cn("max-w-2xl text-white/90 drop-shadow", subCls)}>{promo.subtitle}</p>
       ) : null}
       <div className="mt-1">
-        <PromoCTA promo={promo} size={size} />
+        {promo.captureEmail ? (
+          <div className={cn("w-full", align === "center" ? "max-w-lg mx-auto" : "max-w-lg")}>
+            <EmailCaptureForm
+              promoId={promo.id}
+              headline={promo.captureHeadline}
+              ctaLabel={promo.captureCtaLabel}
+              variant="hero"
+            />
+          </div>
+        ) : (
+          <PromoCTA promo={promo} size={size} />
+        )}
       </div>
     </div>
   )

@@ -519,7 +519,7 @@ function SubOrderBlock({
       </section>
 
       <section className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-6">
           <h2 className="text-lg font-bold text-foreground">
             Items {single ? "in Order" : "in this Shipment"}
           </h2>
