@@ -1,6 +1,8 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { PromoSlot } from "@/components/marketing/PromoSlot"
+import { TickerBar } from "@/components/marketing/TickerBar"
+import { PromoPopupModal } from "@/components/marketing/PromoPopupModal"
 import { GeoGate } from "@/components/geo/GeoGate"
 // REPLACED BY <CategoriesBentoGrid> + <TrustMissionBand>: kept commented for
 // quick revert if there's a visual regression.
@@ -231,6 +233,9 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
+      {/* The homepage is OUTSIDE the (main) route group, so the ticker + promo
+          popup mounted in (main)/layout don't reach it — mount them here too. */}
+      <TickerBar />
 
       <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0 space-y-10">
         {/* GeoGate wraps the homepage too. The (main) route group has its
@@ -298,6 +303,7 @@ export default async function HomePage() {
 
       <PromoSlot placement="FOOTER" className="max-w-page mx-auto px-4 sm:px-5 mb-6" />
       <Footer />
+      <PromoPopupModal />
     </div>
   )
 }

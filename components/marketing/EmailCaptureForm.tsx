@@ -21,6 +21,8 @@ interface EmailCaptureFormProps {
    */
   variant?: "modal" | "hero"
   className?: string
+  /** Fired once when the email is accepted (code sent). */
+  onSuccess?: () => void
 }
 
 /**
@@ -34,6 +36,7 @@ export function EmailCaptureForm({
   ctaLabel,
   variant = "modal",
   className,
+  onSuccess,
 }: EmailCaptureFormProps) {
   const inputId = useId()
   const [email, setEmail] = useState("")
@@ -65,6 +68,7 @@ export function EmailCaptureForm({
       }
       if (res.ok && data.status === "sent") {
         setStatus("success")
+        onSuccess?.()
         return
       }
       setStatus("idle")

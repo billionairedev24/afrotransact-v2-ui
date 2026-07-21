@@ -11,8 +11,11 @@ function apiBase(): string {
 
 /**
  * Public proxy for the promotions feed. The browser hits this route, which
- * caches upstream for 60s — matches the storefront ISR cadence for marketing
- * surfaces. Returns `{ promotions: [...] }`.
+ * caches upstream briefly. Kept short (15s) so an admin who creates/edits a
+ * promotion — especially a POPUP or TICKER — sees it on the storefront within
+ * seconds rather than minutes. On a low-traffic site a longer
+ * stale-while-revalidate window can keep serving a stale (empty) list because
+ * nothing hits it to trigger a refresh, so we cap staleness tightly.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -21,7 +24,7 @@ export async function GET(request: Request) {
 
   try {
     const res = await fetch(`${apiBase()}/api/v1/promotions${qs}`, {
-      next: { revalidate: 60, tags: ["promotions", `promotions:${placement || "all"}`] },
+      next: { revalidate: 15, tags: ["promotions", `promotions:${placement || "all"}`] },
     })
     if (!res.ok) {
       return NextResponse.json({ promotions: [] }, { status: 200 })
@@ -31,7 +34,7 @@ export async function GET(request: Request) {
       { promotions: Array.isArray(data.promotions) ? data.promotions : [] },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+          "Cache-Control": "public, s-maxage=15, stale-while-revalidate=15",
         },
       },
     )
