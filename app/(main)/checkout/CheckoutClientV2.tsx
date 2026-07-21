@@ -1251,9 +1251,16 @@ export default function CheckoutClientV2({
                 <dt className="text-gray-600">Items ({cartItems.length})</dt>
                 <dd className="text-gray-900 tabular-nums">{formatCents(dSubtotal)}</dd>
               </div>
-              {couponResult && dDiscount > 0 && !couponTargetsShipping && (
+              {dDiscount > 0 && !couponTargetsShipping && (couponResult || checkoutResult?.couponAutoApplied) && (
                 <div className="flex justify-between italic text-green-700">
-                  <dt>Discount ({couponResult.code})</dt>
+                  <dt>
+                    Discount ({couponResult?.code ?? checkoutResult?.couponCode})
+                    {checkoutResult?.couponAutoApplied && (
+                      <span className="ml-2 not-italic text-[11px] font-semibold text-green-700">
+                        🎉 applied automatically
+                      </span>
+                    )}
+                  </dt>
                   <dd className="tabular-nums">-{formatCents(dDiscount)}</dd>
                 </div>
               )}

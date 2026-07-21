@@ -1253,6 +1253,42 @@ export function adminGetRefundQueue(token: string, page = 0, size = 20) {
   return api<PagedAdminOrders>(`/api/v1/orders/admin/refund-queue?page=${page}&size=${size}`, { token })
 }
 
+// ── Admin: Returns review queue + customer messaging ─────────────────────────
+
+/** Admin returns review queue across all stores. Omit `status` for all statuses. */
+export function adminListReturns(
+  token: string,
+  { status, page = 0 }: { status?: string; page?: number } = {},
+) {
+  const params = new URLSearchParams()
+  params.set("page", String(page))
+  params.set("size", "20")
+  if (status) params.set("status", status)
+  return api<PagedReturns>(`/api/v1/returns/admin?${params}`, { token })
+}
+
+/** A single message in the admin↔customer thread for an order. */
+export interface OrderMessageDto {
+  id: string
+  orderNumber: string
+  sender: "admin"
+  adminEmail?: string
+  body: string
+  createdAt: string
+}
+
+export function adminListOrderMessages(token: string, orderNumber: string) {
+  return api<OrderMessageDto[]>(`/api/v1/orders/admin/${orderNumber}/messages`, { token })
+}
+
+export function adminSendOrderMessage(token: string, orderNumber: string, body: string) {
+  return api<OrderMessageDto>(`/api/v1/orders/admin/${orderNumber}/messages`, {
+    method: "POST",
+    body: { body },
+    token,
+  })
+}
+
 export function getOnboardingProgress(token: string) {
   return api<OnboardingProgress>("/api/v1/seller/onboarding", { token })
 }
@@ -1825,6 +1861,9 @@ export interface CheckoutResponse {
   shippingCostCents: number
   totalCents: number
   couponCode: string | null
+  /** true when couponCode was auto-applied from an email-bound coupon (buyer
+   *  didn't type it) — the summary shows an "applied automatically" badge. */
+  couponAutoApplied?: boolean
   currency: string
   paymentClientSecret: string | null
   status: string

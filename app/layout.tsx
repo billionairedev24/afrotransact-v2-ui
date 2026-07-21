@@ -27,7 +27,8 @@ export const metadata: Metadata = {
   description:
     "Connecting immigrant communities with fresh food, authentic products, and trusted local vendors. Shop from your community, support your neighbors.",
   // Favicons are served via the Next App Router file conventions
-  // (app/favicon.ico, app/icon.svg, app/apple-icon.png) — no explicit
+  // (app/favicon.ico [16/32/48/64], app/icon.png [512], app/apple-icon.png
+  // [180]) — the AfroTransact bag mark centered on a black tile. No explicit
   // `icons` metadata needed.
   openGraph: {
     title: "AfroTransact - Your Community Marketplace",

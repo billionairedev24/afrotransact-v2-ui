@@ -38,9 +38,9 @@ export function RequestReturnButton({ sub, orderNumber }: { sub: SubOrderLite; o
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-foreground border border-gray-300 rounded-full px-3 py-1.5 hover:bg-gray-50 transition-colors"
+        className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-gray-700 hover:text-foreground border border-gray-300 rounded-full px-3 py-1.5 hover:bg-gray-50 transition-colors"
       >
-        <Package className="h-3.5 w-3.5" />
+        <Package className="h-3.5 w-3.5 shrink-0" />
         Return or replace items
       </button>
       {open && (
@@ -254,18 +254,18 @@ function ReturnRequestModal({
               )}
             </div>
 
-            <footer className="px-6 py-4 border-t border-gray-200 flex items-center justify-between gap-3 bg-gray-50">
+            <footer className="px-6 py-4 border-t border-gray-200 flex flex-col-reverse gap-3 bg-gray-50 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[11px] text-gray-500">
                 Seller has 48 hours to respond. After that we auto-approve.
               </p>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={onClose} className="px-4 py-2 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-100">
+              <div className="flex items-center justify-end gap-2 shrink-0">
+                <button type="button" onClick={onClose} className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap text-gray-700 hover:bg-gray-100">
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || totalQty === 0}
-                  className="px-5 py-2 rounded-full text-sm font-bold bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-40"
+                  className="px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-40"
                 >
                   {submitting ? "Submitting…" : "Submit return"}
                 </button>
