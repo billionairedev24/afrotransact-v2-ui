@@ -4,6 +4,7 @@ import { Providers } from "@/components/providers"
 import { AiChatOverlay } from "@/components/ai/AiWidget"
 import { WhatsAppFab } from "@/components/support/WhatsAppFab"
 import { Toaster } from "sonner"
+import { SITE_URL } from "@/lib/site"
 import "./globals.css"
 
 // Body / UI voice.
@@ -41,12 +42,7 @@ export const metadata: Metadata = {
   verification: {
     google: "J8ES2z6EgHkohYBiaDFrY9zUP8e5y-YLgkQXHnniYHg",
   },
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.NODE_ENV === 'production'
-        ? 'https://afrotransact.com'
-        : 'http://localhost:3001')
-  ),
+  metadataBase: new URL(SITE_URL),
 }
 
 export default function RootLayout({
