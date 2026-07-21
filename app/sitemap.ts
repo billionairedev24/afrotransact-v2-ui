@@ -9,8 +9,12 @@ export const revalidate = 3600
 
 // Safety caps so a single generation always finishes inside the function's
 // time budget even if the catalog grows unexpectedly.
-const MAX_PAGES_PER_STORE = 10 // × 100 = up to 1,000 products/store
+const MAX_PAGES_PER_STORE = 20 // × 100 = up to 2,000 products/store
 const PRODUCT_PAGE_SIZE = 100
+
+// AfroTransact-sold products live under the house store, which is intentionally
+// excluded from the public /stores list — but its products still need indexing.
+const HOUSE_STORE_ID = "00000000-0000-0000-0000-00000000a710"
 
 const now = new Date()
 
@@ -59,27 +63,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     /* skip categories on failure */
   }
 
-  // ── Stores + their products ──
+  // ── Stores (seller store pages) ──
   const storeEntries: MetadataRoute.Sitemap = []
-  const productSlugs = new Set<string>()
+  let sellerStoreIds: string[] = []
   try {
     const stores = await getAllStores({ revalidate })
     for (const store of stores ?? []) {
       if (store.slug) storeEntries.push(entry(`/store/${store.slug}`, "weekly", 0.6))
-      try {
-        for (let page = 0; page < MAX_PAGES_PER_STORE; page++) {
-          const res = await getStoreProducts(store.id, page, PRODUCT_PAGE_SIZE)
-          for (const p of res.content ?? []) {
-            if (p.slug) productSlugs.add(p.slug)
-          }
-          if (page + 1 >= (res.totalPages ?? 1)) break
-        }
-      } catch {
-        /* skip this store's products on failure */
-      }
     }
+    sellerStoreIds = (stores ?? []).map((s) => s.id)
   } catch {
     /* skip stores on failure */
+  }
+
+  // ── Products (house store + every seller store) ──
+  const productSlugs = new Set<string>()
+  const storeIds = Array.from(new Set<string>([HOUSE_STORE_ID, ...sellerStoreIds]))
+  for (const storeId of storeIds) {
+    try {
+      for (let page = 0; page < MAX_PAGES_PER_STORE; page++) {
+        const res = await getStoreProducts(storeId, page, PRODUCT_PAGE_SIZE)
+        for (const p of res.content ?? []) {
+          if (p.slug) productSlugs.add(p.slug)
+        }
+        if (page + 1 >= (res.totalPages ?? 1)) break
+      }
+    } catch {
+      /* skip this store's products on failure */
+    }
   }
 
   const productEntries: MetadataRoute.Sitemap = Array.from(productSlugs).map((slug) =>
