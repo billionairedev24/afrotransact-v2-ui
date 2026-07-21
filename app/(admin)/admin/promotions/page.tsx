@@ -7,18 +7,20 @@ import {
   Search,
   X,
   Upload,
-  MoreVertical,
   Trash2,
   Copy,
   Pencil,
   MoveUp,
   MoveDown,
-  CalendarClock,
+  Eye,
+  EyeOff,
   Sparkles,
   Image as ImageIcon,
 } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { Sheet } from "@/components/ui/Sheet"
+import { DataTable } from "@/components/ui/DataTable"
 import { useUploadThing } from "@/lib/uploadthing"
 import { PromoSlot, type Promotion, type PromoPlacement } from "@/components/marketing/PromoSlot"
 
@@ -30,6 +32,7 @@ const PLACEMENT_OPTIONS: { value: PromoPlacement; label: string; help: string }[
   { value: "SIDEBAR", label: "Sidebar", help: "Vertical card on the product detail page." },
   { value: "FOOTER", label: "Footer", help: "Wide banner above the global footer." },
   { value: "POPUP", label: "Popup", help: "Auto-opening modal shown to shoppers within its schedule. Great for launches & limited-time offers." },
+  { value: "TICKER", label: "Ticker", help: "Thin scrolling bar under the navbar. Text only — the title is the message. Great for 'Free shipping', 'Doorstep delivery', etc." },
 ]
 
 const PLACEMENT_LABEL: Record<PromoPlacement, string> = {
@@ -38,7 +41,11 @@ const PLACEMENT_LABEL: Record<PromoPlacement, string> = {
   SIDEBAR: "Sidebar",
   FOOTER: "Footer",
   POPUP: "Popup",
+  TICKER: "Ticker",
 }
+
+// Text-only placements don't need an image.
+const isTextOnly = (p: PromoPlacement) => p === "TICKER"
 
 function classifyStatus(p: Promotion): PromoStatus {
   if (!p.active) return "draft"
@@ -242,8 +249,12 @@ export default function AdminPromotionsPage() {
   }
 
   async function handleSave(e: EditorState) {
-    if (!e.title.trim() || !e.imageUrl.trim()) {
-      toast.error("Title and image are required")
+    if (!e.title.trim()) {
+      toast.error(isTextOnly(e.placement) ? "A message is required" : "Title is required")
+      return
+    }
+    if (!isTextOnly(e.placement) && !e.imageUrl.trim()) {
+      toast.error("An image is required for this placement")
       return
     }
     const body = {
@@ -337,6 +348,115 @@ export default function AdminPromotionsPage() {
     }
   }
 
+  const columns = useMemo<ColumnDef<Promotion>[]>(
+    () => [
+      {
+        id: "promo",
+        header: "Promotion",
+        accessorFn: (p) => `${p.title} ${p.subtitle ?? ""}`,
+        cell: ({ row }) => {
+          const p = row.original
+          return (
+            <div className="flex min-w-0 max-w-[360px] items-center gap-3">
+              <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-md border border-input bg-gray-100">
+                {p.imageUrl ? (
+                  <Image src={p.imageUrl} alt="" fill sizes="64px" className="object-cover" />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-gray-300">
+                    <ImageIcon className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-gray-900">{p.title}</p>
+                {p.subtitle ? <p className="truncate text-xs text-gray-500">{p.subtitle}</p> : null}
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        id: "placement",
+        header: "Placement",
+        accessorFn: (p) => PLACEMENT_LABEL[p.placement],
+        cell: ({ row }) => (
+          <span className="inline-flex items-center whitespace-nowrap rounded-full border border-input bg-gray-50 px-2.5 py-0.5 text-xs font-semibold text-gray-700">
+            {PLACEMENT_LABEL[row.original.placement]}
+          </span>
+        ),
+      },
+      {
+        id: "status",
+        header: "Status",
+        accessorFn: (p) => classifyStatus(p),
+        cell: ({ row }) => statusChip(classifyStatus(row.original)),
+      },
+      {
+        id: "schedule",
+        header: "Schedule",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-xs text-gray-600">{formatScheduleLine(row.original)}</span>
+        ),
+      },
+      {
+        id: "order",
+        header: "Order",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => move(row.original, "up")}
+              aria-label="Move up"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-input bg-white text-gray-500 hover:bg-gray-50"
+            >
+              <MoveUp className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => move(row.original, "down")}
+              aria-label="Move down"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-input bg-white text-gray-500 hover:bg-gray-50"
+            >
+              <MoveDown className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => <span className="sr-only">Actions</span>,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const p = row.original
+          const btn =
+            "flex h-8 w-8 items-center justify-center rounded-lg border border-input bg-white text-gray-600 hover:bg-gray-50"
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button onClick={() => toggleActive(p)} title={p.active ? "Disable" : "Enable"} className={btn}>
+                {p.active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+              <button onClick={() => openEdit(p)} title="Edit" className={btn}>
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button onClick={() => openDuplicate(p)} title="Duplicate" className={btn}>
+                <Copy className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setConfirmDelete(p.id)}
+                title="Delete"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-input bg-white text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          )
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -389,30 +509,18 @@ export default function AdminPromotionsPage() {
         </div>
       </div>
 
-      {/* Grid */}
-      {loading ? (
-        <div className="py-16 text-center text-sm text-gray-500">Loading promotions…</div>
-      ) : promos.length === 0 ? (
+      {/* List */}
+      {!loading && promos.length === 0 ? (
         <EmptyState onCreate={openNew} />
-      ) : filtered.length === 0 ? (
-        <div className="py-16 text-center text-sm text-gray-500 rounded-2xl border border-dashed border-input bg-white">
-          No promotions match these filters.
-        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((p) => (
-            <PromoCard
-              key={p.id}
-              promo={p}
-              onEdit={() => openEdit(p)}
-              onDuplicate={() => openDuplicate(p)}
-              onDelete={() => setConfirmDelete(p.id)}
-              onToggle={() => toggleActive(p)}
-              onMoveUp={() => move(p, "up")}
-              onMoveDown={() => move(p, "down")}
-            />
-          ))}
-        </div>
+        <DataTable
+          columns={columns}
+          data={filtered}
+          loading={loading}
+          searchPlaceholder="Search promotions…"
+          emptyMessage="No promotions match these filters."
+          pageSize={20}
+        />
       )}
 
       {/* Editor */}
@@ -451,100 +559,6 @@ export default function AdminPromotionsPage() {
   )
 }
 
-// ── Cards & empty state ─────────────────────────────────────────────────────
-
-function PromoCard({
-  promo,
-  onEdit,
-  onDuplicate,
-  onDelete,
-  onToggle,
-  onMoveUp,
-  onMoveDown,
-}: {
-  promo: Promotion
-  onEdit: () => void
-  onDuplicate: () => void
-  onDelete: () => void
-  onToggle: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
-}) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const status = classifyStatus(promo)
-
-  return (
-    <div className="rounded-2xl border border-input bg-white overflow-hidden hover:shadow-md transition-shadow">
-      <div className="relative aspect-[16/9] bg-gray-100">
-        {promo.imageUrl ? (
-          <Image src={promo.imageUrl} alt={promo.title} fill sizes="(max-width:1024px) 100vw, 400px" className="object-cover" />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-            <ImageIcon className="h-10 w-10" />
-          </div>
-        )}
-        <div className="absolute top-3 left-3 flex gap-2">
-          {statusChip(status)}
-          <span className="inline-flex items-center gap-1 rounded-full border border-white/40 bg-white/85 backdrop-blur px-2 py-0.5 text-[10px] font-semibold text-gray-700">
-            {PLACEMENT_LABEL[promo.placement]}
-          </span>
-        </div>
-      </div>
-      <div className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="font-semibold text-gray-900 truncate">{promo.title}</p>
-            {promo.subtitle ? <p className="text-xs text-gray-500 truncate">{promo.subtitle}</p> : null}
-          </div>
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label="Open menu"
-              className="h-8 w-8 rounded-lg border border-input bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-9 z-50 w-44 rounded-xl border border-input bg-white shadow-lg py-1 text-sm">
-                  <button onClick={() => { setMenuOpen(false); onEdit() }} className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"><Pencil className="h-3.5 w-3.5" /> Edit</button>
-                  <button onClick={() => { setMenuOpen(false); onDuplicate() }} className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2"><Copy className="h-3.5 w-3.5" /> Duplicate</button>
-                  <button onClick={() => { setMenuOpen(false); onDelete() }} className="w-full px-3 py-2 text-left hover:bg-gray-50 text-red-600 flex items-center gap-2"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-gray-500">
-          <CalendarClock className="h-3.5 w-3.5" />
-          {formatScheduleLine(promo)}
-        </div>
-
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-1">
-            <button onClick={onMoveUp} aria-label="Move up" className="h-7 w-7 rounded-lg border border-input bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50">
-              <MoveUp className="h-3.5 w-3.5" />
-            </button>
-            <button onClick={onMoveDown} aria-label="Move down" className="h-7 w-7 rounded-lg border border-input bg-white flex items-center justify-center text-gray-500 hover:bg-gray-50">
-              <MoveDown className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <button
-            onClick={onToggle}
-            aria-pressed={promo.active}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${promo.active ? "bg-brand-gold" : "bg-gray-200"}`}
-          >
-            <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${promo.active ? "translate-x-5" : "translate-x-0.5"}`}
-            />
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
@@ -601,7 +615,8 @@ function PromoEditorSheet({
   }
 
   const placementInfo = PLACEMENT_OPTIONS.find((o) => o.value === value.placement)
-  const previewPromos: Promotion[] = value.imageUrl ? [toPromotion(value)] : []
+  const previewPromos: Promotion[] =
+    value.imageUrl || (isTextOnly(value.placement) && value.title.trim()) ? [toPromotion(value)] : []
 
   return (
     <Sheet open={open} onClose={onClose}>
@@ -617,7 +632,14 @@ function PromoEditorSheet({
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
-            {/* Image upload */}
+            {/* Image upload — image placements only; ticker is text-only */}
+            {isTextOnly(editor.placement) ? (
+              <div className="rounded-xl border border-dashed border-input bg-brand-gold/10 px-4 py-3 text-xs text-gray-600">
+                <span className="font-semibold text-gray-800">Ticker</span> is text-only — the{" "}
+                <span className="font-semibold text-gray-800">Message</span> below scrolls in a thin
+                bar under the navbar. Optionally make it clickable with the CTA URL.
+              </div>
+            ) : (
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2">Image</label>
               {editor.imageUrl ? (
@@ -653,12 +675,13 @@ function PromoEditorSheet({
                 </label>
               )}
             </div>
+            )}
 
-            <Field label="Title">
+            <Field label={isTextOnly(editor.placement) ? "Message" : "Title"}>
               <input
                 value={editor.title}
                 onChange={(e) => onChange({ ...editor, title: e.target.value })}
-                placeholder="e.g. Summer Restock"
+                placeholder={isTextOnly(editor.placement) ? "e.g. Free doorstep delivery within 48 hours" : "e.g. Summer Restock"}
                 className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm outline-none focus:border-primary/60"
               />
             </Field>
@@ -836,7 +859,19 @@ function PromoEditorSheet({
               <p className="text-xs font-semibold text-gray-600 mb-2">Live preview</p>
               <div className="rounded-xl border border-input bg-gray-50 p-3">
                 {previewPromos.length > 0 ? (
-                  editor.placement === "POPUP" ? (
+                  editor.placement === "TICKER" ? (
+                    <div className="overflow-hidden rounded-lg border border-black/10 bg-brand-gold text-brand-gold-foreground">
+                      <div className="flex items-center whitespace-nowrap py-2 text-[13px] leading-none">
+                        <span className="inline-flex items-center gap-2 px-6">
+                          <span aria-hidden className="text-brand-gold-foreground/50">◆</span>
+                          <span className="font-semibold">{previewPromos[0].title || "Your message"}</span>
+                          {previewPromos[0].subtitle && (
+                            <span className="text-brand-gold-foreground/75">{previewPromos[0].subtitle}</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  ) : editor.placement === "POPUP" ? (
                     <div className="mx-auto max-w-[280px] bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={previewPromos[0].imageUrl} alt="" className="w-full aspect-[16/9] object-cover" />
@@ -857,7 +892,9 @@ function PromoEditorSheet({
                   )
                 ) : (
                   <div className="text-center text-xs text-gray-400 py-10">
-                    Upload an image to see the preview.
+                    {isTextOnly(editor.placement)
+                      ? "Enter a message to see the ticker preview."
+                      : "Upload an image to see the preview."}
                   </div>
                 )}
               </div>
@@ -873,7 +910,7 @@ function PromoEditorSheet({
             </button>
             <button
               onClick={() => onSave(value)}
-              disabled={!value.title.trim() || !value.imageUrl.trim()}
+              disabled={!value.title.trim() || (!isTextOnly(value.placement) && !value.imageUrl.trim())}
               className="flex-1 rounded-xl bg-brand-gold py-2 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {editor.id ? "Save changes" : "Create promotion"}

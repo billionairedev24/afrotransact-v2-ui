@@ -18,6 +18,9 @@ import { EmailCaptureForm } from "@/components/marketing/EmailCaptureForm"
  */
 const STORAGE_KEY = "atx.promoPopup"
 const COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000
+// A far-future timestamp used as a "never show again" sentinel: the cooldown
+// check (now - dismissedAt < COOLDOWN_MS) is always true against it.
+const NEVER_TS = 9_999_999_999_999
 const SHOW_DELAY_MS = 2500
 
 type Dismissed = Record<string, number>
@@ -41,6 +44,7 @@ function isLiveNow(p: Promotion): boolean {
 export function PromoPopupModal() {
   const [promo, setPromo] = useState<Promotion | null>(null)
   const [open, setOpen] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     // Not on funnel/admin routes.
@@ -77,19 +81,23 @@ export function PromoPopupModal() {
 
   if (!open || !promo) return null
 
-  function dismiss() {
-    if (promo) writeDismissed({ ...readDismissed(), [promo.id]: Date.now() })
+  // permanent=true → never show this promo again on this browser; otherwise a
+  // 3-day cooldown. Once the visitor has submitted their email they've gotten
+  // the code, so closing is treated as permanent.
+  function dismiss(permanent = false) {
+    if (promo) writeDismissed({ ...readDismissed(), [promo.id]: permanent ? NEVER_TS : Date.now() })
     setOpen(false)
   }
+  const closeAfterEngage = () => dismiss(submitted)
 
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="promo-modal-title"
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-      <button type="button" aria-label="Close" onClick={dismiss}
+      <button type="button" aria-label="Close" onClick={closeAfterEngage}
         className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in" />
 
       <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <button type="button" onClick={dismiss} aria-label="Close"
+        <button type="button" onClick={closeAfterEngage} aria-label="Close"
           className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-white/80 text-gray-600 hover:text-gray-900 hover:bg-white transition-colors">
           <X className="h-4 w-4" />
         </button>
@@ -113,20 +121,40 @@ export function PromoPopupModal() {
                 headline={promo.captureHeadline}
                 ctaLabel={promo.captureCtaLabel}
                 variant="modal"
+                onSuccess={() => setSubmitted(true)}
               />
             </div>
           ) : (
             promo.ctaUrl && (
-              <Link href={promo.ctaUrl} onClick={dismiss}
+              <Link href={promo.ctaUrl} onClick={() => dismiss(true)}
                 className="mt-5 flex items-center justify-center gap-2 w-full h-12 rounded-full bg-[#F5C518] hover:bg-[#E5B100] text-gray-900 font-bold text-[15px] transition-colors">
                 {promo.ctaLabel || "Shop now"}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             )
           )}
-          <button type="button" onClick={dismiss} className="mt-3 text-xs font-medium text-gray-500 hover:text-gray-800">
-            No thanks
-          </button>
+
+          {/* Footer controls. Once the email is in, "No thanks" makes no sense —
+              show a single Done that closes for good. */}
+          {submitted ? (
+            <button
+              type="button"
+              onClick={() => dismiss(true)}
+              className="mt-4 text-sm font-semibold text-gray-700 hover:text-gray-900"
+            >
+              Done
+            </button>
+          ) : (
+            <div className="mt-3 flex items-center justify-center gap-4 text-xs">
+              <button type="button" onClick={() => dismiss(false)} className="font-medium text-gray-500 hover:text-gray-800">
+                No thanks
+              </button>
+              <span aria-hidden className="text-gray-300">·</span>
+              <button type="button" onClick={() => dismiss(true)} className="font-medium text-gray-400 hover:text-gray-700">
+                Don&rsquo;t show again
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

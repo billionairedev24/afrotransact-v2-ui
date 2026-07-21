@@ -6,7 +6,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { EmailCaptureForm } from "@/components/marketing/EmailCaptureForm"
 
-export type PromoPlacement = "HERO" | "STRIP_TOP" | "SIDEBAR" | "FOOTER" | "POPUP"
+export type PromoPlacement = "HERO" | "STRIP_TOP" | "SIDEBAR" | "FOOTER" | "POPUP" | "TICKER"
 
 export interface Promotion {
   id: string
@@ -86,6 +86,9 @@ export function PromoSlot({ placement, className, promotions }: PromoSlotProps) 
       return <FooterSlot items={items} className={className} />
     case "POPUP":
       // Rendered by <PromoPopupModal/>, not inline.
+      return null
+    case "TICKER":
+      // Rendered by <TickerBar/> under the navbar, not inline.
       return null
     default:
       return null
