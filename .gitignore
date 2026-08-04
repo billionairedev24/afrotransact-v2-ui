@@ -66,3 +66,7 @@ server_output.log
 
 # Personal/local tool dirs
 .kimchi/
+
+# Playwright
+e2e/.auth/
+playwright-report/
