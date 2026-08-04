@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 import { getCategories } from "@/lib/api"
 import CategoryPageClient from "./CategoryPageClient"
 
@@ -40,6 +41,18 @@ export async function generateMetadata(
   }
 }
 
-export default function CategoryPage() {
+export default async function CategoryPage({ params }: { params: Promise<Params> }) {
+  const { slug } = await params
+  // Validate the slug server-side so an unknown category returns a real 404
+  // instead of a soft-404 (empty client render served with a 200). On a
+  // transient API error we don't 404 a possibly-valid page.
+  let exists = true
+  try {
+    const categories = await getCategories({ revalidate: 300 })
+    exists = findCategoryName(categories as unknown as { slug: string; name: string }[], slug) !== null
+  } catch {
+    exists = true
+  }
+  if (!exists) notFound()
   return <CategoryPageClient />
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 import { getStoreBySlug } from "@/lib/api"
 import StorePageClient from "./StorePageClient"
 
@@ -43,6 +44,19 @@ export async function generateMetadata(
   }
 }
 
-export default function StorePage() {
+export default async function StorePage({ params }: { params: Promise<Params> }) {
+  const { slug } = await params
+  // Validate server-side so an unknown store returns a real 404 instead of a
+  // soft-404 (empty client render served with a 200). Only a genuine 404 is
+  // treated as not-found; a transient error falls through to the client.
+  let notFoundStore = false
+  try {
+    await getStoreBySlug(slug, { revalidate: 180 })
+  } catch (err) {
+    // Direct status check — `instanceof ApiError` is unreliable across the RSC
+    // module boundary. Only a genuine 404 is treated as not-found.
+    if ((err as { status?: number } | null)?.status === 404) notFoundStore = true
+  }
+  if (notFoundStore) notFound()
   return <StorePageClient />
 }

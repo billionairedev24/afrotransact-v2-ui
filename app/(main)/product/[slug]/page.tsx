@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
-import { getProductBySlug } from "@/lib/api"
+import { notFound, redirect } from "next/navigation"
+import { getProductBySlug, getCatalogItemPublic, type Product } from "@/lib/api"
 import ProductPageClient from "./ProductPageClient"
 
 // Product pages benefit from ISR: the detail is SEO-critical but rarely
@@ -50,20 +51,33 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
+
+  let product: Product | null = null
   try {
-    const product = await getProductBySlug(slug, { revalidate: 60 })
-    if (product.catalogItemId) {
-      const { getCatalogItemPublic } = await import("@/lib/api")
-      try {
-        const item = await getCatalogItemPublic(product.catalogItemId)
-        const { redirect } = await import("next/navigation")
-        redirect(`/p/${item.slug}`)
-      } catch {
-        // Catalog item missing — fall through to the legacy view.
-      }
-    }
-  } catch {
-    // Product missing — let the client component render its own 404.
+    product = await getProductBySlug(slug, { revalidate: 60 })
+  } catch (err) {
+    // A genuine 404 → a real 404 (not a soft-404 rendered with a 200). A
+    // transient error falls through to the legacy client render below.
+    // Check the status field directly — `instanceof ApiError` is unreliable
+    // across the RSC module boundary.
+    if ((err as { status?: number } | null)?.status === 404) notFound()
   }
+
+  // Catalog-linked offers live at the canonical /p/{catalog-slug} Buy Box.
+  // Resolve the catalog slug, then redirect OUTSIDE any try/catch so Next's
+  // NEXT_REDIRECT signal isn't swallowed (the previous try/catch ate it, which
+  // is why both /product/ and /p/ were serving the same content = duplicates).
+  let catalogSlug: string | null = null
+  if (product?.catalogItemId) {
+    try {
+      const item = await getCatalogItemPublic(product.catalogItemId)
+      catalogSlug = item.slug
+    } catch {
+      // Catalog item missing — fall through to the legacy view below.
+    }
+  }
+  if (catalogSlug) redirect(`/p/${catalogSlug}`)
+
+  // Legacy (pre-catalog) offers with no catalog item render here.
   return <ProductPageClient />
 }

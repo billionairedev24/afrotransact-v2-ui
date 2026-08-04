@@ -36,6 +36,7 @@ export async function generateMetadata(
         images: primary ? [{ url: primary.url }] : undefined,
         type: "website",
       },
+      alternates: { canonical: `/p/${slug}` },
     }
   } catch {
     return { title: "Product not found | AfroTransact" }
