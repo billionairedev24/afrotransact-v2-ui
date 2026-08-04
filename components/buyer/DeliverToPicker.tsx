@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { MapPin, X, Loader2 } from "lucide-react"
 
 /* Geocoding now happens entirely client-side via Google Maps (NEXT_PUBLIC
@@ -85,99 +85,15 @@ const COUNTRIES = [
 
 export function DeliverToPicker() {
   const location = useBuyerLocation((s) => s.location)
-  const prompted = useBuyerLocation((s) => s.prompted)
   const markPrompted = useBuyerLocation((s) => s.markPrompted)
   const setLocation = useBuyerLocation((s) => s.setLocation)
 
   const [open, setOpen] = useState(false)
 
-  // Wait for the persisted store (localStorage) to rehydrate before deciding
-  // whether to auto-pop. On first render `prompted`/`location` still read their
-  // initial false/null values, so without this the modal pops on EVERY visit —
-  // even after the buyer has already accepted/set a location.
-  //
-  // Start `false` on the server and first client render: `persist` (and its
-  // localStorage-backed API) only exists in the browser, so touching
-  // `useBuyerLocation.persist.hasHydrated()` during SSR/prerender throws
-  // ("Cannot read properties of undefined"). The effect below reconciles the
-  // real hydration state on the client, which is also where auto-pop matters.
-  const [hydrated, setHydrated] = useState(false)
-  useEffect(() => {
-    const unsub = useBuyerLocation.persist.onFinishHydration(() => setHydrated(true))
-    setHydrated(useBuyerLocation.persist.hasHydrated())
-    return unsub
-  }, [])
-
-  // First-visit auto-detect: ask the browser for GPS, reverse-geocode to a
-  // postal code, and save silently. If the user denies or it fails, fall
-  // back to popping the picker modal so they can type a ZIP. Either way
-  // they can click the header pill to change later.
-  const popped = useRef(false)
-  useEffect(() => {
-    if (popped.current) return
-    if (!hydrated) return
-    if (prompted || location) return
-    popped.current = true
-    let cancelled = false
-    const fallback = window.setTimeout(() => {
-      if (!cancelled) setOpen(true)
-    }, 4000)
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          window.clearTimeout(fallback)
-          if (cancelled) return
-          // First try our seller-side endpoint (Google Maps if configured),
-          // then fall back to BigDataCloud's key-free client endpoint so we
-          // can still resolve city/state when Google isn't wired up. Whatever
-          // succeeds gets saved with city/state; if both fail we save the
-          // raw coords so geo-filtered search still works.
-          const { latitude: lat, longitude: lng } = pos.coords
-          let resolved: Resolved | null = null
-          // 1. Google directly (uses NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
-          resolved = await googleReverseGeocode(lat, lng)
-          // 2. BigDataCloud key-free fallback
-          if (!resolved) {
-            try {
-              const bdc = await fetch(
-                `https://api-bdc.io/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
-              ).then((r) => r.json() as Promise<{ postcode?: string; countryCode?: string; principalSubdivisionCode?: string; city?: string; locality?: string }>)
-              if (bdc) {
-                resolved = {
-                  postalCode: bdc.postcode || undefined,
-                  country: bdc.countryCode || "US",
-                  // BDC returns "US-TX" — strip prefix to match our shape.
-                  state: bdc.principalSubdivisionCode?.split("-").pop() || null,
-                  city: bdc.city || bdc.locality || null,
-                }
-              }
-            } catch { /* fall through to coord-only */ }
-          }
-          if (cancelled) return
-          setLocation({
-            postalCode: resolved?.postalCode,
-            country: resolved?.country ?? "US",
-            state: resolved?.state ?? null,
-            city: resolved?.city ?? null,
-            lat,
-            lng,
-          })
-        },
-        () => {
-          window.clearTimeout(fallback)
-          if (!cancelled) setOpen(true)
-        },
-        { timeout: 3500, maximumAge: 60_000 },
-      )
-    } else {
-      window.clearTimeout(fallback)
-      setOpen(true)
-    }
-    return () => {
-      cancelled = true
-      window.clearTimeout(fallback)
-    }
-  }, [hydrated, prompted, location, setLocation])
+  // No first-visit auto-prompt: we do NOT auto-request GPS or auto-pop the
+  // modal on load (that double-prompted on top of the browser's native
+  // geolocation alert). The buyer opens this picker on demand via the header
+  // pill below. Until they set a location we fall back to the default region.
 
   return (
     <>
