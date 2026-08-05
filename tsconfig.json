@@ -16,7 +16,9 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "types": ["google.maps"],
+    "types": [
+      "google.maps"
+    ],
     "plugins": [
       {
         "name": "next"
@@ -37,6 +39,9 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "e2e",
+    "node_modules",
+    "playwright-report",
+    "playwright.config.ts"
   ]
 }
