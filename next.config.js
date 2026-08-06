@@ -4,11 +4,17 @@
 // Use ENFORCE_HTTPS=true in production deployments to enable upgrade-insecure-requests and HSTS.
 const enforceHttps = process.env.ENFORCE_HTTPS === 'true'
 
+// Local seed data uses loremflickr.com placeholder product images. Allowed in
+// dev only so `next/image` (and CSP) don't block seeded catalogs; prod images
+// come from real storage (cdn/S3/uploadthing) so this host stays out of prod.
+const isProd = process.env.NODE_ENV === 'production'
+const devImageHosts = isProd ? [] : ['https://loremflickr.com']
+
 const cspDirectives = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  `img-src 'self' data: blob: https://*.afrotransact.com https://cdn.afrotransact.com https://images.unsplash.com https://source.unsplash.com https://maps.gstatic.com https://maps.googleapis.com https://utfs.io https://*.ufs.sh https://*.uploadthing.com https://*.ingest.uploadthing.com`,
+  `img-src 'self' data: blob: https://*.afrotransact.com https://cdn.afrotransact.com https://images.unsplash.com https://source.unsplash.com https://maps.gstatic.com https://maps.googleapis.com https://utfs.io https://*.ufs.sh https://*.uploadthing.com https://*.ingest.uploadthing.com ${devImageHosts.join(' ')}`.trim(),
   "font-src 'self' https://fonts.gstatic.com",
   "frame-src https://js.stripe.com https://hooks.stripe.com",
   `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'} https://api.prod.afrotransact.com https://api.stripe.com https://maps.googleapis.com https://api.bigdatacloud.net https://api-bdc.io https://api.zippopotam.us https://utfs.io https://*.ufs.sh https://*.uploadthing.com https://*.ingest.uploadthing.com http://localhost:* ws://localhost:*`,
@@ -56,6 +62,8 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.ingest.uploadthing.com' },
       { protocol: 'https', hostname: '**.amazonaws.com' },
       { protocol: 'https', hostname: '**.s3.amazonaws.com' },
+      // dev-only: local seed data placeholder images
+      ...(isProd ? [] : [{ protocol: 'https', hostname: 'loremflickr.com' }]),
     ],
   },
 
