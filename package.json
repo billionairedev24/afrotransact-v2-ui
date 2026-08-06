@@ -7,7 +7,10 @@
     "build": "next build && cp -r .next/static .next/standalone/afrotransact-v2-ui/.next/static && cp -r public .next/standalone/afrotransact-v2-ui/public 2>/dev/null || true",
     "start": "PORT=3001 node --env-file-if-exists=.env --env-file-if-exists=.env.production --env-file-if-exists=.env.local --env-file-if-exists=.env.production.local .next/standalone/afrotransact-v2-ui/server.js",
     "lint": "eslint --max-warnings=100 .",
-    "test": "jest"
+    "test": "jest",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots",
+    "test:visual:report": "playwright show-report"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.6.0",
@@ -45,6 +48,7 @@
   ],
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
+    "@playwright/test": "^1.62.1",
     "@types/google.maps": "^3.65.1",
     "@types/node": "^25.9.3",
     "@types/react": "19.2.17",
