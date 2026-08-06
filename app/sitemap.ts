@@ -77,14 +77,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // ── Products (house store + every seller store) ──
-  const productSlugs = new Set<string>()
+  // Only PUBLICLY-AVAILABLE products belong in the sitemap: status "active" and
+  // published (drafts/retired/unpublished would be soft-404s to Googlebot).
+  // Catalog-linked offers use their canonical /p/{slug} Buy Box URL; legacy
+  // (pre-catalog) offers only render at /product/{slug}, so they use that.
+  const catalogSlugs = new Set<string>()
+  const legacySlugs = new Set<string>()
   const storeIds = Array.from(new Set<string>([HOUSE_STORE_ID, ...sellerStoreIds]))
   for (const storeId of storeIds) {
     try {
       for (let page = 0; page < MAX_PAGES_PER_STORE; page++) {
         const res = await getStoreProducts(storeId, page, PRODUCT_PAGE_SIZE)
         for (const p of res.content ?? []) {
-          if (p.slug) productSlugs.add(p.slug)
+          if (!p.slug || p.status !== "active" || !p.publishedAt) continue
+          if (p.catalogItemId) catalogSlugs.add(p.slug)
+          else legacySlugs.add(p.slug)
         }
         if (page + 1 >= (res.totalPages ?? 1)) break
       }
@@ -93,9 +100,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  const productEntries: MetadataRoute.Sitemap = Array.from(productSlugs).map((slug) =>
-    entry(`/product/${slug}`, "weekly", 0.8),
-  )
+  const productEntries: MetadataRoute.Sitemap = [
+    ...Array.from(catalogSlugs).map((slug) => entry(`/p/${slug}`, "weekly", 0.8)),
+    ...Array.from(legacySlugs).map((slug) => entry(`/product/${slug}`, "weekly", 0.8)),
+  ]
 
   return [...staticEntries, ...categoryEntries, ...storeEntries, ...productEntries]
 }
