@@ -110,7 +110,7 @@ draft ──open──▶ open ──(orderByAt reached OR manual)──▶ clos
 
 ## 6. Storefront (Customer) Flow
 
-1. **Entry point** — while a campaign is `open`, a "Preorder" nav item + a homepage banner appear (reuses the existing promotion/ticker placement system). Absent when no campaign is open.
+1. **Entry point** — while a campaign is `open`, a "Preorder" nav item + a homepage banner appear. The banner is a **dedicated preorder component gated on "a campaign is open"** (not the promotions/ticker scheduler — avoids coupling preorder visibility to the promo system). Absent when no campaign is open.
 2. **`/preorder` page** — campaign header (name + "Order by Tue 6pm · Delivered Thu"), then item cards: product + size options with **campaign prices** + quantity picker. Closed/empty state: "No preorder is open right now."
 3. **Preorder cart** — a **separate cart** from the regular one (cannot mix). Shows subtotal, the **flat delivery fee**, tax per campaign `taxMode`, and a persistent "Arrives [distributionDate]" banner.
 4. **Checkout** — the **normal** address → pay flow. Totals resolve from **campaign config** (flat fee replaces the shipping quote; tax override applies). **Charged in full now.**
@@ -153,7 +153,7 @@ Reads paid orders where `preorderCampaignId = {id}`. Backs both the admin demand
 ### 8.4 Payment & refunds
 - **Charge:** existing Stripe PaymentIntent (immediate capture) — no provider change.
 - **Full refund:** existing refund path on cancel (whole preorder or whole campaign).
-- **Partial refund:** admin reduces sourced units on an order item; system refunds `(orderedUnits − sourcedUnits) × unitPrice` (delivery-fee handling — see Open Questions), updates the item, and notifies the customer.
+- **Partial refund:** admin reduces sourced units on an order item; system refunds `(orderedUnits − sourcedUnits) × unitPrice`, updates the item, and notifies the customer. **The flat delivery fee is retained on partial refunds** (one delivery still happens); it is refunded **only when the entire order is cancelled**.
 
 ---
 
@@ -180,8 +180,8 @@ Reads paid orders where `preorderCampaignId = {id}`. Backs both the admin demand
 
 ---
 
-## 11. Assumptions & Open Questions
+## 11. Assumptions & Resolved Decisions
 
 - **Assumption:** preorder products are **house products** created for the campaign; campaign price is authoritative over any product default price.
-- **Open:** on a **partial refund**, is the flat delivery fee refunded proportionally, kept in full (one delivery still happens), or refunded only if the *entire* order is cancelled? *(Recommendation: keep the flat delivery fee on partial refunds since one delivery still occurs; refund it only on full cancellation.)*
-- **Open:** should the homepage banner reuse the promotions `TICKER` placement or be a dedicated preorder banner component? *(Recommendation: dedicated component gated on "campaign open" to avoid coupling to the promo scheduler.)*
+- **Resolved — partial-refund delivery fee:** the flat delivery fee is **kept on partial refunds** (one delivery still occurs) and **refunded only on full order cancellation**. (See §8.4.)
+- **Resolved — preorder banner:** a **dedicated preorder banner component gated on "a campaign is open"**, independent of the promotions/ticker scheduler. (See §6.)
