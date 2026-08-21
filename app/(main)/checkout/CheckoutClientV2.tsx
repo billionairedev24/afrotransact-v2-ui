@@ -1378,7 +1378,7 @@ export default function CheckoutClientV2({
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
                 <AddressAutocomplete
                   value={addressQuery}
-                  onChange={setAddressQuery}
+                  onChange={(v) => { setAddressQuery(v); setForm((prev) => ({ ...prev, line1: v })) }}
                   onSelect={(parts) => {
                     setForm((prev) => ({
                       ...prev,
