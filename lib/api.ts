@@ -4489,7 +4489,7 @@ export interface ReconciliationDto {
   ledgerFeeCents: number
   stripeFeeCents: number
   feeDeltaCents: number
-  notes: string[]
+  notes: string
 }
 
 /**
@@ -4542,14 +4542,13 @@ export interface OpExDto {
 
 export function listOpex(
   token: string,
-  params: { from?: string; to?: string; category?: string } = {},
+  params: { from: string; to: string; category?: string },
 ) {
   const q = new URLSearchParams()
-  if (params.from) q.set("from", params.from)
-  if (params.to) q.set("to", params.to)
+  q.set("from", params.from)
+  q.set("to", params.to)
   if (params.category) q.set("category", params.category)
-  const qs = q.toString()
-  return api<OpExDto[]>(`/api/v1/admin/ledger/opex${qs ? `?${qs}` : ""}`, { token })
+  return api<OpExDto[]>(`/api/v1/admin/ledger/opex?${q.toString()}`, { token })
 }
 
 export function recordOpex(
