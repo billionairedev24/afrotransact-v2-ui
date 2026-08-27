@@ -855,6 +855,26 @@ export default function CheckoutClientV2({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shipGroups.map((g) => g.storeId).join(","), effectiveShippingCents])
 
+  // Per-group shipping split for the CHECKOUT PAYLOAD's `groupSelections`.
+  // This must use the PRE-discount `shippingCents` (the same base as
+  // `selectedShippingAmountCents`), NOT `effectiveShippingCents` — the
+  // backend applies a shipping-target coupon's discount itself when it sums
+  // these amounts. Splitting the already-discounted total here would cause
+  // the coupon to be applied twice (double discount). The order-summary
+  // display intentionally uses the discounted `perGroupShipCents` above;
+  // only the payload needs the pre-discount split.
+  const payloadShipCents = useMemo(() => {
+    const map = new Map<string, number>()
+    if (shipGroups.length === 0) return map
+    const base = Math.floor(shippingCents / shipGroups.length)
+    const remainder = shippingCents - base * shipGroups.length
+    shipGroups.forEach((g, i) => {
+      map.set(g.storeId, base + (i < remainder ? 1 : 0))
+    })
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shipGroups.map((g) => g.storeId).join(","), shippingCents])
+
   const stripeFeatureEnabled = features.stripeEnabled()
   const stripeRow = paymentMethods.find((m) => m.provider.toLowerCase() === "stripe")
   const stripeMethodEnabled = stripeRow ? stripeRow.enabled : paymentMethods.length === 0
@@ -962,7 +982,7 @@ export default function CheckoutClientV2({
                 storeId: g.storeId,
                 quoteId: selectedQuote?.quoteId,
                 deliveryMethod: "ship",
-                amountCents: perGroupShipCents.get(g.storeId) ?? 0,
+                amountCents: payloadShipCents.get(g.storeId) ?? 0,
               }
             })
           : undefined,
@@ -1224,6 +1244,11 @@ export default function CheckoutClientV2({
                 {fulfillmentGroups.map((g) => {
                   const storePickup = storePickupByStoreId.get(g.storeId)
                   const pickupOpt = pickupOptionFor(g.storeId)
+                  // Defensive: `eligible: true` with a missing `option` is malformed
+                  // upstream data. Treat it as "pickup not offered" for this store
+                  // (ship-only) rather than showing a misleading "in pickup range"
+                  // badge with no way to actually select pickup.
+                  const pickupDisplayEligible = !!(storePickup?.eligible && pickupOpt)
                   const method = effectiveMethod(g.storeId)
                   const qty = g.items.reduce((n, it) => n + it.quantity, 0)
                   return (
@@ -1253,13 +1278,13 @@ export default function CheckoutClientV2({
                           <span
                             className={cn(
                               "ml-auto inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap",
-                              storePickup.eligible
+                              pickupDisplayEligible
                                 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                                 : "bg-muted text-muted-foreground",
                             )}
                           >
                             <MapPin className="h-3.5 w-3.5" />
-                            {storePickup.eligible ? "In pickup range" : "Pickup out of range"}
+                            {pickupDisplayEligible ? "In pickup range" : "Pickup out of range"}
                           </span>
                         )}
                       </header>
