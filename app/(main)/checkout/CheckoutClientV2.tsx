@@ -51,6 +51,10 @@ import {
   Edit2,
   AlertCircle,
   ShieldCheck,
+  Store,
+  Clock,
+  Info,
+  Check,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { friendlyMessage, logError } from "@/lib/errors"
@@ -499,6 +503,21 @@ export default function CheckoutClientV2({
     })
   }, [sortedQuotes])
   const anySyntheticVisible = sortedGroups.some((g) => g.hasSynthetic)
+
+  // Pickup (P1): the backend offers, at most, a single order-level pickup
+  // option for single-store carts — prepended as groups[0] with
+  // deliveryMethod "pickup" / a "pickup:<storeId>" quoteId. It's rendered as
+  // its own card above the ranked ship list, not mixed into it. Mixed-cart
+  // per-fulfilment-group pickup is P2 (see app/(main)/dev/pickup-preview on
+  // feat/pickup-checkout-preview) and out of scope here.
+  const isPickupOption = (o: FlatQuote) => o.deliveryMethod === "pickup" || o.quoteId?.startsWith("pickup:")
+  const pickupOption = flatQuotes.find(isPickupOption) ?? null
+  const shipOptions = sortedQuotes.filter((o) => !isPickupOption(o))
+  const pickupSelected = !!pickupOption && selectedQuoteId === pickupOption.quoteId
+  const cheapestShipCents = shipOptions.length > 0 ? Math.min(...shipOptions.map((o) => o.amountCents)) : null
+  const pickupSavingsCents = pickupSelected && cheapestShipCents !== null && Number.isFinite(cheapestShipCents)
+    ? cheapestShipCents
+    : 0
 
   // preselect cheapest once
   useEffect(() => {
@@ -1004,11 +1023,13 @@ export default function CheckoutClientV2({
           <Section
             n={2}
             title="Delivery options"
-            subtitle={freeShippingApplies
-              ? "Free — your order qualifies for free delivery"
-              : selectedQuote
-                ? `${selectedQuote.serviceName} — ${fmtShip(selectedQuote.amountCents)}`
-                : "Choose a delivery option"}
+            subtitle={pickupSelected
+              ? "Pickup — Free"
+              : freeShippingApplies
+                ? "Free — your order qualifies for free delivery"
+                : selectedQuote
+                  ? `${selectedQuote.serviceName} — ${fmtShip(selectedQuote.amountCents)}`
+                  : "Choose a delivery option"}
             disabled={!selectedAddress}
           >
             {requoting && (
@@ -1059,11 +1080,87 @@ export default function CheckoutClientV2({
               <p className="text-sm text-gray-500">No delivery options available for this address.</p>
             ) : (
               <>
+                {/* Pickup (P1, single-store carts only): a distinct card above
+                    the ranked ship list, bound to the same selectedQuoteId so
+                    submitting sends the pickup quoteId through the existing
+                    single-selection checkout fields. */}
+                {pickupOption && (
+                  <label
+                    className={cn(
+                      "mb-3 flex flex-col gap-2 rounded-2xl border bg-card px-4 py-4 cursor-pointer transition-colors",
+                      pickupSelected ? "border-brand-gold bg-amber-50/50 dark:bg-amber-950/20 ring-1 ring-brand-gold/40" : "border-border hover:bg-muted/50",
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="ship-rate"
+                        checked={pickupSelected}
+                        onChange={() => setSelectedQuoteId(pickupOption.quoteId)}
+                        className="h-4 w-4 accent-brand-gold flex-none"
+                      />
+                      <span className="grid place-items-center h-9 w-9 rounded-xl bg-muted flex-none">
+                        <Store className="h-4 w-4 text-foreground" />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold text-foreground">Pickup</span>
+                          <span className="text-[10px] font-bold tracking-wide text-emerald-700 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 rounded-full px-2 py-0.5">
+                            FREE
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Collect in person</p>
+                      </div>
+                      <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
+                    </div>
+
+                    {pickupSelected && pickupOption.pickupLocation && (
+                      <div className="ml-7 rounded-xl border border-dashed border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 px-4 py-3">
+                        <p className="text-[13px] font-semibold text-emerald-800 dark:text-emerald-300 inline-flex items-center gap-1.5">
+                          <MapPin className="h-4 w-4" /> {pickupOption.pickupLocation.name || "Collect at the store"}
+                        </p>
+                        {pickupOption.pickupLocation.line1 && (
+                          <p className="text-[13px] text-foreground mt-1">
+                            {pickupOption.pickupLocation.line1}
+                            {pickupOption.pickupLocation.line2 ? `, ${pickupOption.pickupLocation.line2}` : ""}
+                          </p>
+                        )}
+                        {(pickupOption.pickupLocation.city || pickupOption.pickupLocation.region || pickupOption.pickupLocation.postalCode) && (
+                          <p className="text-[13px] text-foreground">
+                            {[pickupOption.pickupLocation.city, pickupOption.pickupLocation.region].filter(Boolean).join(", ")}
+                            {pickupOption.pickupLocation.postalCode ? ` ${pickupOption.pickupLocation.postalCode}` : ""}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1.5">
+                          <Clock className="h-3 w-3" /> Ready in ~2 hours
+                          {pickupOption.pickupLocation.hours ? ` · ${pickupOption.pickupLocation.hours}` : ""}
+                        </p>
+                        {pickupOption.pickupLocation.instructions && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{pickupOption.pickupLocation.instructions}</p>
+                        )}
+                        {pickupSavingsCents > 0 && (
+                          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mt-2 inline-flex items-center gap-1.5">
+                            <Check className="h-3.5 w-3.5" /> You save {fmtShip(pickupSavingsCents)} with pickup
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </label>
+                )}
+
+                {!pickupOption && quotes?.pickupUnavailableReason && (
+                  <div className="mb-3 flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                    <Info className="h-3.5 w-3.5 shrink-0" />
+                    <span>Pickup unavailable — {quotes.pickupUnavailableReason}</span>
+                  </div>
+                )}
+
                 {/* Amazon-style flat ranked list. Carrier brand (USPS/UPS/
                     FedEx) is intentionally hidden — the buyer chooses by
                     speed and price; the carrier is a backstage detail. */}
+                {shipOptions.length > 0 && (
                 <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-                  {sortedQuotes.map((q) => {
+                  {shipOptions.map((q) => {
                     const checked = selectedQuoteId === q.quoteId
                     return (
                       <li key={q.quoteId}>
@@ -1105,6 +1202,7 @@ export default function CheckoutClientV2({
                     )
                   })}
                 </ul>
+                )}
               </>
             )}
           </Section>
@@ -1266,11 +1364,13 @@ export default function CheckoutClientV2({
               )}
               <div className="flex justify-between">
                 <dt className="text-gray-600">
-                  {shipNoun}
+                  {pickupSelected ? "Pickup" : shipNoun}
                   {/* The badge must reflect what we actually charge — never
                       contradict the line total. Show "free" when the buyer has
                       met the free-shipping threshold or the quote is genuinely $0. */}
-                  {effectiveShippingCents === 0 && (freeShippingApplies || selectedQuote) && !couponTargetsShipping && (
+                  {pickupSelected ? (
+                    <span className="ml-2 text-[11px] font-semibold text-green-700">Free</span>
+                  ) : effectiveShippingCents === 0 && (freeShippingApplies || selectedQuote) && !couponTargetsShipping && (
                     <span className="ml-2 text-[11px] font-semibold text-green-700">Free {shipNounLower} applied</span>
                   )}
                   {couponTargetsShipping && shippingDiscountCents > 0 && (
@@ -1305,6 +1405,11 @@ export default function CheckoutClientV2({
                 <dd className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dTotal)}</dd>
               </div>
             </dl>
+            {pickupSelected && pickupSavingsCents > 0 && (
+              <div className="mt-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-[12px] font-semibold px-3 py-2 inline-flex items-center gap-2">
+                <Check className="h-3.5 w-3.5" /> You save {fmtShip(pickupSavingsCents)} with pickup
+              </div>
+            )}
             {!totalsAreFinal ? (
               <p className="mt-2 text-[11px] text-gray-500">Final total is confirmed at payment. You&apos;ll never be charged more than the amount shown when you place your order.</p>
             ) : (

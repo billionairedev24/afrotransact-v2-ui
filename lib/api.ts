@@ -1874,6 +1874,18 @@ export interface CheckoutResponse {
   checkoutSessionId?: string | null
 }
 
+export interface PickupLocationDto {
+  name?: string
+  line1?: string
+  line2?: string
+  city?: string
+  region?: string
+  postalCode?: string
+  country?: string
+  hours?: string
+  instructions?: string
+}
+
 export interface ShippingQuoteOption {
   quoteId: string
   carrier: string
@@ -1883,6 +1895,10 @@ export interface ShippingQuoteOption {
   amountCents: number
   currency: string
   estimatedDays: number
+  /** "pickup" when this option is an in-person collect option (P1: single-store carts only). */
+  deliveryMethod?: string
+  /** Present when deliveryMethod === "pickup" — the store's collection address. */
+  pickupLocation?: PickupLocationDto
 }
 
 export interface ShippingQuoteGroup {
@@ -1898,6 +1914,8 @@ export interface ShippingQuoteResponse {
   message?: string
   packageCount?: number
   shipmentHints?: string[]
+  /** Set when pickup is enabled but unavailable for this cart/address (e.g. out of range) — no pickup option is included in `groups`. */
+  pickupUnavailableReason?: string
 }
 
 export interface ShippingSettings {
