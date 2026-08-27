@@ -2141,6 +2141,31 @@ export function putAdminShippingSettings(token: string, data: ShippingSettings) 
   return api<ShippingSettings>("/api/v1/admin/config/shipping", { method: "PUT", body: data, token })
 }
 
+export interface PickupLocationSettings {
+  name: string
+  line1: string
+  line2: string
+  city: string
+  region: string
+  postal_code: string
+  country: string
+  hours: string
+  instructions: string
+}
+
+export interface PickupSettings {
+  pickup_enabled: boolean
+  pickup_location: PickupLocationSettings
+}
+
+export function getAdminPickupSettings(token: string) {
+  return api<PickupSettings>("/api/v1/admin/config/pickup", { token })
+}
+
+export function putAdminPickupSettings(token: string, data: PickupSettings) {
+  return api<PickupSettings>("/api/v1/admin/config/pickup", { method: "PUT", body: data, token })
+}
+
 // ── Admin ──
 
 export function getAdminPlans(token: string) {
