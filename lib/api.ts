@@ -1850,6 +1850,19 @@ export interface CheckoutRequest {
   /** Backlog #40: when true the payment service attaches a Stripe Customer +
    *  setup_future_usage=off_session so the card is saved on success. */
   saveCard?: boolean
+  /** Pickup Phase 2 (per-fulfillment-group checkout): one entry per store in
+   *  the cart describing how that store's items are being fulfilled. Backend
+   *  (already merged) uses this to zero out pickup groups' shipping and
+   *  snapshot the pickup location, while ship groups are billed their
+   *  amountCents. Omitted entirely when no store in the cart offers pickup —
+   *  in that case the legacy selectedShipping* fields below are the only
+   *  signal, exactly as before this feature existed. */
+  groupSelections?: {
+    storeId: string
+    quoteId?: string
+    deliveryMethod?: string
+    amountCents?: number
+  }[]
 }
 
 export interface CheckoutResponse {
@@ -1906,6 +1919,17 @@ export interface ShippingQuoteGroup {
   options: ShippingQuoteOption[]
 }
 
+/** Pickup Phase 2: per-store pickup eligibility for a mixed-cart checkout.
+ *  `option` (when present) is the $0 "pickup:<storeId>" quote option for that
+ *  store — same shape as any other ShippingQuoteOption, with
+ *  deliveryMethod "pickup" and a populated pickupLocation. */
+export interface StorePickupOption {
+  storeId: string
+  eligible: boolean
+  reason?: string
+  option?: ShippingQuoteOption
+}
+
 export interface ShippingQuoteResponse {
   realtimeEnabled: boolean
   shippingProvider: string
@@ -1916,6 +1940,11 @@ export interface ShippingQuoteResponse {
   shipmentHints?: string[]
   /** Set when pickup is enabled but unavailable for this cart/address (e.g. out of range) — no pickup option is included in `groups`. */
   pickupUnavailableReason?: string
+  /** Pickup Phase 2: per-store pickup eligibility for mixed-cart checkout.
+   *  Absent/empty means no store in this cart offers pickup — the checkout UI
+   *  falls back to the ship-only flow (structurally identical to pre-pickup
+   *  checkout). */
+  storePickups?: StorePickupOption[]
 }
 
 export interface ShippingSettings {

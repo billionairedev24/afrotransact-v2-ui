@@ -90,6 +90,7 @@ import {
   type SavedPaymentMethod,
   type ShippingQuoteOption,
   type ShippingQuoteResponse,
+  type StorePickupOption,
   type UserAddress,
   type ValidateCouponResponse,
   type ResolvedZone,
@@ -513,19 +514,101 @@ export default function CheckoutClientV2({
   }, [sortedQuotes])
   const anySyntheticVisible = sortedGroups.some((g) => g.hasSynthetic)
 
-  // Pickup (P1): the backend offers, at most, a single order-level pickup
-  // option for single-store carts — prepended as groups[0] with
-  // deliveryMethod "pickup" / a "pickup:<storeId>" quoteId. It's rendered as
-  // its own card above the ranked ship list, not mixed into it. Mixed-cart
-  // per-fulfilment-group pickup is P2 (see app/(main)/dev/pickup-preview on
-  // feat/pickup-checkout-preview) and out of scope here.
-  const pickupOption = flatQuotes.find(isPickupQuote) ?? null
   const shipOptions = sortedQuotes.filter((o) => !isPickupQuote(o))
-  const pickupSelected = !!pickupOption && selectedQuoteId === pickupOption.quoteId
   const cheapestShipCents = shipOptions.length > 0 ? Math.min(...shipOptions.map((o) => o.amountCents)) : null
-  const pickupSavingsCents = pickupSelected && cheapestShipCents !== null && Number.isFinite(cheapestShipCents)
-    ? cheapestShipCents
-    : 0
+
+  // ─── Pickup Phase 2: per-fulfillment-group pickup/delivery ────────
+  // A "fulfillment group" is one store's items in the cart. House store
+  // (AfroTransact-fulfilled items) uses a fixed id; every other storeId is a
+  // seller. Delivery options themselves stay ORDER-LEVEL (one shared
+  // `shipOptions` list / `selectedQuoteId`, computed above from the whole
+  // cart) — only the fulfillment METHOD (pickup vs. ship) is chosen
+  // per-store. This is a known limitation: there is no per-store carrier
+  // rate yet, so two "ship" groups in the same order share one delivery
+  // quote. A future backend task would need to quote each store's parcel
+  // independently to remove this limitation.
+  const HOUSE_STORE_ID = "00000000-0000-0000-0000-00000000a710"
+
+  type FulfillmentGroup = {
+    storeId: string
+    storeName: string
+    isHouse: boolean
+    items: typeof cartItems
+  }
+  const fulfillmentGroups: FulfillmentGroup[] = useMemo(() => {
+    const order: string[] = []
+    const map = new Map<string, FulfillmentGroup>()
+    for (const item of cartItems) {
+      if (!map.has(item.storeId)) {
+        order.push(item.storeId)
+        map.set(item.storeId, {
+          storeId: item.storeId,
+          isHouse: item.storeId === HOUSE_STORE_ID,
+          storeName: item.storeId === HOUSE_STORE_ID ? "AfroTransact" : (item.storeName || "Seller"),
+          items: [],
+        })
+      }
+      map.get(item.storeId)!.items.push(item)
+    }
+    return order.map((id) => map.get(id)!)
+  }, [cartItems])
+
+  const storePickupByStoreId = useMemo(() => {
+    const m = new Map<string, StorePickupOption>()
+    for (const sp of quotes?.storePickups ?? []) m.set(sp.storeId, sp)
+    return m
+  }, [quotes])
+
+  // storeId -> chosen method. Defaults to "ship" (pickup requires an active
+  // opt-in click, same rule as the P1 single-store pickup card). Reset
+  // whenever a fresh quote lands (see the quote-fetch effect below).
+  const [groupMethod, setGroupMethod] = useState<Record<string, "pickup" | "ship">>({})
+  // Reset per-group method choices whenever a fresh quote set lands (address
+  // change, cart re-quote) — mirrors the `setSelectedQuoteId(null)` reset
+  // above; a stale "pickup" choice for a store that's no longer eligible (or
+  // whose storeId isn't even in the new quote) must not carry over silently.
+  useEffect(() => {
+    if (!quotes) setGroupMethod({})
+  }, [quotes])
+
+  function pickupOptionFor(storeId: string): ShippingQuoteOption | null {
+    const sp = storePickupByStoreId.get(storeId)
+    return sp?.eligible ? (sp.option ?? null) : null
+  }
+  function effectiveMethod(storeId: string): "pickup" | "ship" {
+    return pickupOptionFor(storeId) && groupMethod[storeId] === "pickup" ? "pickup" : "ship"
+  }
+
+  const pickupGroups = fulfillmentGroups.filter((g) => effectiveMethod(g.storeId) === "pickup")
+  const shipGroups = fulfillmentGroups.filter((g) => effectiveMethod(g.storeId) === "ship")
+  // All-pickup is the multi-group generalization of the old single-store
+  // `pickupSelected` flag — for a 1-group cart the two are identical, which
+  // is what keeps the legacy single-store flow byte-for-byte unchanged.
+  const allPickupSelected = fulfillmentGroups.length > 0 && pickupGroups.length === fulfillmentGroups.length
+  // True only when at least one store in this cart actually offers pickup —
+  // gates whether we send `groupSelections` at all. A ship-only cart (no
+  // storePickups, or all ineligible) never sets this, so its checkout
+  // payload is identical to the pre-Pickup-Phase-2 payload.
+  const anyPickupOffered = fulfillmentGroups.some((g) => !!pickupOptionFor(g.storeId))
+
+  const pickupSelected = allPickupSelected // legacy alias used by totals/summary below
+  const pickupSavingsCents = (() => {
+    if (pickupGroups.length === 0 || cheapestShipCents === null || !Number.isFinite(cheapestShipCents)) return 0
+    // Even-split attribution: what each pickup group would have contributed
+    // toward the shared order-level delivery cost had it shipped instead.
+    const hypotheticalGroupCount = fulfillmentGroups.length || 1
+    const perGroupHypothetical = cheapestShipCents / hypotheticalGroupCount
+    return Math.round(pickupGroups.length * perGroupHypothetical)
+  })()
+
+  // The legacy selectedShipping* fields only carry ONE signal for the whole
+  // order. When every group picked pickup we point them at the first pickup
+  // group's option (for a 1-group cart — the only case that existed before
+  // this feature — this is the same, and only, pickup group). Mixed
+  // pickup+ship orders rely on `groupSelections` for the full per-store
+  // truth; the legacy fields fall back to describing the ship side.
+  const primaryPickupOption = pickupGroups.length > 0 ? pickupOptionFor(pickupGroups[0].storeId) : null
+
 
   // preselect cheapest once
   useEffect(() => {
@@ -542,7 +625,10 @@ export default function CheckoutClientV2({
   const freeShippingThresholdCents =
     activeZone?.effectiveSettings?.freeShippingThresholdCents ?? region?.freeShippingThresholdCents ?? 0
   const freeShippingApplies = freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents
-  const shippingCents = freeShippingApplies ? 0 : (selectedQuote?.amountCents ?? 0)
+  // allPickupSelected zeroes the order-level delivery cost entirely — every
+  // store in the cart is being collected in person, so there is nothing to
+  // ship. For a 1-group cart this is exactly the old `pickupSelected` gate.
+  const shippingCents = allPickupSelected ? 0 : (freeShippingApplies ? 0 : (selectedQuote?.amountCents ?? 0))
   // A $0 shipping charge means free shipping (global switch or threshold met) —
   // show "Free" rather than "$0.00" everywhere shipping is displayed.
   const fmtShip = (cents: number) => (cents === 0 ? "Free" : formatCents(cents))
@@ -752,6 +838,23 @@ export default function CheckoutClientV2({
   const effectiveShippingCents = Math.max(0, shippingCents - shippingDiscountCents)
   const total = taxableSubtotal + tax + effectiveShippingCents
 
+  // Per-group shipping breakdown for the order summary: even split of the
+  // shared order-level delivery cost across groups currently choosing to
+  // ship (documented limitation — no per-store carrier rate yet). Remainder
+  // cents land on the first N groups so the figures sum exactly to
+  // effectiveShippingCents. Pickup groups always contribute $0.
+  const perGroupShipCents = useMemo(() => {
+    const map = new Map<string, number>()
+    if (shipGroups.length === 0) return map
+    const base = Math.floor(effectiveShippingCents / shipGroups.length)
+    const remainder = effectiveShippingCents - base * shipGroups.length
+    shipGroups.forEach((g, i) => {
+      map.set(g.storeId, base + (i < remainder ? 1 : 0))
+    })
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shipGroups.map((g) => g.storeId).join(","), effectiveShippingCents])
+
   const stripeFeatureEnabled = features.stripeEnabled()
   const stripeRow = paymentMethods.find((m) => m.provider.toLowerCase() === "stripe")
   const stripeMethodEnabled = stripeRow ? stripeRow.enabled : paymentMethods.length === 0
@@ -834,12 +937,35 @@ export default function CheckoutClientV2({
         // it must always be sent even when free-shipping would otherwise blank
         // these fields — otherwise the backend can't tell pickup from a
         // free-shipped delivery and never triggers pickup fulfillment/emails.
-        selectedShippingQuoteId: pickupSelected ? selectedQuote?.quoteId : (freeShippingApplies ? undefined : selectedQuote?.quoteId),
-        selectedShippingCarrier: pickupSelected ? (selectedQuote?.carrier ?? "PICKUP") : (freeShippingApplies ? undefined : selectedQuote?.carrier),
-        selectedShippingService: pickupSelected ? (selectedQuote?.serviceCode ?? "PICKUP") : (freeShippingApplies ? undefined : selectedQuote?.serviceCode),
+        selectedShippingQuoteId: allPickupSelected ? primaryPickupOption?.quoteId : (freeShippingApplies ? undefined : selectedQuote?.quoteId),
+        selectedShippingCarrier: allPickupSelected ? "PICKUP" : (freeShippingApplies ? undefined : selectedQuote?.carrier),
+        selectedShippingService: allPickupSelected ? "PICKUP" : (freeShippingApplies ? undefined : selectedQuote?.serviceCode),
         selectedShippingAmountCents: shippingCents,
         saveCard,
         couponCodes: couponResult && couponCode ? [couponCode] : undefined,
+        // Omitted entirely (undefined) unless at least one store in the cart
+        // actually offers pickup — this is what keeps a ship-only cart's
+        // checkout payload byte-for-byte identical to the pre-Pickup-Phase-2
+        // shape.
+        groupSelections: anyPickupOffered
+          ? fulfillmentGroups.map((g) => {
+              if (effectiveMethod(g.storeId) === "pickup") {
+                const opt = pickupOptionFor(g.storeId)
+                return {
+                  storeId: g.storeId,
+                  quoteId: opt?.quoteId ?? `pickup:${g.storeId}`,
+                  deliveryMethod: "pickup",
+                  amountCents: 0,
+                }
+              }
+              return {
+                storeId: g.storeId,
+                quoteId: selectedQuote?.quoteId,
+                deliveryMethod: "ship",
+                amountCents: perGroupShipCents.get(g.storeId) ?? 0,
+              }
+            })
+          : undefined,
       }, idempotencyKeyRef.current)
       setCheckoutResult(result)
       return result
@@ -855,7 +981,7 @@ export default function CheckoutClientV2({
       placingRef.current = false
       setMinting(false)
     }
-  }, [authToken, region, selectedAddress, cartItems, checkoutResult, selectedQuote, pickupSelected, saveCard, profileName, profilePhone, sessionName, router])
+  }, [authToken, region, selectedAddress, cartItems, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, perGroupShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
 
   // ─── place order ───────────────────────────────────────────────────
   const paymentHandleRef = useRef<PaymentHandle | null>(null)
@@ -918,7 +1044,7 @@ export default function CheckoutClientV2({
   if (cartItems.length === 0) disabledReason = "Your cart is empty"
   else if (!selectedAddress) disabledReason = `Select a ${shipNounLower} address`
   else if (ratesUnavailable) disabledReason = "Shipping isn't available for this address yet"
-  else if (!selectedQuoteId) disabledReason = "Choose a delivery option"
+  else if (!allPickupSelected && !selectedQuoteId) disabledReason = "Choose a delivery option"
   else if (!stripeAvailable) disabledReason = "Payment is unavailable in this region"
   else if (selectedSavedCardId === null && !checkoutResult && !minting) disabledReason = null // new-card path: minting on click
   if (requoting) disabledReason = "Updating delivery options…"
@@ -1094,131 +1220,201 @@ export default function CheckoutClientV2({
             ) : flatQuotes.length === 0 ? (
               <p className="text-sm text-gray-500">No delivery options available for this address.</p>
             ) : (
-              <>
-                {/* Pickup (P1, single-store carts only): a distinct card above
-                    the ranked ship list, bound to the same selectedQuoteId so
-                    submitting sends the pickup quoteId through the existing
-                    single-selection checkout fields. */}
-                {pickupOption && (
-                  <label
-                    className={cn(
-                      "mb-3 flex flex-col gap-2 rounded-2xl border bg-card px-4 py-4 cursor-pointer transition-colors",
-                      pickupSelected ? "border-brand-gold bg-amber-50/50 dark:bg-amber-950/20 ring-1 ring-brand-gold/40" : "border-border hover:bg-muted/50",
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="ship-rate"
-                        checked={pickupSelected}
-                        onChange={() => setSelectedQuoteId(pickupOption.quoteId)}
-                        className="h-4 w-4 accent-brand-gold flex-none"
-                      />
-                      <span className="grid place-items-center h-9 w-9 rounded-xl bg-muted flex-none">
-                        <Store className="h-4 w-4 text-foreground" />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-foreground">Pickup</span>
-                          <span className="text-[10px] font-bold tracking-wide text-emerald-700 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 rounded-full px-2 py-0.5">
-                            FREE
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Collect in person</p>
-                      </div>
-                      <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
-                    </div>
-
-                    {pickupSelected && pickupOption.pickupLocation && (
-                      <div className="ml-7 rounded-xl border border-dashed border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 px-4 py-3">
-                        <p className="text-[13px] font-semibold text-emerald-800 dark:text-emerald-300 inline-flex items-center gap-1.5">
-                          <MapPin className="h-4 w-4" /> {pickupOption.pickupLocation.name || "Collect at the store"}
-                        </p>
-                        {pickupOption.pickupLocation.line1 && (
-                          <p className="text-[13px] text-foreground mt-1">
-                            {pickupOption.pickupLocation.line1}
-                            {pickupOption.pickupLocation.line2 ? `, ${pickupOption.pickupLocation.line2}` : ""}
-                          </p>
-                        )}
-                        {(pickupOption.pickupLocation.city || pickupOption.pickupLocation.region || pickupOption.pickupLocation.postalCode) && (
-                          <p className="text-[13px] text-foreground">
-                            {[pickupOption.pickupLocation.city, pickupOption.pickupLocation.region].filter(Boolean).join(", ")}
-                            {pickupOption.pickupLocation.postalCode ? ` ${pickupOption.pickupLocation.postalCode}` : ""}
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1.5">
-                          <Clock className="h-3 w-3" /> Ready in ~2 hours
-                          {pickupOption.pickupLocation.hours ? ` · ${pickupOption.pickupLocation.hours}` : ""}
-                        </p>
-                        {pickupOption.pickupLocation.instructions && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{pickupOption.pickupLocation.instructions}</p>
-                        )}
-                        {pickupSavingsCents > 0 && (
-                          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mt-2 inline-flex items-center gap-1.5">
-                            <Check className="h-3.5 w-3.5" /> You save {fmtShip(pickupSavingsCents)} with pickup
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </label>
-                )}
-
-                {!pickupOption && quotes?.pickupUnavailableReason && (
-                  <div className="mb-3 flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-                    <Info className="h-3.5 w-3.5 shrink-0" />
-                    <span>Pickup unavailable — {quotes.pickupUnavailableReason}</span>
-                  </div>
-                )}
-
-                {/* Amazon-style flat ranked list. Carrier brand (USPS/UPS/
-                    FedEx) is intentionally hidden — the buyer chooses by
-                    speed and price; the carrier is a backstage detail. */}
-                {shipOptions.length > 0 && (
-                <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-                  {shipOptions.map((q) => {
-                    const checked = selectedQuoteId === q.quoteId
-                    return (
-                      <li key={q.quoteId}>
-                        <label className={cn(
-                          "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
-                          checked ? "bg-amber-50/40" : "hover:bg-gray-50",
-                        )}>
-                          <input
-                            type="radio"
-                            name="ship-rate"
-                            checked={checked}
-                            onChange={() => setSelectedQuoteId(q.quoteId)}
-                            className="h-4 w-4 accent-brand-gold"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900">
-                              {q.serviceName}
-                            </p>
-                            {/* Delivery ETA — configurable via NEXT_PUBLIC_DELIVERY_ETA_HOURS. */}
-                            <p className="text-xs text-gray-500">
-                              Arrives in {DELIVERY_ETA_HOURS} hours
-                            </p>
-                          </div>
-                          {/* Waived either by the free-delivery threshold or by a
-                              shipping-target (free-shipping) coupon — in the coupon
-                              case we strike the original fee so the saving is clear. */}
-                          {freeShippingApplies ? (
-                            <p className="text-sm font-bold text-green-700 tabular-nums">Free</p>
-                          ) : couponTargetsShipping ? (
-                            <p className="text-sm tabular-nums">
-                              <span className="mr-1.5 text-gray-400 line-through">{fmtShip(q.amountCents)}</span>
-                              <span className="font-bold text-green-700">Free</span>
-                            </p>
-                          ) : (
-                            <p className="text-sm font-bold text-gray-900 tabular-nums">{fmtShip(q.amountCents)}</p>
+              <div className="space-y-4">
+                {fulfillmentGroups.map((g) => {
+                  const storePickup = storePickupByStoreId.get(g.storeId)
+                  const pickupOpt = pickupOptionFor(g.storeId)
+                  const method = effectiveMethod(g.storeId)
+                  const qty = g.items.reduce((n, it) => n + it.quantity, 0)
+                  return (
+                    <section
+                      key={g.storeId}
+                      className="rounded-2xl border border-border bg-card overflow-hidden"
+                    >
+                      {/* store header */}
+                      <header className="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-border bg-muted/40">
+                        <span
+                          className={cn(
+                            "grid place-items-center h-9 w-9 rounded-xl flex-none text-sm font-bold",
+                            g.isHouse ? "bg-foreground text-brand-gold" : "bg-muted text-foreground",
                           )}
-                        </label>
-                      </li>
-                    )
-                  })}
-                </ul>
-                )}
-              </>
+                        >
+                          {g.isHouse ? "₳" : <Store className="h-4 w-4" />}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">
+                            {g.isHouse ? "Fulfilled by AfroTransact" : g.storeName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {qty} item{qty === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        {storePickup && (
+                          <span
+                            className={cn(
+                              "ml-auto inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap",
+                              storePickup.eligible
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            <MapPin className="h-3.5 w-3.5" />
+                            {storePickup.eligible ? "In pickup range" : "Pickup out of range"}
+                          </span>
+                        )}
+                      </header>
+
+                      {/* items */}
+                      <div className="flex flex-wrap gap-2 px-4 sm:px-5 pt-3">
+                        {g.items.map((it) => (
+                          <div
+                            key={it.variantId}
+                            className="flex items-center gap-2.5 rounded-xl border border-border bg-muted/40 pl-1.5 pr-3 py-1.5"
+                          >
+                            <div className="relative h-9 w-9 rounded-lg bg-background overflow-hidden flex-none">
+                              {it.imageUrl ? (
+                                <Image src={it.imageUrl} alt={it.title} fill className="object-cover" sizes="36px" unoptimized />
+                              ) : (
+                                <div className="h-full w-full grid place-items-center text-muted-foreground">
+                                  <Package className="h-4 w-4" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="leading-tight">
+                              <p className="text-[13px] font-medium text-foreground line-clamp-1 max-w-[10rem]">{it.title}</p>
+                              <p className="text-[11px] text-muted-foreground">Qty {it.quantity}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* method options */}
+                      <div className="px-4 sm:px-5 pb-4 pt-3 space-y-2.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Choose fulfillment
+                        </p>
+
+                        {pickupOpt && (
+                          <>
+                            <label
+                              className={cn(
+                                "flex items-center gap-3 rounded-xl border px-4 py-3.5 cursor-pointer transition-colors",
+                                method === "pickup"
+                                  ? "border-brand-gold bg-amber-50/50 dark:bg-amber-950/20"
+                                  : "border-border hover:bg-muted/50",
+                              )}
+                            >
+                              <input
+                                type="radio"
+                                name={`fulfill-${g.storeId}`}
+                                className="h-4 w-4 accent-brand-gold flex-none"
+                                checked={method === "pickup"}
+                                onChange={() => setGroupMethod((s) => ({ ...s, [g.storeId]: "pickup" }))}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-semibold text-foreground">Pickup</span>
+                                  <span className="text-[10px] font-bold tracking-wide text-emerald-700 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 rounded-full px-2 py-0.5">
+                                    FREE
+                                  </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
+                                  <Clock className="h-3 w-3" /> Ready in ~2 hours
+                                  {pickupOpt.pickupLocation?.hours ? ` · ${pickupOpt.pickupLocation.hours}` : ""}
+                                </p>
+                              </div>
+                              <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
+                            </label>
+
+                            {method === "pickup" && pickupOpt.pickupLocation && (
+                              <div className="rounded-xl border border-dashed border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 px-4 py-3">
+                                <p className="text-[13px] font-semibold text-emerald-800 dark:text-emerald-300 inline-flex items-center gap-1.5">
+                                  <MapPin className="h-4 w-4" /> {pickupOpt.pickupLocation.name || "Collect at the store"}
+                                </p>
+                                {pickupOpt.pickupLocation.line1 && (
+                                  <p className="text-[13px] text-foreground mt-1">
+                                    {pickupOpt.pickupLocation.line1}
+                                    {pickupOpt.pickupLocation.line2 ? `, ${pickupOpt.pickupLocation.line2}` : ""}
+                                  </p>
+                                )}
+                                {(pickupOpt.pickupLocation.city || pickupOpt.pickupLocation.region || pickupOpt.pickupLocation.postalCode) && (
+                                  <p className="text-[13px] text-foreground">
+                                    {[pickupOpt.pickupLocation.city, pickupOpt.pickupLocation.region].filter(Boolean).join(", ")}
+                                    {pickupOpt.pickupLocation.postalCode ? ` ${pickupOpt.pickupLocation.postalCode}` : ""}
+                                  </p>
+                                )}
+                                {pickupOpt.pickupLocation.instructions && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">{pickupOpt.pickupLocation.instructions}</p>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {!pickupOpt && storePickup && !storePickup.eligible && (
+                          <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3.5 opacity-70">
+                            <span className="h-4 w-4 rounded-full border-2 border-muted-foreground/40 flex-none" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-semibold text-muted-foreground">Pickup</span>
+                              <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
+                                <Info className="h-3.5 w-3.5" /> Unavailable — {storePickup.reason || "this store is outside your pickup range"}
+                              </p>
+                            </div>
+                            <span className="text-sm text-muted-foreground">—</span>
+                          </div>
+                        )}
+
+                        {/* Delivery — ORDER-LEVEL: the same ranked ship list is
+                            shown in every group. Known limitation: there is no
+                            per-store carrier rate yet, so picking a delivery
+                            option here sets the shared order-level quote used
+                            by every group that isn't picking up. */}
+                        {shipOptions.map((q) => {
+                          const checked = method === "ship" && selectedQuoteId === q.quoteId
+                          return (
+                            <label
+                              key={q.quoteId}
+                              className={cn(
+                                "flex items-center gap-3 rounded-xl border px-4 py-3.5 cursor-pointer transition-colors",
+                                checked ? "border-brand-gold bg-amber-50/50 dark:bg-amber-950/20" : "border-border hover:bg-muted/50",
+                              )}
+                            >
+                              <input
+                                type="radio"
+                                name={`fulfill-${g.storeId}`}
+                                className="h-4 w-4 accent-brand-gold flex-none"
+                                checked={checked}
+                                onChange={() => {
+                                  setGroupMethod((s) => ({ ...s, [g.storeId]: "ship" }))
+                                  setSelectedQuoteId(q.quoteId)
+                                }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
+                                  <Truck className="h-4 w-4 text-muted-foreground" /> {q.serviceName}
+                                </span>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  Arrives in {DELIVERY_ETA_HOURS} hours
+                                </p>
+                              </div>
+                              {freeShippingApplies ? (
+                                <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
+                              ) : couponTargetsShipping ? (
+                                <span className="text-sm tabular-nums">
+                                  <span className="mr-1.5 text-muted-foreground line-through">{fmtShip(q.amountCents)}</span>
+                                  <span className="font-bold text-emerald-700 dark:text-emerald-400">Free</span>
+                                </span>
+                              ) : (
+                                <span className="text-sm font-bold text-foreground tabular-nums">{fmtShip(q.amountCents)}</span>
+                              )}
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </section>
+                  )
+                })}
+              </div>
             )}
           </Section>
 
@@ -1377,6 +1573,35 @@ export default function CheckoutClientV2({
                   <dd className="tabular-nums">-{formatCents(dDiscount)}</dd>
                 </div>
               )}
+              {fulfillmentGroups.length > 1 ? (
+                // Multi-store cart: itemize shipping per fulfillment group.
+                // Delivery cost is order-level (shared across ship groups —
+                // see the "Known limitation" comment near perGroupShipCents),
+                // so each ship group shows its even-split attribution rather
+                // than an independently-quoted rate.
+                fulfillmentGroups.map((g) => {
+                  const method = effectiveMethod(g.storeId)
+                  const label = g.isHouse ? "AfroTransact" : g.storeName
+                  const cents = method === "pickup" ? 0 : (perGroupShipCents.get(g.storeId) ?? 0)
+                  return (
+                    <div key={g.storeId} className="flex justify-between">
+                      <dt className="text-gray-600">
+                        {shipNoun} — {label}
+                        {method === "pickup" && (
+                          <span className="ml-2 text-[11px] font-semibold text-green-700">Pickup · Free</span>
+                        )}
+                      </dt>
+                      <dd className="text-gray-900 tabular-nums">
+                        {method === "pickup" ? (
+                          <span className="text-green-700 font-semibold">Free</span>
+                        ) : (
+                          fmtShip(cents)
+                        )}
+                      </dd>
+                    </div>
+                  )
+                })
+              ) : (
               <div className="flex justify-between">
                 <dt className="text-gray-600">
                   {pickupSelected ? "Pickup" : shipNoun}
@@ -1407,6 +1632,7 @@ export default function CheckoutClientV2({
                   ) : "—"}
                 </dd>
               </div>
+              )}
               <div className="flex justify-between">
                 <dt className="text-gray-600">Tax</dt>
                 {dTax === 0 ? (
@@ -1420,7 +1646,7 @@ export default function CheckoutClientV2({
                 <dd className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dTotal)}</dd>
               </div>
             </dl>
-            {pickupSelected && pickupSavingsCents > 0 && (
+            {pickupGroups.length > 0 && pickupSavingsCents > 0 && (
               <div className="mt-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-[12px] font-semibold px-3 py-2 inline-flex items-center gap-2">
                 <Check className="h-3.5 w-3.5" /> You save {fmtShip(pickupSavingsCents)} with pickup
               </div>
