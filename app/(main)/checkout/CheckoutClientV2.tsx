@@ -83,6 +83,7 @@ import {
   listSavedPaymentMethods,
   validateCoupon,
   resolveServiceZone,
+  getStoreById,
   ApiError,
   type CheckoutResponse,
   type CheckoutShippingContext,
@@ -96,6 +97,18 @@ import {
   type ValidateCouponResponse,
   type ResolvedZone,
 } from "@/lib/api"
+
+// A store name that is actually a raw UUID (storeId used as a placeholder
+// when the real name wasn't populated on the cart item) must never be shown
+// to the buyer — see checkout store-name resolver below.
+function looksLikeUuid(s: string | null | undefined): boolean {
+  return !!s && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s)
+}
+
+// House store (AfroTransact-fulfilled items) uses a fixed id; every other
+// storeId is a seller. Module-level so it's available to the store-name
+// resolver above the fulfillment-groups section that originally defined it.
+const HOUSE_STORE_ID_CONST = "00000000-0000-0000-0000-00000000a710"
 
 // Module-local Stripe singleton. We don't reuse the one inside
 // `_stripe-payment.tsx` because it isn't exported, and per the V2 brief we
@@ -204,6 +217,49 @@ export default function CheckoutClientV2({
   const effectiveItems = buyNowMode && buyNowItems.length > 0 ? buyNowItems : cartItems
   const doUpdateQuantity = buyNowMode ? buyNowUpdateQuantity : updateQuantity
   const doRemoveItem = buyNowMode ? buyNowRemoveItem : removeItem
+
+  // ─── Store-name resolution ──────────────────────────────────────────
+  // Cart items may carry `storeName` = the storeId (a UUID) when the real
+  // name wasn't populated upstream. Never render that verbatim — resolve
+  // the real name via the seller-service store lookup, cache results, and
+  // fall back to a clean generic label rather than a UUID.
+  const [storeNames, setStoreNames] = useState<Map<string, string>>(new Map())
+  const nonHouseStoreIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const it of effectiveItems) {
+      if (it.storeId && it.storeId !== HOUSE_STORE_ID_CONST) ids.add(it.storeId)
+    }
+    return Array.from(ids).sort()
+  }, [effectiveItems])
+  useEffect(() => {
+    const missing = nonHouseStoreIds.filter((id) => !storeNames.has(id))
+    if (missing.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      const results = await Promise.allSettled(missing.map((id) => getStoreById(id)))
+      if (cancelled) return
+      setStoreNames((prev) => {
+        const next = new Map(prev)
+        results.forEach((r, i) => {
+          if (r.status === "fulfilled" && r.value?.name) next.set(missing[i], r.value.name)
+        })
+        return next
+      })
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonHouseStoreIds])
+
+  const resolveStoreName = useCallback(
+    (storeId: string, fallbackName?: string | null): string => {
+      if (storeId === HOUSE_STORE_ID_CONST) return "AfroTransact"
+      const fetched = storeNames.get(storeId)
+      if (fetched) return fetched
+      if (fallbackName && !looksLikeUuid(fallbackName) && fallbackName !== storeId) return fallbackName
+      return "Seller store"
+    },
+    [storeNames],
+  )
 
   const subtotal = effectiveItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
@@ -561,7 +617,7 @@ export default function CheckoutClientV2({
   // rate yet, so two "ship" groups in the same order share one delivery
   // quote. A future backend task would need to quote each store's parcel
   // independently to remove this limitation.
-  const HOUSE_STORE_ID = "00000000-0000-0000-0000-00000000a710"
+  const HOUSE_STORE_ID = HOUSE_STORE_ID_CONST
 
   type FulfillmentGroup = {
     storeId: string
@@ -578,14 +634,15 @@ export default function CheckoutClientV2({
         map.set(item.storeId, {
           storeId: item.storeId,
           isHouse: item.storeId === HOUSE_STORE_ID,
-          storeName: item.storeId === HOUSE_STORE_ID ? "AfroTransact" : (item.storeName || "Seller"),
+          storeName: resolveStoreName(item.storeId, item.storeName),
           items: [],
         })
       }
       map.get(item.storeId)!.items.push(item)
     }
     return order.map((id) => map.get(id)!)
-  }, [effectiveItems])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveItems, storeNames])
 
   const storePickupByStoreId = useMemo(() => {
     const m = new Map<string, StorePickupOption>()
@@ -1547,9 +1604,19 @@ export default function CheckoutClientV2({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 line-clamp-2">{it.title}</p>
                     <p className="text-xs text-gray-500">
-                      {it.storeName && it.storeName !== it.storeId ? it.storeName : null}
-                      {it.storeName && it.storeName !== it.storeId && it.variantName ? " • " : null}
-                      {it.variantName || null}
+                      {(() => {
+                        const label =
+                          it.storeId === HOUSE_STORE_ID_CONST
+                            ? null
+                            : resolveStoreName(it.storeId, it.storeName)
+                        return (
+                          <>
+                            {label}
+                            {label && it.variantName ? " • " : null}
+                            {it.variantName || null}
+                          </>
+                        )
+                      })()}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <button
@@ -1658,19 +1725,29 @@ export default function CheckoutClientV2({
                 // see the "Known limitation" comment near perGroupShipCents),
                 // so each ship group shows its even-split attribution rather
                 // than an independently-quoted rate.
-                fulfillmentGroups.map((g) => {
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    {shipNoun}
+                  </p>
+                  <div className="space-y-1.5">
+                    {fulfillmentGroups.map((g) => {
                   const method = effectiveMethod(g.storeId)
-                  const label = g.isHouse ? "AfroTransact" : g.storeName
                   const cents = method === "pickup" ? 0 : (perGroupShipCents.get(g.storeId) ?? 0)
                   return (
-                    <div key={g.storeId} className="flex justify-between">
-                      <dt className="text-gray-600">
-                        {shipNoun} — {label}
-                        {method === "pickup" && (
-                          <span className="ml-2 text-[11px] font-semibold text-green-700">Pickup · Free</span>
+                    <div key={g.storeId} className="flex items-center justify-between gap-3">
+                      <dt className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-gray-900 dark:text-foreground truncate max-w-[9rem] sm:max-w-[11rem]">
+                          {g.storeName}
+                        </span>
+                        {method === "pickup" ? (
+                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-full">
+                            Pickup
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-[11px] text-gray-500">{shipNounLower}</span>
                         )}
                       </dt>
-                      <dd className="text-gray-900 tabular-nums">
+                      <dd className="shrink-0 text-gray-900 tabular-nums">
                         {method === "pickup" ? (
                           <span className="text-green-700 font-semibold">Free</span>
                         ) : (
@@ -1679,7 +1756,9 @@ export default function CheckoutClientV2({
                       </dd>
                     </div>
                   )
-                })
+                    })}
+                  </div>
+                </div>
               ) : (
               <div className="flex justify-between">
                 <dt className="text-gray-600">
@@ -2176,10 +2255,12 @@ function InlinePaymentForm({
  *  secure, PCI-compliant transaction. */
 function PoweredByStripe({ className }: { className?: string }) {
   return (
-    <div className={cn("flex items-center justify-center gap-1.5 text-gray-400", className)}>
+    <div className={cn("flex items-center justify-center gap-1.5 text-muted-foreground/80", className)}>
       <Lock className="h-3 w-3 shrink-0" />
+      <span className="text-[11px] font-medium">Secure checkout</span>
+      <span className="text-gray-300 dark:text-border">·</span>
       <span className="text-[11px]">Powered by</span>
-      <svg viewBox="0 0 60 25" width="42" height="18" role="img" aria-label="Stripe" fill="none">
+      <svg viewBox="0 0 60 25" width="38" height="16" role="img" aria-label="Stripe" fill="none" className="opacity-80">
         <title>Stripe</title>
         <path
           fillRule="evenodd"
