@@ -469,9 +469,19 @@ export default function CheckoutClientV2({
     return out
   }, [quotes])
 
+  // Pickup is intentionally excluded from the auto-preselect computation: its
+  // amountCents is always 0, so it would always "win" as cheapest and become
+  // the silent default. Delivery must stay the default — pickup requires an
+  // active opt-in click. See isPickupOption below (defined ahead of use via
+  // this local re-declaration since it's needed here too).
+  const isPickupQuote = (o: FlatQuote) => o.deliveryMethod === "pickup" || o.quoteId?.startsWith("pickup:")
+
   const cheapestId = useMemo(() => {
     let id: string | null = null; let best = Infinity
-    for (const o of flatQuotes) if (o.amountCents < best) { best = o.amountCents; id = o.quoteId }
+    for (const o of flatQuotes) {
+      if (isPickupQuote(o)) continue
+      if (o.amountCents < best) { best = o.amountCents; id = o.quoteId }
+    }
     return id
   }, [flatQuotes])
 
@@ -510,9 +520,8 @@ export default function CheckoutClientV2({
   // its own card above the ranked ship list, not mixed into it. Mixed-cart
   // per-fulfilment-group pickup is P2 (see app/(main)/dev/pickup-preview on
   // feat/pickup-checkout-preview) and out of scope here.
-  const isPickupOption = (o: FlatQuote) => o.deliveryMethod === "pickup" || o.quoteId?.startsWith("pickup:")
-  const pickupOption = flatQuotes.find(isPickupOption) ?? null
-  const shipOptions = sortedQuotes.filter((o) => !isPickupOption(o))
+  const pickupOption = flatQuotes.find(isPickupQuote) ?? null
+  const shipOptions = sortedQuotes.filter((o) => !isPickupQuote(o))
   const pickupSelected = !!pickupOption && selectedQuoteId === pickupOption.quoteId
   const cheapestShipCents = shipOptions.length > 0 ? Math.min(...shipOptions.map((o) => o.amountCents)) : null
   const pickupSavingsCents = pickupSelected && cheapestShipCents !== null && Number.isFinite(cheapestShipCents)
@@ -589,7 +598,10 @@ export default function CheckoutClientV2({
           if (!stillThere) {
             let newCheapest: string | null = null
             let best = Infinity
-            for (const o of next) if (o.amountCents < best) { best = o.amountCents; newCheapest = o.quoteId }
+            for (const o of next) {
+              if (isPickupQuote(o)) continue
+              if (o.amountCents < best) { best = o.amountCents; newCheapest = o.quoteId }
+            }
             if (newCheapest) {
               setSelectedQuoteId(newCheapest)
               toast.info("Delivery option updated to keep your order shippable.")
@@ -818,10 +830,14 @@ export default function CheckoutClientV2({
         saveAddress: false,
         // When free shipping applies we don't assert a paid carrier quote — the
         // order service bills $0 shipping above the threshold, and this keeps the
-        // charge in agreement with what the buyer sees.
-        selectedShippingQuoteId: freeShippingApplies ? undefined : selectedQuote?.quoteId,
-        selectedShippingCarrier: freeShippingApplies ? undefined : selectedQuote?.carrier,
-        selectedShippingService: freeShippingApplies ? undefined : selectedQuote?.serviceCode,
+        // charge in agreement with what the buyer sees. Pickup is the exception:
+        // its quoteId is a SIGNAL (which store to collect from), not a charge, so
+        // it must always be sent even when free-shipping would otherwise blank
+        // these fields — otherwise the backend can't tell pickup from a
+        // free-shipped delivery and never triggers pickup fulfillment/emails.
+        selectedShippingQuoteId: pickupSelected ? selectedQuote?.quoteId : (freeShippingApplies ? undefined : selectedQuote?.quoteId),
+        selectedShippingCarrier: pickupSelected ? (selectedQuote?.carrier ?? "PICKUP") : (freeShippingApplies ? undefined : selectedQuote?.carrier),
+        selectedShippingService: pickupSelected ? (selectedQuote?.serviceCode ?? "PICKUP") : (freeShippingApplies ? undefined : selectedQuote?.serviceCode),
         selectedShippingAmountCents: shippingCents,
         saveCard,
         couponCodes: couponResult && couponCode ? [couponCode] : undefined,
@@ -840,7 +856,7 @@ export default function CheckoutClientV2({
       placingRef.current = false
       setMinting(false)
     }
-  }, [authToken, region, selectedAddress, cartItems, checkoutResult, selectedQuote, saveCard, profileName, profilePhone, sessionName, router])
+  }, [authToken, region, selectedAddress, cartItems, checkoutResult, selectedQuote, pickupSelected, saveCard, profileName, profilePhone, sessionName, router])
 
   // ─── place order ───────────────────────────────────────────────────
   const paymentHandleRef = useRef<PaymentHandle | null>(null)
