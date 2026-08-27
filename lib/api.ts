@@ -4417,3 +4417,158 @@ export function getCatalogItemPublic(id: string): Promise<CatalogItem> {
     next: { revalidate: 60 },
   })
 }
+
+// ── Admin ledger — account-scoped (D1) ────────────────────────────────────────
+// D1a added `account=all|house|<sellerId>` scoping across the existing ledger
+// endpoints, plus a new /accounts list, /pnl, and /reconciliation. Existing
+// adminLedger* functions above (adminLedgerJournal, adminLedgerTrialBalance)
+// are extended in place with an optional `account` param rather than
+// duplicated. New endpoints follow the same (token, params) signature style.
+
+export interface AccountRef {
+  id: string
+  kind: "house" | "seller"
+  name: string
+  hasActivity: boolean
+}
+
+export function getAccounts(token: string) {
+  return api<AccountRef[]>(`/api/v1/admin/ledger/accounts`, { token })
+}
+
+export interface PnlLine {
+  label: string
+  amountCents: number
+  role: "BASE" | "ADD" | "SUB" | "SUBTOTAL" | "TOTAL"
+}
+
+export interface PnlDto {
+  scope: string
+  kind: "HOUSE" | "SELLER" | "ALL"
+  from: string
+  to: string
+  currency: string
+  lines: PnlLine[]
+  memos: Record<string, number>
+}
+
+export function getPnl(
+  token: string,
+  params: { account?: string; from?: string; to?: string } = {},
+) {
+  const q = new URLSearchParams()
+  if (params.account) q.set("account", params.account)
+  if (params.from) q.set("from", params.from)
+  if (params.to) q.set("to", params.to)
+  const qs = q.toString()
+  return api<PnlDto>(`/api/v1/admin/ledger/pnl${qs ? `?${qs}` : ""}`, { token })
+}
+
+/** Account-scoped variant of adminLedgerSummary — same shape, adds `account`. */
+export function getScopedSummary(token: string, params: { account?: string } = {}) {
+  const q = params.account ? `?account=${encodeURIComponent(params.account)}` : ""
+  return api<LedgerSummaryDto>(`/api/v1/admin/ledger/summary${q}`, { token })
+}
+
+export function getTrialBalance(
+  token: string,
+  params: { account?: string; asOf?: string } = {},
+) {
+  const q = new URLSearchParams()
+  if (params.account) q.set("account", params.account)
+  if (params.asOf) q.set("asOf", params.asOf)
+  const qs = q.toString()
+  return api<TrialBalance>(`/api/v1/admin/ledger/trial-balance${qs ? `?${qs}` : ""}`, { token })
+}
+
+export interface ReconciliationDto {
+  ledgerBalanceCents: number
+  stripeAvailableCents: number
+  stripePendingCents: number
+  deltaCents: number
+  ledgerFeeCents: number
+  stripeFeeCents: number
+  feeDeltaCents: number
+  notes: string
+}
+
+/**
+ * House-only. A seller account (or `account=all`) returns HTTP 409 with body
+ * `{ applicable: false, reason }` — the reconciliation view has no meaning
+ * outside the house scope. Rather than throw (ApiError would surface a
+ * generic error toast for a non-error condition), this catches that 409 and
+ * returns the `{applicable: false, reason}` shape directly so callers can
+ * render an inline "not applicable" state. Any other non-2xx still throws
+ * via the shared `api()` helper.
+ */
+export function getReconciliation(
+  token: string,
+  params: { from?: string; to?: string } = {},
+): Promise<ReconciliationDto | { applicable: false; reason: string }> {
+  const q = new URLSearchParams()
+  if (params.from) q.set("from", params.from)
+  if (params.to) q.set("to", params.to)
+  const qs = q.toString()
+  return api<ReconciliationDto>(`/api/v1/admin/ledger/reconciliation${qs ? `?${qs}` : ""}`, {
+    token,
+  }).catch((err) => {
+    if (err instanceof ApiError && err.status === 409) {
+      try {
+        const parsed = JSON.parse(err.body)
+        if (parsed && parsed.applicable === false) {
+          return { applicable: false as const, reason: parsed.reason ?? "Not applicable for this scope" }
+        }
+      } catch {
+        /* fall through to rethrow below */
+      }
+    }
+    throw err
+  })
+}
+
+// ── Admin ledger — operating expenses (Phase C) ───────────────────────────────
+export interface OpExDto {
+  id: string
+  expenseDate: string
+  category: string
+  amountCents: number
+  currency: string
+  description: string | null
+  source: string
+  recurring: boolean
+  status: string
+  journalEntryId: string | null
+}
+
+export function listOpex(
+  token: string,
+  params: { from: string; to: string; category?: string },
+) {
+  const q = new URLSearchParams()
+  q.set("from", params.from)
+  q.set("to", params.to)
+  if (params.category) q.set("category", params.category)
+  return api<OpExDto[]>(`/api/v1/admin/ledger/opex?${q.toString()}`, { token })
+}
+
+export function recordOpex(
+  token: string,
+  body: {
+    expenseDate: string
+    category: string
+    amountCents: number
+    currency?: string
+    description?: string
+    recurring?: boolean
+  },
+) {
+  return api<OpExDto>(`/api/v1/admin/ledger/opex`, { method: "POST", token, body })
+}
+
+export function voidOpex(token: string, id: string, reason: string) {
+  return api<OpExDto>(`/api/v1/admin/ledger/opex/${encodeURIComponent(id)}/void`, {
+    method: "POST",
+    token,
+    body: { reason },
+  })
+}
