@@ -397,6 +397,15 @@ export default function AdminAccountingPage() {
 
       {tab === "pnl" && (
         <section className="space-y-4">
+          {!pnlLoading && pnl != null && pnl.lines.length > 0 && pnl.lines.every((l) => l.amountCents === 0) && (
+            <div className="rounded-xl border border-brand-gold/40 bg-brand-gold/10 p-3 text-sm">
+              <span className="font-semibold text-foreground">No activity in this period.</span>{" "}
+              <span className="text-muted-foreground">
+                This scope has no ledger entries for the selected range — try <b>Last month</b> or a{" "}
+                <b>Custom</b> range that covers when the account was active.
+              </span>
+            </div>
+          )}
           <PnlStatement pnl={pnl} loading={pnlLoading} />
           <p className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
             {account === "house"
