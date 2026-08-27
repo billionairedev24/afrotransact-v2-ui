@@ -94,17 +94,21 @@ export default function AdminAccountingPage() {
 
   const [reconciliation, setReconciliation] = useState<ReconciliationDto | { applicable: false; reason: string } | null>(null)
   const [reconciliationLoading, setReconciliationLoading] = useState(false)
+  const [reconError, setReconError] = useState<string | null>(null)
 
   const [opex, setOpex] = useState<OpExDto[] | null>(null)
   const [opexLoading, setOpexLoading] = useState(false)
   const [opexFormOpen, setOpexFormOpen] = useState(false)
   const [opexSubmitting, setOpexSubmitting] = useState(false)
+  const [opexError, setOpexError] = useState<string | null>(null)
 
   const [journal, setJournal] = useState<JournalEntryRow[] | null>(null)
   const [journalLoading, setJournalLoading] = useState(false)
+  const [journalError, setJournalError] = useState<string | null>(null)
 
   const [trial, setTrial] = useState<TrialBalance | null>(null)
   const [trialLoading, setTrialLoading] = useState(false)
+  const [trialError, setTrialError] = useState<string | null>(null)
 
   const [backfillRunning, setBackfillRunning] = useState(false)
   const [backfillResult, setBackfillResult] = useState<string | null>(null)
@@ -150,28 +154,32 @@ export default function AdminAccountingPage() {
   }, [account, range.from, range.to])
 
   const loadReconciliation = useCallback(async () => {
-    if (isSellerScope) { setReconciliation(null); return }
+    if (isSellerScope) { setReconciliation(null); setReconError(null); return }
     setReconciliationLoading(true)
+    setReconError(null)
     try {
       const token = await getAccessToken()
       if (!token) return
       setReconciliation(await getReconciliation(token, { from: range.from, to: range.to }))
     } catch (e) {
       logError(e, "accounting.loadReconciliation")
+      setReconError(friendlyMessage(e, "Couldn't load the reconciliation."))
     } finally {
       setReconciliationLoading(false)
     }
   }, [isSellerScope, range.from, range.to])
 
   const loadOpex = useCallback(async () => {
-    if (isSellerScope) { setOpex(null); return }
+    if (isSellerScope) { setOpex(null); setOpexError(null); return }
     setOpexLoading(true)
+    setOpexError(null)
     try {
       const token = await getAccessToken()
       if (!token) return
       setOpex(await listOpex(token, { from: range.from, to: range.to }))
     } catch (e) {
       logError(e, "accounting.loadOpex")
+      setOpexError(friendlyMessage(e, "Couldn't load the operating costs."))
     } finally {
       setOpexLoading(false)
     }
@@ -179,6 +187,7 @@ export default function AdminAccountingPage() {
 
   const loadJournal = useCallback(async () => {
     setJournalLoading(true)
+    setJournalError(null)
     try {
       const token = await getAccessToken()
       if (!token) return
@@ -186,6 +195,7 @@ export default function AdminAccountingPage() {
       setJournal(page.entries)
     } catch (e) {
       logError(e, "accounting.loadJournal")
+      setJournalError(friendlyMessage(e, "Couldn't load the journal."))
     } finally {
       setJournalLoading(false)
     }
@@ -193,12 +203,14 @@ export default function AdminAccountingPage() {
 
   const loadTrial = useCallback(async () => {
     setTrialLoading(true)
+    setTrialError(null)
     try {
       const token = await getAccessToken()
       if (!token) return
       setTrial(await getTrialBalance(token, { account, asOf: range.to }))
     } catch (e) {
       logError(e, "accounting.loadTrial")
+      setTrialError(friendlyMessage(e, "Couldn't load the trial balance."))
     } finally {
       setTrialLoading(false)
     }
@@ -397,18 +409,26 @@ export default function AdminAccountingPage() {
       )}
 
       {tab === "reconciliation" && (
-        <ReconciliationPanel data={reconciliation} loading={reconciliationLoading} isSellerScope={isSellerScope} />
+        !isSellerScope && reconError ? (
+          <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{reconError}</div>
+        ) : (
+          <ReconciliationPanel data={reconciliation} loading={reconciliationLoading} isSellerScope={isSellerScope} />
+        )
       )}
 
       {tab === "opex" && (
         <>
-          <OperatingCosts
-            items={opex}
-            loading={opexLoading}
-            isSellerScope={isSellerScope}
-            onRecord={() => setOpexFormOpen(true)}
-            onVoid={handleVoidOpex}
-          />
+          {!isSellerScope && opexError ? (
+            <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{opexError}</div>
+          ) : (
+            <OperatingCosts
+              items={opex}
+              loading={opexLoading}
+              isSellerScope={isSellerScope}
+              onRecord={() => setOpexFormOpen(true)}
+              onVoid={handleVoidOpex}
+            />
+          )}
           <RecordCostForm
             open={opexFormOpen}
             onClose={() => setOpexFormOpen(false)}
@@ -418,15 +438,25 @@ export default function AdminAccountingPage() {
         </>
       )}
 
-      {tab === "journal" && <JournalTable entries={journal} loading={journalLoading} />}
+      {tab === "journal" && (
+        journalError ? (
+          <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{journalError}</div>
+        ) : (
+          <JournalTable entries={journal} loading={journalLoading} />
+        )
+      )}
 
       {tab === "trial" && (
-        <TrialBalanceTable
-          rows={trial?.rows ?? null}
-          totalDebitsCents={trial?.totalDebitsCents}
-          totalCreditsCents={trial?.totalCreditsCents}
-          loading={trialLoading}
-        />
+        trialError ? (
+          <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-600">{trialError}</div>
+        ) : (
+          <TrialBalanceTable
+            rows={trial?.rows ?? null}
+            totalDebitsCents={trial?.totalDebitsCents}
+            totalCreditsCents={trial?.totalCreditsCents}
+            loading={trialLoading}
+          />
+        )
       )}
     </main>
   )
