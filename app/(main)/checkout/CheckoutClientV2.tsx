@@ -472,8 +472,7 @@ export default function CheckoutClientV2({
   // Pickup is intentionally excluded from the auto-preselect computation: its
   // amountCents is always 0, so it would always "win" as cheapest and become
   // the silent default. Delivery must stay the default — pickup requires an
-  // active opt-in click. See isPickupOption below (defined ahead of use via
-  // this local re-declaration since it's needed here too).
+  // active opt-in click.
   const isPickupQuote = (o: FlatQuote) => o.deliveryMethod === "pickup" || o.quoteId?.startsWith("pickup:")
 
   const cheapestId = useMemo(() => {
