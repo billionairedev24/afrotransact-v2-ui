@@ -28,7 +28,7 @@ import {
   useImperativeHandle,
   forwardRef,
 } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Elements,
   PaymentElement,
@@ -60,6 +60,7 @@ import { cn } from "@/lib/utils"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { features } from "@/lib/features"
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
+import { useBuyNowStore } from "@/stores/buy-now-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
@@ -167,11 +168,44 @@ export default function CheckoutClientV2({
   // ─── cart ──────────────────────────────────────────────────────────
   const cartItems = useCartStore((s) => s.items)
   const { cartReady } = useCartHydration()
-  const getSubtotal = useCartStore((s) => s.getSubtotal)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeItem = useCartStore((s) => s.removeItem)
   const clearCart = useCartStore((s) => s.clearCart)
-  const subtotal = getSubtotal()
+
+  // ─── buy-now mode (?buynow=1) ───────────────────────────────────────
+  // A "Buy Now" CTA (ForYouRail / ProductPageClient / BuyBoxClient) sets
+  // the ephemeral buy-now store and lands here with ?buynow=1. In that
+  // mode the order path (subtotal, fulfillment groups, quotes, submit
+  // payload, review list) uses ONLY the buy-now item(s), and on success we
+  // clear the buy-now store instead of the persistent cart — so a buy-now
+  // purchase never disturbs whatever else is sitting in the buyer's cart.
+  //
+  // KNOWN BACKEND GAP: order-service's PaymentEventConsumer clears the
+  // buyer's SERVER cart on payment confirmation regardless of how the
+  // order was placed. Because checkout syncs `effectiveItems` to the
+  // server cart before minting (see syncServerCart/mintIntent below), a
+  // buy-now purchase can still cause the buyer's real server-side cart to
+  // be wiped when the order confirms. This frontend change preserves the
+  // LOCAL (zustand) cart state, but the server cart clear is a backend
+  // follow-up (PaymentEventConsumer should only clear items that were
+  // actually part of the order, not blanket-clear).
+  const searchParams = useSearchParams()
+  const buyNowMode = searchParams.get("buynow") === "1"
+  const buyNowItems = useBuyNowStore((s) => s.items)
+  const clearBuyNow = useBuyNowStore((s) => s.clear)
+  const buyNowUpdateQuantity = useBuyNowStore((s) => s.updateQuantity)
+  const buyNowRemoveItem = useBuyNowStore((s) => s.removeItem)
+
+  // Graceful fallback: if buy-now mode is requested but the (in-memory,
+  // unpersisted) buy-now store is empty — e.g. the buyer refreshed the
+  // checkout page — fall back to the persistent cart rather than showing
+  // a hard error; the empty-cart guard effect further below will redirect
+  // to /cart if that's also empty.
+  const effectiveItems = buyNowMode && buyNowItems.length > 0 ? buyNowItems : cartItems
+  const doUpdateQuantity = buyNowMode ? buyNowUpdateQuantity : updateQuantity
+  const doRemoveItem = buyNowMode ? buyNowRemoveItem : removeItem
+
+  const subtotal = effectiveItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
   // Buyer's resolved service-location (post-regions rewrite). Preferred
   // over region for shipping quotes, coupon validation, and free-shipping
@@ -397,7 +431,7 @@ export default function CheckoutClientV2({
   // "Cart is empty" and the UI shows "couldn't find shipping options".
   const syncServerCart = useCallback(async () => {
     if (!authToken) return
-    const items = cartItems.map((item) => ({
+    const items = effectiveItems.map((item) => ({
       variantId: item.variantId,
       productId: item.productId || item.variantId,
       storeId: item.storeId,
@@ -412,7 +446,7 @@ export default function CheckoutClientV2({
       heightIn: item.heightIn ?? null,
     }))
     await mergeCart(authToken, items)
-  }, [authToken, cartItems])
+  }, [authToken, effectiveItems])
 
   // ─── shipping quotes (Section 2) ───────────────────────────────────
   const [quotes, setQuotes] = useState<ShippingQuoteResponse | null>(null)
@@ -533,12 +567,12 @@ export default function CheckoutClientV2({
     storeId: string
     storeName: string
     isHouse: boolean
-    items: typeof cartItems
+    items: typeof effectiveItems
   }
   const fulfillmentGroups: FulfillmentGroup[] = useMemo(() => {
     const order: string[] = []
     const map = new Map<string, FulfillmentGroup>()
-    for (const item of cartItems) {
+    for (const item of effectiveItems) {
       if (!map.has(item.storeId)) {
         order.push(item.storeId)
         map.set(item.storeId, {
@@ -551,7 +585,7 @@ export default function CheckoutClientV2({
       map.get(item.storeId)!.items.push(item)
     }
     return order.map((id) => map.get(id)!)
-  }, [cartItems])
+  }, [effectiveItems])
 
   const storePickupByStoreId = useMemo(() => {
     const m = new Map<string, StorePickupOption>()
@@ -652,7 +686,7 @@ export default function CheckoutClientV2({
   useEffect(() => {
     if (!didInitialQuoteRef.current) return
     if (!authToken || !region || !selectedAddress) return
-    if (cartItems.length === 0) return
+    if (effectiveItems.length === 0) return
 
     if (requoteTimerRef.current) clearTimeout(requoteTimerRef.current)
     requoteTimerRef.current = setTimeout(() => {
@@ -706,10 +740,10 @@ export default function CheckoutClientV2({
     return () => {
       if (requoteTimerRef.current) clearTimeout(requoteTimerRef.current)
     }
-    // We deliberately depend on cartItems (not items by ref): qty + composition.
+    // We deliberately depend on effectiveItems (not items by ref): qty + composition.
     // activeZoneId included so a resolved zone change triggers a re-quote.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartItems, authToken, region?.id, selectedAddress?.id, activeZoneId])
+  }, [effectiveItems, authToken, region?.id, selectedAddress?.id, activeZoneId])
 
   // ─── saved cards (Section 3) ───────────────────────────────────────
   const [savedCards, setSavedCards] = useState<SavedPaymentMethod[]>([])
@@ -817,7 +851,7 @@ export default function CheckoutClientV2({
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotal, cartItems.length, region?.id, activeZoneId])
+  }, [subtotal, effectiveItems.length, region?.id, activeZoneId])
 
   // ─── totals ────────────────────────────────────────────────────────
   // Tax comes from the resolved destination zone — the same source the server
@@ -914,7 +948,7 @@ export default function CheckoutClientV2({
     setMinting(true)
     setPlaceError(null)
     try {
-      const items = cartItems.map((item) => ({
+      const items = effectiveItems.map((item) => ({
         variantId: item.variantId,
         productId: item.productId || item.variantId,
         storeId: item.storeId,
@@ -1001,7 +1035,7 @@ export default function CheckoutClientV2({
       placingRef.current = false
       setMinting(false)
     }
-  }, [authToken, region, selectedAddress, cartItems, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
+  }, [authToken, region, selectedAddress, effectiveItems, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
 
   // ─── place order ───────────────────────────────────────────────────
   const paymentHandleRef = useRef<PaymentHandle | null>(null)
@@ -1012,11 +1046,21 @@ export default function CheckoutClientV2({
     // fires and the order materializes. Deleting it here caused a race:
     // any lingering checkout request (mount effect, retry) would hit an
     // already-empty cart and fail with 400.
-    clearCart()
-    try { clearGuestCart() } catch { /* non-fatal */ }
+    //
+    // Buy-now mode: clear ONLY the ephemeral buy-now store, never the
+    // persistent cart — a buy-now purchase must leave whatever else is in
+    // the buyer's cart untouched. (See the KNOWN BACKEND GAP note above:
+    // the server-side cart is still blanket-cleared by PaymentEventConsumer,
+    // which this frontend change cannot prevent.)
+    if (buyNowMode) {
+      clearBuyNow()
+    } else {
+      clearCart()
+      try { clearGuestCart() } catch { /* non-fatal */ }
+    }
     const sid = checkoutResult?.checkoutSessionId
     router.push(sid ? `/checkout/complete?session=${encodeURIComponent(sid)}` : "/checkout/complete")
-  }, [clearCart, router, checkoutResult])
+  }, [buyNowMode, clearBuyNow, clearCart, router, checkoutResult])
 
   // Pre-mint the PI as soon as we have an address + rate, so clientSecret is
   // ready by the time the buyer scrolls to payment. mintIntent is idempotent
@@ -1061,7 +1105,7 @@ export default function CheckoutClientV2({
 
   // ─── disabled reason for Place Order ──────────────────────────────
   let disabledReason: string | null = null
-  if (cartItems.length === 0) disabledReason = "Your cart is empty"
+  if (effectiveItems.length === 0) disabledReason = "Your cart is empty"
   else if (!selectedAddress) disabledReason = `Select a ${shipNounLower} address`
   else if (ratesUnavailable) disabledReason = "Shipping isn't available for this address yet"
   else if (!allPickupSelected && !selectedQuoteId) disabledReason = "Choose a delivery option"
@@ -1076,14 +1120,24 @@ export default function CheckoutClientV2({
     // for a moment until getCart() lands. Wait for the cart to actually
     // hydrate (cartReady) before treating an empty cart as real — otherwise a
     // checkout refresh redirects to /cart on the transient empty state.
-    if (!mounted || !cartReady) return
+    // Buy-now mode's item lives in an unpersisted in-memory store, so it has
+    // no such hydration delay — skip the cartReady wait in that mode.
+    if (!mounted) return
+    if (!buyNowMode && !cartReady) return
     // Also bail while a payment is in-flight: handlePaymentComplete() calls
-    // clearCart() *before* router.push('/checkout/complete'), and without this
-    // guard the resulting empty-cart transition races the push and lands the
-    // buyer on /cart instead of the acknowledgement page.
+    // clearCart()/clearBuyNow() *before* router.push('/checkout/complete'),
+    // and without this guard the resulting empty transition races the push
+    // and lands the buyer on /cart instead of the acknowledgement page.
     if (paying || placingRef.current) return
-    if (cartItems.length === 0) router.replace("/cart")
-  }, [mounted, cartReady, cartItems.length, router, paying])
+    if (effectiveItems.length === 0) {
+      // Buy-now mode with nothing in the ephemeral store means the buyer
+      // refreshed mid buy-now-checkout (in-memory state doesn't survive a
+      // reload) and also has nothing in their persistent cart to fall back
+      // to — send them back with an explanation instead of a bare redirect.
+      if (buyNowMode) toast.error("Your buy-now session expired.")
+      router.replace("/cart")
+    }
+  }, [mounted, cartReady, buyNowMode, effectiveItems.length, router, paying])
 
   if (!mounted) {
     return (
@@ -1478,10 +1532,10 @@ export default function CheckoutClientV2({
           <Section
             n={4}
             title="Review items"
-            subtitle={`${cartItems.length} item${cartItems.length === 1 ? "" : "s"} in your order`}
+            subtitle={`${effectiveItems.length} item${effectiveItems.length === 1 ? "" : "s"} in your order`}
           >
             <ul className="divide-y divide-gray-100">
-              {cartItems.map((it) => (
+              {effectiveItems.map((it) => (
                 <li key={it.variantId} className="flex gap-3 py-3">
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                     {it.imageUrl ? (
@@ -1500,20 +1554,20 @@ export default function CheckoutClientV2({
                     <div className="flex items-center gap-2 mt-1.5">
                       <button
                         type="button"
-                        onClick={() => updateQuantity(it.variantId, Math.max(0, it.quantity - 1))}
+                        onClick={() => doUpdateQuantity(it.variantId, Math.max(0, it.quantity - 1))}
                         className="h-7 w-7 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
                         aria-label="Decrease quantity"
                       >−</button>
                       <span className="text-sm font-semibold tabular-nums w-6 text-center">{it.quantity}</span>
                       <button
                         type="button"
-                        onClick={() => updateQuantity(it.variantId, it.quantity + 1)}
+                        onClick={() => doUpdateQuantity(it.variantId, it.quantity + 1)}
                         className="h-7 w-7 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
                         aria-label="Increase quantity"
                       >+</button>
                       <button
                         type="button"
-                        onClick={() => removeItem(it.variantId)}
+                        onClick={() => doRemoveItem(it.variantId)}
                         className="ml-2 text-xs font-semibold text-red-600 hover:underline"
                       >
                         Remove
@@ -1582,7 +1636,7 @@ export default function CheckoutClientV2({
 
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <dt className="text-gray-600">Items ({cartItems.length})</dt>
+                <dt className="text-gray-600">Items ({effectiveItems.length})</dt>
                 <dd className="text-gray-900 tabular-nums">{formatCents(dSubtotal)}</dd>
               </div>
               {dDiscount > 0 && !couponTargetsShipping && (couponResult || checkoutResult?.couponAutoApplied) && (
