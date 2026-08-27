@@ -32,6 +32,7 @@ import {
   Info,
   Bell,
   Globe,
+  MapPin,
 } from "lucide-react"
 
 const INPUT_CLASS =
@@ -460,6 +461,20 @@ export default function SettingsPage() {
           className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
         >
           Open Store shipping
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </Section>
+
+      <Section
+        icon={MapPin}
+        title="Pickup"
+        subtitle="Enable in-person pickup and set the location buyers see at checkout."
+      >
+        <Link
+          href="/admin/settings/pickup"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
+        >
+          Open Pickup settings
           <ChevronRight className="h-4 w-4" />
         </Link>
       </Section>
