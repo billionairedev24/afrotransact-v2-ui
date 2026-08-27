@@ -29,11 +29,13 @@ import { toast } from "sonner"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getForYouProducts, type ForYouProduct } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
+import { useBuyNowStore } from "@/stores/buy-now-store"
 
 export function ForYouRail() {
   const { status } = useSession()
   const router = useRouter()
   const addItem = useCartStore((s) => s.addItem)
+  const setBuyNow = useBuyNowStore((s) => s.setBuyNow)
   const [items, setItems] = useState<ForYouProduct[] | null>(null)
 
   useEffect(() => {
@@ -69,14 +71,10 @@ export function ForYouRail() {
       ? "Buy it again"
       : "For you"
 
-  function handleAddToCart(p: ForYouProduct) {
-    if (!p.variantId) {
-      toast.error("This item is no longer available in the same variant")
-      return
-    }
-    addItem({
+  function mapToCartItem(p: ForYouProduct) {
+    return {
       productId: p.productId,
-      variantId: p.variantId,
+      variantId: p.variantId as string,
       storeId: p.storeId ?? "",
       storeName: "",
       title: p.name,
@@ -88,8 +86,25 @@ export function ForYouRail() {
       quantity: 1,
       imageUrl: p.imageUrl ?? undefined,
       slug: p.slug ?? "",
-    })
-    router.push("/checkout")
+    }
+  }
+
+  function handleAddToCart(p: ForYouProduct) {
+    if (!p.variantId) {
+      toast.error("This item is no longer available in the same variant")
+      return
+    }
+    addItem(mapToCartItem(p))
+    toast.success("Added to cart")
+  }
+
+  function handleBuyNow(p: ForYouProduct) {
+    if (!p.variantId) {
+      toast.error("This item is no longer available in the same variant")
+      return
+    }
+    setBuyNow(mapToCartItem(p))
+    router.push("/checkout?buynow=1")
   }
 
   return (
@@ -149,13 +164,22 @@ export function ForYouRail() {
                     Out of Stock
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleAddToCart(p)}
-                    className="mt-2 w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover transition-colors"
-                  >
-                    {isBuyAgain ? "Buy Again" : "Add to cart"}
-                  </button>
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleAddToCart(p)}
+                      className="w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover transition-colors"
+                    >
+                      {isBuyAgain ? "Buy Again" : "Add to cart"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleBuyNow(p)}
+                      className="w-full border border-border text-foreground py-1.5 rounded-full text-xs font-bold text-center hover:bg-muted transition-colors"
+                    >
+                      Buy now
+                    </button>
+                  </div>
                 )}
               </div>
             )

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useCartStore } from "@/stores/cart-store"
+import { useBuyNowStore } from "@/stores/buy-now-store"
 import { storeDisplayName } from "@/lib/house-store"
 import type { CatalogItemBuyBox, OfferSummary } from "@/lib/api"
 
@@ -23,26 +24,31 @@ export function BuyBoxClient({
   primaryImageUrl: string | null
 }) {
   const addItem = useCartStore((s) => s.addItem)
+  const setBuyNow = useBuyNowStore((s) => s.setBuyNow)
   const router = useRouter()
   const [adding, setAdding] = useState<string | null>(null)
+
+  function mapToCartItem(offer: OfferSummary, qty: number) {
+    return {
+      // productId = offerId in V1 (1:1 with catalog.products row).
+      productId: offer.offerId,
+      variantId: offer.variantId,
+      storeId: offer.storeId,
+      storeName: storeDisplayName(offer.storeId),
+      title: item.title,
+      variantName: offer.variantName ?? "Default",
+      // CartStore.price is in cents. OfferSummary.price is in major units.
+      price: Math.round(offer.price * 100),
+      quantity: qty,
+      imageUrl: primaryImageUrl ?? undefined,
+      slug: item.slug,
+    }
+  }
 
   function add(offer: OfferSummary, qty: number = 1) {
     setAdding(offer.offerId)
     try {
-      addItem({
-        // productId = offerId in V1 (1:1 with catalog.products row).
-        productId: offer.offerId,
-        variantId: offer.variantId,
-        storeId: offer.storeId,
-        storeName: storeDisplayName(offer.storeId),
-        title: item.title,
-        variantName: offer.variantName ?? "Default",
-        // CartStore.price is in cents. OfferSummary.price is in major units.
-        price: Math.round(offer.price * 100),
-        quantity: qty,
-        imageUrl: primaryImageUrl ?? undefined,
-        slug: item.slug,
-      })
+      addItem(mapToCartItem(offer, qty))
       toast.success(`Added ${item.title} to cart`)
     } finally {
       setAdding(null)
@@ -50,8 +56,10 @@ export function BuyBoxClient({
   }
 
   function buyNow(offer: OfferSummary) {
-    add(offer, 1)
-    router.push("/checkout")
+    // Deliberately do NOT call add() here — Buy Now must not touch the
+    // persistent cart, only the ephemeral buy-now store.
+    setBuyNow(mapToCartItem(offer, 1))
+    router.push("/checkout?buynow=1")
   }
 
   if (!item.buyBox) {

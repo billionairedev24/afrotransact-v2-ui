@@ -28,7 +28,7 @@ import {
   useImperativeHandle,
   forwardRef,
 } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Elements,
   PaymentElement,
@@ -60,6 +60,7 @@ import { cn } from "@/lib/utils"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { features } from "@/lib/features"
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
+import { useBuyNowStore } from "@/stores/buy-now-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
@@ -82,6 +83,7 @@ import {
   listSavedPaymentMethods,
   validateCoupon,
   resolveServiceZone,
+  getStoreById,
   ApiError,
   type CheckoutResponse,
   type CheckoutShippingContext,
@@ -95,6 +97,18 @@ import {
   type ValidateCouponResponse,
   type ResolvedZone,
 } from "@/lib/api"
+
+// A store name that is actually a raw UUID (storeId used as a placeholder
+// when the real name wasn't populated on the cart item) must never be shown
+// to the buyer — see checkout store-name resolver below.
+function looksLikeUuid(s: string | null | undefined): boolean {
+  return !!s && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s)
+}
+
+// House store (AfroTransact-fulfilled items) uses a fixed id; every other
+// storeId is a seller. Module-level so it's available to the store-name
+// resolver above the fulfillment-groups section that originally defined it.
+const HOUSE_STORE_ID_CONST = "00000000-0000-0000-0000-00000000a710"
 
 // Module-local Stripe singleton. We don't reuse the one inside
 // `_stripe-payment.tsx` because it isn't exported, and per the V2 brief we
@@ -167,11 +181,87 @@ export default function CheckoutClientV2({
   // ─── cart ──────────────────────────────────────────────────────────
   const cartItems = useCartStore((s) => s.items)
   const { cartReady } = useCartHydration()
-  const getSubtotal = useCartStore((s) => s.getSubtotal)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeItem = useCartStore((s) => s.removeItem)
   const clearCart = useCartStore((s) => s.clearCart)
-  const subtotal = getSubtotal()
+
+  // ─── buy-now mode (?buynow=1) ───────────────────────────────────────
+  // A "Buy Now" CTA (ForYouRail / ProductPageClient / BuyBoxClient) sets
+  // the ephemeral buy-now store and lands here with ?buynow=1. In that
+  // mode the order path (subtotal, fulfillment groups, quotes, submit
+  // payload, review list) uses ONLY the buy-now item(s), and on success we
+  // clear the buy-now store instead of the persistent cart — so a buy-now
+  // purchase never disturbs whatever else is sitting in the buyer's cart.
+  //
+  // KNOWN BACKEND GAP: order-service's PaymentEventConsumer clears the
+  // buyer's SERVER cart on payment confirmation regardless of how the
+  // order was placed. Because checkout syncs `effectiveItems` to the
+  // server cart before minting (see syncServerCart/mintIntent below), a
+  // buy-now purchase can still cause the buyer's real server-side cart to
+  // be wiped when the order confirms. This frontend change preserves the
+  // LOCAL (zustand) cart state, but the server cart clear is a backend
+  // follow-up (PaymentEventConsumer should only clear items that were
+  // actually part of the order, not blanket-clear).
+  const searchParams = useSearchParams()
+  const buyNowMode = searchParams.get("buynow") === "1"
+  const buyNowItems = useBuyNowStore((s) => s.items)
+  const clearBuyNow = useBuyNowStore((s) => s.clear)
+  const buyNowUpdateQuantity = useBuyNowStore((s) => s.updateQuantity)
+  const buyNowRemoveItem = useBuyNowStore((s) => s.removeItem)
+
+  // Graceful fallback: if buy-now mode is requested but the (in-memory,
+  // unpersisted) buy-now store is empty — e.g. the buyer refreshed the
+  // checkout page — fall back to the persistent cart rather than showing
+  // a hard error; the empty-cart guard effect further below will redirect
+  // to /cart if that's also empty.
+  const effectiveItems = buyNowMode && buyNowItems.length > 0 ? buyNowItems : cartItems
+  const doUpdateQuantity = buyNowMode ? buyNowUpdateQuantity : updateQuantity
+  const doRemoveItem = buyNowMode ? buyNowRemoveItem : removeItem
+
+  // ─── Store-name resolution ──────────────────────────────────────────
+  // Cart items may carry `storeName` = the storeId (a UUID) when the real
+  // name wasn't populated upstream. Never render that verbatim — resolve
+  // the real name via the seller-service store lookup, cache results, and
+  // fall back to a clean generic label rather than a UUID.
+  const [storeNames, setStoreNames] = useState<Map<string, string>>(new Map())
+  const nonHouseStoreIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const it of effectiveItems) {
+      if (it.storeId && it.storeId !== HOUSE_STORE_ID_CONST) ids.add(it.storeId)
+    }
+    return Array.from(ids).sort()
+  }, [effectiveItems])
+  useEffect(() => {
+    const missing = nonHouseStoreIds.filter((id) => !storeNames.has(id))
+    if (missing.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      const results = await Promise.allSettled(missing.map((id) => getStoreById(id)))
+      if (cancelled) return
+      setStoreNames((prev) => {
+        const next = new Map(prev)
+        results.forEach((r, i) => {
+          if (r.status === "fulfilled" && r.value?.name) next.set(missing[i], r.value.name)
+        })
+        return next
+      })
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonHouseStoreIds])
+
+  const resolveStoreName = useCallback(
+    (storeId: string, fallbackName?: string | null): string => {
+      if (storeId === HOUSE_STORE_ID_CONST) return "AfroTransact"
+      const fetched = storeNames.get(storeId)
+      if (fetched) return fetched
+      if (fallbackName && !looksLikeUuid(fallbackName) && fallbackName !== storeId) return fallbackName
+      return "Seller store"
+    },
+    [storeNames],
+  )
+
+  const subtotal = effectiveItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
   // Buyer's resolved service-location (post-regions rewrite). Preferred
   // over region for shipping quotes, coupon validation, and free-shipping
@@ -397,7 +487,7 @@ export default function CheckoutClientV2({
   // "Cart is empty" and the UI shows "couldn't find shipping options".
   const syncServerCart = useCallback(async () => {
     if (!authToken) return
-    const items = cartItems.map((item) => ({
+    const items = effectiveItems.map((item) => ({
       variantId: item.variantId,
       productId: item.productId || item.variantId,
       storeId: item.storeId,
@@ -412,7 +502,7 @@ export default function CheckoutClientV2({
       heightIn: item.heightIn ?? null,
     }))
     await mergeCart(authToken, items)
-  }, [authToken, cartItems])
+  }, [authToken, effectiveItems])
 
   // ─── shipping quotes (Section 2) ───────────────────────────────────
   const [quotes, setQuotes] = useState<ShippingQuoteResponse | null>(null)
@@ -527,31 +617,32 @@ export default function CheckoutClientV2({
   // rate yet, so two "ship" groups in the same order share one delivery
   // quote. A future backend task would need to quote each store's parcel
   // independently to remove this limitation.
-  const HOUSE_STORE_ID = "00000000-0000-0000-0000-00000000a710"
+  const HOUSE_STORE_ID = HOUSE_STORE_ID_CONST
 
   type FulfillmentGroup = {
     storeId: string
     storeName: string
     isHouse: boolean
-    items: typeof cartItems
+    items: typeof effectiveItems
   }
   const fulfillmentGroups: FulfillmentGroup[] = useMemo(() => {
     const order: string[] = []
     const map = new Map<string, FulfillmentGroup>()
-    for (const item of cartItems) {
+    for (const item of effectiveItems) {
       if (!map.has(item.storeId)) {
         order.push(item.storeId)
         map.set(item.storeId, {
           storeId: item.storeId,
           isHouse: item.storeId === HOUSE_STORE_ID,
-          storeName: item.storeId === HOUSE_STORE_ID ? "AfroTransact" : (item.storeName || "Seller"),
+          storeName: resolveStoreName(item.storeId, item.storeName),
           items: [],
         })
       }
       map.get(item.storeId)!.items.push(item)
     }
     return order.map((id) => map.get(id)!)
-  }, [cartItems])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveItems, storeNames])
 
   const storePickupByStoreId = useMemo(() => {
     const m = new Map<string, StorePickupOption>()
@@ -652,7 +743,7 @@ export default function CheckoutClientV2({
   useEffect(() => {
     if (!didInitialQuoteRef.current) return
     if (!authToken || !region || !selectedAddress) return
-    if (cartItems.length === 0) return
+    if (effectiveItems.length === 0) return
 
     if (requoteTimerRef.current) clearTimeout(requoteTimerRef.current)
     requoteTimerRef.current = setTimeout(() => {
@@ -706,10 +797,10 @@ export default function CheckoutClientV2({
     return () => {
       if (requoteTimerRef.current) clearTimeout(requoteTimerRef.current)
     }
-    // We deliberately depend on cartItems (not items by ref): qty + composition.
+    // We deliberately depend on effectiveItems (not items by ref): qty + composition.
     // activeZoneId included so a resolved zone change triggers a re-quote.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartItems, authToken, region?.id, selectedAddress?.id, activeZoneId])
+  }, [effectiveItems, authToken, region?.id, selectedAddress?.id, activeZoneId])
 
   // ─── saved cards (Section 3) ───────────────────────────────────────
   const [savedCards, setSavedCards] = useState<SavedPaymentMethod[]>([])
@@ -817,7 +908,7 @@ export default function CheckoutClientV2({
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotal, cartItems.length, region?.id, activeZoneId])
+  }, [subtotal, effectiveItems.length, region?.id, activeZoneId])
 
   // ─── totals ────────────────────────────────────────────────────────
   // Tax comes from the resolved destination zone — the same source the server
@@ -914,7 +1005,7 @@ export default function CheckoutClientV2({
     setMinting(true)
     setPlaceError(null)
     try {
-      const items = cartItems.map((item) => ({
+      const items = effectiveItems.map((item) => ({
         variantId: item.variantId,
         productId: item.productId || item.variantId,
         storeId: item.storeId,
@@ -1001,7 +1092,7 @@ export default function CheckoutClientV2({
       placingRef.current = false
       setMinting(false)
     }
-  }, [authToken, region, selectedAddress, cartItems, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
+  }, [authToken, region, selectedAddress, effectiveItems, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
 
   // ─── place order ───────────────────────────────────────────────────
   const paymentHandleRef = useRef<PaymentHandle | null>(null)
@@ -1012,11 +1103,21 @@ export default function CheckoutClientV2({
     // fires and the order materializes. Deleting it here caused a race:
     // any lingering checkout request (mount effect, retry) would hit an
     // already-empty cart and fail with 400.
-    clearCart()
-    try { clearGuestCart() } catch { /* non-fatal */ }
+    //
+    // Buy-now mode: clear ONLY the ephemeral buy-now store, never the
+    // persistent cart — a buy-now purchase must leave whatever else is in
+    // the buyer's cart untouched. (See the KNOWN BACKEND GAP note above:
+    // the server-side cart is still blanket-cleared by PaymentEventConsumer,
+    // which this frontend change cannot prevent.)
+    if (buyNowMode) {
+      clearBuyNow()
+    } else {
+      clearCart()
+      try { clearGuestCart() } catch { /* non-fatal */ }
+    }
     const sid = checkoutResult?.checkoutSessionId
     router.push(sid ? `/checkout/complete?session=${encodeURIComponent(sid)}` : "/checkout/complete")
-  }, [clearCart, router, checkoutResult])
+  }, [buyNowMode, clearBuyNow, clearCart, router, checkoutResult])
 
   // Pre-mint the PI as soon as we have an address + rate, so clientSecret is
   // ready by the time the buyer scrolls to payment. mintIntent is idempotent
@@ -1061,7 +1162,7 @@ export default function CheckoutClientV2({
 
   // ─── disabled reason for Place Order ──────────────────────────────
   let disabledReason: string | null = null
-  if (cartItems.length === 0) disabledReason = "Your cart is empty"
+  if (effectiveItems.length === 0) disabledReason = "Your cart is empty"
   else if (!selectedAddress) disabledReason = `Select a ${shipNounLower} address`
   else if (ratesUnavailable) disabledReason = "Shipping isn't available for this address yet"
   else if (!allPickupSelected && !selectedQuoteId) disabledReason = "Choose a delivery option"
@@ -1076,14 +1177,24 @@ export default function CheckoutClientV2({
     // for a moment until getCart() lands. Wait for the cart to actually
     // hydrate (cartReady) before treating an empty cart as real — otherwise a
     // checkout refresh redirects to /cart on the transient empty state.
-    if (!mounted || !cartReady) return
+    // Buy-now mode's item lives in an unpersisted in-memory store, so it has
+    // no such hydration delay — skip the cartReady wait in that mode.
+    if (!mounted) return
+    if (!buyNowMode && !cartReady) return
     // Also bail while a payment is in-flight: handlePaymentComplete() calls
-    // clearCart() *before* router.push('/checkout/complete'), and without this
-    // guard the resulting empty-cart transition races the push and lands the
-    // buyer on /cart instead of the acknowledgement page.
+    // clearCart()/clearBuyNow() *before* router.push('/checkout/complete'),
+    // and without this guard the resulting empty transition races the push
+    // and lands the buyer on /cart instead of the acknowledgement page.
     if (paying || placingRef.current) return
-    if (cartItems.length === 0) router.replace("/cart")
-  }, [mounted, cartReady, cartItems.length, router, paying])
+    if (effectiveItems.length === 0) {
+      // Buy-now mode with nothing in the ephemeral store means the buyer
+      // refreshed mid buy-now-checkout (in-memory state doesn't survive a
+      // reload) and also has nothing in their persistent cart to fall back
+      // to — send them back with an explanation instead of a bare redirect.
+      if (buyNowMode) toast.error("Your buy-now session expired.")
+      router.replace("/cart")
+    }
+  }, [mounted, cartReady, buyNowMode, effectiveItems.length, router, paying])
 
   if (!mounted) {
     return (
@@ -1478,10 +1589,10 @@ export default function CheckoutClientV2({
           <Section
             n={4}
             title="Review items"
-            subtitle={`${cartItems.length} item${cartItems.length === 1 ? "" : "s"} in your order`}
+            subtitle={`${effectiveItems.length} item${effectiveItems.length === 1 ? "" : "s"} in your order`}
           >
             <ul className="divide-y divide-gray-100">
-              {cartItems.map((it) => (
+              {effectiveItems.map((it) => (
                 <li key={it.variantId} className="flex gap-3 py-3">
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                     {it.imageUrl ? (
@@ -1493,27 +1604,37 @@ export default function CheckoutClientV2({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 line-clamp-2">{it.title}</p>
                     <p className="text-xs text-gray-500">
-                      {it.storeName && it.storeName !== it.storeId ? it.storeName : null}
-                      {it.storeName && it.storeName !== it.storeId && it.variantName ? " • " : null}
-                      {it.variantName || null}
+                      {(() => {
+                        const label =
+                          it.storeId === HOUSE_STORE_ID_CONST
+                            ? null
+                            : resolveStoreName(it.storeId, it.storeName)
+                        return (
+                          <>
+                            {label}
+                            {label && it.variantName ? " • " : null}
+                            {it.variantName || null}
+                          </>
+                        )
+                      })()}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <button
                         type="button"
-                        onClick={() => updateQuantity(it.variantId, Math.max(0, it.quantity - 1))}
+                        onClick={() => doUpdateQuantity(it.variantId, Math.max(0, it.quantity - 1))}
                         className="h-7 w-7 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
                         aria-label="Decrease quantity"
                       >−</button>
                       <span className="text-sm font-semibold tabular-nums w-6 text-center">{it.quantity}</span>
                       <button
                         type="button"
-                        onClick={() => updateQuantity(it.variantId, it.quantity + 1)}
+                        onClick={() => doUpdateQuantity(it.variantId, it.quantity + 1)}
                         className="h-7 w-7 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
                         aria-label="Increase quantity"
                       >+</button>
                       <button
                         type="button"
-                        onClick={() => removeItem(it.variantId)}
+                        onClick={() => doRemoveItem(it.variantId)}
                         className="ml-2 text-xs font-semibold text-red-600 hover:underline"
                       >
                         Remove
@@ -1582,7 +1703,7 @@ export default function CheckoutClientV2({
 
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <dt className="text-gray-600">Items ({cartItems.length})</dt>
+                <dt className="text-gray-600">Items ({effectiveItems.length})</dt>
                 <dd className="text-gray-900 tabular-nums">{formatCents(dSubtotal)}</dd>
               </div>
               {dDiscount > 0 && !couponTargetsShipping && (couponResult || checkoutResult?.couponAutoApplied) && (
@@ -1604,19 +1725,29 @@ export default function CheckoutClientV2({
                 // see the "Known limitation" comment near perGroupShipCents),
                 // so each ship group shows its even-split attribution rather
                 // than an independently-quoted rate.
-                fulfillmentGroups.map((g) => {
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    {shipNoun}
+                  </p>
+                  <div className="space-y-1.5">
+                    {fulfillmentGroups.map((g) => {
                   const method = effectiveMethod(g.storeId)
-                  const label = g.isHouse ? "AfroTransact" : g.storeName
                   const cents = method === "pickup" ? 0 : (perGroupShipCents.get(g.storeId) ?? 0)
                   return (
-                    <div key={g.storeId} className="flex justify-between">
-                      <dt className="text-gray-600">
-                        {shipNoun} — {label}
-                        {method === "pickup" && (
-                          <span className="ml-2 text-[11px] font-semibold text-green-700">Pickup · Free</span>
+                    <div key={g.storeId} className="flex items-center justify-between gap-3">
+                      <dt className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-gray-900 dark:text-foreground truncate max-w-[9rem] sm:max-w-[11rem]">
+                          {g.storeName}
+                        </span>
+                        {method === "pickup" ? (
+                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-full">
+                            Pickup
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-[11px] text-gray-500">{shipNounLower}</span>
                         )}
                       </dt>
-                      <dd className="text-gray-900 tabular-nums">
+                      <dd className="shrink-0 text-gray-900 tabular-nums">
                         {method === "pickup" ? (
                           <span className="text-green-700 font-semibold">Free</span>
                         ) : (
@@ -1625,7 +1756,9 @@ export default function CheckoutClientV2({
                       </dd>
                     </div>
                   )
-                })
+                    })}
+                  </div>
+                </div>
               ) : (
               <div className="flex justify-between">
                 <dt className="text-gray-600">
@@ -2122,10 +2255,12 @@ function InlinePaymentForm({
  *  secure, PCI-compliant transaction. */
 function PoweredByStripe({ className }: { className?: string }) {
   return (
-    <div className={cn("flex items-center justify-center gap-1.5 text-gray-400", className)}>
+    <div className={cn("flex items-center justify-center gap-1.5 text-muted-foreground/80", className)}>
       <Lock className="h-3 w-3 shrink-0" />
+      <span className="text-[11px] font-medium">Secure checkout</span>
+      <span className="text-gray-300 dark:text-border">·</span>
       <span className="text-[11px]">Powered by</span>
-      <svg viewBox="0 0 60 25" width="42" height="18" role="img" aria-label="Stripe" fill="none">
+      <svg viewBox="0 0 60 25" width="38" height="16" role="img" aria-label="Stripe" fill="none" className="opacity-80">
         <title>Stripe</title>
         <path
           fillRule="evenodd"

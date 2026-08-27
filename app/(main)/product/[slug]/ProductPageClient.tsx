@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils"
 import ProductReviews from "@/components/reviews/ProductReviews"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 import { useCartStore } from "@/stores/cart-store"
+import { useBuyNowStore } from "@/stores/buy-now-store"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { useWishlistStore } from "@/stores/wishlist-store"
 import { useWishlist } from "@/hooks/use-wishlist"
@@ -97,6 +98,7 @@ export default function ProductPageClient() {
   const addItem = useCartStore((s) => s.addItem)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeItem = useCartStore((s) => s.removeItem)
+  const setBuyNow = useBuyNowStore((s) => s.setBuyNow)
 
   const [productDeal, setProductDeal] = useState<DealData | null>(null)
 
@@ -231,8 +233,27 @@ export default function ProductPageClient() {
 
   function handleBuyNow() {
     if (!product || !variant || !inStock) return
-    if (!isInCart) handleAddToCart()
-    router.push("/checkout")
+    // Deliberately does NOT touch the persistent cart — Buy Now checks out
+    // only this exact item via the ephemeral buy-now store, leaving the
+    // buyer's cart (including any existing entry for this same variant)
+    // untouched.
+    setBuyNow({
+      productId: product.id,
+      variantId: variant.id,
+      storeId: product.storeId,
+      storeName: storeName || (isHouseStore(product.storeId) ? HOUSE_STORE_NAME : "Store"),
+      title: product.title,
+      variantName: variant.name || "Default",
+      price: displayPriceCents,
+      quantity,
+      imageUrl: product.images[0]?.url,
+      slug: product.slug,
+      weightKg: variant.weightKg ?? null,
+      lengthIn: variant.lengthIn ?? null,
+      widthIn: variant.widthIn ?? null,
+      heightIn: variant.heightIn ?? null,
+    })
+    router.push("/checkout?buynow=1")
   }
 
   if (loading) {
