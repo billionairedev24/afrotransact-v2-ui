@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { toLocalDate } from "./format"
 
 export type PeriodKey = "mtd" | "lastMonth" | "custom"
 
@@ -21,17 +22,17 @@ const OPTIONS: { key: PeriodKey; label: string }[] = [
   { key: "custom", label: "Custom" },
 ]
 
-/** Month-to-date range: first of this month → now, as ISO date-times. */
+/** Month-to-date range: first of this month → today, as bare YYYY-MM-DD dates. */
 function mtdRange(now: Date): { from: string; to: string } {
   const from = new Date(now.getFullYear(), now.getMonth(), 1)
-  return { from: from.toISOString(), to: now.toISOString() }
+  return { from: toLocalDate(from), to: toLocalDate(now) }
 }
 
-/** Full previous calendar month, as ISO date-times. */
+/** Full previous calendar month (1st → last day), as bare YYYY-MM-DD dates. */
 function lastMonthRange(now: Date): { from: string; to: string } {
   const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const to = new Date(now.getFullYear(), now.getMonth(), 1)
-  return { from: from.toISOString(), to: to.toISOString() }
+  const to = new Date(now.getFullYear(), now.getMonth(), 0) // day 0 = last day of previous month
+  return { from: toLocalDate(from), to: toLocalDate(to) }
 }
 
 export function PeriodSelect({ value, onChange }: PeriodSelectProps) {

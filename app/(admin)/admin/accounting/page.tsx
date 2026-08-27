@@ -36,7 +36,7 @@ import { ReconciliationPanel } from "./_components/ReconciliationPanel"
 import { OperatingCosts } from "./_components/OperatingCosts"
 import { RecordCostForm } from "./_components/RecordCostForm"
 import { JournalTable, TrialBalanceTable } from "./_components/ScopedLedgerTable"
-import { money } from "./_components/format"
+import { money, toLocalDate } from "./_components/format"
 
 type TabKey = "pnl" | "reconciliation" | "opex" | "journal" | "trial"
 
@@ -51,7 +51,7 @@ const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?
 function mtdDefault(): { from: string; to: string } {
   const now = new Date()
   const from = new Date(now.getFullYear(), now.getMonth(), 1)
-  return { from: from.toISOString(), to: now.toISOString() }
+  return { from: toLocalDate(from), to: toLocalDate(now) }
 }
 
 /** Build the top KPI row from a scope's P&L (hero = TOTAL line) + supplementary lines. */
@@ -352,14 +352,14 @@ export default function AdminAccountingPage() {
             <input
               type="date"
               value={range.from.slice(0, 10)}
-              onChange={(e) => setRange((r) => ({ ...r, from: new Date(e.target.value).toISOString() }))}
+              onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
               className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
             />
             <span className="text-xs text-muted-foreground">to</span>
             <input
               type="date"
               value={range.to.slice(0, 10)}
-              onChange={(e) => setRange((r) => ({ ...r, to: new Date(e.target.value).toISOString() }))}
+              onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
               className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
             />
           </div>
