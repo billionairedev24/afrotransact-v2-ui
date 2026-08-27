@@ -1001,7 +1001,7 @@ export default function CheckoutClientV2({
       placingRef.current = false
       setMinting(false)
     }
-  }, [authToken, region, selectedAddress, cartItems, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, perGroupShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
+  }, [authToken, region, selectedAddress, cartItems, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
 
   // ─── place order ───────────────────────────────────────────────────
   const paymentHandleRef = useRef<PaymentHandle | null>(null)
