@@ -975,23 +975,8 @@ export default function CheckoutClientV2({
   const effectiveShippingCents = Math.max(0, shippingCents - shippingDiscountCents)
   const total = taxableSubtotal + tax + effectiveShippingCents
 
-  // Per-group shipping breakdown for the order summary: even split of the
-  // shared order-level delivery cost across groups currently choosing to
-  // ship (documented limitation — no per-store carrier rate yet). Remainder
-  // cents land on the first N groups so the figures sum exactly to
-  // effectiveShippingCents. Pickup groups always contribute $0.
-  const perGroupShipCents = useMemo(() => {
-    const map = new Map<string, number>()
-    if (shipGroups.length === 0) return map
-    const base = Math.floor(effectiveShippingCents / shipGroups.length)
-    const remainder = effectiveShippingCents - base * shipGroups.length
-    shipGroups.forEach((g, i) => {
-      map.set(g.storeId, base + (i < remainder ? 1 : 0))
-    })
-    return map
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shipGroups.map((g) => g.storeId).join(","), effectiveShippingCents])
-
+  // Delivery is a single flat order-level fee shown once in the summary — the
+  // per-group even-split display was removed (it read as "$7.99 × N stores").
   // Per-group shipping split for the CHECKOUT PAYLOAD's `groupSelections`.
   // This must use the PRE-discount `shippingCents` (the same base as
   // `selectedShippingAmountCents`), NOT `effectiveShippingCents` — the
@@ -1594,15 +1579,19 @@ export default function CheckoutClientV2({
                                   Arrives in {DELIVERY_ETA_HOURS} hours
                                 </p>
                               </div>
+                              {/* Delivery is a single FLAT fee for the whole order
+                                  (shown once in the order summary), never a per-group
+                                  charge — so we don't stamp the dollar amount on each
+                                  group's option (that read as "$7.99 × N"). */}
                               {freeShippingApplies ? (
                                 <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
                               ) : couponTargetsShipping ? (
                                 <span className="text-sm tabular-nums">
-                                  <span className="mr-1.5 text-muted-foreground line-through">{fmtShip(q.amountCents)}</span>
+                                  <span className="mr-1.5 text-muted-foreground line-through">{fmtShip(shippingCents)}</span>
                                   <span className="font-bold text-emerald-700 dark:text-emerald-400">Free</span>
                                 </span>
                               ) : (
-                                <span className="text-sm font-bold text-foreground tabular-nums">{fmtShip(q.amountCents)}</span>
+                                <span className="text-xs font-medium text-muted-foreground">Flat rate</span>
                               )}
                             </label>
                           )
@@ -1780,58 +1769,17 @@ export default function CheckoutClientV2({
                   <dd className="tabular-nums">-{formatCents(dDiscount)}</dd>
                 </div>
               )}
-              {fulfillmentGroups.length > 1 ? (
-                // Multi-store cart: itemize shipping per fulfillment group.
-                // Delivery cost is order-level (shared across ship groups —
-                // see the "Known limitation" comment near perGroupShipCents),
-                // so each ship group shows its even-split attribution rather
-                // than an independently-quoted rate.
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                    {shipNoun}
-                  </p>
-                  <div className="space-y-1.5">
-                    {fulfillmentGroups.map((g) => {
-                  const method = effectiveMethod(g.storeId)
-                  const cents = method === "pickup" ? 0 : (perGroupShipCents.get(g.storeId) ?? 0)
-                  return (
-                    <div key={g.storeId} className="flex items-center justify-between gap-3">
-                      <dt className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-gray-900 dark:text-foreground truncate max-w-[9rem] sm:max-w-[11rem]">
-                          {g.storeName}
-                        </span>
-                        {method === "pickup" ? (
-                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-full">
-                            Pickup
-                          </span>
-                        ) : (
-                          <span className="shrink-0 text-[11px] text-gray-500">{shipNounLower}</span>
-                        )}
-                      </dt>
-                      <dd className="shrink-0 text-gray-900 tabular-nums">
-                        {method === "pickup" ? (
-                          <span className="text-green-700 font-semibold">Free</span>
-                        ) : (
-                          fmtShip(cents)
-                        )}
-                      </dd>
-                    </div>
-                  )
-                    })}
-                  </div>
-                </div>
-              ) : (
+              {/* Delivery is a SINGLE flat fee for the whole order — never split
+                  per store. When every group is pickup it's free; otherwise it's
+                  the one flat delivery rate (regardless of how many stores ship). */}
               <div className="flex justify-between">
                 <dt className="text-gray-600">
-                  {pickupSelected ? "Pickup" : shipNoun}
-                  {/* The badge must reflect what we actually charge — never
-                      contradict the line total. Show "free" when the buyer has
-                      met the free-shipping threshold or the quote is genuinely $0. */}
-                  {pickupSelected ? (
-                    <span className="ml-2 text-[11px] font-semibold text-green-700">Free</span>
-                  ) : effectiveShippingCents === 0 && (freeShippingApplies || selectedQuote) && !couponTargetsShipping && (
+                  {shipNoun}
+                  {allPickupSelected ? (
+                    <span className="ml-2 text-[11px] font-semibold text-green-700">Free · all pickup</span>
+                  ) : effectiveShippingCents === 0 && (freeShippingApplies || selectedQuote) && !couponTargetsShipping ? (
                     <span className="ml-2 text-[11px] font-semibold text-green-700">Free {shipNounLower} applied</span>
-                  )}
+                  ) : null}
                   {couponTargetsShipping && shippingDiscountCents > 0 && (
                     <span className="ml-2 text-[11px] font-semibold text-green-700">
                       {effectiveShippingCents === 0 ? "Waived" : "Discounted"} by {couponResult?.code}
@@ -1839,7 +1787,9 @@ export default function CheckoutClientV2({
                   )}
                 </dt>
                 <dd className="text-gray-900 tabular-nums">
-                  {freeShippingApplies || selectedQuote ? (
+                  {allPickupSelected ? (
+                    <span className="text-green-700 font-semibold">Free</span>
+                  ) : freeShippingApplies || selectedQuote ? (
                     couponTargetsShipping && shippingDiscountCents > 0 ? (
                       <>
                         <span className="text-gray-400 line-through mr-1">{fmtShip(shippingCents)}</span>
@@ -1851,7 +1801,6 @@ export default function CheckoutClientV2({
                   ) : "—"}
                 </dd>
               </div>
-              )}
               <div className="flex justify-between">
                 <dt className="text-gray-600">Tax</dt>
                 {dTax === 0 ? (
