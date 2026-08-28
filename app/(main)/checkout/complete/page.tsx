@@ -16,6 +16,7 @@ import {
   MapPin,
   Store,
   Clock,
+  ArrowRight,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
@@ -56,7 +57,7 @@ function OrderStamp({ orderNumber }: { orderNumber: string }) {
           .then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) })
           .catch(() => {})
       }}
-      className="group inline-flex items-center gap-2 rounded-full border border-brand-gold/60 bg-brand-gold/10 px-4 py-1.5 transition-colors hover:bg-brand-gold/20"
+      className="group inline-flex items-center gap-2.5 rounded-full border border-brand-gold/60 bg-brand-gold/10 px-4 py-2 transition-colors hover:bg-brand-gold/20"
     >
       <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-brand-gold-ink">Order</span>
       <span className="font-mono text-sm font-semibold tracking-wide text-foreground">{orderNumber}</span>
@@ -81,36 +82,46 @@ const PICKUP_JOURNEY = [
   { key: "collected", label: "Picked up", Icon: PackageCheck },
 ]
 
-function Journey({ steps }: { steps: typeof SHIP_JOURNEY }) {
+/** Horizontal stepper — completed/active/upcoming states with a connecting progress line. */
+function StatusTracker({ steps, title }: { steps: typeof SHIP_JOURNEY; title?: string }) {
   const active = 0 // just placed
   return (
     <div>
+      {title && (
+        <p className="mb-4 text-sm font-bold text-foreground">{title}</p>
+      )}
       <div className="flex items-center">
         {steps.map((s, i) => {
           const done = i <= active
           return (
             <Fragment key={s.key}>
-              <span
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 ${
-                  done
-                    ? "border-brand-green bg-brand-green text-brand-green-foreground"
-                    : "border-border bg-card text-muted-foreground/50"
-                }`}
-              >
-                <s.Icon className="h-4 w-4" />
-              </span>
+              <div className="flex flex-col items-center">
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                    done
+                      ? "border-brand-green bg-brand-green text-brand-green-foreground shadow-sm shadow-brand-green/30"
+                      : "border-border bg-card text-muted-foreground/50"
+                  }`}
+                >
+                  <s.Icon className="h-4.5 w-4.5" />
+                </span>
+              </div>
               {i < steps.length - 1 && (
-                <span className={`h-0.5 flex-1 ${i < active ? "bg-brand-green" : "bg-border"}`} />
+                <span
+                  className={`-mx-0.5 h-0.5 flex-1 rounded-full ${i < active ? "bg-brand-green" : "bg-border"}`}
+                />
               )}
             </Fragment>
           )
         })}
       </div>
-      <div className="mt-2 flex justify-between">
+      <div className="mt-2 flex">
         {steps.map((s, i) => (
           <span
             key={s.key}
-            className={`w-16 text-[11px] font-medium ${i <= active ? "text-foreground" : "text-muted-foreground"} ${i === 0 ? "text-left" : i === steps.length - 1 ? "text-right" : "text-center"}`}
+            className={`flex-1 text-[11px] font-medium leading-tight ${i <= active ? "text-foreground" : "text-muted-foreground"} ${
+              i === 0 ? "text-left" : i === steps.length - 1 ? "text-right" : "text-center"
+            }`}
           >
             {s.label}
           </span>
@@ -122,38 +133,51 @@ function Journey({ steps }: { steps: typeof SHIP_JOURNEY }) {
 
 function SummaryRow({ label, value, accent }: { label: string; value: string; accent?: "green" }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className={accent === "green" ? "font-medium text-brand-green" : "text-foreground"}>{value}</span>
+      <span className={`tabular-nums ${accent === "green" ? "font-medium text-brand-green" : "text-foreground"}`}>{value}</span>
     </div>
   )
 }
 
-/** Collect address / hours / instructions / prep time for a pickup sub-order. */
-function PickupAddressBlock({ subOrder }: { subOrder: SubOrderDto }) {
+/** Collect address / hours / instructions / prep time for a pickup sub-order — styled like a ticket/pass. */
+function PickupCard({ subOrder }: { subOrder: SubOrderDto }) {
   const loc = subOrder.pickupLocation
   if (!loc) return null
   const addressLine = [loc.city, loc.region].filter(Boolean).join(", ") + (loc.postalCode ? ` ${loc.postalCode}` : "")
-  const meta = [loc.hours, loc.prepTime].filter(Boolean)
   return (
-    <div className="rounded-xl border border-dashed border-brand-green/40 bg-brand-green-soft/60 px-4 py-3">
-      <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-green">
-        <MapPin className="h-4 w-4" /> Collect at {loc.name || "the store"}
-      </p>
-      {(loc.line1 || addressLine.trim()) && (
-        <p className="mt-1 text-[13px] text-foreground">
-          {loc.line1}
-          {loc.line1 && addressLine.trim() ? ", " : ""}
-          {addressLine.trim()}
-        </p>
-      )}
-      {meta.length > 0 && (
-        <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" /> {meta.join(" · ")}
-        </p>
-      )}
-      {loc.instructions && <p className="mt-1 text-xs text-muted-foreground">{loc.instructions}</p>}
-      <p className="mt-2 text-[11px] font-medium text-muted-foreground">
+    <div className="relative overflow-hidden rounded-2xl border border-brand-green/30 bg-brand-green-soft/50 p-5">
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-green text-brand-green-foreground">
+          <Store className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-brand-green">Collect in store</p>
+          <p className="mt-0.5 text-base font-bold text-foreground">{loc.name || "Store pickup"}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2.5 border-t border-dashed border-brand-green/30 pt-4">
+        {(loc.line1 || addressLine.trim()) && (
+          <p className="flex items-start gap-2 text-sm text-foreground">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+            <span>
+              {loc.line1}
+              {loc.line1 && addressLine.trim() ? ", " : ""}
+              {addressLine.trim()}
+            </span>
+          </p>
+        )}
+        {(loc.hours || loc.prepTime) && (
+          <p className="flex items-start gap-2 text-sm text-muted-foreground">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+            <span>{[loc.hours, loc.prepTime && `Ready in ${loc.prepTime}`].filter(Boolean).join(" · ")}</span>
+          </p>
+        )}
+        {loc.instructions && <p className="text-sm text-muted-foreground">{loc.instructions}</p>}
+      </div>
+
+      <p className="mt-4 rounded-lg bg-card/70 px-3 py-2 text-[11px] font-semibold text-muted-foreground">
         Bring your order number and a photo ID when you collect.
       </p>
     </div>
@@ -173,17 +197,129 @@ function getFulfillmentShape(order: OrderDto | null): FulfillmentShape {
 
 const HERO_COPY: Record<FulfillmentShape, { title: string; body: string }> = {
   allShip: {
-    title: "Your treasures are on the way!",
-    body: "Thanks for your order — we’ve got it and we’re getting it ready. A confirmation email is on its way.",
+    title: "Your order is on the way",
+    body: "Thanks for shopping with us — we've got it and we're getting it packed. A confirmation email is on its way.",
   },
   allPickup: {
-    title: "Your order is being prepared for pickup",
-    body: "Thanks for your order — we’ll let you know the moment it’s ready to collect. A confirmation email is on its way.",
+    title: "Your order will be ready to collect",
+    body: "Thanks for your order — we're getting your pickup ready and will let you know the moment it's waiting for you. A confirmation email is on its way.",
   },
   mixed: {
     title: "Thanks — your order is confirmed",
     body: "Part of your order ships to you, and part is ready to collect in-store. A confirmation email is on its way.",
   },
+}
+
+/** Hero: success mark, per-shape headline, reassurance line, order number stamp. */
+function Hero({ shape, orderNumber }: { shape: FulfillmentShape; orderNumber?: string | null }) {
+  const hero = HERO_COPY[shape]
+  return (
+    <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-center sm:gap-6 sm:text-left">
+      <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
+        <span className="absolute inset-0 rounded-full bg-brand-green/10" />
+        <span className="absolute inset-1.5 rounded-full bg-brand-green/15" />
+        <span className="relative flex h-11 w-11 items-center justify-center rounded-full bg-brand-green text-brand-green-foreground shadow-lg shadow-brand-green/30">
+          <CheckCircle className="h-6 w-6" />
+        </span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+          {hero.title}
+        </h1>
+        <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">{hero.body}</p>
+        {orderNumber && (
+          <div className="mt-4 flex justify-center sm:justify-start">
+            <OrderStamp orderNumber={orderNumber} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Mixed-cart: clearly labeled Shipping + Pickup sections, each with their own tracker. */
+function MixedSections({ pickupSubOrders }: { pickupSubOrders: SubOrderDto[] }) {
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <p className="mb-4 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Truck className="h-3.5 w-3.5" /> Shipping to you
+        </p>
+        <StatusTracker steps={SHIP_JOURNEY} />
+      </div>
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <p className="mb-4 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Store className="h-3.5 w-3.5" /> Ready for pickup
+        </p>
+        <StatusTracker steps={PICKUP_JOURNEY} />
+        <div className="mt-5 space-y-3">
+          {pickupSubOrders.map((s) => <PickupCard key={s.id} subOrder={s} />)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Sticky order-summary card: item rows with thumbnail, then subtotal/shipping/tax/total. */
+function OrderSummaryCard({
+  items,
+  order,
+  currency,
+  shape,
+}: {
+  items: NonNullable<OrderDto["subOrders"]>[number]["items"]
+  order: OrderDto | null
+  currency: string
+  shape: FulfillmentShape
+}) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:sticky lg:top-6">
+      <div className="border-b border-border px-5 py-4">
+        <h2 className="text-sm font-bold text-foreground">Order summary</h2>
+      </div>
+      <ul className="max-h-[360px] divide-y divide-border overflow-y-auto">
+        {items.map((it) => (
+          <li key={it.id} className="flex items-center gap-3 px-5 py-3">
+            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+              {it.imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={it.imageUrl} alt={it.productTitle ?? "Item"} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-muted-foreground"><Package className="h-5 w-5" /></div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-foreground">{it.productTitle ?? "Item"}</p>
+              {it.variantName && <p className="truncate text-xs text-muted-foreground">{it.variantName}</p>}
+              <p className="text-xs text-muted-foreground">Qty {it.quantity}</p>
+            </div>
+            <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+              {fmtMoney(it.totalPriceCents, currency)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="space-y-2 border-t border-border bg-muted/40 px-5 py-4">
+        <SummaryRow label="Subtotal" value={fmtMoney(order?.subtotalCents, currency)} />
+        {!!order?.discountCents && order.discountCents > 0 && (
+          <SummaryRow
+            label={`Discount${order.couponCode ? ` (${order.couponCode})` : ""}`}
+            value={`−${fmtMoney(order.discountCents, currency)}`}
+            accent="green"
+          />
+        )}
+        <SummaryRow
+          label={shape === "allPickup" ? "Pickup" : shape === "mixed" ? "Shipping & pickup" : "Shipping"}
+          value={order?.shippingCostCents ? fmtMoney(order.shippingCostCents, currency) : shape === "allPickup" ? "Pickup · Free" : "Free"}
+        />
+        <SummaryRow label="Tax" value={fmtMoney(order?.taxCents, currency)} />
+        <div className="mt-1 flex items-center justify-between border-t border-border pt-3">
+          <span className="text-base font-bold text-foreground">Total</span>
+          <span className="text-base font-extrabold tabular-nums text-foreground">{fmtMoney(order?.totalCents, currency)}</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
@@ -204,128 +340,68 @@ function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
   const currency = order?.currency ?? "USD"
   const shape = getFulfillmentShape(order)
   const pickupSubOrders = (order?.subOrders ?? []).filter((s) => s.deliveryMethod === "pickup")
-  const hero = HERO_COPY[shape]
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-14">
+    <main className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
       {/* Hero */}
-      <div className="text-center">
-        <div className="relative mx-auto flex h-20 w-20 items-center justify-center">
-          <span className="absolute inset-0 rounded-full bg-brand-green/10" />
-          <span className="absolute inset-2 rounded-full bg-brand-green/15" />
-          <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-brand-green text-brand-green-foreground shadow-lg shadow-brand-green/30">
-            <CheckCircle className="h-7 w-7" />
-          </span>
-        </div>
-        <h1 className="mt-6 font-display text-3xl font-extrabold tracking-tight text-foreground">
-          {hero.title}
-        </h1>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{hero.body}</p>
-        {orderNumber && (
-          <div className="mt-5 flex justify-center">
-            <OrderStamp orderNumber={orderNumber} />
-          </div>
-        )}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+        <Hero shape={shape} orderNumber={orderNumber} />
       </div>
 
-      {/* Progress tracker(s) */}
-      {shape === "mixed" ? (
-        <div className="mx-auto mt-10 max-w-lg space-y-8">
-          <div>
-            <p className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              <Store className="h-3.5 w-3.5" /> Pickup
-            </p>
-            <Journey steps={PICKUP_JOURNEY} />
-            <div className="mt-4 space-y-3">
-              {pickupSubOrders.map((s) => <PickupAddressBlock key={s.id} subOrder={s} />)}
-            </div>
-          </div>
-          <div>
-            <p className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              <Truck className="h-3.5 w-3.5" /> Shipping
-            </p>
-            <Journey steps={SHIP_JOURNEY} />
-          </div>
-        </div>
-      ) : (
-        <div className="mx-auto mt-10 max-w-md">
-          <Journey steps={shape === "allPickup" ? PICKUP_JOURNEY : SHIP_JOURNEY} />
-          {shape === "allPickup" && (
-            <div className="mt-6 space-y-3">
-              {pickupSubOrders.map((s) => <PickupAddressBlock key={s.id} subOrder={s} />)}
+      {/* Two-column: tracker/fulfillment (left) + sticky order summary (right) */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px] lg:items-start">
+        <div className="space-y-6">
+          {shape === "mixed" ? (
+            <MixedSections pickupSubOrders={pickupSubOrders} />
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+              <StatusTracker
+                steps={shape === "allPickup" ? PICKUP_JOURNEY : SHIP_JOURNEY}
+                title={shape === "allPickup" ? "Pickup status" : "Delivery status"}
+              />
+              {shape === "allPickup" && (
+                <div className="mt-6 space-y-3">
+                  {pickupSubOrders.map((s) => <PickupCard key={s.id} subOrder={s} />)}
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Order summary (best-effort) */}
-      {items.length > 0 && (
-        <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-          <div className="border-b border-border px-5 py-3">
-            <h2 className="text-sm font-bold text-foreground">Order summary</h2>
+          {/* What's next */}
+          <div className="flex items-start gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-sm text-muted-foreground shadow-sm">
+            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-brand-gold" />
+            <p>
+              We&rsquo;ll email your receipt now and another note the moment{" "}
+              {shape === "allPickup"
+                ? "your order is ready for pickup"
+                : shape === "mixed"
+                  ? "each part of your order ships or is ready to collect"
+                  : "your order ships"}
+              . You can track everything from your orders anytime.
+            </p>
           </div>
-          <ul className="divide-y divide-border">
-            {items.map((it) => (
-              <li key={it.id} className="flex items-center gap-3 px-5 py-3">
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-                  {it.imageUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={it.imageUrl} alt={it.productTitle ?? "Item"} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-muted-foreground"><Package className="h-5 w-5" /></div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{it.productTitle ?? "Item"}</p>
-                  {it.variantName && <p className="truncate text-xs text-muted-foreground">{it.variantName}</p>}
-                  <p className="text-xs text-muted-foreground">Qty {it.quantity}</p>
-                </div>
-                <span className="text-sm font-semibold text-foreground">{fmtMoney(it.totalPriceCents, currency)}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="space-y-1.5 border-t border-border bg-muted/40 px-5 py-4 text-sm">
-            <SummaryRow label="Subtotal" value={fmtMoney(order?.subtotalCents, currency)} />
-            {!!order?.discountCents && order.discountCents > 0 && (
-              <SummaryRow label={`Discount${order.couponCode ? ` (${order.couponCode})` : ""}`} value={`−${fmtMoney(order.discountCents, currency)}`} accent="green" />
-            )}
-            <SummaryRow
-              label={shape === "allPickup" ? "Pickup" : "Shipping"}
-              value={order?.shippingCostCents ? fmtMoney(order.shippingCostCents, currency) : "Free"}
-            />
-            <SummaryRow label="Tax" value={fmtMoney(order?.taxCents, currency)} />
-            <div className="mt-1 flex items-center justify-between border-t border-border pt-2">
-              <span className="font-bold text-foreground">Total</span>
-              <span className="font-extrabold text-foreground">{fmtMoney(order?.totalCents, currency)}</span>
-            </div>
+
+          {/* CTAs */}
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={orderNumber ? `/orders/${orderNumber}` : "/orders"}
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover"
+            >
+              {orderNumber ? "Track your order" : "View orders"} <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/"
+              className="rounded-xl border border-border px-6 py-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"
+            >
+              Continue shopping
+            </Link>
           </div>
         </div>
-      )}
 
-      {/* Next steps */}
-      <div className="mt-6 flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-brand-gold" />
-        <p>
-          We&rsquo;ll email your receipt now and another note the moment{" "}
-          {shape === "allPickup" ? "your order is ready for pickup" : "your order ships"}. You can track everything
-          from your orders anytime.
-        </p>
-      </div>
-
-      {/* CTAs */}
-      <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <Link
-          href={orderNumber ? `/orders/${orderNumber}` : "/orders"}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
-        >
-          <Package className="h-4 w-4" /> {orderNumber ? "View your order" : "View orders"}
-        </Link>
-        <Link
-          href="/"
-          className="rounded-xl border border-border px-6 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
-        >
-          Continue shopping
-        </Link>
+        {/* Order summary (best-effort, sticky on desktop) */}
+        {items.length > 0 && (
+          <OrderSummaryCard items={items} order={order} currency={currency} shape={shape} />
+        )}
       </div>
 
       {/* Suggestions */}
