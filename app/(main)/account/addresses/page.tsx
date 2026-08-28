@@ -108,17 +108,22 @@ export function AddressesSection() {
     }
   }
 
-  const field = (label: string, key: keyof FormState, placeholder = "") => (
-    <div>
-      <label className="mb-1.5 block text-xs font-semibold text-foreground">{label}</label>
-      <input
-        value={form[key] as string}
-        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-        placeholder={placeholder}
-        className="h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/30 transition"
-      />
-    </div>
-  )
+  const field = (label: string, key: keyof FormState, placeholder = "") => {
+    const fieldId = `addr-${String(key)}`
+    return (
+      <div>
+        <label htmlFor={fieldId} className="mb-1.5 block text-xs font-semibold text-foreground">{label}</label>
+        <input
+          id={fieldId}
+          name={String(key)}
+          value={form[key] as string}
+          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+          placeholder={placeholder}
+          className="h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/30 transition"
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
