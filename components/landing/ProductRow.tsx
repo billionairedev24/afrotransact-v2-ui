@@ -23,11 +23,12 @@ import { useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import { getProductById, type SearchResult } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { StarRating } from "@/components/products/StarRating"
+import { AddToCartControl } from "@/components/cart/AddToCartControl"
 
 interface ProductRowProps {
   title: string
@@ -154,15 +155,9 @@ function MiniProductCard({ product }: { product: SearchResult }) {
             Out of Stock
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={adding}
-            className="mt-2 w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
-          >
-            {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            {adding ? "Adding…" : "Add to Cart"}
-          </button>
+          <div className="mt-2">
+            <AddToCartControl productId={product.product_id} onAdd={handleAdd} adding={adding} />
+          </div>
         )}
       </div>
     </div>
