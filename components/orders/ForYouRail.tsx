@@ -4,7 +4,7 @@
  * Home-page "For You" rail. Successor to the old BuyItAgainRail — same
  * client-side gating (next-auth session + empty-response hide), but the API
  * now mixes three sources:
- *   - BUY_AGAIN — the buyer has bought this before (chip + "Buy Again" CTA).
+ *   - BUY_AGAIN — the buyer has bought this before (shown via a "Bought before" chip).
  *   - CO_PURCHASE — other buyers bought this alongside the buyer's purchases.
  *   - CATEGORY — top-rated active products in the buyer's past categories.
  *
@@ -113,7 +113,9 @@ export function ForYouRail() {
         <h2 className="font-display text-2xl md:text-[1.7rem] font-semibold tracking-tight text-foreground mb-6">{title}</h2>
         <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 snap-x">
           {items.map((p) => {
-            const isBuyAgain = p.source === "BUY_AGAIN"
+            // Repeat-purchase context is shown by the "Bought before" chip
+            // below — every card uses the same Add-to-cart / Buy-now pair, so
+            // no redundant "Buy Again" button.
             // Per-card chip copy. CATEGORY is the soft fallback; chipping it
             // would feel noisy because the buyer hasn't asked for it explicitly.
             const chip =
@@ -170,7 +172,7 @@ export function ForYouRail() {
                       onClick={() => handleAddToCart(p)}
                       className="w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover transition-colors"
                     >
-                      {isBuyAgain ? "Buy Again" : "Add to cart"}
+                      Add to cart
                     </button>
                     <button
                       type="button"
