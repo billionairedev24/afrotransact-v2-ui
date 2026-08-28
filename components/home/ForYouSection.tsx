@@ -2,19 +2,15 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ChevronRight, Loader2, Sparkles, Star, MapPin, Leaf, ShoppingCart } from "lucide-react"
+import { ChevronRight, Sparkles, Star, MapPin, Leaf } from "lucide-react"
 import { getRecommendations, getProductById, type SearchResult, type RecommendationsResponse } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { toast } from "sonner"
+import { AddToCartControl } from "@/components/cart/AddToCartControl"
 
 function AddToCartButton({ item }: { item: SearchResult }) {
   const addItem = useCartStore((s) => s.addItem)
-  const updateQuantity = useCartStore((s) => s.updateQuantity)
-  const cartItems = useCartStore((s) => s.items)
   const [loading, setLoading] = useState(false)
-
-  const cartItem = cartItems.find((i) => i.productId === item.product_id)
-  const quantity = cartItem?.quantity ?? 0
 
   async function handleAdd(e: React.MouseEvent) {
     e.preventDefault()
@@ -48,13 +44,6 @@ function AddToCartButton({ item }: { item: SearchResult }) {
     }
   }
 
-  function handleChange(e: React.MouseEvent, delta: number) {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!cartItem) return
-    updateQuantity(cartItem.variantId, quantity + delta)
-  }
-
   if (!item.in_stock) {
     return (
       <button disabled className="mt-1 flex w-full items-center justify-center rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-400 cursor-not-allowed">
@@ -63,38 +52,10 @@ function AddToCartButton({ item }: { item: SearchResult }) {
     )
   }
 
-  if (quantity > 0) {
-    return (
-      <div
-        onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-        className="mt-1 flex w-full items-center justify-between rounded-lg bg-primary px-1 py-0.5"
-      >
-        <button
-          onClick={(e) => handleChange(e, -1)}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
-        >
-          −
-        </button>
-        <span className="text-sm font-black text-[#0f0f10] tabular-nums">{quantity}</span>
-        <button
-          onClick={(e) => handleChange(e, +1)}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-[#0f0f10] font-black text-base hover:bg-black/10 transition-colors"
-        >
-          +
-        </button>
-      </div>
-    )
-  }
-
   return (
-    <button
-      onClick={handleAdd}
-      disabled={loading}
-      className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-brand-gold-foreground hover:bg-brand-gold/90 transition-colors disabled:opacity-60"
-    >
-      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5" />}
-      Add to Cart
-    </button>
+    <div className="mt-1">
+      <AddToCartControl productId={item.product_id} onAdd={handleAdd} adding={loading} />
+    </div>
   )
 }
 

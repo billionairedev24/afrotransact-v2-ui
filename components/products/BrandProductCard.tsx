@@ -15,7 +15,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ShoppingCart, Loader2, Timer, Package, MapPin } from "lucide-react"
+import { Timer, Package, MapPin } from "lucide-react"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -23,6 +23,7 @@ import { getProductById } from "@/lib/api"
 import { useCartStore } from "@/stores/cart-store"
 import { StarRating } from "@/components/products/StarRating"
 import { supportWhatsAppLink } from "@/lib/support-whatsapp"
+import { AddToCartControl } from "@/components/cart/AddToCartControl"
 
 export interface BrandProductCardItem {
   productId: string
@@ -276,11 +277,7 @@ export function BrandProductRow({ item }: { item: BrandProductCardItem }) {
 /** Shared "Add to Cart" button — fetches default variant then writes to cart. */
 function CardAddToCart({ item }: { item: BrandProductCardItem }) {
   const addItem = useCartStore((s) => s.addItem)
-  const updateQuantity = useCartStore((s) => s.updateQuantity)
-  const cartItems = useCartStore((s) => s.items)
   const [loading, setLoading] = useState(false)
-  const cartItem = cartItems.find((i) => i.productId === item.productId)
-  const quantity = cartItem?.quantity ?? 0
 
   async function handleAdd(e: React.MouseEvent) {
     e.preventDefault()
@@ -317,13 +314,6 @@ function CardAddToCart({ item }: { item: BrandProductCardItem }) {
     }
   }
 
-  function step(e: React.MouseEvent, delta: number) {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!cartItem) return
-    updateQuantity(cartItem.variantId, quantity + delta)
-  }
-
   if (!item.inStock) {
     return (
       <button
@@ -355,37 +345,5 @@ function CardAddToCart({ item }: { item: BrandProductCardItem }) {
     }
   }
 
-  if (quantity > 0) {
-    return (
-      <div
-        onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-        className="flex w-full items-center justify-between rounded-full bg-brand-gold px-1 py-0.5"
-      >
-        <button
-          onClick={(e) => step(e, -1)}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-brand-gold-foreground font-black hover:bg-black/10 transition-colors"
-        >
-          −
-        </button>
-        <span className="text-sm font-black text-brand-gold-foreground tabular-nums">{quantity}</span>
-        <button
-          onClick={(e) => step(e, +1)}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-brand-gold-foreground font-black hover:bg-black/10 transition-colors"
-        >
-          +
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <button
-      onClick={handleAdd}
-      disabled={loading}
-      className="flex w-full items-center justify-center gap-1.5 rounded-full bg-brand-gold hover:bg-brand-gold-hover px-3 py-2 text-xs font-bold uppercase tracking-wider text-brand-gold-foreground transition-colors disabled:opacity-60"
-    >
-      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5" />}
-      Add to Cart
-    </button>
-  )
+  return <AddToCartControl productId={item.productId} onAdd={handleAdd} adding={loading} />
 }
