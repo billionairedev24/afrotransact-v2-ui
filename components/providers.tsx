@@ -7,6 +7,7 @@ import { CartMergeProvider } from "@/components/providers/CartMergeProvider"
 import { WishlistSyncProvider } from "@/components/providers/WishlistSyncProvider"
 import { SessionGuard } from "@/components/providers/SessionGuard"
 import { PostLoginRedirect } from "@/components/providers/PostLoginRedirect"
+import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
 import { Toaster } from "sonner"
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -33,6 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <CartMergeProvider>
               <WishlistSyncProvider>
               {children}
+            <LoadingOverlay />
             <Toaster
               theme="light"
               position="bottom-right"

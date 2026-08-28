@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter, usePathname } from "next/navigation"
+import { useLoadingOverlayStore } from "@/stores/loading-overlay-store"
+import { useOverlayNavigate } from "@/hooks/use-overlay-navigate"
 import { useSession, signIn } from "next-auth/react"
 import {
   ShoppingCart,
@@ -149,6 +151,8 @@ export function Header() {
   const [searchCategorySlug, setSearchCategorySlug] = useState<string>("")
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
   const [authPending, setAuthPending] = useState<null | "signin" | "register">(null)
+  const showLoadingOverlay = useLoadingOverlayStore((s) => s.show)
+  const overlayNavigate = useOverlayNavigate()
 
   function beginSignIn(kind: "signin" | "register") {
     if (authPending) return
@@ -157,6 +161,10 @@ export function Header() {
       typeof window !== "undefined"
         ? window.location.pathname + window.location.search
         : "/"
+    // Full-screen overlay covers the (potentially multi-second) redirect to
+    // Keycloak and back, since the inline button spinner disappears the
+    // moment the browser navigates away from this page.
+    showLoadingOverlay(kind === "signin" ? "Signing you in…" : "Redirecting…")
     // Defer the redirect so React commits the pending state and paints the
     // spinner before signIn() navigates the page away. Two rAFs guarantee a
     // paint in every browser; without this the user sees a blank dead time.
@@ -433,7 +441,7 @@ export function Header() {
                           setShowSuggestions(false)
                           setQuery(item.text)
                           const path = item.slug?.trim() ? `/product/${item.slug}` : `/product/${item.product_id}`
-                          router.push(path)
+                          overlayNavigate(path, "Loading product…")
                         }}
                       >
                         {item.image_url ? (
@@ -464,7 +472,7 @@ export function Header() {
                       className="w-full px-4 py-2 text-xs text-foreground font-medium text-center hover:bg-muted transition-colors border-t border-border"
                       onClick={() => {
                         setShowSuggestions(false)
-                        router.push(`/search?q=${encodeURIComponent(query)}`)
+                        overlayNavigate(`/search?q=${encodeURIComponent(query)}`, "Searching…")
                       }}
                     >
                       See all results for &ldquo;{query}&rdquo;
@@ -939,7 +947,7 @@ export function Header() {
                       setMobileSearchOpen(false)
                       setQuery(item.text)
                       const path = item.slug?.trim() ? `/product/${item.slug}` : `/product/${item.product_id}`
-                      router.push(path)
+                      overlayNavigate(path, "Loading product…")
                     }}
                   >
                     {item.image_url ? (
