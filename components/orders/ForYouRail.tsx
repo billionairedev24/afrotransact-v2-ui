@@ -35,6 +35,8 @@ export function ForYouRail() {
   const { status } = useSession()
   const router = useRouter()
   const addItem = useCartStore((s) => s.addItem)
+  const cartItems = useCartStore((s) => s.items)
+  const updateQuantity = useCartStore((s) => s.updateQuantity)
   const setBuyNow = useBuyNowStore((s) => s.setBuyNow)
   const [items, setItems] = useState<ForYouProduct[] | null>(null)
 
@@ -116,6 +118,11 @@ export function ForYouRail() {
             // Repeat-purchase context is shown by the "Bought before" chip
             // below — every card uses the same Add-to-cart / Buy-now pair, so
             // no redundant "Buy Again" button.
+            // Once the item is in the cart, the "Add to cart" button becomes a
+            // −/qty/+ stepper — repeat clicks adjust the quantity instead of
+            // blindly re-adding (a mis-click shouldn't silently pile up units).
+            const cartItem = cartItems.find((i) => i.variantId === p.variantId)
+            const qty = cartItem?.quantity ?? 0
             // Per-card chip copy. CATEGORY is the soft fallback; chipping it
             // would feel noisy because the buyer hasn't asked for it explicitly.
             const chip =
@@ -167,13 +174,35 @@ export function ForYouRail() {
                   </button>
                 ) : (
                   <div className="mt-2 flex flex-col gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleAddToCart(p)}
-                      className="w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover transition-colors"
-                    >
-                      Add to cart
-                    </button>
+                    {qty > 0 && cartItem ? (
+                      <div className="w-full flex items-center justify-between rounded-full bg-brand-gold px-1 py-0.5">
+                        <button
+                          type="button"
+                          aria-label="Decrease quantity"
+                          onClick={() => updateQuantity(cartItem.variantId, qty - 1)}
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-brand-gold-foreground font-black text-base hover:bg-black/10 transition-colors"
+                        >
+                          −
+                        </button>
+                        <span className="text-sm font-black text-brand-gold-foreground tabular-nums">{qty} in cart</span>
+                        <button
+                          type="button"
+                          aria-label="Increase quantity"
+                          onClick={() => updateQuantity(cartItem.variantId, qty + 1)}
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-brand-gold-foreground font-black text-base hover:bg-black/10 transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleAddToCart(p)}
+                        className="w-full bg-brand-gold text-brand-gold-foreground border border-brand-gold-hover py-1.5 rounded-full text-xs font-bold text-center hover:bg-brand-gold-hover transition-colors"
+                      >
+                        Add to cart
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleBuyNow(p)}
