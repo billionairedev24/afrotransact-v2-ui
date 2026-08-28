@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { AccountShell } from "@/components/account/AccountShell"
+import { Toggle } from "@/components/ui/Toggle"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getUserProfile, API_BASE } from "@/lib/api"
 
@@ -32,38 +33,6 @@ const ITEMS: { key: keyof NotificationPrefs; label: string; description: string 
   { key: "seller_updates",  label: "Stores you follow",    description: "When stores you follow add new products" },
   { key: "newsletter",      label: "Weekly newsletter",    description: "A curated roundup of what's trending on AfroTransact" },
 ]
-
-function Toggle({
-  checked,
-  onChange,
-  disabled,
-  label,
-}: {
-  checked: boolean
-  onChange: () => void
-  disabled?: boolean
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={onChange}
-      disabled={disabled}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:opacity-50 ${
-        checked ? "bg-brand-gold" : "bg-muted"
-      }`}
-    >
-      <span
-        className={`inline-block h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform ${
-          checked ? "translate-x-[22px]" : "translate-x-[3px]"
-        }`}
-      />
-    </button>
-  )
-}
 
 export function NotificationsSection() {
   const { status } = useSession()
