@@ -100,9 +100,10 @@ export function PasswordCard() {
       {open && (
         <form onSubmit={handleSubmit} className="border-t border-border bg-muted/40 px-5 py-5 space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-foreground">Current password</label>
+            <label htmlFor="acct-current-password" className="mb-1.5 block text-xs font-semibold text-foreground">Current password</label>
             <div className="relative">
               <input
+                id="acct-current-password"
                 type={showCurrent ? "text" : "password"}
                 value={current}
                 onChange={(e) => setCurrent(e.target.value)}
@@ -122,9 +123,10 @@ export function PasswordCard() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-foreground">New password</label>
+            <label htmlFor="acct-new-password" className="mb-1.5 block text-xs font-semibold text-foreground">New password</label>
             <div className="relative">
               <input
+                id="acct-new-password"
                 type={showNext ? "text" : "password"}
                 value={next}
                 onChange={(e) => setNext(e.target.value)}
@@ -157,9 +159,10 @@ export function PasswordCard() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-foreground">Confirm new password</label>
+            <label htmlFor="acct-confirm-password" className="mb-1.5 block text-xs font-semibold text-foreground">Confirm new password</label>
             <div className="relative">
               <input
+                id="acct-confirm-password"
                 type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
