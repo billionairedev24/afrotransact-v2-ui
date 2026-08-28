@@ -204,7 +204,6 @@ function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
   const currency = order?.currency ?? "USD"
   const shape = getFulfillmentShape(order)
   const pickupSubOrders = (order?.subOrders ?? []).filter((s) => s.deliveryMethod === "pickup")
-  const shipSubOrders = (order?.subOrders ?? []).filter((s) => s.deliveryMethod !== "pickup")
   const hero = HERO_COPY[shape]
 
   return (
