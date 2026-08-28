@@ -85,6 +85,7 @@ import {
   resolveServiceZone,
   getStoreById,
   ApiError,
+  type BuyNowItem,
   type CheckoutResponse,
   type CheckoutShippingContext,
   type Region,
@@ -153,6 +154,39 @@ function formatCents(v: number) {
 
 type FlatQuote = ShippingQuoteOption & { carrier: string }
 
+// Maps a buy-now (or cart) line item to the explicit-items shape the backend
+// expects on `buyNowItems`. Used ONLY when actually in buy-now mode (see
+// `isBuyNow` below) — never for normal cart checkout.
+function toBuyNowItem(item: {
+  variantId: string
+  productId?: string | null
+  storeId: string
+  quantity: number
+  price: number
+  title?: string | null
+  variantName?: string | null
+  imageUrl?: string | null
+  weightKg?: number | null
+  lengthIn?: number | null
+  widthIn?: number | null
+  heightIn?: number | null
+}): BuyNowItem {
+  return {
+    variantId: item.variantId,
+    productId: item.productId || item.variantId,
+    storeId: item.storeId,
+    quantity: item.quantity,
+    unitPriceCents: item.price,
+    productTitle: item.title ?? undefined,
+    variantName: item.variantName ?? undefined,
+    imageUrl: item.imageUrl ?? undefined,
+    weightKg: item.weightKg ?? null,
+    lengthIn: item.lengthIn ?? null,
+    widthIn: item.widthIn ?? null,
+    heightIn: item.heightIn ?? null,
+  }
+}
+
 // Delivery ETA shown on shipping options. Configurable via env (build-time)
 // so ops can tune it without a code change; defaults to 48 hours.
 const DELIVERY_ETA_HOURS = Number(process.env.NEXT_PUBLIC_DELIVERY_ETA_HOURS) || 48
@@ -193,15 +227,12 @@ export default function CheckoutClientV2({
   // clear the buy-now store instead of the persistent cart — so a buy-now
   // purchase never disturbs whatever else is sitting in the buyer's cart.
   //
-  // KNOWN BACKEND GAP: order-service's PaymentEventConsumer clears the
-  // buyer's SERVER cart on payment confirmation regardless of how the
-  // order was placed. Because checkout syncs `effectiveItems` to the
-  // server cart before minting (see syncServerCart/mintIntent below), a
-  // buy-now purchase can still cause the buyer's real server-side cart to
-  // be wiped when the order confirms. This frontend change preserves the
-  // LOCAL (zustand) cart state, but the server cart clear is a backend
-  // follow-up (PaymentEventConsumer should only clear items that were
-  // actually part of the order, not blanket-clear).
+  // Explicit-items checkout: when `isBuyNow` (below), the shipping-quote and
+  // checkout requests send `buyNow: true` + `buyNowItems: [...]` and we
+  // deliberately SKIP `syncServerCart`/`mergeCart` — the backend builds the
+  // order from the explicit items alone and never reads or mutates the
+  // buyer's persistent SERVER cart. The buyer's real cart (server and local)
+  // is therefore left completely untouched by a buy-now purchase.
   const searchParams = useSearchParams()
   const buyNowMode = searchParams.get("buynow") === "1"
   const buyNowItems = useBuyNowStore((s) => s.items)
@@ -214,7 +245,13 @@ export default function CheckoutClientV2({
   // checkout page — fall back to the persistent cart rather than showing
   // a hard error; the empty-cart guard effect further below will redirect
   // to /cart if that's also empty.
-  const effectiveItems = buyNowMode && buyNowItems.length > 0 ? buyNowItems : cartItems
+  // True only when there's an actual buy-now item to check out with. If the
+  // buy-now store is empty (e.g. the buyer refreshed the checkout page),
+  // `effectiveItems` falls back to the real cart below and this must be
+  // false — otherwise a refresh would send `buyNow: true` with the buyer's
+  // whole cart as `buyNowItems`, which is exactly the bug this guards against.
+  const isBuyNow = buyNowMode && buyNowItems.length > 0
+  const effectiveItems = isBuyNow ? buyNowItems : cartItems
   const doUpdateQuantity = buyNowMode ? buyNowUpdateQuantity : updateQuantity
   const doRemoveItem = buyNowMode ? buyNowRemoveItem : removeItem
 
@@ -485,6 +522,9 @@ export default function CheckoutClientV2({
   // quotes, checkout) see the current contents. The shipping-quote endpoint
   // reads the SERVER cart to weigh the order; without this it throws
   // "Cart is empty" and the UI shows "couldn't find shipping options".
+  // Buy-now checkouts never call this — they send `buyNowItems` explicitly
+  // instead (see `isBuyNow` above) so the persistent server cart is never
+  // touched.
   const syncServerCart = useCallback(async () => {
     if (!authToken) return
     const items = effectiveItems.map((item) => ({
@@ -523,8 +563,11 @@ export default function CheckoutClientV2({
     ;(async () => {
       try {
         // Sync the cart to the server first — the quote endpoint weighs the
-        // SERVER cart, so without this it sees an empty cart.
-        await syncServerCart()
+        // SERVER cart, so without this it sees an empty cart. Skipped for
+        // buy-now: `buyNowItems` below tells the backend what to weigh
+        // instead, and we must not merge the buy-now item into the buyer's
+        // persistent cart.
+        if (!isBuyNow) await syncServerCart()
         // Backend expects EXACTLY one of zoneId / regionId (XOR). Prefer the
         // resolved service-zone id; only fall back to regionId if no zone
         // is resolved yet. Sending both fails validation with a 400.
@@ -536,6 +579,7 @@ export default function CheckoutClientV2({
           destinationLine1: selectedAddress.line1,
           destinationZip: selectedAddress.postalCode,
           destinationCountry: selectedAddress.countryCode || "US",
+          ...(isBuyNow ? { buyNow: true, buyNowItems: effectiveItems.map(toBuyNowItem) } : {}),
         })
         if (cancelled) return
         setQuotes(q)
@@ -753,8 +797,9 @@ export default function CheckoutClientV2({
       setRatesUnavailable(false)
       ;(async () => {
         try {
-          // Re-sync the (now-changed) cart before re-quoting.
-          await syncServerCart()
+          // Re-sync the (now-changed) cart before re-quoting. Skipped for
+          // buy-now — see the initial-quote effect above.
+          if (!isBuyNow) await syncServerCart()
           const zoneId = activeZoneId
           const q = await getShippingQuotes(authToken, {
             ...(zoneId ? { zoneId } : { regionId: region.id }),
@@ -763,6 +808,7 @@ export default function CheckoutClientV2({
             destinationLine1: selectedAddress.line1,
             destinationZip: selectedAddress.postalCode,
             destinationCountry: selectedAddress.countryCode || "US",
+            ...(isBuyNow ? { buyNow: true, buyNowItems: effectiveItems.map(toBuyNowItem) } : {}),
           })
           if (runId !== requoteRunIdRef.current) return // stale
           const next: FlatQuote[] = []
@@ -1005,21 +1051,25 @@ export default function CheckoutClientV2({
     setMinting(true)
     setPlaceError(null)
     try {
-      const items = effectiveItems.map((item) => ({
-        variantId: item.variantId,
-        productId: item.productId || item.variantId,
-        storeId: item.storeId,
-        quantity: item.quantity,
-        unitPriceCents: item.price,
-        productTitle: item.title,
-        variantName: item.variantName,
-        imageUrl: item.imageUrl,
-        weightKg: item.weightKg ?? null,
-        lengthIn: item.lengthIn ?? null,
-        widthIn: item.widthIn ?? null,
-        heightIn: item.heightIn ?? null,
-      }))
-      await mergeCart(authToken, items)
+      // Buy-now: never merge into the persistent server cart — the explicit
+      // `buyNowItems` on the checkout call below is what the backend uses.
+      if (!isBuyNow) {
+        const items = effectiveItems.map((item) => ({
+          variantId: item.variantId,
+          productId: item.productId || item.variantId,
+          storeId: item.storeId,
+          quantity: item.quantity,
+          unitPriceCents: item.price,
+          productTitle: item.title,
+          variantName: item.variantName,
+          imageUrl: item.imageUrl,
+          weightKg: item.weightKg ?? null,
+          lengthIn: item.lengthIn ?? null,
+          widthIn: item.widthIn ?? null,
+          heightIn: item.heightIn ?? null,
+        }))
+        await mergeCart(authToken, items)
+      }
       // Normalize the address phone to E.164 (respecting the address country)
       // so a legacy bare number doesn't fail the order service. Block with a
       // clear message when a stored number can't be validated for its country.
@@ -1077,6 +1127,7 @@ export default function CheckoutClientV2({
               }
             })
           : undefined,
+        ...(isBuyNow ? { buyNow: true, buyNowItems: effectiveItems.map(toBuyNowItem) } : {}),
       }, idempotencyKeyRef.current)
       setCheckoutResult(result)
       return result
@@ -1092,7 +1143,7 @@ export default function CheckoutClientV2({
       placingRef.current = false
       setMinting(false)
     }
-  }, [authToken, region, selectedAddress, effectiveItems, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
+  }, [authToken, region, selectedAddress, effectiveItems, isBuyNow, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
 
   // ─── place order ───────────────────────────────────────────────────
   const paymentHandleRef = useRef<PaymentHandle | null>(null)
@@ -1104,12 +1155,14 @@ export default function CheckoutClientV2({
     // any lingering checkout request (mount effect, retry) would hit an
     // already-empty cart and fail with 400.
     //
-    // Buy-now mode: clear ONLY the ephemeral buy-now store, never the
-    // persistent cart — a buy-now purchase must leave whatever else is in
-    // the buyer's cart untouched. (See the KNOWN BACKEND GAP note above:
-    // the server-side cart is still blanket-cleared by PaymentEventConsumer,
-    // which this frontend change cannot prevent.)
-    if (buyNowMode) {
+    // Buy-now: clear ONLY the ephemeral buy-now store, never the persistent
+    // cart — a buy-now purchase leaves whatever else is in the buyer's cart
+    // untouched (the backend builds the order from an ephemeral cart and never
+    // touches the persistent one). We key off `isBuyNow` (the EFFECTIVE mode),
+    // not the raw `?buynow=1` URL flag: if the in-memory buy-now store was lost
+    // to a refresh, checkout fell back to the real cart, so on success we must
+    // clear THAT cart — not no-op on an already-empty buy-now store.
+    if (isBuyNow) {
       clearBuyNow()
     } else {
       clearCart()
@@ -1117,7 +1170,7 @@ export default function CheckoutClientV2({
     }
     const sid = checkoutResult?.checkoutSessionId
     router.push(sid ? `/checkout/complete?session=${encodeURIComponent(sid)}` : "/checkout/complete")
-  }, [buyNowMode, clearBuyNow, clearCart, router, checkoutResult])
+  }, [isBuyNow, clearBuyNow, clearCart, router, checkoutResult])
 
   // Pre-mint the PI as soon as we have an address + rate, so clientSecret is
   // ready by the time the buyer scrolls to payment. mintIntent is idempotent
