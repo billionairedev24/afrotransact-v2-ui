@@ -1155,12 +1155,14 @@ export default function CheckoutClientV2({
     // any lingering checkout request (mount effect, retry) would hit an
     // already-empty cart and fail with 400.
     //
-    // Buy-now mode: clear ONLY the ephemeral buy-now store, never the
-    // persistent cart — a buy-now purchase must leave whatever else is in
-    // the buyer's cart untouched. (See the KNOWN BACKEND GAP note above:
-    // the server-side cart is still blanket-cleared by PaymentEventConsumer,
-    // which this frontend change cannot prevent.)
-    if (buyNowMode) {
+    // Buy-now: clear ONLY the ephemeral buy-now store, never the persistent
+    // cart — a buy-now purchase leaves whatever else is in the buyer's cart
+    // untouched (the backend builds the order from an ephemeral cart and never
+    // touches the persistent one). We key off `isBuyNow` (the EFFECTIVE mode),
+    // not the raw `?buynow=1` URL flag: if the in-memory buy-now store was lost
+    // to a refresh, checkout fell back to the real cart, so on success we must
+    // clear THAT cart — not no-op on an already-empty buy-now store.
+    if (isBuyNow) {
       clearBuyNow()
     } else {
       clearCart()
@@ -1168,7 +1170,7 @@ export default function CheckoutClientV2({
     }
     const sid = checkoutResult?.checkoutSessionId
     router.push(sid ? `/checkout/complete?session=${encodeURIComponent(sid)}` : "/checkout/complete")
-  }, [buyNowMode, clearBuyNow, clearCart, router, checkoutResult])
+  }, [isBuyNow, clearBuyNow, clearCart, router, checkoutResult])
 
   // Pre-mint the PI as soon as we have an address + rate, so clientSecret is
   // ready by the time the buyer scrolls to payment. mintIntent is idempotent
