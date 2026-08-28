@@ -1,216 +1,127 @@
 "use client"
 
 /**
- * AccountClient — consolidated settings layout.
+ * AccountClient — Amazon-style "Your Account" hub.
  *
- * Renders the buyer-account sections in a single scrolling page with a
- * sticky in-page nav on lg+ (anchor jumps, not route changes). On mobile
- * the nav collapses; sections stack.
- *
- * Each section is the *embeddable* part of its sub-page (Profile,
- * Login & Security, Addresses, Payments, Notifications) — the
- * standalone deep-link routes still exist and render the same section
- * inside an AccountShell wrapper.
+ * A dashboard of link-cards, each punching out to its own dedicated
+ * route (deep-linkable, bookmarkable, each wrapped in AccountShell).
+ * This replaces the old single tall-scrolling page with sticky in-page
+ * nav — there is no anchor-jump nav or inline section rendering here
+ * anymore. Section components (ProfileSection, SecuritySection, etc.)
+ * are untouched and still live at their own routes.
  */
 
-import { useEffect, useState } from "react"
+import Link from "next/link"
 import {
   User as UserIcon,
   Lock,
   MapPin,
   CreditCard,
   Bell,
+  Heart,
+  ShoppingBag,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react"
 import { SignOutButton } from "@/components/account/SignOutButton"
-import { ProfileSection } from "@/app/(main)/account/profile/page"
-import { SecuritySection } from "@/app/(main)/account/security/page"
-import { AddressesSection } from "@/app/(main)/account/addresses/page"
-import { PaymentsSection } from "@/app/(main)/account/payments/page"
-import { NotificationsSection } from "@/app/(main)/account/notifications/page"
-import { cn } from "@/lib/utils"
 
-interface Section {
-  id: string
+interface AccountCard {
   title: string
-  blurb: string
+  href: string
+  description: string
   icon: LucideIcon
-  render: () => React.ReactNode
 }
 
-const SECTIONS: Section[] = [
+const CARDS: AccountCard[] = [
   {
-    id: "profile",
-    title: "Profile",
-    blurb: "Your name, email, and phone on file.",
-    icon: UserIcon,
-    render: () => <ProfileSection />,
+    title: "Your Orders",
+    href: "/orders",
+    description: "Track, return, or buy again.",
+    icon: ShoppingBag,
   },
   {
-    id: "security",
     title: "Login & Security",
-    blurb: "Change your password or close your account.",
+    href: "/account/security",
+    description: "Password and account access.",
     icon: Lock,
-    render: () => <SecuritySection />,
   },
   {
-    id: "addresses",
-    title: "Addresses",
-    blurb: "Manage delivery addresses and the default for checkout.",
+    title: "Your Addresses",
+    href: "/account/addresses",
+    description: "Edit or add delivery addresses.",
     icon: MapPin,
-    render: () => <AddressesSection />,
   },
   {
-    id: "payments",
-    title: "Payment methods",
-    blurb: "Saved cards, tokenised by Stripe. Set a default for 1-click reorder.",
+    title: "Payment Options",
+    href: "/account/payments",
+    description: "Manage your saved cards.",
     icon: CreditCard,
-    render: () => <PaymentsSection />,
   },
   {
-    id: "notifications",
-    title: "Notifications",
-    blurb: "Choose which emails and alerts you receive.",
+    title: "Your Profile",
+    href: "/account/profile",
+    description: "Name and personal details.",
+    icon: UserIcon,
+  },
+  {
+    title: "Communications",
+    href: "/account/notifications",
+    description: "Email & message preferences.",
     icon: Bell,
-    render: () => <NotificationsSection />,
+  },
+  {
+    title: "Your Wishlist",
+    href: "/account/wishlist",
+    description: "Items you're saving for later.",
+    icon: Heart,
   },
 ]
 
-/** Anchor-driven nav: highlights whichever section is currently in view. */
-function useActiveSection(ids: string[]): string {
-  const [active, setActive] = useState(ids[0] ?? "")
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const obs = new IntersectionObserver(
-      (entries) => {
-        // Pick the topmost intersecting section.
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        if (visible[0]) setActive(visible[0].target.id)
-      },
-      { rootMargin: "-30% 0px -55% 0px", threshold: 0 },
-    )
-    for (const id of ids) {
-      const el = document.getElementById(id)
-      if (el) obs.observe(el)
-    }
-    return () => obs.disconnect()
-  }, [ids])
-  return active
-}
-
 export function AccountClient({ firstName, email }: { firstName: string; email: string }) {
-  const active = useActiveSection(SECTIONS.map((s) => s.id))
-
   return (
-    <div className="mx-auto max-w-[1180px] px-4 sm:px-6 py-6 lg:py-10">
-      <header className="mb-8">
+    <div className="mx-auto max-w-[1180px] px-4 sm:px-6 py-8 lg:py-12">
+      <header className="mb-8 lg:mb-10">
         <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
-          Hi {firstName}
+          Your Account
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Manage your account, addresses, and preferences. Signed in as{" "}
+        <p className="mt-2 text-sm sm:text-base text-muted-foreground">
+          Hi {firstName} — signed in as{" "}
           <span className="font-semibold text-foreground">{email}</span>.
         </p>
       </header>
 
-      {/* Mobile quick nav: horizontal scroll of section chips (anchor jumps). */}
-      <nav
-        aria-label="Account sections"
-        className="lg:hidden -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {SECTIONS.map((s) => {
-          const Icon = s.icon
-          const isActive = active === s.id
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {CARDS.map((card) => {
+          const Icon = card.icon
           return (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              aria-current={isActive ? "true" : undefined}
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm transition-colors",
-                isActive
-                  ? "border-brand-gold bg-brand-gold/15 font-semibold text-foreground"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground",
-              )}
+            <Link
+              key={card.href}
+              href={card.href}
+              className="group flex items-start gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-gold hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <Icon className={cn("h-3.5 w-3.5", isActive && "text-brand-gold-ink")} />
-              {s.title}
-            </a>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-gold/15 text-brand-gold-ink transition-colors group-hover:bg-brand-gold/25">
+                <Icon className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="flex items-center gap-1 text-base font-semibold text-foreground">
+                  {card.title}
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">{card.description}</p>
+              </div>
+            </Link>
           )
         })}
-      </nav>
+      </div>
 
-      <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
-        {/* Sticky in-page nav. Anchor jumps within the same page — no route
-            changes, no card-tile detour to a second screen. */}
-        <aside className="hidden lg:block">
-          <nav className="sticky top-6 space-y-0.5 rounded-2xl border border-border bg-card p-2 shadow-sm">
-            {SECTIONS.map((s) => {
-              const Icon = s.icon
-              const isActive = active === s.id
-              return (
-                <a
-                  key={s.id}
-                  href={`#${s.id}`}
-                  aria-current={isActive ? "true" : undefined}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                    isActive
-                      ? "bg-brand-gold/15 font-semibold text-foreground"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                  )}
-                >
-                  <Icon className={cn("h-4 w-4", isActive && "text-brand-gold-ink")} />
-                  {s.title}
-                </a>
-              )
-            })}
-          </nav>
-        </aside>
-
-        <div className="min-w-0 space-y-12">
-          {SECTIONS.map((s) => {
-            const Icon = s.icon
-            return (
-              <section
-                key={s.id}
-                id={s.id}
-                aria-labelledby={`${s.id}-title`}
-                className="scroll-mt-6"
-              >
-                <div className="mb-4 flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted">
-                    <Icon className="h-4 w-4 text-foreground" />
-                  </div>
-                  <div className="min-w-0">
-                    <h2
-                      id={`${s.id}-title`}
-                      className="text-lg font-semibold text-foreground"
-                    >
-                      {s.title}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">{s.blurb}</p>
-                  </div>
-                </div>
-                {s.render()}
-              </section>
-            )
-          })}
-
-          <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">
-                Signed in as {email}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Need to switch accounts or take a break?
-              </p>
-            </div>
-            <SignOutButton />
-          </section>
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/40 p-5">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground truncate">Signed in as {email}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Need to switch accounts or take a break?
+          </p>
         </div>
+        <SignOutButton />
       </div>
     </div>
   )

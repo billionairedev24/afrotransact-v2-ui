@@ -62,7 +62,7 @@ export function AccountShell({ title, subtitle, variant = "subpage", children }:
       {variant === "subpage" && (
         <Link
           href="/account"
-          className="md:hidden inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-3"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold rounded-md"
         >
           <ChevronLeft className="h-4 w-4" /> Your Account
         </Link>
