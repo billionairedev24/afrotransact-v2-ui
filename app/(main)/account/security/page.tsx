@@ -29,8 +29,8 @@ function passwordStrength(pw: string): {
   const hasSym   = /[^a-zA-Z0-9]/.test(pw)
   if (pw.length < 12) return { score: 2, label: "Fair", barColor: "bg-amber-500",  textColor: "text-amber-600" }
   if (hasUpper && hasNum && hasSym)
-    return { score: 4, label: "Strong", barColor: "bg-emerald-500", textColor: "text-emerald-600" }
-  return { score: 3, label: "Good", barColor: "bg-blue-500", textColor: "text-blue-600" }
+    return { score: 4, label: "Strong", barColor: "bg-brand-green", textColor: "text-brand-green" }
+  return { score: 3, label: "Good", barColor: "bg-brand-gold", textColor: "text-brand-gold-ink" }
 }
 
 const inputCls =
