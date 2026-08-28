@@ -1830,6 +1830,25 @@ export function attachDeliveryProof(token: string, subOrderId: string, imageUrl:
   })
 }
 
+/** Explicit buy-now item shape sent alongside `buyNow: true` on the
+ *  shipping-quote and checkout requests, so the backend can build the order
+ *  from ONLY this item without reading (or touching) the buyer's persistent
+ *  server cart. */
+export interface BuyNowItem {
+  variantId: string
+  productId: string
+  storeId: string
+  quantity: number
+  unitPriceCents: number
+  productTitle?: string
+  variantName?: string
+  imageUrl?: string
+  weightKg?: number | null
+  lengthIn?: number | null
+  widthIn?: number | null
+  heightIn?: number | null
+}
+
 export interface CheckoutRequest {
   regionId: string
   shippingAddressId?: string
@@ -1867,6 +1886,11 @@ export interface CheckoutRequest {
     deliveryMethod?: string
     amountCents?: number
   }[]
+  /** Buy Now (explicit-items) mode: when true, order-service builds the order
+   *  from ONLY `buyNowItems` and never reads or mutates the persistent server
+   *  cart. Omitted (or false) for normal cart checkout — unchanged behavior. */
+  buyNow?: boolean
+  buyNowItems?: BuyNowItem[]
 }
 
 export interface CheckoutResponse {
@@ -2158,6 +2182,9 @@ export function getShippingQuotes(
     destinationLine1?: string
     destinationZip?: string
     destinationCountry?: string
+    /** Buy Now (explicit-items) mode — see CheckoutRequest.buyNow/buyNowItems. */
+    buyNow?: boolean
+    buyNowItems?: BuyNowItem[]
   },
 ) {
   return api<ShippingQuoteResponse>("/api/v1/orders/shipping/quotes", {
