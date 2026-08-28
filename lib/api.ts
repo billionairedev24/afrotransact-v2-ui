@@ -1763,6 +1763,10 @@ export interface SubOrderDto {
   deliveryProofImageUrl?: string | null
   deliveryProofUploadedAt?: string | null
   items: OrderItemDto[]
+  /** "ship" | "pickup" — how this sub-order is being fulfilled. */
+  deliveryMethod?: string
+  /** Present when deliveryMethod === "pickup" — the collect address snapshot. */
+  pickupLocation?: PickupLocationDto
 }
 
 export interface OrderDto {
@@ -1897,6 +1901,7 @@ export interface PickupLocationDto {
   country?: string
   hours?: string
   instructions?: string
+  prepTime?: string
 }
 
 export interface ShippingQuoteOption {
@@ -2180,6 +2185,7 @@ export interface PickupLocationSettings {
   country: string
   hours: string
   instructions: string
+  prep_time: string
 }
 
 export interface PickupSettings {

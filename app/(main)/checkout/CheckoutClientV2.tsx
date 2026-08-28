@@ -1395,7 +1395,11 @@ export default function CheckoutClientV2({
                             )}
                           >
                             <MapPin className="h-3.5 w-3.5" />
-                            {pickupDisplayEligible ? "In pickup range" : "Pickup out of range"}
+                            {pickupDisplayEligible
+                              ? pickupOpt?.pickupLocation?.city
+                                ? `Collect in ${pickupOpt.pickupLocation.city}`
+                                : "Pickup available near you"
+                              : "Pickup not available here"}
                           </span>
                         )}
                       </header>
@@ -1454,10 +1458,14 @@ export default function CheckoutClientV2({
                                     FREE
                                   </span>
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
-                                  <Clock className="h-3 w-3" /> Ready in ~2 hours
-                                  {pickupOpt.pickupLocation?.hours ? ` · ${pickupOpt.pickupLocation.hours}` : ""}
-                                </p>
+                                {(pickupOpt.pickupLocation?.prepTime || pickupOpt.pickupLocation?.hours) && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
+                                    <Clock className="h-3 w-3" />
+                                    {[pickupOpt.pickupLocation?.prepTime, pickupOpt.pickupLocation?.hours]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </p>
+                                )}
                               </div>
                               <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
                             </label>

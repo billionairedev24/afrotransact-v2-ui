@@ -27,6 +27,7 @@ const EMPTY_SETTINGS: PickupSettings = {
     country: "",
     hours: "",
     instructions: "",
+    prep_time: "",
   },
 }
 
@@ -165,6 +166,16 @@ export default function AdminPickupSettingsPage() {
                 placeholder="e.g. Mon-Fri 9am-5pm"
                 className={INPUT_CLASS}
               />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Ready in (prep time)</label>
+              <input
+                value={settings.pickup_location.prep_time}
+                onChange={(e) => updateLocation("prep_time", e.target.value)}
+                placeholder="e.g. Ready in ~2 hours, or Same day"
+                className={INPUT_CLASS}
+              />
+              <p className="text-[11px] text-gray-400 mt-1">Shown to buyers at checkout next to the pickup option.</p>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">Address line 1</label>
