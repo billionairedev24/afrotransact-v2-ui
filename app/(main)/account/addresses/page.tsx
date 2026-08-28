@@ -110,58 +110,62 @@ export function AddressesSection() {
 
   const field = (label: string, key: keyof FormState, placeholder = "") => (
     <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <label className="mb-1.5 block text-xs font-semibold text-foreground">{label}</label>
       <input
         value={form[key] as string}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 outline-none focus:border-primary/60 transition-colors"
+        className="h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/30 transition"
       />
     </div>
   )
 
   return (
-    <>
+    <div className="space-y-4">
       {error && (
-        <div className="flex items-center gap-3 rounded-2xl border border-red-500/30 bg-white p-4 mb-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
           <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
-          <p className="text-sm text-red-500 flex-1">{error}</p>
-          <button onClick={() => setError(null)}><X className="h-4 w-4 text-red-600" /></button>
+          <p className="text-sm text-red-700 flex-1">{error}</p>
+          <button onClick={() => setError(null)} aria-label="Dismiss error">
+            <X className="h-4 w-4 text-red-600" />
+          </button>
         </div>
       )}
 
       {showForm && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">{editingId ? "Edit Address" : "New Address"}</h2>
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h3 className="text-base font-semibold text-foreground mb-4">
+            {editingId ? "Edit address" : "New address"}
+          </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {field("Label (e.g. Home, Work)", "label", "Home")}
-            {field("Address Line 1", "line1", "123 Main St")}
+            {field("Address line 1", "line1", "123 Main St")}
             {field("Line 2 (optional)", "line2", "Apt 4B")}
             {field("City", "city", "City")}
             {field("State", "state", "State")}
-            {field("ZIP Code", "postalCode", "ZIP")}
+            {field("ZIP code", "postalCode", "ZIP")}
           </div>
-          <div className="flex items-center gap-2 mt-4">
+          <label className="mt-4 flex items-center gap-2 text-sm text-foreground">
             <input
               type="checkbox"
               checked={form.isDefault}
               onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-              className="rounded border-gray-300"
+              className="h-4 w-4 rounded border-border accent-brand-gold"
             />
-            <label className="text-sm text-gray-600">Set as default address</label>
-          </div>
+            Set as default address
+          </label>
           <div className="flex gap-3 mt-5">
             <button
               onClick={handleSave}
               disabled={saving || !form.line1 || !form.city}
-              className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-[#0f0f10] disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-5 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {editingId ? "Update" : "Save"}
             </button>
             <button
               onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY) }}
-              className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm text-gray-900"
+              className="rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
             >
               Cancel
             </button>
@@ -171,60 +175,80 @@ export function AddressesSection() {
 
       <button
         onClick={() => { setEditingId(null); setForm(EMPTY); setShowForm(true) }}
-        className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors mb-6"
+        className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
       >
         <Plus className="h-4 w-4" /> Add new address
       </button>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 gap-3">
-          <Loader2 className="h-5 w-5 animate-spin text-foreground" />
-          <span className="text-sm text-gray-500">Loading…</span>
+        <div className="flex items-center justify-center rounded-2xl border border-border bg-card py-16 gap-3 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span className="text-sm">Loading…</span>
         </div>
       ) : addresses.length === 0 ? (
-        <div className="py-16 text-center">
-          <MapPin className="mx-auto h-10 w-10 text-gray-600" />
-          <p className="mt-3 text-sm text-gray-500">No saved addresses yet.</p>
+        <div className="rounded-2xl border border-border bg-card px-6 py-16 text-center">
+          <MapPin className="mx-auto h-12 w-12 text-muted-foreground" />
+          <h4 className="mt-4 text-sm font-semibold text-foreground">No saved addresses yet</h4>
+          <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
+            Add a delivery address to speed through checkout next time.
+          </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <ul className="space-y-3">
           {addresses.map((a) => (
-            <div key={a.id} className="rounded-2xl border border-gray-200 bg-white p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-foreground mt-0.5 shrink-0" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-gray-900">{a.label || "Address"}</span>
+            <li key={a.id} className="rounded-2xl border border-border bg-card p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted">
+                    <MapPin className="h-4 w-4 text-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-foreground">{a.label || "Address"}</span>
                       {a.isDefault && (
-                        <span className="flex items-center gap-1 text-xs text-foreground font-medium">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-gold-foreground">
                           <Star className="h-3 w-3 fill-current" /> Default
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{a.line1}{a.line2 ? `, ${a.line2}` : ""}</p>
-                    <p className="text-sm text-gray-500">{a.city}, {a.state} {a.postalCode}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{a.line1}{a.line2 ? `, ${a.line2}` : ""}</p>
+                    <p className="text-sm text-muted-foreground">{a.city}, {a.state} {a.postalCode}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   {!a.isDefault && (
-                    <button onClick={() => handleSetDefault(a.id)} className="p-1.5 rounded-lg hover:bg-gray-100" title="Set as default">
-                      <Star className="h-4 w-4 text-gray-500" />
+                    <button
+                      onClick={() => handleSetDefault(a.id)}
+                      className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      title="Set as default"
+                      aria-label="Set as default address"
+                    >
+                      <Star className="h-4 w-4" />
                     </button>
                   )}
-                  <button onClick={() => openEdit(a)} className="p-1.5 rounded-lg hover:bg-gray-100" title="Edit">
-                    <Pencil className="h-4 w-4 text-gray-500" />
+                  <button
+                    onClick={() => openEdit(a)}
+                    className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    title="Edit"
+                    aria-label="Edit address"
+                  >
+                    <Pencil className="h-4 w-4" />
                   </button>
-                  <button onClick={() => handleDelete(a.id)} className="p-1.5 rounded-lg hover:bg-red-500/10" title="Delete">
-                    <Trash2 className="h-4 w-4 text-red-600" />
+                  <button
+                    onClick={() => handleDelete(a.id)}
+                    className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                    title="Delete"
+                    aria-label="Delete address"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-    </>
+    </div>
   )
 }
 

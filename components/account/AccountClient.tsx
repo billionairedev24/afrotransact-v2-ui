@@ -106,14 +106,41 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
   return (
     <div className="mx-auto max-w-[1180px] px-4 sm:px-6 py-6 lg:py-10">
       <header className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+        <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
           Hi {firstName}
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground">
           Manage your account, addresses, and preferences. Signed in as{" "}
           <span className="font-semibold text-foreground">{email}</span>.
         </p>
       </header>
+
+      {/* Mobile quick nav: horizontal scroll of section chips (anchor jumps). */}
+      <nav
+        aria-label="Account sections"
+        className="lg:hidden -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {SECTIONS.map((s) => {
+          const Icon = s.icon
+          const isActive = active === s.id
+          return (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              aria-current={isActive ? "true" : undefined}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm transition-colors",
+                isActive
+                  ? "border-brand-gold bg-brand-gold/15 font-semibold text-foreground"
+                  : "border-border bg-card text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className={cn("h-3.5 w-3.5", isActive && "text-brand-gold-ink")} />
+              {s.title}
+            </a>
+          )
+        })}
+      </nav>
 
       <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
         {/* Sticky in-page nav. Anchor jumps within the same page — no route
@@ -127,14 +154,15 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
                 <a
                   key={s.id}
                   href={`#${s.id}`}
+                  aria-current={isActive ? "true" : undefined}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
                     isActive
-                      ? "bg-muted font-semibold text-foreground"
+                      ? "bg-brand-gold/15 font-semibold text-foreground"
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={cn("h-4 w-4", isActive && "text-brand-gold-ink")} />
                   {s.title}
                 </a>
               )
