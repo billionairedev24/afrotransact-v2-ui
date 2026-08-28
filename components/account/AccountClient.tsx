@@ -1,36 +1,31 @@
 "use client"
 
 /**
- * AccountClient — "Your Account" settings, laid out like Chrome's
- * chrome://settings: a fixed left sidebar of sections (icon + label, active
- * item shown as a rounded pill) next to a wide main column that starts with
- * a search box and then renders the active section as a stack of rounded
- * row-cards.
+ * AccountClient — "Your Account", laid out as a single branded page: a left
+ * rail of sections (icon + label, active item marked with a gold ground and
+ * accent bar) beside a content column that renders the active section.
  *
- * Everything happens on this one page: clicking a sidebar item swaps
- * `activeSection` client state and renders that section's content in the
- * main column. There is NO route navigation here — no <Link> to another
- * account route, no router.push. The URL hash is kept in sync via
- * `history.replaceState` only, for bookmarking/refresh, never for
- * navigation. On small screens the sidebar collapses into a horizontal
- * scrollable pill bar above the content.
+ * Everything happens on this one page: clicking a rail item swaps
+ * `activeSection` client state and renders that section's content. There is
+ * NO route navigation here — no <Link> to another account route, no
+ * router.push. The URL hash is kept in sync via `history.replaceState` only,
+ * for bookmarking/refresh, never for navigation. On small screens the rail
+ * collapses into a horizontal scrollable chip bar above the content.
  *
- * The section forms themselves (ProfileSection, SecuritySection, etc.) are
- * untouched — their data/handlers/validation are unchanged. They still live
- * at their standalone /account/<name> routes (kept for bookmarks) and are
- * simply re-hosted here; only the row/card presentation around them (e.g.
- * notifications' toggle rows) has been restyled to match Chrome.
+ * The visual language is AfroTransact's own — brand gold (#FFD400) as the
+ * single accent, deep amber-gold ink for text/icons on light, storefront
+ * card + border tokens — not a generic settings-app grey. The section forms
+ * (ProfileSection, SecuritySection, etc.) are unchanged; only the shell
+ * around them lives here.
  */
 
 import { useEffect, useMemo, useState } from "react"
-import Image from "next/image"
 import {
   User as UserIcon,
   Lock,
   MapPin,
   CreditCard,
   Bell,
-  Search,
   LogOut,
   type LucideIcon,
 } from "lucide-react"
@@ -50,7 +45,6 @@ interface SectionDef {
   headerLabel: string
   description: string
   icon: LucideIcon
-  keywords: string[]
   Component: () => React.JSX.Element | null
 }
 
@@ -61,7 +55,6 @@ const SECTIONS: SectionDef[] = [
     headerLabel: "Profile",
     description: "Your personal information on file with AfroTransact.",
     icon: UserIcon,
-    keywords: ["name", "email", "phone", "profile", "personal"],
     Component: ProfileSection,
   },
   {
@@ -70,7 +63,6 @@ const SECTIONS: SectionDef[] = [
     headerLabel: "Login and security",
     description: "Manage how you sign in and protect your account.",
     icon: Lock,
-    keywords: ["password", "security", "login", "sign in", "close account", "delete"],
     Component: SecuritySection,
   },
   {
@@ -79,16 +71,14 @@ const SECTIONS: SectionDef[] = [
     headerLabel: "Addresses",
     description: "Add, edit, or set a default delivery address for checkout.",
     icon: MapPin,
-    keywords: ["address", "delivery", "shipping", "default"],
     Component: AddressesSection,
   },
   {
     id: "payments",
     label: "Payments",
     headerLabel: "Payment methods",
-    description: "Cards you have saved at checkout. Tokenized by Stripe — we never store raw card numbers.",
+    description: "Cards you saved at checkout. Tokenized by Stripe — we never store raw card numbers.",
     icon: CreditCard,
-    keywords: ["card", "payment", "stripe", "billing"],
     Component: PaymentsSection,
   },
   {
@@ -97,7 +87,6 @@ const SECTIONS: SectionDef[] = [
     headerLabel: "Communications",
     description: "Choose which emails you want to receive. Changes save automatically.",
     icon: Bell,
-    keywords: ["notification", "email", "newsletter", "promotion", "communication"],
     Component: NotificationsSection,
   },
 ]
@@ -110,12 +99,16 @@ function sectionFromHash(): SectionId {
   return SECTION_IDS.has(hash) ? (hash as SectionId) : "profile"
 }
 
+function initialOf(name: string, email: string): string {
+  const src = (name || email || "?").trim()
+  return src ? src[0]!.toUpperCase() : "?"
+}
+
 export function AccountClient({ firstName, email }: { firstName: string; email: string }) {
   const [activeSection, setActiveSection] = useState<SectionId>("profile")
-  const [query, setQuery] = useState("")
 
-  // Pick up a deep-linked hash (e.g. #security) on mount only — this is a
-  // read of the current URL, not a navigation.
+  // Pick up a deep-linked hash (e.g. #security) on mount only — a read of the
+  // current URL, not a navigation.
   useEffect(() => {
     setActiveSection(sectionFromHash())
   }, [])
@@ -139,31 +132,22 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
   )
   const ActiveComponent = active.Component
 
-  // Lightweight search: if the query doesn't match the active section at
-  // all, surface the best-matching sections so the user can jump to them.
-  // This keeps the search bar functional without needing to index every
-  // row inside every section's own component.
-  const normalizedQuery = query.trim().toLowerCase()
-  const activeMatches =
-    normalizedQuery.length === 0 ||
-    active.label.toLowerCase().includes(normalizedQuery) ||
-    active.description.toLowerCase().includes(normalizedQuery) ||
-    active.keywords.some((k) => k.includes(normalizedQuery))
-
-  const suggestions =
-    normalizedQuery.length > 0
-      ? SECTIONS.filter(
-          (s) =>
-            s.id !== active.id &&
-            (s.label.toLowerCase().includes(normalizedQuery) ||
-              s.description.toLowerCase().includes(normalizedQuery) ||
-              s.keywords.some((k) => k.includes(normalizedQuery))),
-        )
-      : []
-
   return (
-    <div className="mx-auto max-w-[1180px] px-4 sm:px-6 py-6 lg:py-10">
-      {/* Mobile: horizontal scrollable pill bar */}
+    <div className="mx-auto max-w-[1140px] px-4 sm:px-6 py-6 lg:py-10">
+      {/* Branded greeting header */}
+      <header className="mb-7 flex items-center gap-4 rounded-3xl border border-border bg-card px-5 py-5 sm:px-7 sm:py-6">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-gold text-2xl font-black text-brand-gold-foreground shadow-sm">
+          {initialOf(firstName, email)}
+        </div>
+        <div className="min-w-0">
+          <h1 className="font-display text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            {firstName ? `Hi, ${firstName}` : "Your Account"}
+          </h1>
+          <p className="mt-0.5 truncate text-sm text-muted-foreground">{email}</p>
+        </div>
+      </header>
+
+      {/* Mobile: horizontal scrollable chip bar */}
       <nav
         aria-label="Account sections"
         className="mb-6 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden"
@@ -177,9 +161,9 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
               type="button"
               aria-current={isActive ? "true" : undefined}
               onClick={() => selectSection(section.id)}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold ${
+              className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold ${
                 isActive
-                  ? "border-brand-gold bg-brand-gold/15 text-foreground"
+                  ? "border-brand-gold bg-brand-gold text-brand-gold-foreground"
                   : "border-border bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -190,21 +174,11 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
         })}
       </nav>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[272px_minmax(0,1fr)]">
-        {/* Desktop sidebar — Chrome settings style */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[248px_minmax(0,1fr)]">
+        {/* Desktop rail */}
         <aside className="hidden lg:block">
-          <div className="sticky top-6">
-            <div className="flex items-center gap-2.5 px-2 mb-1">
-              <Image src="/brand/logo-gold.svg" alt="" width={22} height={22} className="shrink-0" />
-              <h1 className="font-display text-lg font-bold tracking-tight text-foreground">
-                Your Account
-              </h1>
-            </div>
-            <p className="px-2 mb-5 text-xs text-muted-foreground truncate">
-              Hi {firstName} · <span className="text-foreground/80">{email}</span>
-            </p>
-
-            <nav aria-label="Account sections" className="space-y-0.5">
+          <div className="sticky top-6 rounded-2xl border border-border bg-card p-2">
+            <nav aria-label="Account sections" className="space-y-1">
               {SECTIONS.map((section) => {
                 const Icon = section.icon
                 const isActive = section.id === activeSection
@@ -216,12 +190,18 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
                     aria-selected={isActive}
                     aria-current={isActive ? "page" : undefined}
                     onClick={() => selectSection(section.id)}
-                    className={`flex w-full items-center gap-3.5 rounded-full px-4 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold ${
+                    className={`relative flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold ${
                       isActive
-                        ? "bg-brand-gold/15 text-foreground font-semibold"
-                        : "text-foreground hover:bg-muted"
+                        ? "bg-brand-gold/15 font-semibold text-foreground"
+                        : "text-foreground/80 hover:bg-muted hover:text-foreground"
                     }`}
                   >
+                    {isActive && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand-gold"
+                      />
+                    )}
                     <Icon
                       className={`h-[18px] w-[18px] shrink-0 ${
                         isActive ? "text-brand-gold-ink" : "text-muted-foreground"
@@ -234,12 +214,12 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
               })}
             </nav>
 
-            <div className="my-3 h-px bg-border" />
+            <div className="my-2 h-px bg-border" />
 
             <button
               type="button"
               onClick={handleSignOut}
-              className="flex w-full items-center gap-3.5 rounded-full px-4 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
+              className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
             >
               <LogOut className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
               Sign out
@@ -247,62 +227,15 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
           </div>
         </aside>
 
-        {/* Main content column */}
+        {/* Content column */}
         <section className="min-w-0 max-w-[820px]" role="tabpanel" aria-live="polite">
-          {/* Search */}
-          <div className="relative mb-8">
-            <Search
-              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <label htmlFor="account-settings-search" className="sr-only">
-              Search settings
-            </label>
-            <input
-              id="account-settings-search"
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search settings"
-              className="h-11 w-full rounded-full border border-transparent bg-muted pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-brand-gold focus:bg-background focus:ring-2 focus:ring-brand-gold/30"
-            />
+          <div className="mb-5 border-b border-border pb-4">
+            <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
+              {active.headerLabel}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">{active.description}</p>
           </div>
-
-          {suggestions.length > 0 && (
-            <div className="mb-6 rounded-2xl border border-border bg-card p-2">
-              <p className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                Other matching settings
-              </p>
-              {suggestions.map((s) => {
-                const Icon = s.icon
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => { selectSection(s.id); setQuery("") }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-foreground hover:bg-muted transition-colors"
-                  >
-                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                    {s.label}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-
-          {activeMatches ? (
-            <div>
-              <h2 className="mb-3 px-1 text-sm font-medium text-muted-foreground">
-                {active.headerLabel}
-              </h2>
-              <p className="mb-4 px-1 text-sm text-muted-foreground/80">{active.description}</p>
-              <ActiveComponent />
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-border px-5 py-10 text-center text-sm text-muted-foreground">
-              No settings here match &ldquo;{query}&rdquo;. Try another section from the list above.
-            </div>
-          )}
+          <ActiveComponent />
         </section>
       </div>
     </div>
