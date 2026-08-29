@@ -35,6 +35,19 @@ function Spinner({ label }: { label: string }) {
   )
 }
 
+/**
+ * Reads the `atx_ref` referral cookie stamped by `/r/{code}` (short link) or
+ * `ReferralCapture` (`?ref=<code>` on any landing page). Threaded into the
+ * Keycloak registration authorization request as `referralCode` so it rides
+ * along in the query string; Keycloak/the backend register handler can pick
+ * it up once wired (a later task).
+ */
+function getReferralCodeCookie(): string | undefined {
+  if (typeof document === "undefined") return undefined
+  const match = document.cookie.match(/(?:^|; )atx_ref=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : undefined
+}
+
 function RegisterRedirect() {
   const searchParams = useSearchParams()
   const role = searchParams.get("role")
@@ -47,6 +60,7 @@ function RegisterRedirect() {
 
     void (async () => {
       try {
+        const referralCode = getReferralCodeCookie()
         if (isSeller) {
           // Persist seller intent so /auth/login can route back to the
           // onboarding flow if the user verifies their email on another
@@ -59,14 +73,17 @@ function RegisterRedirect() {
           } catch {
             // localStorage unavailable (SSR / private mode) — proceed anyway.
           }
-          await signIn("keycloak-register-seller", {
-            callbackUrl: "/dashboard/onboarding",
-            registration_role: "seller",
-          })
+          await signIn(
+            "keycloak-register-seller",
+            { callbackUrl: "/dashboard/onboarding", registration_role: "seller" },
+            referralCode ? { referralCode } : undefined,
+          )
         } else {
-          await signIn("keycloak-register", {
-            callbackUrl: searchParams.get("callbackUrl") || "/",
-          })
+          await signIn(
+            "keycloak-register",
+            { callbackUrl: searchParams.get("callbackUrl") || "/" },
+            referralCode ? { referralCode } : undefined,
+          )
         }
       } catch {
         // Allow the user to manually retry via a refresh if NextAuth throws.

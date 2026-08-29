@@ -4715,3 +4715,35 @@ export function voidOpex(token: string, id: string, reason: string) {
     body: { reason },
   })
 }
+
+// ── Referral + store credit (buyer "Wallet" section) ──────────────────────
+
+export interface ReferralMeDto {
+  enabled: boolean
+  code?: string
+  link?: string
+  rewardCents?: number
+  currency?: string
+  referredCount?: number
+}
+
+export interface StoreCreditEntryDto {
+  deltaCents: number
+  reason: string
+  orderNumber?: string
+  createdAt: string
+}
+
+export interface StoreCreditMeDto {
+  balanceCents: number
+  currency: string
+  entries: StoreCreditEntryDto[]
+}
+
+export function getReferralMe(token: string) {
+  return api<ReferralMeDto>("/api/v1/referral/me", { token })
+}
+
+export function getStoreCreditMe(token: string) {
+  return api<StoreCreditMeDto>("/api/v1/store-credit/me", { token })
+}
