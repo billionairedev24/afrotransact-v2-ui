@@ -12,11 +12,16 @@
  * for bookmarking/refresh, never for navigation. On small screens the rail
  * collapses into a horizontal scrollable chip bar above the content.
  *
+ * All sections always render (Recipients / My preorders / Followed sellers /
+ * Wallet included) — there is no backend yet for those four, so their own
+ * components render an on-brand "coming soon" / empty state rather than
+ * being hidden from the rail. Count badges are only shown where a real
+ * number is available (Orders, Wishlist); sections without backend data
+ * never show a fabricated count.
+ *
  * The visual language is AfroTransact's own — brand gold (#FFD400) as the
  * single accent, deep amber-gold ink for text/icons on light, storefront
- * card + border tokens — not a generic settings-app grey. The section forms
- * (ProfileSection, SecuritySection, etc.) are unchanged; only the shell
- * around them lives here.
+ * card + border tokens — not a generic settings-app grey.
  */
 
 import { useEffect, useMemo, useState } from "react"
@@ -30,17 +35,21 @@ import {
   Package,
   Users,
   Hourglass,
+  Store,
   Wallet,
   LogOut,
   Star,
   type LucideIcon,
 } from "lucide-react"
 import { signOut } from "next-auth/react"
+import { useQuery } from "@tanstack/react-query"
 import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
-import { getAccountFeatureFlags } from "@/lib/account-features"
+import { getAccessToken } from "@/lib/auth-helpers"
+import { getBuyerOrders, getWishlist } from "@/lib/api"
 import { OrdersSection } from "@/components/account/sections/OrdersSection"
 import { RecipientsSection } from "@/components/account/sections/RecipientsSection"
 import { PreordersSection } from "@/components/account/sections/PreordersSection"
+import { FollowedSellersSection } from "@/components/account/sections/FollowedSellersSection"
 import { ReviewsToWriteSection } from "@/components/account/sections/ReviewsToWriteSection"
 import { WalletSection } from "@/components/account/sections/WalletSection"
 import { ProfileSection } from "@/components/account/sections/ProfileSection"
@@ -54,13 +63,14 @@ type SectionId =
   | "orders"
   | "recipients"
   | "preorders"
+  | "sellers"
   | "reviews"
   | "wallet"
-  | "profile"
-  | "security"
   | "wishlist"
   | "addresses"
   | "payments"
+  | "profile"
+  | "security"
   | "notifications"
 
 interface SectionDef {
@@ -70,18 +80,20 @@ interface SectionDef {
   description: string
   icon: LucideIcon
   Component: () => React.JSX.Element | null
-  /** When false, the section is filtered out entirely: no rail item, no panel. */
-  enabled?: boolean
 }
 
-const flags = getAccountFeatureFlags()
+const DEFAULT_SECTION: SectionId = "orders"
 
+// Rail order, per the approved preview: Orders, Recipients, My preorders,
+// Followed sellers, Reviews to write, Wallet & credit, Wishlist, — divider —
+// Addresses, Payments, Profile, Login & security, Communications,
+// — divider — Sign out (rendered separately below).
 const SECTIONS: SectionDef[] = [
   {
     id: "orders",
     label: "Orders",
-    headerLabel: "Your orders",
-    description: "Track, review, and reorder from your recent purchases.",
+    headerLabel: "Orders",
+    description: "Track deliveries, download receipts, buy again, or start a return.",
     icon: Package,
     Component: OrdersSection,
   },
@@ -89,25 +101,31 @@ const SECTIONS: SectionDef[] = [
     id: "recipients",
     label: "Recipients",
     headerLabel: "Recipients",
-    description: "People you ship to — save an address book for checkout.",
+    description: "Your family & friends address book. Ship to them in one tap at checkout.",
     icon: Users,
     Component: RecipientsSection,
-    enabled: flags.recipientsEnabled,
   },
   {
     id: "preorders",
     label: "My preorders",
     headerLabel: "My preorders",
-    description: "Track your preorder campaign items from reservation to ship date.",
+    description: "Campaign pledges you've committed to. You're charged only when the campaign locks.",
     icon: Hourglass,
     Component: PreordersSection,
-    enabled: flags.preorderActive,
+  },
+  {
+    id: "sellers",
+    label: "Followed sellers",
+    headerLabel: "Followed sellers",
+    description: "Shops you follow. Get first word on new drops, restocks, and campaigns.",
+    icon: Store,
+    Component: FollowedSellersSection,
   },
   {
     id: "reviews",
     label: "Reviews to write",
     headerLabel: "Reviews to write",
-    description: "Rate and review the items you've received.",
+    description: "Rate what you've received. Your reviews build trust for the whole community.",
     icon: Star,
     Component: ReviewsToWriteSection,
   },
@@ -115,10 +133,33 @@ const SECTIONS: SectionDef[] = [
     id: "wallet",
     label: "Wallet & credit",
     headerLabel: "Wallet & credit",
-    description: "Your balance, activity, and referral link.",
+    description: "Store credit and referral earnings. Applied automatically at checkout.",
     icon: Wallet,
     Component: WalletSection,
-    enabled: flags.referralEnabled,
+  },
+  {
+    id: "wishlist",
+    label: "Wishlist",
+    headerLabel: "Wishlist",
+    description: "Saved for later. Move to cart when you're ready.",
+    icon: Heart,
+    Component: WishlistSection,
+  },
+  {
+    id: "addresses",
+    label: "Addresses",
+    headerLabel: "Addresses",
+    description: "Your own delivery addresses for checkout.",
+    icon: MapPin,
+    Component: AddressesSection,
+  },
+  {
+    id: "payments",
+    label: "Payments",
+    headerLabel: "Payment methods",
+    description: "Cards you saved at checkout. Tokenized by Stripe — we never store raw card numbers.",
+    icon: CreditCard,
+    Component: PaymentsSection,
   },
   {
     id: "profile",
@@ -137,30 +178,6 @@ const SECTIONS: SectionDef[] = [
     Component: SecuritySection,
   },
   {
-    id: "wishlist",
-    label: "Wishlist",
-    headerLabel: "Wishlist",
-    description: "Products you've saved for later. Move them to your cart anytime.",
-    icon: Heart,
-    Component: WishlistSection,
-  },
-  {
-    id: "addresses",
-    label: "Addresses",
-    headerLabel: "Addresses",
-    description: "Add, edit, or set a default delivery address for checkout.",
-    icon: MapPin,
-    Component: AddressesSection,
-  },
-  {
-    id: "payments",
-    label: "Payments",
-    headerLabel: "Payment methods",
-    description: "Cards you saved at checkout. Tokenized by Stripe — we never store raw card numbers.",
-    icon: CreditCard,
-    Component: PaymentsSection,
-  },
-  {
     id: "notifications",
     label: "Communications",
     headerLabel: "Communications",
@@ -170,16 +187,15 @@ const SECTIONS: SectionDef[] = [
   },
 ]
 
-const VISIBLE_SECTIONS: SectionDef[] = SECTIONS.filter((s) => s.enabled !== false)
-const VISIBLE_SECTION_IDS = new Set<string>(VISIBLE_SECTIONS.map((s) => s.id))
+const SECTION_IDS = new Set<string>(SECTIONS.map((s) => s.id))
+
+// Sections after which a divider renders in the rail, per the preview.
+const DIVIDER_AFTER: ReadonlySet<SectionId> = new Set(["wishlist", "notifications"])
 
 function sectionFromHash(): SectionId {
-  // "profile" is always rendered (never gated), so it's a safe fallback for
-  // both the SSR-default case and a deep link to a gated-off section.
-  const fallback: SectionId = "profile"
-  if (typeof window === "undefined") return fallback
+  if (typeof window === "undefined") return DEFAULT_SECTION
   const hash = window.location.hash.replace("#", "")
-  return VISIBLE_SECTION_IDS.has(hash) ? (hash as SectionId) : fallback
+  return SECTION_IDS.has(hash) ? (hash as SectionId) : DEFAULT_SECTION
 }
 
 function initialOf(name: string, email: string): string {
@@ -188,13 +204,43 @@ function initialOf(name: string, email: string): string {
 }
 
 export function AccountClient({ firstName, email }: { firstName: string; email: string }) {
-  const [activeSection, setActiveSection] = useState<SectionId>("profile")
+  const [activeSection, setActiveSection] = useState<SectionId>(DEFAULT_SECTION)
 
   // Pick up a deep-linked hash (e.g. #security) on mount only — a read of the
   // current URL, not a navigation.
   useEffect(() => {
     setActiveSection(sectionFromHash())
   }, [])
+
+  // Real counts only where a backend exists — Orders and Wishlist. The other
+  // rail items (Recipients / My preorders / Followed sellers / Wallet) have
+  // no backend yet, so they never show a badge.
+  const ordersCountQuery = useQuery({
+    queryKey: ["account-hub", "orders-count"],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) return 0
+      const page = await getBuyerOrders(token, 0, 1)
+      return page.totalElements
+    },
+    staleTime: 30_000,
+  })
+
+  const wishlistCountQuery = useQuery({
+    queryKey: ["account-hub", "wishlist-count"],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) return 0
+      const page = await getWishlist(token, 0, 1)
+      return page.totalElements
+    },
+    staleTime: 30_000,
+  })
+
+  const counts: Partial<Record<SectionId, number>> = {
+    orders: ordersCountQuery.data,
+    wishlist: wishlistCountQuery.data,
+  }
 
   function selectSection(id: SectionId) {
     setActiveSection(id)
@@ -210,7 +256,7 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
   }
 
   const active = useMemo(
-    () => VISIBLE_SECTIONS.find((s) => s.id === activeSection) ?? VISIBLE_SECTIONS[0],
+    () => SECTIONS.find((s) => s.id === activeSection) ?? SECTIONS[0],
     [activeSection],
   )
   const ActiveComponent = active.Component
@@ -235,9 +281,10 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
         aria-label="Account sections"
         className="mb-6 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden"
       >
-        {VISIBLE_SECTIONS.map((section) => {
+        {SECTIONS.map((section) => {
           const Icon = section.icon
           const isActive = section.id === activeSection
+          const count = counts[section.id]
           return (
             <button
               key={section.id}
@@ -252,6 +299,15 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
               {section.label}
+              {typeof count === "number" && count > 0 && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                    isActive ? "bg-black/10" : "bg-brand-gold/15 text-brand-gold-ink"
+                  }`}
+                >
+                  {count}
+                </span>
+              )}
             </button>
           )
         })}
@@ -267,40 +323,50 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
               aria-orientation="vertical"
               className="space-y-1"
             >
-              {VISIBLE_SECTIONS.map((section) => {
+              {SECTIONS.map((section) => {
                 const Icon = section.icon
                 const isActive = section.id === activeSection
+                const count = counts[section.id]
                 return (
-                  <button
-                    key={section.id}
-                    id={`account-tab-${section.id}`}
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    aria-controls="account-panel"
-                    tabIndex={isActive ? 0 : -1}
-                    aria-current={isActive ? "page" : undefined}
-                    onClick={() => selectSection(section.id)}
-                    className={`relative flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold ${
-                      isActive
-                        ? "bg-brand-gold/15 font-semibold text-foreground"
-                        : "text-foreground/80 hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    {isActive && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand-gold"
-                      />
-                    )}
-                    <Icon
-                      className={`h-[18px] w-[18px] shrink-0 ${
-                        isActive ? "text-brand-gold-ink" : "text-muted-foreground"
+                  <div key={section.id}>
+                    <button
+                      id={`account-tab-${section.id}`}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      aria-controls="account-panel"
+                      tabIndex={isActive ? 0 : -1}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={() => selectSection(section.id)}
+                      className={`relative flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold ${
+                        isActive
+                          ? "bg-brand-gold/15 font-semibold text-foreground"
+                          : "text-foreground/80 hover:bg-muted hover:text-foreground"
                       }`}
-                      aria-hidden="true"
-                    />
-                    <span className="truncate">{section.label}</span>
-                  </button>
+                    >
+                      {isActive && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand-gold"
+                        />
+                      )}
+                      <Icon
+                        className={`h-[18px] w-[18px] shrink-0 ${
+                          isActive ? "text-brand-gold-ink" : "text-muted-foreground"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span className="flex-1 truncate">{section.label}</span>
+                      {typeof count === "number" && count > 0 && (
+                        <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 text-[11px] font-bold text-brand-gold-ink">
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                    {DIVIDER_AFTER.has(section.id) && (
+                      <div className="my-2 h-px bg-border" aria-hidden="true" />
+                    )}
+                  </div>
                 )
               })}
             </nav>

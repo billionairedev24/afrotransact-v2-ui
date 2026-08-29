@@ -14,7 +14,7 @@ export function PreordersSection() {
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gold/15">
         <Hourglass className="h-6 w-6 text-brand-gold-ink" aria-hidden="true" />
       </div>
-      <h4 className="mt-4 text-sm font-semibold text-foreground">No preorders yet</h4>
+      <h4 className="mt-4 text-sm font-semibold text-foreground">No active preorder campaigns yet.</h4>
       <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">
         Preorder a campaign item and track its status here — from reservation
         to ship date.
