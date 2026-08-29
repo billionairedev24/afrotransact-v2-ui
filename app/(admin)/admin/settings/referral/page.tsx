@@ -19,6 +19,7 @@ const EMPTY_SETTINGS: ReferralSettings = {
   enabled: false,
   reward_cents: 0,
   currency: "USD",
+  max_referrals_per_user: 0,
 }
 
 const MAX_REWARD_DOLLARS = 10_000
@@ -51,6 +52,7 @@ function describeReferralError(err: unknown): string {
 export default function AdminReferralSettingsPage() {
   const [settings, setSettings] = useState<ReferralSettings>(EMPTY_SETTINGS)
   const [rewardDollars, setRewardDollars] = useState<number>(0)
+  const [maxReferralsPerUser, setMaxReferralsPerUser] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -62,6 +64,7 @@ export default function AdminReferralSettingsPage() {
       const data = await getReferralSettings()
       setSettings(data)
       setRewardDollars((data.reward_cents ?? 0) / 100)
+      setMaxReferralsPerUser(data.max_referrals_per_user ?? 0)
     } catch (e) {
       logError(e, "referralSettings.load")
       toast.error(describeReferralError(e))
@@ -85,6 +88,10 @@ export default function AdminReferralSettingsPage() {
       toast.error(`Reward amount can't exceed $${MAX_REWARD_DOLLARS.toLocaleString()}.`)
       return
     }
+    if (!Number.isInteger(maxReferralsPerUser) || maxReferralsPerUser < 0) {
+      toast.error("Max referrals per user must be a whole number of zero or greater.")
+      return
+    }
 
     setSaving(true)
     try {
@@ -92,10 +99,12 @@ export default function AdminReferralSettingsPage() {
         enabled: settings.enabled,
         reward_cents: Math.round(rewardDollars * 100),
         currency: "USD",
+        max_referrals_per_user: maxReferralsPerUser,
       }
       const updated = await updateReferralSettings(token, payload)
       setSettings(updated)
       setRewardDollars((updated.reward_cents ?? 0) / 100)
+      setMaxReferralsPerUser(updated.max_referrals_per_user ?? 0)
       toast.success("Referral settings saved")
     } catch (err) {
       logError(err, "referralSettings.save")
@@ -171,6 +180,20 @@ export default function AdminReferralSettingsPage() {
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">Currency</label>
               <input value="USD" disabled className={`${INPUT_CLASS} max-w-[180px] bg-gray-50 text-gray-500`} />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Max referrals per user (0 = unlimited)</label>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={maxReferralsPerUser}
+                onChange={(e) => setMaxReferralsPerUser(Math.max(0, Math.trunc(Number(e.target.value))))}
+                className={`${INPUT_CLASS} max-w-[180px]`}
+              />
+              <p className="text-xs text-gray-400 mt-1.5">
+                Caps how many rewarded referrals a single referrer can earn. Guards against reward farming.
+              </p>
             </div>
           </div>
         </div>

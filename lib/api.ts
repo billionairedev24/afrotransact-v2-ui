@@ -2255,6 +2255,7 @@ export interface ReferralSettings {
   enabled: boolean
   reward_cents: number
   currency: string
+  max_referrals_per_user: number
 }
 
 /** Public — no auth. Storefront (account hub Wallet, `?ref=` capture) reads this. */
