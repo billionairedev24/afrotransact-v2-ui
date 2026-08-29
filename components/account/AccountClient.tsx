@@ -28,12 +28,19 @@ import {
   CreditCard,
   Bell,
   Package,
+  Users,
+  Hourglass,
+  Wallet,
   LogOut,
   type LucideIcon,
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
+import { getAccountFeatureFlags } from "@/lib/account-features"
 import { OrdersSection } from "@/components/account/sections/OrdersSection"
+import { RecipientsSection } from "@/components/account/sections/RecipientsSection"
+import { PreordersSection } from "@/components/account/sections/PreordersSection"
+import { WalletSection } from "@/components/account/sections/WalletSection"
 import { ProfileSection } from "@/components/account/sections/ProfileSection"
 import { SecuritySection } from "@/components/account/sections/SecuritySection"
 import { WishlistSection } from "@/components/account/sections/WishlistSection"
@@ -41,7 +48,17 @@ import { AddressesSection } from "@/components/account/sections/AddressesSection
 import { PaymentsSection } from "@/components/account/sections/PaymentsSection"
 import { NotificationsSection } from "@/components/account/sections/NotificationsSection"
 
-type SectionId = "orders" | "profile" | "security" | "wishlist" | "addresses" | "payments" | "notifications"
+type SectionId =
+  | "orders"
+  | "recipients"
+  | "preorders"
+  | "wallet"
+  | "profile"
+  | "security"
+  | "wishlist"
+  | "addresses"
+  | "payments"
+  | "notifications"
 
 interface SectionDef {
   id: SectionId
@@ -50,7 +67,11 @@ interface SectionDef {
   description: string
   icon: LucideIcon
   Component: () => React.JSX.Element | null
+  /** When false, the section is filtered out entirely: no rail item, no panel. */
+  enabled?: boolean
 }
+
+const flags = getAccountFeatureFlags()
 
 const SECTIONS: SectionDef[] = [
   {
@@ -60,6 +81,33 @@ const SECTIONS: SectionDef[] = [
     description: "Track, review, and reorder from your recent purchases.",
     icon: Package,
     Component: OrdersSection,
+  },
+  {
+    id: "recipients",
+    label: "Recipients",
+    headerLabel: "Recipients",
+    description: "People you ship to — save an address book for checkout.",
+    icon: Users,
+    Component: RecipientsSection,
+    enabled: flags.recipientsEnabled,
+  },
+  {
+    id: "preorders",
+    label: "My preorders",
+    headerLabel: "My preorders",
+    description: "Track your preorder campaign items from reservation to ship date.",
+    icon: Hourglass,
+    Component: PreordersSection,
+    enabled: flags.preorderActive,
+  },
+  {
+    id: "wallet",
+    label: "Wallet & credit",
+    headerLabel: "Wallet & credit",
+    description: "Your balance, activity, and referral link.",
+    icon: Wallet,
+    Component: WalletSection,
+    enabled: flags.referralEnabled,
   },
   {
     id: "profile",
@@ -111,12 +159,16 @@ const SECTIONS: SectionDef[] = [
   },
 ]
 
-const SECTION_IDS = new Set<string>(SECTIONS.map((s) => s.id))
+const VISIBLE_SECTIONS: SectionDef[] = SECTIONS.filter((s) => s.enabled !== false)
+const VISIBLE_SECTION_IDS = new Set<string>(VISIBLE_SECTIONS.map((s) => s.id))
 
 function sectionFromHash(): SectionId {
-  if (typeof window === "undefined") return "profile"
+  // "profile" is always rendered (never gated), so it's a safe fallback for
+  // both the SSR-default case and a deep link to a gated-off section.
+  const fallback: SectionId = "profile"
+  if (typeof window === "undefined") return fallback
   const hash = window.location.hash.replace("#", "")
-  return SECTION_IDS.has(hash) ? (hash as SectionId) : "profile"
+  return VISIBLE_SECTION_IDS.has(hash) ? (hash as SectionId) : fallback
 }
 
 function initialOf(name: string, email: string): string {
@@ -147,7 +199,7 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
   }
 
   const active = useMemo(
-    () => SECTIONS.find((s) => s.id === activeSection) ?? SECTIONS[0],
+    () => VISIBLE_SECTIONS.find((s) => s.id === activeSection) ?? VISIBLE_SECTIONS[0],
     [activeSection],
   )
   const ActiveComponent = active.Component
@@ -172,7 +224,7 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
         aria-label="Account sections"
         className="mb-6 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden"
       >
-        {SECTIONS.map((section) => {
+        {VISIBLE_SECTIONS.map((section) => {
           const Icon = section.icon
           const isActive = section.id === activeSection
           return (
@@ -199,7 +251,7 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
         <aside className="hidden lg:block">
           <div className="sticky top-6 rounded-2xl border border-border bg-card p-2">
             <nav aria-label="Account sections" className="space-y-1">
-              {SECTIONS.map((section) => {
+              {VISIBLE_SECTIONS.map((section) => {
                 const Icon = section.icon
                 const isActive = section.id === activeSection
                 return (
