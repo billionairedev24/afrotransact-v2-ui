@@ -1801,6 +1801,29 @@ export function getOrderByNumber(token: string, orderNumber: string) {
   return api<OrderDto>(`/api/v1/orders/${orderNumber}`, { token })
 }
 
+/**
+ * Downloads the order receipt PDF and triggers a browser save — no
+ * navigation, no browser PDF viewer tab. Throws on a non-ok response so
+ * callers can toast an error.
+ */
+export async function downloadReceipt(token: string, orderNumber: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/v1/orders/${orderNumber}/receipt`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to download receipt (${res.status})`)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `receipt-${orderNumber}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 export function getAdminOrders(token: string, page = 0, size = 20) {
   return api<Page<OrderDto>>(`/api/v1/orders/admin/all?page=${page}&size=${size}&sort=createdAt,desc`, { token })
 }

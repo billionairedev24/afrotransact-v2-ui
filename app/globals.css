@@ -308,3 +308,32 @@ body.storefront-preview header,
 body.storefront-preview footer {
   display: none !important;
 }
+
+/* Printable receipt (app/(main)/orders/[orderNumber]/receipt): on print, hide
+   everything on the page except the receipt itself — site header/footer,
+   ticker bar, promo popups, and the on-screen toolbar all live outside/inside
+   `.receipt-printable` and get blanked via the visibility trick so only the
+   receipt paper renders, full-bleed, on the page. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .receipt-printable,
+  .receipt-printable * {
+    visibility: visible;
+  }
+  .receipt-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .receipt-no-print {
+    display: none !important;
+  }
+  @page {
+    margin: 12mm;
+  }
+}
