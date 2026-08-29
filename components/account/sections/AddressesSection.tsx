@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
-import { AccountShell } from "@/components/account/AccountShell"
 import {
   getAddresses,
   createAddress,
@@ -254,16 +253,5 @@ export function AddressesSection() {
         </ul>
       )}
     </div>
-  )
-}
-
-export default function AddressesPage() {
-  return (
-    <AccountShell
-      title="Your Addresses"
-      subtitle="Add, edit, or set a default delivery address for checkout."
-    >
-      <AddressesSection />
-    </AccountShell>
   )
 }

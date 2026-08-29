@@ -555,7 +555,7 @@ export function Header() {
                             <Package className="h-4 w-4 text-muted-foreground" />
                             Orders
                           </Link>
-                          <Link href="/account/wishlist" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                          <Link href="/account#wishlist" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                             <Heart className="h-4 w-4 text-muted-foreground" />
                             Wishlist
                           </Link>
@@ -571,7 +571,7 @@ export function Header() {
                               Admin Panel
                             </Link>
                           )}
-                          <Link href="/account/settings" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                          <Link href="/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                             <Settings className="h-4 w-4 text-muted-foreground" />
                             Settings
                           </Link>
@@ -848,17 +848,17 @@ export function Header() {
                 My Orders
               </MobileMenuRow>
               <MobileMenuRow
-                href={isAuthenticated ? "/account/wishlist" : "/auth/login?callbackUrl=/account/wishlist"}
+                href={isAuthenticated ? "/account#wishlist" : "/auth/login?callbackUrl=/account"}
                 onClick={closeMobileMenu}
                 icon={Eye}
               >
                 Watchlist
               </MobileMenuRow>
               <MobileMenuRow
-                href={isAuthenticated ? "/account/settings" : "/auth/login?callbackUrl=/account/settings"}
+                href={isAuthenticated ? "/account" : "/auth/login?callbackUrl=/account"}
                 onClick={closeMobileMenu}
                 icon={Settings}
-                active={pathname?.startsWith("/account/settings") ?? false}
+                active={pathname?.startsWith("/account") ?? false}
               >
                 Settings
               </MobileMenuRow>

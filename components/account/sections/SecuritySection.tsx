@@ -14,7 +14,6 @@ import {
   AlertCircle,
 } from "lucide-react"
 import { toast } from "sonner"
-import { AccountShell } from "@/components/account/AccountShell"
 
 function passwordStrength(pw: string): {
   score: 0 | 1 | 2 | 3 | 4
@@ -331,8 +330,7 @@ function CloseAccountModal({ email, onClose }: { email: string; onClose: () => v
 
 /**
  * SecuritySection — password + account-close cards without the page chrome.
- * Used by the consolidated /account page; also wraps in AccountShell for
- * the standalone /account/security deep-link route below.
+ * Rendered inline on the consolidated /account page.
  */
 export function SecuritySection() {
   const { data: session, status } = useSession()
@@ -358,16 +356,5 @@ export function SecuritySection() {
       <PasswordCard />
       <CloseAccountCard email={email} />
     </div>
-  )
-}
-
-export default function SecurityPage() {
-  return (
-    <AccountShell
-      title="Login & Security"
-      subtitle="Manage how you sign in and protect your account."
-    >
-      <SecuritySection />
-    </AccountShell>
   )
 }

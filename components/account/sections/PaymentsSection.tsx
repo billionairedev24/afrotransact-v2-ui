@@ -11,7 +11,6 @@ import {
   updateUserDefaults,
   type SavedPaymentMethod,
 } from "@/lib/api"
-import { AccountShell } from "@/components/account/AccountShell"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { friendlyMessage } from "@/lib/errors"
 
@@ -212,16 +211,5 @@ export function PaymentsSection() {
         </div>
       )}
     </>
-  )
-}
-
-export default function PaymentMethodsPage() {
-  return (
-    <AccountShell
-      title="Payment Methods"
-      subtitle="Cards you have saved at checkout. Tokenized by Stripe — we never store raw card numbers."
-    >
-      <PaymentsSection />
-    </AccountShell>
   )
 }

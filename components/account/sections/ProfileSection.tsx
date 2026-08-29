@@ -6,13 +6,12 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { Loader2, User as UserIcon, Mail, Phone, CheckCircle2 } from "lucide-react"
-import { AccountShell } from "@/components/account/AccountShell"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getUserProfile, updateUserProfile, type UserProfile } from "@/lib/api"
 
 /**
- * ProfileSection — the actual form. Exported so the consolidated
- * /account page can embed it without nesting another AccountShell.
+ * ProfileSection — the actual form, rendered inline on the consolidated
+ * /account page.
  */
 export function ProfileSection() {
   const { status } = useSession()
@@ -103,17 +102,6 @@ export function ProfileSection() {
         </button>
       </div>
     </div>
-  )
-}
-
-export default function ProfilePage() {
-  return (
-    <AccountShell
-      title="Profile"
-      subtitle="Your personal information on file with AfroTransact."
-    >
-      <ProfileSection />
-    </AccountShell>
   )
 }
 

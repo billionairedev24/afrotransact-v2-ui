@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { AccountShell } from "@/components/account/AccountShell"
 import { Toggle } from "@/components/ui/Toggle"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getUserProfile, API_BASE } from "@/lib/api"
@@ -25,6 +24,9 @@ const DEFAULT_PREFS: NotificationPrefs = {
   seller_updates: false,
   newsletter: false,
 }
+
+// Flip this to true (and wire a real backend field) to enable SMS/WhatsApp alert rows.
+const COMMS_CHANNELS_SMS_WHATSAPP = false
 
 const ITEMS: { key: keyof NotificationPrefs; label: string; description: string }[] = [
   { key: "order_updates",   label: "Order updates",        description: "Confirmations, shipping tracking, and delivery alerts" },
@@ -151,6 +153,24 @@ export function NotificationsSection() {
                 />
               </li>
             ))}
+            {COMMS_CHANNELS_SMS_WHATSAPP && (
+              <>
+                <li className="flex items-center gap-4 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">SMS alerts</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">Order and delivery updates via text message</p>
+                  </div>
+                  <Toggle checked={false} onChange={() => {}} disabled label="SMS alerts" />
+                </li>
+                <li className="flex items-center gap-4 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">WhatsApp alerts</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">Order and delivery updates via WhatsApp</p>
+                  </div>
+                  <Toggle checked={false} onChange={() => {}} disabled label="WhatsApp alerts" />
+                </li>
+              </>
+            )}
           </ul>
         )}
         {saving && (
@@ -165,16 +185,5 @@ export function NotificationsSection() {
         toggle is off, so you don&apos;t miss critical updates about a purchase.
       </p>
     </>
-  )
-}
-
-export default function NotificationsPage() {
-  return (
-    <AccountShell
-      title="Notifications"
-      subtitle="Choose which emails you want to receive. Changes save automatically."
-    >
-      <NotificationsSection />
-    </AccountShell>
   )
 }
