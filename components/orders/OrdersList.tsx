@@ -429,15 +429,13 @@ function OrderCard({
           {returnableSubOrder && (
             <RequestReturnButton sub={returnableSubOrder} orderNumber={order.orderNumber} />
           )}
-          <button
-            type="button"
-            disabled
-            title="Downloadable receipts are coming soon"
-            className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-muted-foreground opacity-60"
+          <Link
+            href={`${detailsHref}/receipt`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted"
           >
             <ReceiptText className="h-3.5 w-3.5" />
             Receipt (PDF)
-          </button>
+          </Link>
         </div>
       </div>
     </li>

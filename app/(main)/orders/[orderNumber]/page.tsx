@@ -902,17 +902,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
             )
           })()}
 
-          {/* Download receipt — endpoint ships in a later task; render disabled so
-              we never wire a fabricated URL. */}
-          <button
-            type="button"
-            disabled
-            title="Coming soon"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground opacity-50 cursor-not-allowed"
+          {/* Download receipt — frontend print/save-as-PDF view, no backend
+              endpoint. window.print() on that page IS the "download". */}
+          <Link
+            href={`/orders/${orderNumber}/receipt`}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:brightness-95"
           >
             <FileDown className="h-4 w-4" />
             Download receipt (PDF)
-          </button>
+          </Link>
         </aside>
       </div>
     </main>
