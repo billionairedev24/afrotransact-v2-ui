@@ -161,7 +161,10 @@ export function ReviewsToWriteSection() {
         for (const order of page.content) {
           for (const subOrder of order.subOrders) {
             if (classifyStatus(subOrder.fulfillmentStatus) !== "delivered") continue
-            const deliveredAt = order.placedAt || order.createdAt
+            // Only the real delivery signal — never the order/placed date. When
+            // there's no delivery-proof timestamp the "Delivered …" line is
+            // simply omitted rather than showing a fabricated date.
+            const deliveredAt = subOrder.deliveryProofUploadedAt || ""
             for (const item of subOrder.items) {
               if (!item.productId || candidates.has(item.productId)) continue
               candidates.set(item.productId, {

@@ -738,7 +738,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   // Referral-credit field lands in a later phase; guard on > 0 so this line
   // simply stays absent until the backend populates it.
   const referralCreditCents = (order as unknown as { referralCreditCents?: number }).referralCreditCents ?? 0
-  const isShipped = ["shipped", "dispatched", "out_for_delivery"].includes(overallStatus.toLowerCase())
+  // Only offer "Track Package" when the order actually has a shipping (non-pickup)
+  // sub-order — a pickup-only order whose aggregate status reads "shipped"/"out
+  // for delivery" must not show a shipping-track affordance.
+  const anyShipping = order.subOrders.some((so) => so.deliveryMethod !== "pickup")
+  const isShipped = anyShipping && ["shipped", "dispatched", "out_for_delivery"].includes(overallStatus.toLowerCase())
   const trackingHref = `/orders/${order.orderNumber}#tracking`
 
   return (
