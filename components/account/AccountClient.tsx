@@ -250,16 +250,24 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
         {/* Desktop rail */}
         <aside className="hidden lg:block">
           <div className="sticky top-6 rounded-2xl border border-border bg-card p-2">
-            <nav aria-label="Account sections" className="space-y-1">
+            <nav
+              aria-label="Account sections"
+              role="tablist"
+              aria-orientation="vertical"
+              className="space-y-1"
+            >
               {VISIBLE_SECTIONS.map((section) => {
                 const Icon = section.icon
                 const isActive = section.id === activeSection
                 return (
                   <button
                     key={section.id}
+                    id={`account-tab-${section.id}`}
                     type="button"
                     role="tab"
                     aria-selected={isActive}
+                    aria-controls="account-panel"
+                    tabIndex={isActive ? 0 : -1}
                     aria-current={isActive ? "page" : undefined}
                     onClick={() => selectSection(section.id)}
                     className={`relative flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold ${
@@ -300,7 +308,14 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
         </aside>
 
         {/* Content column */}
-        <section className="min-w-0 max-w-[820px]" role="tabpanel" aria-live="polite">
+        <section
+          id="account-panel"
+          className="min-w-0 max-w-[820px]"
+          role="tabpanel"
+          aria-labelledby={`account-tab-${active.id}`}
+          tabIndex={0}
+          aria-live="polite"
+        >
           <div className="mb-5 border-b border-border pb-4">
             <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
               {active.headerLabel}

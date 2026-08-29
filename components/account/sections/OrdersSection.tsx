@@ -255,7 +255,18 @@ export function OrdersSection() {
         </ul>
       )}
 
-      {!loading && !error && totalElements > 0 && (
+      {/* Filtering is client-side over the current page only, so the server
+          pager's "of N" would be misleading while a status filter is active.
+          Show the pager only when unfiltered; while filtered, show a short note.
+          (The full filtered history lives on the standalone /orders page; the
+          real server-side status filter arrives with the orders-backend work.) */}
+      {!loading && !error && totalElements > 0 && filter !== "all" && (
+        <p className="border-t border-border pt-4 text-xs text-muted-foreground">
+          Showing matches on this page. Choose “All orders” to page through your full history.
+        </p>
+      )}
+
+      {!loading && !error && totalElements > 0 && filter === "all" && (
         <div className="flex flex-col items-center justify-between gap-3 border-t border-border pt-4 sm:flex-row">
           <p className="text-xs text-muted-foreground">
             Showing {rangeStart}–{rangeEnd} of {totalElements}
