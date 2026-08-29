@@ -27,11 +27,13 @@ import {
   MapPin,
   CreditCard,
   Bell,
+  Package,
   LogOut,
   type LucideIcon,
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
+import { OrdersSection } from "@/components/account/sections/OrdersSection"
 import { ProfileSection } from "@/components/account/sections/ProfileSection"
 import { SecuritySection } from "@/components/account/sections/SecuritySection"
 import { WishlistSection } from "@/components/account/sections/WishlistSection"
@@ -39,7 +41,7 @@ import { AddressesSection } from "@/components/account/sections/AddressesSection
 import { PaymentsSection } from "@/components/account/sections/PaymentsSection"
 import { NotificationsSection } from "@/components/account/sections/NotificationsSection"
 
-type SectionId = "profile" | "security" | "wishlist" | "addresses" | "payments" | "notifications"
+type SectionId = "orders" | "profile" | "security" | "wishlist" | "addresses" | "payments" | "notifications"
 
 interface SectionDef {
   id: SectionId
@@ -51,6 +53,14 @@ interface SectionDef {
 }
 
 const SECTIONS: SectionDef[] = [
+  {
+    id: "orders",
+    label: "Orders",
+    headerLabel: "Your orders",
+    description: "Track, review, and reorder from your recent purchases.",
+    icon: Package,
+    Component: OrdersSection,
+  },
   {
     id: "profile",
     label: "Profile",

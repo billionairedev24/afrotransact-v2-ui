@@ -27,7 +27,6 @@ import { toast } from "sonner"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   Package,
-  Clock,
   CheckCircle,
   Truck,
   XCircle,
@@ -54,62 +53,19 @@ import {
 import { logError } from "@/lib/errors"
 import { OrderCardSkeleton } from "@/components/ui/Skeleton"
 import { useCartStore } from "@/stores/cart-store"
-
-/* ──────────────────────── Status groupings ──────────────────────────── */
+import {
+  type StatusGroup,
+  STATUS_GROUPS,
+  classifyStatus,
+  statusBadge,
+} from "@/components/orders/status"
 
 /* Tab groups align with the Order Details fulfillment stepper:
  *   Order Placed → Shipped → Out for Delivery → Delivered
  * Cancelled/Refunded statuses fall outside these groups — they still appear
- * under "All Orders" but don't get a dedicated tab. */
-type StatusGroup = "all" | "placed" | "shipped" | "out_for_delivery" | "delivered"
-
-const STATUS_GROUPS: Record<Exclude<StatusGroup, "all">, ReadonlySet<string>> = {
-  placed:           new Set(["pending", "awaiting_payment", "paid", "confirmed", "processing", "packaged"]),
-  shipped:          new Set(["dispatched", "shipped"]),
-  out_for_delivery: new Set(["out_for_delivery"]),
-  delivered:        new Set(["delivered", "completed"]),
-}
-
-function classifyStatus(status: string): Exclude<StatusGroup, "all"> | null {
-  const s = status.toLowerCase()
-  for (const [group, members] of Object.entries(STATUS_GROUPS)) {
-    if (members.has(s)) return group as Exclude<StatusGroup, "all">
-  }
-  return null
-}
-
-/**
- * Status pill — surfaces the actual order status name, not a marketing
- * synonym. Tone is grouped (Pending = gray/amber, Confirmed = blue,
- * Shipped = gold, Delivered = green, Cancelled = red).
- */
-function statusBadge(status: string) {
-  const s = status.toLowerCase()
-  // Cancelled / refunded show the raw label so buyers see exactly why the
-  // order is in that state.
-  if (s === "cancelled") {
-    return { label: "Cancelled", Icon: XCircle, tone: "bg-red-50 text-red-700 border-red-200" }
-  }
-  if (s === "refunded") {
-    return { label: "Refunded", Icon: XCircle, tone: "bg-red-50 text-red-700 border-red-200" }
-  }
-  if (s === "payment_failed") {
-    return { label: "Payment failed", Icon: XCircle, tone: "bg-red-50 text-red-700 border-red-200" }
-  }
-  if (STATUS_GROUPS.placed.has(s)) {
-    return { label: "Order Placed", Icon: Package, tone: "bg-amber-50 text-amber-800 border-amber-200" }
-  }
-  if (STATUS_GROUPS.shipped.has(s)) {
-    return { label: "Shipped", Icon: Truck, tone: "bg-blue-50 text-blue-700 border-blue-200" }
-  }
-  if (STATUS_GROUPS.out_for_delivery.has(s)) {
-    return { label: "Out for Delivery", Icon: Truck, tone: "bg-brand-gold/15 text-brand-gold-foreground border-brand-gold/30" }
-  }
-  if (STATUS_GROUPS.delivered.has(s)) {
-    return { label: "Delivered", Icon: CheckCircle, tone: "bg-green-50 text-green-700 border-green-200" }
-  }
-  return { label: status, Icon: Clock, tone: "bg-gray-100 text-foreground border-gray-200" }
-}
+ * under "All Orders" but don't get a dedicated tab. Grouping + badge helpers
+ * live in components/orders/status.tsx, shared with the account-hub
+ * OrdersSection so the two surfaces never drift. */
 
 /* ──────────────────────── Formatters ────────────────────────────────── */
 
