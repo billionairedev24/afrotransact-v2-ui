@@ -10,8 +10,8 @@ import { getAccessToken } from "@/lib/auth-helpers"
 import { getUserProfile, updateUserProfile, type UserProfile } from "@/lib/api"
 
 /**
- * ProfileSection — the actual form. Exported so the consolidated
- * /account page can embed it without nesting another AccountShell.
+ * ProfileSection — the actual form, rendered inline on the consolidated
+ * /account page.
  */
 export function ProfileSection() {
   const { status } = useSession()

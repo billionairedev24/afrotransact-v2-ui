@@ -330,8 +330,7 @@ function CloseAccountModal({ email, onClose }: { email: string; onClose: () => v
 
 /**
  * SecuritySection — password + account-close cards without the page chrome.
- * Used by the consolidated /account page; also wraps in AccountShell for
- * the standalone /account/security deep-link route below.
+ * Rendered inline on the consolidated /account page.
  */
 export function SecuritySection() {
   const { data: session, status } = useSession()

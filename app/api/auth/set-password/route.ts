@@ -240,7 +240,7 @@ async function sendPasswordChangedEmail(
   try {
     await fetch(
       `${kcBase}/admin/realms/${realm}/users/${encodeURIComponent(userId)}/execute-actions-email` +
-        `?redirect_uri=${encodeURIComponent(appUrl + "/account/settings")}&client_id=${env("KEYCLOAK_CLIENT_ID", "afrotransact-web")}`,
+        `?redirect_uri=${encodeURIComponent(appUrl + "/account")}&client_id=${env("KEYCLOAK_CLIENT_ID", "afrotransact-web")}`,
       {
         method: "PUT",
         headers: {
