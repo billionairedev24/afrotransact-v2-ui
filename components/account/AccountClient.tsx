@@ -31,11 +31,11 @@ import {
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
-import { ProfileSection } from "@/app/(main)/account/profile/page"
-import { SecuritySection } from "@/app/(main)/account/security/page"
-import { AddressesSection } from "@/app/(main)/account/addresses/page"
-import { PaymentsSection } from "@/app/(main)/account/payments/page"
-import { NotificationsSection } from "@/app/(main)/account/notifications/page"
+import { ProfileSection } from "@/components/account/sections/ProfileSection"
+import { SecuritySection } from "@/components/account/sections/SecuritySection"
+import { AddressesSection } from "@/components/account/sections/AddressesSection"
+import { PaymentsSection } from "@/components/account/sections/PaymentsSection"
+import { NotificationsSection } from "@/components/account/sections/NotificationsSection"
 
 type SectionId = "profile" | "security" | "addresses" | "payments" | "notifications"
 
