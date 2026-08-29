@@ -137,7 +137,14 @@ Match the approved receipt preview. Changes to the existing generator:
    as a fallback.
 5. **✓ PAID badge** in the header meta and a **social footer** (Instagram / LinkedIn /
    WhatsApp) matching `templates/defaults.go`.
-6. Keep the working parts: black/gold header, green totals, thumbnails, advertorial band.
+6. **Use the real logo, not a text wordmark.** Today the header renders the string
+   "AfroTransact" in gold. Bundle the brand logo `email-logo-white.png` (the same white
+   logo the emails use, `afrotransact-v2-ui/public/brand/email-logo-white.png`) into the
+   notification service via `//go:embed`, register it with gofpdf, and draw it on the black
+   header band (height ~10–12mm, left-aligned). No network fetch for the brand mark — it must
+   render offline/deterministically. Keep the text wordmark only as a fallback if image
+   registration fails. (Product thumbnails may still be fetched over HTTP as today.)
+7. Keep the working parts: black/gold header, green totals, thumbnails, advertorial band.
 
 The receipt is generated in the notification consumer and attached to order/payment emails;
 also expose it for **on-demand download** from the order detail + list ("Receipt (PDF)").
