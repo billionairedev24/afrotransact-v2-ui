@@ -17,7 +17,7 @@
  * yet — so the pager and "of N" label are only shown while unfiltered.
  */
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -34,12 +34,13 @@ import {
   AlertCircle,
 } from "lucide-react"
 import { getAccessToken } from "@/lib/auth-helpers"
-import { getBuyerOrders, reorderOrder, type OrderDto, type Page } from "@/lib/api"
+import { getBuyerOrders, reorderOrder, downloadReceipt, getStoreById, type OrderDto, type Page } from "@/lib/api"
 import { logError, friendlyMessage } from "@/lib/errors"
 import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
 import { classifyStatus, statusBadge } from "@/components/orders/status"
 import { RequestReturnButton } from "@/components/returns/RequestReturnButton"
+import { HOUSE_STORE_ID, storeDisplayName } from "@/lib/house-store"
 
 const DEFAULT_PAGE_SIZE = 6
 
@@ -74,7 +75,13 @@ function matchesFilter(order: OrderDto, filter: ListFilter): boolean {
   return classifyStatus(order.status) === filter
 }
 
-export function OrdersList({ pageSize = DEFAULT_PAGE_SIZE }: { pageSize?: number }) {
+export function OrdersList({
+  pageSize = DEFAULT_PAGE_SIZE,
+  showFilters = true,
+}: {
+  pageSize?: number
+  showFilters?: boolean
+}) {
   const router = useRouter()
   const addItem = useCartStore((s) => s.addItem)
 
@@ -84,6 +91,7 @@ export function OrdersList({ pageSize = DEFAULT_PAGE_SIZE }: { pageSize?: number
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [buyingAgainId, setBuyingAgainId] = useState<string | null>(null)
+  const [storeNames, setStoreNames] = useState<Map<string, string>>(new Map())
 
   useEffect(() => {
     let cancelled = false
@@ -113,6 +121,37 @@ export function OrdersList({ pageSize = DEFAULT_PAGE_SIZE }: { pageSize?: number
 
   const allOrders = data?.content ?? []
   const orders = filter === "all" ? allOrders : allOrders.filter((o) => matchesFilter(o, filter))
+
+  // Store-name resolution — never render a raw storeId UUID (same pattern as
+  // the order-detail page: fetch getStoreById for every non-house storeId seen).
+  const nonHouseStoreIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const order of allOrders) {
+      for (const so of order.subOrders) {
+        if (so.storeId && so.storeId !== HOUSE_STORE_ID) ids.add(so.storeId)
+      }
+    }
+    return Array.from(ids).sort()
+  }, [allOrders])
+
+  useEffect(() => {
+    const missing = nonHouseStoreIds.filter((id) => !storeNames.has(id))
+    if (missing.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      const results = await Promise.allSettled(missing.map((id) => getStoreById(id)))
+      if (cancelled) return
+      setStoreNames((prev) => {
+        const next = new Map(prev)
+        results.forEach((r, i) => {
+          if (r.status === "fulfilled" && r.value?.name) next.set(missing[i], r.value.name)
+        })
+        return next
+      })
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonHouseStoreIds])
 
   function restoreCartFromOrder(order: OrderDto): number {
     useCartStore.getState().clearCart()
@@ -201,26 +240,28 @@ export function OrdersList({ pageSize = DEFAULT_PAGE_SIZE }: { pageSize?: number
   return (
     <div className="space-y-5">
       {/* Status filter pills */}
-      <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => {
-          const isActive = filter === f.key
-          return (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                isActive
-                  ? "border-brand-gold bg-brand-gold/15 text-brand-gold-ink"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {f.label}
-            </button>
-          )
-        })}
-      </div>
+      {showFilters && (
+        <div className="flex flex-wrap gap-2">
+          {FILTERS.map((f) => {
+            const isActive = filter === f.key
+            return (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setFilter(f.key)}
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                  isActive
+                    ? "border-brand-gold bg-brand-gold/15 text-brand-gold-ink"
+                    : "border-border bg-card text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {f.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {loading && (
         <div className="flex items-center justify-center rounded-2xl border border-border bg-card py-16">
@@ -255,6 +296,7 @@ export function OrdersList({ pageSize = DEFAULT_PAGE_SIZE }: { pageSize?: number
               order={order}
               buyingAgain={buyingAgainId === order.id}
               onBuyAgain={() => handleBuyAgain(order)}
+              storeNames={storeNames}
             />
           ))}
         </ul>
@@ -319,16 +361,18 @@ function OrderCard({
   order,
   buyingAgain,
   onBuyAgain,
+  storeNames,
 }: {
   order: OrderDto
   buyingAgain: boolean
   onBuyAgain: () => void
+  storeNames: Map<string, string>
 }) {
   const badge = statusBadge(order.status)
   const group = classifyStatus(order.status)
   const allItems = order.subOrders.flatMap((so) => so.items)
   const firstItem = allItems[0]
-  const extraItemCount = allItems.length - 1
+  const itemCount = allItems.reduce((sum, it) => sum + it.quantity, 0)
   const placedDate = order.placedAt || order.createdAt
   const detailsHref = `/orders/${order.orderNumber}`
   const trackingHref = `/orders/${order.orderNumber}#tracking`
@@ -340,103 +384,104 @@ function OrderCard({
     ? order.subOrders.find((so) => so.items.length > 0)
     : undefined
 
+  const sellerNames = Array.from(
+    new Set(order.subOrders.map((so) => storeDisplayName(so.storeId, storeNames.get(so.storeId)))),
+  )
+  const soldByLabel = sellerNames.join(" & ")
+
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false)
+  async function handleDownloadReceipt() {
+    if (downloadingReceipt) return
+    setDownloadingReceipt(true)
+    try {
+      const token = await getAccessToken()
+      if (!token) {
+        toast.error("Session expired — please sign in again")
+        return
+      }
+      await downloadReceipt(token, order.orderNumber)
+    } catch (e) {
+      logError(e, "downloading receipt")
+      toast.error("Couldn't download the receipt — try again")
+    } finally {
+      setDownloadingReceipt(false)
+    }
+  }
+
   return (
-    <li className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border bg-muted/40 px-4 py-3 sm:px-4.5">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground">Order placed</p>
-            <p className="text-sm font-medium text-foreground">{formatDate(placedDate)}</p>
-          </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground">Total</p>
-            <p className="text-sm font-semibold tabular-nums text-foreground">{formatCents(order.totalCents, order.currency)}</p>
-          </div>
-          <div>
-            <p className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground">Order #</p>
-            <p className="text-sm font-medium text-foreground">{order.orderNumber}</p>
-          </div>
+    <li className="rounded-2xl border border-border bg-card p-4.5 shadow-sm">
+      <div className="flex items-center gap-3.5">
+        <div className="relative h-[60px] w-[60px] shrink-0 overflow-hidden rounded-xl bg-muted">
+          {firstItem?.imageUrl ? (
+            <Image src={firstItem.imageUrl} alt={firstItem.productTitle ?? "Item"} fill sizes="60px" className="object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <Package className="h-5 w-5 text-muted-foreground" />
+            </div>
+          )}
         </div>
-        <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold whitespace-nowrap", badge.tone)}>
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-1 text-sm font-semibold text-foreground">
+            Order #{order.orderNumber} · {itemCount} item{itemCount === 1 ? "" : "s"}
+          </p>
+          <p className="line-clamp-1 text-xs text-muted-foreground">
+            Placed {formatDate(placedDate)}{soldByLabel ? ` · Sold by ${soldByLabel}` : ""}
+          </p>
+        </div>
+        <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold whitespace-nowrap", badge.tone)}>
           <badge.Icon className="h-3 w-3" />
           {badge.label}
         </span>
       </div>
 
-      <div className="p-4 sm:p-4.5">
-        {firstItem ? (
-          <Link href={detailsHref} className="flex min-w-0 items-center gap-3.5">
-            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
-              {firstItem.imageUrl ? (
-                <Image src={firstItem.imageUrl} alt={firstItem.productTitle ?? "Item"} fill sizes="56px" className="object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Package className="h-5 w-5 text-muted-foreground" />
-                </div>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="line-clamp-1 text-sm font-semibold text-foreground">{firstItem.productTitle ?? "Item"}</p>
-              <p className="text-xs text-muted-foreground">
-                Qty {firstItem.quantity}
-                {extraItemCount > 0 && ` · +${extraItemCount} more item${extraItemCount === 1 ? "" : "s"}`}
-              </p>
-            </div>
-            <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-              {formatCents(firstItem.totalPriceCents, order.currency)}
-            </span>
+      <div className="mt-3.5 flex flex-wrap gap-2">
+        {canTrack && (
+          <Link
+            href={trackingHref}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-gold px-3.5 py-2 text-xs font-semibold text-brand-gold-foreground hover:brightness-95"
+          >
+            <Truck className="h-3.5 w-3.5" />
+            Track package
           </Link>
-        ) : (
-          <p className="text-sm text-muted-foreground">No items on this order</p>
         )}
-
-        <div className="mt-3.5 flex flex-wrap items-center gap-2">
-          {canTrack && (
-            <Link
-              href={trackingHref}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-gold px-3.5 py-2 text-xs font-semibold text-brand-gold-foreground hover:brightness-95"
-            >
-              <Truck className="h-3.5 w-3.5" />
-              Track package
-            </Link>
-          )}
+        {canReview && (
           <Link
-            href={detailsHref}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+            href={`${detailsHref}#review`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-green px-3.5 py-2 text-xs font-semibold text-white hover:brightness-95"
           >
-            View order
+            <Star className="h-3.5 w-3.5" />
+            Write a review
           </Link>
-          {canReorder && (
-            <button
-              type="button"
-              onClick={onBuyAgain}
-              disabled={buyingAgain}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {buyingAgain ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              Buy again
-            </button>
-          )}
-          {canReview && (
-            <Link
-              href={`${detailsHref}#review`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted"
-            >
-              <Star className="h-3.5 w-3.5" />
-              Write a review
-            </Link>
-          )}
-          {returnableSubOrder && (
-            <RequestReturnButton sub={returnableSubOrder} orderNumber={order.orderNumber} />
-          )}
-          <Link
-            href={`${detailsHref}/receipt`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+        )}
+        {canReorder && (
+          <button
+            type="button"
+            onClick={onBuyAgain}
+            disabled={buyingAgain}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <ReceiptText className="h-3.5 w-3.5" />
-            Receipt (PDF)
-          </Link>
-        </div>
+            {buyingAgain ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            Buy again
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={handleDownloadReceipt}
+          disabled={downloadingReceipt}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {downloadingReceipt ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ReceiptText className="h-3.5 w-3.5" />}
+          Receipt (PDF)
+        </button>
+        {returnableSubOrder && (
+          <RequestReturnButton sub={returnableSubOrder} orderNumber={order.orderNumber} />
+        )}
+        <Link
+          href={detailsHref}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+        >
+          View order
+        </Link>
       </div>
     </li>
   )

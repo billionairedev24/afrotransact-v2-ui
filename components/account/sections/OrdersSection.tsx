@@ -13,5 +13,5 @@
 import { OrdersList } from "@/components/orders/OrdersList"
 
 export function OrdersSection() {
-  return <OrdersList pageSize={6} />
+  return <OrdersList pageSize={6} showFilters={false} />
 }

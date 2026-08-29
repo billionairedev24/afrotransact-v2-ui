@@ -31,6 +31,7 @@ import {
   checkReviewEligibility,
   createReview,
   getStoreById,
+  downloadReceipt,
   type OrderDto,
   type SubOrderDto,
   type OrderItemDto,
@@ -679,6 +680,25 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [storeNames, setStoreNames] = useState<Map<string, string>>(new Map())
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false)
+
+  async function handleDownloadReceipt() {
+    if (downloadingReceipt) return
+    setDownloadingReceipt(true)
+    try {
+      const token = await getAccessToken()
+      if (!token) {
+        toast.error("Session expired — please sign in again")
+        return
+      }
+      await downloadReceipt(token, orderNumber)
+    } catch (e) {
+      logError(e, "downloading receipt")
+      toast.error("Couldn't download the receipt — try again")
+    } finally {
+      setDownloadingReceipt(false)
+    }
+  }
 
   useEffect(() => {
     if (sessionStatus === "loading") return
@@ -902,15 +922,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
             )
           })()}
 
-          {/* Download receipt — frontend print/save-as-PDF view, no backend
-              endpoint. window.print() on that page IS the "download". */}
-          <Link
-            href={`/orders/${orderNumber}/receipt`}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:brightness-95"
+          <button
+            type="button"
+            onClick={handleDownloadReceipt}
+            disabled={downloadingReceipt}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <FileDown className="h-4 w-4" />
+            {downloadingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
             Download receipt (PDF)
-          </Link>
+          </button>
         </aside>
       </div>
     </main>
