@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from "react"
 import {
   User as UserIcon,
   Lock,
+  Heart,
   MapPin,
   CreditCard,
   Bell,
@@ -33,11 +34,12 @@ import { signOut } from "next-auth/react"
 import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
 import { ProfileSection } from "@/components/account/sections/ProfileSection"
 import { SecuritySection } from "@/components/account/sections/SecuritySection"
+import { WishlistSection } from "@/components/account/sections/WishlistSection"
 import { AddressesSection } from "@/components/account/sections/AddressesSection"
 import { PaymentsSection } from "@/components/account/sections/PaymentsSection"
 import { NotificationsSection } from "@/components/account/sections/NotificationsSection"
 
-type SectionId = "profile" | "security" | "addresses" | "payments" | "notifications"
+type SectionId = "profile" | "security" | "wishlist" | "addresses" | "payments" | "notifications"
 
 interface SectionDef {
   id: SectionId
@@ -64,6 +66,14 @@ const SECTIONS: SectionDef[] = [
     description: "Manage how you sign in and protect your account.",
     icon: Lock,
     Component: SecuritySection,
+  },
+  {
+    id: "wishlist",
+    label: "Wishlist",
+    headerLabel: "Wishlist",
+    description: "Products you've saved for later. Move them to your cart anytime.",
+    icon: Heart,
+    Component: WishlistSection,
   },
   {
     id: "addresses",
