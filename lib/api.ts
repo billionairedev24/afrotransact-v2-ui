@@ -2251,6 +2251,21 @@ export function putAdminPickupSettings(token: string, data: PickupSettings) {
   return api<PickupSettings>("/api/v1/admin/config/pickup", { method: "PUT", body: data, token })
 }
 
+export interface ReferralSettings {
+  enabled: boolean
+  reward_cents: number
+  currency: string
+}
+
+/** Public — no auth. Storefront (account hub Wallet, `?ref=` capture) reads this. */
+export function getReferralSettings() {
+  return api<ReferralSettings>("/api/v1/config/referral-settings")
+}
+
+export function updateReferralSettings(token: string, data: ReferralSettings) {
+  return api<ReferralSettings>("/api/v1/admin/config/referral-settings", { method: "PUT", body: data, token })
+}
+
 // ── Admin ──
 
 export function getAdminPlans(token: string) {

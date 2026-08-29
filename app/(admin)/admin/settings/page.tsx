@@ -33,6 +33,7 @@ import {
   Bell,
   Globe,
   MapPin,
+  Gift,
 } from "lucide-react"
 
 const INPUT_CLASS =
@@ -475,6 +476,20 @@ export default function SettingsPage() {
           className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
         >
           Open Pickup settings
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </Section>
+
+      <Section
+        icon={Gift}
+        title="Referral"
+        subtitle="Enable the referral program and set the store-credit reward buyers earn."
+      >
+        <Link
+          href="/admin/settings/referral"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors"
+        >
+          Open Referral settings
           <ChevronRight className="h-4 w-4" />
         </Link>
       </Section>
