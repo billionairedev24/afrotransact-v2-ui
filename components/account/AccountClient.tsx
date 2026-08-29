@@ -32,6 +32,7 @@ import {
   Hourglass,
   Wallet,
   LogOut,
+  Star,
   type LucideIcon,
 } from "lucide-react"
 import { signOut } from "next-auth/react"
@@ -40,6 +41,7 @@ import { getAccountFeatureFlags } from "@/lib/account-features"
 import { OrdersSection } from "@/components/account/sections/OrdersSection"
 import { RecipientsSection } from "@/components/account/sections/RecipientsSection"
 import { PreordersSection } from "@/components/account/sections/PreordersSection"
+import { ReviewsToWriteSection } from "@/components/account/sections/ReviewsToWriteSection"
 import { WalletSection } from "@/components/account/sections/WalletSection"
 import { ProfileSection } from "@/components/account/sections/ProfileSection"
 import { SecuritySection } from "@/components/account/sections/SecuritySection"
@@ -52,6 +54,7 @@ type SectionId =
   | "orders"
   | "recipients"
   | "preorders"
+  | "reviews"
   | "wallet"
   | "profile"
   | "security"
@@ -99,6 +102,14 @@ const SECTIONS: SectionDef[] = [
     icon: Hourglass,
     Component: PreordersSection,
     enabled: flags.preorderActive,
+  },
+  {
+    id: "reviews",
+    label: "Reviews to write",
+    headerLabel: "Reviews to write",
+    description: "Rate and review the items you've received.",
+    icon: Star,
+    Component: ReviewsToWriteSection,
   },
   {
     id: "wallet",
