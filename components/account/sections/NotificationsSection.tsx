@@ -25,6 +25,9 @@ const DEFAULT_PREFS: NotificationPrefs = {
   newsletter: false,
 }
 
+// Flip this to true (and wire a real backend field) to enable SMS/WhatsApp alert rows.
+const COMMS_CHANNELS_SMS_WHATSAPP = false
+
 const ITEMS: { key: keyof NotificationPrefs; label: string; description: string }[] = [
   { key: "order_updates",   label: "Order updates",        description: "Confirmations, shipping tracking, and delivery alerts" },
   { key: "promotions",      label: "Promotions and deals", description: "Exclusive discounts and limited-time offers" },
@@ -150,6 +153,24 @@ export function NotificationsSection() {
                 />
               </li>
             ))}
+            {COMMS_CHANNELS_SMS_WHATSAPP && (
+              <>
+                <li className="flex items-center gap-4 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">SMS alerts</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">Order and delivery updates via text message</p>
+                  </div>
+                  <Toggle checked={false} onChange={() => {}} disabled label="SMS alerts" />
+                </li>
+                <li className="flex items-center gap-4 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">WhatsApp alerts</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">Order and delivery updates via WhatsApp</p>
+                  </div>
+                  <Toggle checked={false} onChange={() => {}} disabled label="WhatsApp alerts" />
+                </li>
+              </>
+            )}
           </ul>
         )}
         {saving && (
