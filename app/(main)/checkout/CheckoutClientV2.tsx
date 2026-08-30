@@ -1692,17 +1692,14 @@ export default function CheckoutClientV2({
                                   Arrives in {DELIVERY_ETA_HOURS} hours
                                 </p>
                               </div>
-                              {/* Show the actual delivery fee on the option (the order
-                                  total still shows delivery once in the summary). */}
+                              {/* Delivery is ONE order-level fee shown once in the order
+                                  summary — never stamped per group here (that reads as a
+                                  per-seller split). The option only signals whether
+                                  delivery is free; the actual fee lives in the summary. */}
                               {freeShippingApplies ? (
                                 <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
-                              ) : couponTargetsShipping ? (
-                                <span className="text-sm tabular-nums">
-                                  <span className="mr-1.5 text-muted-foreground line-through">{fmtShip(shippingCents)}</span>
-                                  <span className="font-bold text-emerald-700 dark:text-emerald-400">Free</span>
-                                </span>
                               ) : (
-                                <span className="text-sm font-bold text-foreground tabular-nums">{fmtShip(shippingCents)}</span>
+                                <span className="text-xs font-medium text-muted-foreground">Standard delivery</span>
                               )}
                             </label>
                           )
