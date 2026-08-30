@@ -1692,10 +1692,8 @@ export default function CheckoutClientV2({
                                   Arrives in {DELIVERY_ETA_HOURS} hours
                                 </p>
                               </div>
-                              {/* Delivery is a single FLAT fee for the whole order
-                                  (shown once in the order summary), never a per-group
-                                  charge — so we don't stamp the dollar amount on each
-                                  group's option (that read as "$7.99 × N"). */}
+                              {/* Show the actual delivery fee on the option (the order
+                                  total still shows delivery once in the summary). */}
                               {freeShippingApplies ? (
                                 <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
                               ) : couponTargetsShipping ? (
@@ -1704,7 +1702,7 @@ export default function CheckoutClientV2({
                                   <span className="font-bold text-emerald-700 dark:text-emerald-400">Free</span>
                                 </span>
                               ) : (
-                                <span className="text-xs font-medium text-muted-foreground">Flat rate</span>
+                                <span className="text-sm font-bold text-foreground tabular-nums">{fmtShip(shippingCents)}</span>
                               )}
                             </label>
                           )
