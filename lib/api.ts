@@ -1988,6 +1988,8 @@ export interface StorePickupOption {
   eligible: boolean
   reason?: string
   option?: ShippingQuoteOption
+  /** Straight-line distance (miles) from the buyer to the pickup point; null when unavailable. */
+  distanceMiles?: number | null
 }
 
 export interface ShippingQuoteResponse {

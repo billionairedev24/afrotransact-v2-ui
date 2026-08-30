@@ -57,6 +57,7 @@ import {
   Check,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatDistance } from "@/lib/format"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { features } from "@/lib/features"
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
@@ -1441,7 +1442,9 @@ export default function CheckoutClientV2({
               : freeShippingApplies
                 ? "Free — your order qualifies for free delivery"
                 : selectedQuote
-                  ? `${selectedQuote.serviceName} — ${fmtShip(selectedQuote.amountCents)}`
+                  // One delivery fee for the whole order — shown once in the
+                  // order summary, never here (and never split per seller).
+                  ? "Delivered by AfroTransact"
                   : "Choose a delivery option"}
             disabled={!selectedAddress}
           >
@@ -1547,9 +1550,9 @@ export default function CheckoutClientV2({
                           >
                             <MapPin className="h-3.5 w-3.5" />
                             {pickupDisplayEligible
-                              ? pickupOpt?.pickupLocation?.city
-                                ? `Collect in ${pickupOpt.pickupLocation.city}`
-                                : "Pickup available near you"
+                              ? storePickup?.distanceMiles != null
+                                ? `Pickup · ${formatDistance(storePickup.distanceMiles)} away`
+                                : "Pickup available"
                               : "Pickup not available here"}
                           </span>
                         )}
@@ -1694,12 +1697,11 @@ export default function CheckoutClientV2({
                               </div>
                               {/* Delivery is ONE order-level fee shown once in the order
                                   summary — never stamped per group here (that reads as a
-                                  per-seller split). The option only signals whether
-                                  delivery is free; the actual fee lives in the summary. */}
-                              {freeShippingApplies ? (
+                                  per-seller split), and never as a bare "Standard delivery"
+                                  label. The option shows only the ETA (under the name) plus
+                                  a "Free" flag when the order qualifies for free delivery. */}
+                              {freeShippingApplies && (
                                 <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
-                              ) : (
-                                <span className="text-xs font-medium text-muted-foreground">Standard delivery</span>
                               )}
                             </label>
                           )
