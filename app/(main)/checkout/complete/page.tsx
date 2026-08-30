@@ -490,12 +490,33 @@ function CheckoutCompleteContent() {
     }
     if (pollState === "polling") {
       return (
-        <main className="mx-auto max-w-[600px] px-4 py-20 text-center">
-          <Loader2 className="mx-auto h-10 w-10 animate-spin text-foreground" />
-          <h1 className="text-xl font-bold text-gray-900 mt-6">Finalizing your order…</h1>
-          <p className="text-gray-500 text-sm mt-2">
-            Hang tight while we confirm your payment. This usually takes a few seconds.
-          </p>
+        <main className="mx-auto max-w-[560px] px-4 py-16 sm:py-24">
+          <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-gold/15">
+              <Loader2 className="h-8 w-8 animate-spin text-brand-gold-foreground" />
+            </div>
+            <h1 className="text-xl font-bold text-foreground">Confirming your payment</h1>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+              Payment received — we&apos;re placing your order now. This usually takes just a few seconds.
+            </p>
+            <ul className="mx-auto mt-7 max-w-[260px] space-y-3.5 text-left">
+              <li className="flex items-center gap-3 text-sm font-medium text-foreground">
+                <CheckCircle className="h-5 w-5 shrink-0 text-brand-green" />
+                Payment received
+              </li>
+              <li className="flex items-center gap-3 text-sm font-semibold text-foreground">
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin text-brand-gold-foreground" />
+                Placing your order
+              </li>
+              <li className="flex items-center gap-3 text-sm text-muted-foreground">
+                <Clock className="h-5 w-5 shrink-0" />
+                Emailing your receipt
+              </li>
+            </ul>
+            <p className="mt-7 text-xs text-muted-foreground">
+              Keep this page open — there&apos;s nothing more to pay.
+            </p>
+          </div>
         </main>
       )
     }

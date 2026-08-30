@@ -5,14 +5,15 @@ const REFERRAL_COOKIE = "atx_ref"
 const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60
 
 /**
- * Short referral link → home page.
+ * Short referral link → registration.
  *
  * The referral service hands out links shaped `https://<host>/r/{code}`
- * (see `GET /api/v1/referral/me`). Visiting one stamps the `atx_ref` cookie
- * (30-day, path=/, SameSite=Lax) so the register flow can thread the code
- * through as `referralCode`, then bounces to the home page. `?ref=<code>`
- * query params on any other landing page are captured the same way by
- * `components/referral/ReferralCapture.tsx`.
+ * (see `GET /api/v1/referral/me`). The whole point of the link is to bring a
+ * NEW person in, so we send it straight to the register flow (`/auth/register`,
+ * which threads the code through to Keycloak as `referralCode`) rather than the
+ * home page. We also stamp the `atx_ref` cookie (30-day, path=/, SameSite=Lax)
+ * so the code survives even if the visitor wanders off and registers later, and
+ * pass it as `?ref=<code>` (captured by `components/referral/ReferralCapture`).
  */
 export async function GET(
   req: NextRequest,
@@ -20,10 +21,14 @@ export async function GET(
 ) {
   const { code: raw } = await params
   const code = decodeURIComponent(raw ?? "").trim()
+  const valid = Boolean(code) && !code.includes("/") && !code.includes("..")
 
-  const res = NextResponse.redirect(new URL("/", req.url))
+  const dest = valid
+    ? `/auth/register?ref=${encodeURIComponent(code)}`
+    : "/"
+  const res = NextResponse.redirect(new URL(dest, req.url))
 
-  if (code && !code.includes("/") && !code.includes("..")) {
+  if (valid) {
     res.cookies.set(REFERRAL_COOKIE, code, {
       path: "/",
       maxAge: THIRTY_DAYS_SECONDS,

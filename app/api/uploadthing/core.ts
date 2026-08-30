@@ -81,6 +81,18 @@ export const ourFileRouter = {
         uploadedBy: metadata.userId,
       }
     }),
+
+  // Buyer-uploaded return/refund evidence photos (any signed-in user).
+  returnPhoto: f({
+    "image/png": { maxFileSize: "8MB", maxFileCount: 10 },
+    "image/jpeg": { maxFileSize: "8MB", maxFileCount: 10 },
+    "image/webp": { maxFileSize: "8MB", maxFileCount: 10 },
+    "image/gif": { maxFileSize: "8MB", maxFileCount: 10 },
+  })
+    .middleware(authMiddleware)
+    .onUploadComplete(({ metadata, file }) => {
+      return { url: file.ufsUrl, name: file.name, uploadedBy: metadata.userId }
+    }),
 } satisfies FileRouter
 
 export type OurFileRouter = typeof ourFileRouter
