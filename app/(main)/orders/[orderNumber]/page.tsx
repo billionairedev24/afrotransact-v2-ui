@@ -20,7 +20,6 @@
 
 import { use, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { signIn, useSession } from "next-auth/react"
 import { toast } from "sonner"
@@ -443,6 +442,7 @@ function OrderItem({
     eligible: boolean; purchased: boolean; already_reviewed: boolean
   } | null>(null)
   const [reviewed, setReviewed] = useState(false)
+  const [imgError, setImgError] = useState(false)
 
   useEffect(() => {
     if (!isDelivered || !item.productId) return
@@ -460,6 +460,15 @@ function OrderItem({
 
   const canReview = isDelivered && eligibility?.eligible === true && !reviewed
   const alreadyReviewed = eligibility?.already_reviewed === true || reviewed
+
+  // Deep-link from the Orders list "Write a review" button (→ …/orders/[n]#review):
+  // auto-open the inline review form for the reviewable item once eligibility
+  // resolves, instead of dropping the buyer on the plain order-details page.
+  useEffect(() => {
+    if (canReview && typeof window !== "undefined" && window.location.hash === "#review") {
+      setShowForm(true)
+    }
+  }, [canReview])
 
   function handleBuyAgain() {
     if (!item.productId || adding) return
@@ -492,13 +501,17 @@ function OrderItem({
   return (
     <div className="flex flex-col sm:flex-row gap-4 border-b border-border pb-6 last:border-0 last:pb-0">
       <div className="w-full sm:w-28 h-28 bg-muted flex-shrink-0 rounded-lg overflow-hidden border border-border">
-        {item.imageUrl ? (
-          <Image
+        {item.imageUrl && !imgError ? (
+          // Native <img>, not next/image: product image hosts are unpredictable
+          // (sellers upload to various CDNs), so requiring each in next.config
+          // remotePatterns silently breaks thumbnails. Same rationale as the
+          // delivery-proof photo below. onError falls back to the Package icon.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={item.imageUrl}
             alt={item.productTitle || "Product"}
-            width={112}
-            height={112}
             className="h-full w-full object-cover"
+            onError={() => setImgError(true)}
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center">
@@ -866,7 +879,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
                 </div>
               )}
               <div className="flex items-center justify-between py-1.5">
-                <span className="text-muted-foreground">Estimated tax</span>
+                <span className="text-muted-foreground">Tax</span>
                 <span className="tabular-nums text-foreground">{formatCents(order.taxCents, order.currency)}</span>
               </div>
               {referralCreditCents > 0 && (

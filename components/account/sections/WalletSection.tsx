@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useState } from "react"
+import { SITE_URL } from "@/lib/site"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -127,6 +128,15 @@ export function WalletSection() {
   }
 
   const currency = credit?.currency || referral?.currency || "USD"
+
+  // Environment-aware share link. The backend's `referral.link` hard-codes the
+  // production host (www.afrotransact.com), which is wrong in local/staging —
+  // build it from the ACTUAL current origin (+ code) so it matches wherever the
+  // app is running (e.g. http://localhost:3001). Falls back to SITE_URL during
+  // SSR, then to the backend link if no code is present.
+  const shareLink = referral?.code
+    ? `${typeof window !== "undefined" ? window.location.origin : SITE_URL}/r/${referral.code}`
+    : referral?.link ?? null
   const entries = [...(credit?.entries ?? [])].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
@@ -236,22 +246,22 @@ export function WalletSection() {
               </div>
             </div>
 
-            {referral.link && (
+            {shareLink && (
               <div className="flex items-center gap-2">
                 <input
                   readOnly
-                  value={referral.link}
+                  value={shareLink}
                   onFocus={(e) => e.currentTarget.select()}
                   className="h-11 w-full min-w-0 flex-1 rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/30 transition"
                 />
                 <button
-                  onClick={() => handleCopy(referral.link!)}
+                  onClick={() => handleCopy(shareLink)}
                   className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-brand-gold px-4 text-sm font-bold text-brand-gold-foreground hover:bg-brand-gold-hover transition-colors"
                 >
                   <Copy className="h-4 w-4" /> Copy
                 </button>
                 <button
-                  onClick={() => handleShare(referral.link!)}
+                  onClick={() => handleShare(shareLink)}
                   className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
                   aria-label="Share referral link"
                 >

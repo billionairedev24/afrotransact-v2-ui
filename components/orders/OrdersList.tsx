@@ -19,7 +19,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -390,6 +389,7 @@ function OrderCard({
   const soldByLabel = sellerNames.join(" & ")
 
   const [downloadingReceipt, setDownloadingReceipt] = useState(false)
+  const [imgError, setImgError] = useState(false)
   async function handleDownloadReceipt() {
     if (downloadingReceipt) return
     setDownloadingReceipt(true)
@@ -409,32 +409,65 @@ function OrderCard({
   }
 
   return (
-    <li className="rounded-2xl border border-border bg-card p-4.5 shadow-sm">
-      <div className="flex items-center gap-3.5">
-        <div className="relative h-[60px] w-[60px] shrink-0 overflow-hidden rounded-xl bg-muted">
-          {firstItem?.imageUrl ? (
-            <Image src={firstItem.imageUrl} alt={firstItem.productTitle ?? "Item"} fill sizes="60px" className="object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <Package className="h-5 w-5 text-muted-foreground" />
-            </div>
-          )}
+    <li className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* Top meta band — Order placed · Total · Order # · status pill (matches approved list preview). */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-muted/40 px-4 py-3 sm:px-5">
+        <div className="flex flex-col">
+          <span className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground">Order placed</span>
+          <span className="text-[13px] font-medium text-foreground">{formatDate(placedDate)}</span>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-1 text-sm font-semibold text-foreground">
-            Order #{order.orderNumber} · {itemCount} item{itemCount === 1 ? "" : "s"}
-          </p>
-          <p className="line-clamp-1 text-xs text-muted-foreground">
-            Placed {formatDate(placedDate)}{soldByLabel ? ` · Sold by ${soldByLabel}` : ""}
-          </p>
+        <div className="flex flex-col">
+          <span className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground">Total</span>
+          <span className="text-[13px] font-bold tabular-nums text-foreground">{formatCents(order.totalCents, order.currency)}</span>
         </div>
-        <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold whitespace-nowrap", badge.tone)}>
+        <div className="flex flex-col">
+          <span className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground">Order #</span>
+          <span className="text-[13px] font-medium text-foreground">{order.orderNumber}</span>
+        </div>
+        <span className={cn("ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold whitespace-nowrap", badge.tone)}>
           <badge.Icon className="h-3 w-3" />
           {badge.label}
         </span>
       </div>
 
-      <div className="mt-3.5 flex flex-wrap gap-2">
+      {/* Body — first-item preview + action row. */}
+      <div className="px-4 py-4 sm:px-5">
+        <div className="flex items-center gap-4">
+          <div className="h-[58px] w-[58px] shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
+            {firstItem?.imageUrl && !imgError ? (
+              // Native <img> (not next/image): seller image hosts are unpredictable
+              // and must not require a next.config allow-list. onError → package icon.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={firstItem.imageUrl}
+                alt={firstItem.productTitle ?? "Item"}
+                className="h-full w-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Package className="h-5 w-5 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 text-sm font-bold text-foreground">
+              {firstItem?.productTitle ?? `${itemCount} item${itemCount === 1 ? "" : "s"}`}
+            </p>
+            <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+              Qty {firstItem?.quantity ?? itemCount}
+              {soldByLabel ? ` · Sold by ${soldByLabel}` : ""}
+              {allItems.length > 1 ? ` · +${allItems.length - 1} more item${allItems.length - 1 === 1 ? "" : "s"}` : ""}
+            </p>
+          </div>
+          {firstItem && (
+            <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
+              {formatCents(firstItem.unitPriceCents, order.currency)}
+            </span>
+          )}
+        </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
         {canTrack && (
           <Link
             href={trackingHref}
@@ -482,6 +515,7 @@ function OrderCard({
         >
           View order
         </Link>
+      </div>
       </div>
     </li>
   )

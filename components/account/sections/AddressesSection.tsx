@@ -13,6 +13,7 @@ import {
   type UserAddress,
 } from "@/lib/api"
 import { logError } from "@/lib/errors"
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import {
   MapPin, Plus, Pencil, Trash2, Star, Loader2, AlertCircle, X,
 } from "lucide-react"
@@ -143,7 +144,22 @@ export function AddressesSection() {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {field("Label (e.g. Home, Work)", "label", "Home")}
-            {field("Address line 1", "line1", "123 Main St")}
+            <div className="sm:col-span-2">
+              <label htmlFor="addr-line1" className="mb-1.5 block text-xs font-semibold text-foreground">Address line 1</label>
+              <AddressAutocomplete
+                value={form.line1}
+                onChange={(v) => setForm((prev) => ({ ...prev, line1: v }))}
+                onSelect={(parts) => setForm((prev) => ({
+                  ...prev,
+                  line1: parts.line1,
+                  line2: parts.line2 || prev.line2,
+                  city: parts.city || prev.city,
+                  state: parts.state || prev.state,
+                  postalCode: parts.zip || prev.postalCode,
+                }))}
+                placeholder="Start typing your address…"
+              />
+            </div>
             {field("Line 2 (optional)", "line2", "Apt 4B")}
             {field("City", "city", "City")}
             {field("State", "state", "State")}

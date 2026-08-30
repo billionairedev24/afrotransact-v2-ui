@@ -25,7 +25,7 @@ import { signOut } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
 import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
 import { getAccessToken } from "@/lib/auth-helpers"
-import { getBuyerOrders, getWishlist } from "@/lib/api"
+import { getBuyerOrders, getWishlist, getReferralMe } from "@/lib/api"
 import { OrdersSection } from "@/components/account/sections/OrdersSection"
 import { RecipientsSection } from "@/components/account/sections/RecipientsSection"
 import { PreordersSection } from "@/components/account/sections/PreordersSection"
@@ -160,6 +160,29 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
     wishlist: wishlistCountQuery.data,
   }
 
+  // Wallet ("Wallet & credit") is driven by the referral program — hide the
+  // rail item entirely (not just an empty state) when referral is off.
+  const referralEnabledQuery = useQuery({
+    queryKey: ["account-hub", "referral-enabled"],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) return false
+      const me = await getReferralMe(token)
+      return me?.enabled === true
+    },
+    staleTime: 60_000,
+  })
+  const referralEnabled = referralEnabledQuery.data === true
+
+  // Rail visibility: Recipients is hidden for now (diaspora ship-to not
+  // launched), and Wallet only appears when the referral program is enabled.
+  const visibleSections = useMemo(
+    () => SECTIONS.filter(
+      (s) => s.id !== "recipients" && (s.id !== "wallet" || referralEnabled),
+    ),
+    [referralEnabled],
+  )
+
   function selectSection(id: SectionId) {
     setActiveSection(id)
     if (typeof window !== "undefined") {
@@ -173,8 +196,8 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
   }
 
   const active = useMemo(
-    () => SECTIONS.find((s) => s.id === activeSection) ?? SECTIONS[0],
-    [activeSection],
+    () => visibleSections.find((s) => s.id === activeSection) ?? visibleSections[0],
+    [activeSection, visibleSections],
   )
   const ActiveComponent = active.Component
 
@@ -195,7 +218,7 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
 
       {/* Mobile: horizontal scrollable chip bar */}
       <nav aria-label="Account sections" className="mb-6 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden">
-        {SECTIONS.map((section) => {
+        {visibleSections.map((section) => {
           const isActive = section.id === activeSection
           const count = counts[section.id]
           return (
@@ -227,7 +250,7 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
         <aside className="hidden lg:block">
           <div className="sticky top-6 rounded-[20px] border border-border bg-card p-2 shadow-sm">
             <nav aria-label="Account sections" role="tablist" aria-orientation="vertical" className="space-y-0.5">
-              {SECTIONS.map((section) => {
+              {visibleSections.map((section) => {
                 const isActive = section.id === activeSection
                 const count = counts[section.id]
                 return (
