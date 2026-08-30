@@ -4798,6 +4798,29 @@ export interface StoreCreditMeDto {
   entries: StoreCreditEntryDto[]
 }
 
+export interface ReferralClaimResponseDto {
+  granted: boolean
+  /** Denial reason when granted=false: disabled | invalid_code | self | not_new | already | referrer_cap_reached */
+  reason?: string
+  rewardCents?: number
+  currency?: string
+}
+
+/**
+ * Claims a referral code for the CURRENT (newly-registered) buyer. Grants store
+ * credit to BOTH the referrer and this buyer on first success. Idempotent and
+ * guarded server-side (self / already-claimed / new-account-window / cap), so
+ * it is safe to call on every authenticated load while an `atx_ref` cookie is
+ * present.
+ */
+export function claimReferral(token: string, referralCode: string) {
+  return api<ReferralClaimResponseDto>("/api/v1/referral/claim", {
+    method: "POST",
+    body: { referralCode },
+    token,
+  })
+}
+
 export function getReferralMe(token: string) {
   return api<ReferralMeDto>("/api/v1/referral/me", { token })
 }

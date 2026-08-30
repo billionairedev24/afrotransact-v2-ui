@@ -130,7 +130,18 @@ function keycloakLoginProvider(): OAuthConfig<Record<string, unknown>> {
     clientSecret: kcClientSecret,
     authorization: {
       url: `${kcIssuerPublic}/protocol/openid-connect/auth`,
-      params: { scope: kcScope },
+      // prompt=login forces Keycloak to show the login form on every explicit
+      // sign-in, even when a Keycloak SSO session cookie (KEYCLOAK_IDENTITY)
+      // still lives in the browser. Without it, clicking "Sign in" after a
+      // logout silently re-authenticated the SAME user off the lingering SSO
+      // cookie — so you could never switch accounts. Our /api/auth/signout
+      // clears the NextAuth cookies but cannot clear Keycloak's browser SSO
+      // cookie from the server side (a server-side fetch carries none of the
+      // user's cookies); id_token_hint isn't available for a silent RP-logout
+      // because we intentionally don't persist the id_token (see jwt() note),
+      // so forcing the prompt on login is the reliable fix. Cross-subdomain
+      // SSO is unaffected — that rides the shared NextAuth cookie, not KC's.
+      params: { scope: kcScope, prompt: "login" },
     },
     token: {
       url: `${kcIssuerServer}/protocol/openid-connect/token`,
