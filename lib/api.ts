@@ -4830,3 +4830,27 @@ export function getReferralMe(token: string) {
 export function getStoreCreditMe(token: string) {
   return api<StoreCreditMeDto>("/api/v1/store-credit/me", { token })
 }
+
+// ── Login sessions / active devices (Account → Login & security) ──────────
+
+/** Per-session device fingerprint captured for the account "active devices" view. */
+export interface LoginSessionDeviceDto {
+  sessionId: string
+  userAgent?: string | null
+  firstSeen: string
+  lastSeen: string
+}
+
+/** Records the current session's device (idempotent upsert keyed by sessionId). */
+export function pingLoginSession(token: string, sessionId: string, userAgent: string) {
+  return api<void>("/api/v1/users/me/login-sessions", {
+    method: "POST",
+    body: { sessionId, userAgent },
+    token,
+  })
+}
+
+/** Fetches every captured device fingerprint for the current user. */
+export function getLoginSessionDevices(token: string) {
+  return api<LoginSessionDeviceDto[]>("/api/v1/users/me/login-sessions", { token })
+}

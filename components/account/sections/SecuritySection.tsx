@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import {
@@ -12,6 +12,11 @@ import {
   ShieldAlert,
   X,
   AlertCircle,
+  Monitor,
+  Smartphone,
+  Tablet,
+  MapPin,
+  LogOut,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -328,9 +333,196 @@ function CloseAccountModal({ email, onClose }: { email: string; onClose: () => v
   )
 }
 
+// ── Active devices ──────────────────────────────────────────────────────
+
+interface SessionRow {
+  id: string
+  current: boolean
+  device: { label: string; browser: string; os: string; type: string; known: boolean }
+  ip: string | null
+  location: string | null
+  started: number | null
+  lastActive: number | null
+}
+
+function relativeTime(ms: number | null): string {
+  if (!ms) return ""
+  const diff = Date.now() - ms
+  const mins = Math.round(diff / 60000)
+  if (mins < 1) return "active just now"
+  if (mins < 60) return `active ${mins} min ago`
+  const hrs = Math.round(mins / 60)
+  if (hrs < 24) return `active ${hrs} hr${hrs === 1 ? "" : "s"} ago`
+  const days = Math.round(hrs / 24)
+  if (days < 30) return `active ${days} day${days === 1 ? "" : "s"} ago`
+  return `last active ${new Date(ms).toLocaleDateString()}`
+}
+
+function DeviceIcon({ type, className }: { type: string; className?: string }) {
+  const Icon = type === "mobile" ? Smartphone : type === "tablet" ? Tablet : Monitor
+  return <Icon className={className} />
+}
+
+function DevicesCard() {
+  const [loading, setLoading] = useState(true)
+  const [rows, setRows] = useState<SessionRow[]>([])
+  const [lastLogin, setLastLogin] = useState<number | null>(null)
+  const [revoking, setRevoking] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/account/sessions", { cache: "no-store" })
+      if (!res.ok) {
+        setRows([])
+        return
+      }
+      const data = await res.json()
+      setRows(Array.isArray(data.sessions) ? data.sessions : [])
+      setLastLogin(typeof data.lastLogin === "number" ? data.lastLogin : null)
+    } catch {
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  async function revoke(target: { sessionId?: string; allExceptCurrent?: boolean }, key: string) {
+    setRevoking(key)
+    try {
+      const res = await fetch("/api/account/sessions/revoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(target),
+      })
+      if (res.ok) {
+        toast.success(target.allExceptCurrent ? "Signed out of your other devices" : "Device signed out")
+        await load()
+      } else {
+        toast.error("Could not sign out that device")
+      }
+    } catch {
+      toast.error("Network error — please try again")
+    } finally {
+      setRevoking(null)
+    }
+  }
+
+  const current = rows.find((r) => r.current)
+  const others = rows.filter((r) => !r.current)
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted">
+            <Monitor className="h-4 w-4 text-foreground" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Where you&apos;re signed in</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {lastLogin
+                ? `Last sign-in ${relativeTime(lastLogin).replace(/^active /, "")}`
+                : "Devices currently signed in to your account."}
+            </p>
+          </div>
+        </div>
+        {others.length > 0 && (
+          <button
+            type="button"
+            onClick={() => revoke({ allExceptCurrent: true }, "all")}
+            disabled={revoking !== null}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-60"
+          >
+            {revoking === "all" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
+            Sign out everywhere else
+          </button>
+        )}
+      </div>
+
+      <div className="border-t border-border">
+        {loading ? (
+          <div className="flex items-center gap-2 px-5 py-6 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading your devices…
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-muted-foreground">
+            We couldn&apos;t load your active sessions right now.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {current && <DeviceRow key={current.id} s={current} revoking={revoking} onRevoke={revoke} />}
+            {others.map((s) => (
+              <DeviceRow key={s.id} s={s} revoking={revoking} onRevoke={revoke} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DeviceRow({
+  s,
+  revoking,
+  onRevoke,
+}: {
+  s: SessionRow
+  revoking: string | null
+  onRevoke: (t: { sessionId?: string }, key: string) => void
+}) {
+  const locationBits = [s.location, s.location ? null : s.ip].filter(Boolean).join("")
+  return (
+    <li className="flex items-center gap-4 px-5 py-4">
+      <div
+        className={
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl " +
+          (s.current ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-muted text-foreground")
+        }
+      >
+        <DeviceIcon type={s.device.type} className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-foreground truncate">
+            {s.device.known ? s.device.label : "Signed-in session"}
+          </p>
+          {s.current && (
+            <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+              This device
+            </span>
+          )}
+        </div>
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+          {locationBits && (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="h-3 w-3" /> {locationBits}
+            </span>
+          )}
+          {(s.lastActive || s.started) && <span>{relativeTime(s.lastActive ?? s.started)}</span>}
+        </p>
+      </div>
+      {!s.current && (
+        <button
+          type="button"
+          onClick={() => onRevoke({ sessionId: s.id }, s.id)}
+          disabled={revoking !== null}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-60"
+        >
+          {revoking === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
+          Sign out
+        </button>
+      )}
+    </li>
+  )
+}
+
 /**
- * SecuritySection — password + account-close cards without the page chrome.
- * Rendered inline on the consolidated /account page.
+ * SecuritySection — active devices + password + account-close cards without the
+ * page chrome. Rendered inline on the consolidated /account page.
  */
 export function SecuritySection() {
   const { data: session, status } = useSession()
@@ -353,6 +545,7 @@ export function SecuritySection() {
 
   return (
     <div className="space-y-4">
+      <DevicesCard />
       <PasswordCard />
       <CloseAccountCard email={email} />
     </div>

@@ -5,6 +5,8 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     accessToken?: string
     error?: string
+    /** Keycloak SSO session id (the token's `sid` claim) — used to flag the current device. */
+    sid?: string
     user: {
       id: string
       roles: string[]
@@ -28,5 +30,7 @@ declare module "next-auth/jwt" {
     registrationRole?: string
     error?: string
     id?: string
+    /** Keycloak SSO session id (`sid` claim from the id token). */
+    sid?: string
   }
 }

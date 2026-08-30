@@ -280,6 +280,9 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
 
         const claims = profile as Record<string, unknown> | undefined
+        // Keycloak SSO session id — lets the account "active devices" view flag
+        // which session is the current one and revoke the others.
+        if (typeof claims?.sid === "string") token.sid = claims.sid
         const flatRoles = claims?.realm_roles as string[] | undefined
         const nestedRoles = (claims?.realm_access as { roles?: string[] })?.roles
         // Only the actual application roles — strip Keycloak-internal roles so
@@ -329,6 +332,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.accessToken = token.accessToken
       session.error = token.error
+      session.sid = token.sid
 
       if (token.id) {
         session.user.id = token.id

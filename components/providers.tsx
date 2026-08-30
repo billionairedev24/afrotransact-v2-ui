@@ -6,6 +6,7 @@ import { useState } from "react"
 import { CartMergeProvider } from "@/components/providers/CartMergeProvider"
 import { WishlistSyncProvider } from "@/components/providers/WishlistSyncProvider"
 import { ReferralClaimProvider } from "@/components/providers/ReferralClaimProvider"
+import { DeviceSessionProvider } from "@/components/providers/DeviceSessionProvider"
 import { SessionGuard } from "@/components/providers/SessionGuard"
 import { PostLoginRedirect } from "@/components/providers/PostLoginRedirect"
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
@@ -35,6 +36,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <CartMergeProvider>
               <WishlistSyncProvider>
               <ReferralClaimProvider>
+              <DeviceSessionProvider>
               {children}
             <LoadingOverlay />
             <Toaster
@@ -48,6 +50,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 },
               }}
             />
+              </DeviceSessionProvider>
               </ReferralClaimProvider>
               </WishlistSyncProvider>
             </CartMergeProvider>

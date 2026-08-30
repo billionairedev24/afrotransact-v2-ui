@@ -214,3 +214,66 @@ export async function grantSellerEntitlements(userId: string): Promise<{
   ])
   return { registrationOk, realmRoleOk }
 }
+
+/** One active Keycloak SSO session (a signed-in device), from the admin API. */
+export interface KcUserSession {
+  id: string
+  ipAddress?: string
+  /** epoch millis */
+  start?: number
+  /** epoch millis */
+  lastAccess?: number
+  clients?: Record<string, string>
+}
+
+/**
+ * Lists the user's active Keycloak SSO sessions (one per signed-in device).
+ * Returns [] on any failure — the account "active devices" view degrades to
+ * empty rather than erroring.
+ */
+export async function listUserSessions(userId: string): Promise<KcUserSession[]> {
+  const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
+  const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
+  const access_token = await getKeycloakAdminAccessToken()
+  if (!access_token) return []
+  try {
+    const res = await fetch(`${kcBase}/admin/realms/${realm}/users/${userId}/sessions`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+      cache: "no-store",
+    })
+    if (!res.ok) {
+      const t = await res.text().catch(() => "")
+      console.error("[keycloak-admin] GET user sessions failed", res.status, t.slice(0, 300))
+      return []
+    }
+    return (await res.json()) as KcUserSession[]
+  } catch (e) {
+    console.error("[keycloak-admin] listUserSessions", e)
+    return []
+  }
+}
+
+/**
+ * Revokes a single Keycloak SSO session by id (signs that device out).
+ * Returns true on success.
+ */
+export async function deleteUserSession(sessionId: string): Promise<boolean> {
+  const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
+  const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
+  const access_token = await getKeycloakAdminAccessToken()
+  if (!access_token) return false
+  try {
+    const res = await fetch(
+      `${kcBase}/admin/realms/${realm}/sessions/${encodeURIComponent(sessionId)}`,
+      { method: "DELETE", headers: { Authorization: `Bearer ${access_token}` } },
+    )
+    if (!res.ok) {
+      const t = await res.text().catch(() => "")
+      console.error("[keycloak-admin] DELETE session failed", res.status, t.slice(0, 300))
+    }
+    return res.ok
+  } catch (e) {
+    console.error("[keycloak-admin] deleteUserSession", e)
+    return false
+  }
+}
