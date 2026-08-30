@@ -1009,11 +1009,16 @@ export default function CheckoutClientV2({
   const idempotencyKeyRef = useRef<string | null>(null)
   const placingRef = useRef(false)
 
-  // Reset the PI whenever the inputs that determine its amount change.
+  // Reset the PI whenever the inputs that determine its amount change. This
+  // MUST include the pickup/ship selection (allPickupSelected + the per-group
+  // groupMethod): choosing free pickup zeroes shipping, so without invalidating
+  // here the minted total stayed stale (the summary — and the charge — didn't
+  // reflect the pickup discount). mintIntent already sends the pickup selection,
+  // so re-minting re-quotes the correct total.
   useEffect(() => {
     idempotencyKeyRef.current = null
     setCheckoutResult(null)
-  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard, couponCode, discountCents])
+  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard, couponCode, discountCents, allPickupSelected, groupMethod])
 
   // ── Amazon-way: the backend's minted order is the SINGLE source of truth for
   //    what the card will be charged. Once `checkoutResult` exists we display
