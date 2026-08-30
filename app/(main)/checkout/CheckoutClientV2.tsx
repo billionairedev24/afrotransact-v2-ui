@@ -152,6 +152,24 @@ function formatCents(v: number) {
   return `$${(v / 100).toFixed(2)}`
 }
 
+// One entry in the checkout's ordered stack of applied coupons. Order matters —
+// the backend applies them sequentially and `discountCents` is the incremental
+// discount THIS code contributed on top of the ones before it.
+type AppliedCoupon = {
+  code: string
+  discountCents: number
+  target: "items" | "shipping"
+  type: string
+  value: number
+}
+
+// Human label for what a coupon does, shown under its code on the chip.
+function couponDescription(c: AppliedCoupon): string {
+  if (c.target === "shipping") return "Free shipping"
+  if (c.type === "percentage") return `${(c.value / 100).toFixed(0)}% off items`
+  return `${formatCents(c.value)} off items`
+}
+
 type FlatQuote = ShippingQuoteOption & { carrier: string }
 
 // Maps a buy-now (or cart) line item to the explicit-items shape the backend
@@ -880,11 +898,22 @@ export default function CheckoutClientV2({
   // when the flag is missing so a broken feature fetch doesn't hide a
   // working coupon system.
   const couponsEnabled = effectiveFeatures["coupons_enabled"] !== false
-  const [couponCode, setCouponCode] = useState("")
+  // Max coupons a buyer may stack, read off the SAME zone-resolve bundle that
+  // carries coupons_enabled. Default 2 when absent (matches the backend
+  // default); clamp to ≥1 so a bad config never hides the coupon input.
+  const maxStackableCoupons = Math.max(1, activeZone?.effectiveSettings?.maxStackableCoupons ?? 2)
   const [couponInput, setCouponInput] = useState("")
-  const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
+  // Ordered list of applied coupons. Replaces the singular couponResult/couponCode.
+  // Each entry is what the backend validate call reported for that code, in the
+  // order the buyer applied them (order matters — discounts stack sequentially).
+  const [appliedCoupons, setAppliedCoupons] = useState<AppliedCoupon[]>([])
   const [couponError, setCouponError] = useState<string | null>(null)
   const [couponLoading, setCouponLoading] = useState(false)
+  // Whether the "add another coupon" input is revealed. After applying one, we
+  // collapse back to the "＋ Have another coupon?" affordance (mockup behavior).
+  const [showAddCoupon, setShowAddCoupon] = useState(false)
+
+  const appliedCodes = useMemo(() => appliedCoupons.map((c) => c.code), [appliedCoupons])
 
   const couponErrorMessage = useCallback((res: ValidateCouponResponse | null, fallback: string): string => {
     const raw = (res?.error ?? "").toLowerCase()
@@ -894,28 +923,63 @@ export default function CheckoutClientV2({
     return "That code isn’t valid"
   }, [])
 
-  const runValidateCoupon = useCallback(async (code: string): Promise<ValidateCouponResponse | null> => {
+  // Turn a rejection into a specific inline message. Prefer the machine `reason`
+  // (duplicate / max_reached / exclusive / exclusive_present / ineligible) so the
+  // buyer sees exactly why, falling back to the humanized error text.
+  const couponRejectionMessage = useCallback((res: ValidateCouponResponse | null, fallback: string): string => {
+    switch (res?.reason) {
+      case "duplicate": return "That coupon is already applied."
+      case "max_reached": return `You’ve applied the maximum of ${maxStackableCoupons} coupon${maxStackableCoupons === 1 ? "" : "s"}.`
+      case "exclusive": return `“${res.code}” can’t be combined with other coupons.`
+      case "exclusive_present": return "An exclusive coupon is already applied — remove it first."
+      case "ineligible":
+      default:
+        return couponErrorMessage(res, fallback)
+    }
+  }, [maxStackableCoupons, couponErrorMessage])
+
+  const runValidateCoupon = useCallback(async (code: string, priorCodes: string[]): Promise<ValidateCouponResponse | null> => {
     if (!authToken) return null
     // Pass shippingCents so a shipping-target coupon can compute its discount
-    // against the actual quoted shipping fee. Prefer the resolved service-zone
-    // id (that's where coupons_enabled is configured); region.id stays as the
-    // legacy fallback — same XOR-preference the shipping-quote call uses.
+    // against the actual quoted shipping fee, and priorCodes so the backend
+    // returns the INCREMENTAL discount this code adds on top of them (matching
+    // what checkout will compute). `subtotal` is the ORIGINAL cart subtotal.
+    // Prefer the resolved service-zone id; region.id stays as the legacy
+    // fallback — same XOR-preference the shipping-quote call uses.
     const zoneId = activeZoneId
-    return await validateCoupon(authToken, code, subtotal, region?.id, shippingCents, zoneId)
+    return await validateCoupon(authToken, code, subtotal, region?.id, shippingCents, zoneId, priorCodes)
   }, [authToken, subtotal, region?.id, shippingCents, activeZoneId])
 
   async function handleApplyCoupon() {
-    if (!couponsEnabled || !couponInput.trim() || !authToken) return
-    setCouponLoading(true)
+    const code = couponInput.trim().toUpperCase()
+    if (!couponsEnabled || !code || !authToken) return
     setCouponError(null)
+    // Fast client-side guards mirror the server cap/duplicate rules so the buyer
+    // gets instant feedback; the order service remains the source of truth.
+    if (appliedCoupons.length >= maxStackableCoupons) {
+      setCouponError(`You’ve applied the maximum of ${maxStackableCoupons} coupon${maxStackableCoupons === 1 ? "" : "s"}.`)
+      return
+    }
+    if (appliedCoupons.some((c) => c.code === code)) {
+      setCouponError("That coupon is already applied.")
+      return
+    }
+    setCouponLoading(true)
     try {
-      const res = await runValidateCoupon(couponInput.trim())
+      const res = await runValidateCoupon(code, appliedCodes)
       if (res?.valid) {
-        setCouponResult(res)
-        setCouponCode(couponInput.trim())
+        setAppliedCoupons((prev) => [...prev, {
+          code: res.code || code,
+          discountCents: res.discountCents,
+          target: res.discountTarget === "shipping" ? "shipping" : "items",
+          type: res.type,
+          value: res.value,
+        }])
         setCouponInput("")
+        // Collapse the input; buyer taps "＋ Have another coupon?" to add more.
+        setShowAddCoupon(false)
       } else {
-        setCouponError(couponErrorMessage(res, "That code isn’t valid"))
+        setCouponError(couponRejectionMessage(res, "That code isn’t valid"))
       }
     } catch (e) {
       logError(e, "validate coupon (v2)")
@@ -925,32 +989,50 @@ export default function CheckoutClientV2({
     }
   }
 
-  function handleRemoveCoupon() {
-    setCouponResult(null)
-    setCouponCode("")
+  function handleRemoveCoupon(code: string) {
+    setAppliedCoupons((prev) => prev.filter((c) => c.code !== code))
     setCouponError(null)
   }
 
-  // Re-validate the applied coupon whenever the cart changes (min-spend may now
-  // fail) OR the destination address's zone changes (coupons_enabled and any
-  // shipping-target discount are zone-scoped, so a coupon valid in one zone may
-  // not apply in another — clear it if it no longer holds).
+  // Re-validate the WHOLE applied set whenever the cart changes (min-spend may
+  // now fail) OR the destination address's zone changes (coupons_enabled and any
+  // shipping-target discount are zone-scoped). Re-runs each code sequentially,
+  // passing the accumulating accepted set so incremental discounts stay correct,
+  // and drops any coupon that no longer holds.
   useEffect(() => {
-    if (!couponResult || !couponCode || !authToken) return
+    if (appliedCoupons.length === 0 || !authToken) return
     let cancelled = false
     ;(async () => {
-      try {
-        const res = await runValidateCoupon(couponCode)
-        if (cancelled) return
-        if (res?.valid) {
-          setCouponResult(res)
-        } else {
-          setCouponResult(null)
-          setCouponError(couponErrorMessage(res, "Coupon no longer applies"))
+      const codes = appliedCoupons.map((c) => c.code)
+      const next: AppliedCoupon[] = []
+      const accepted: string[] = []
+      let dropped = false
+      for (const code of codes) {
+        try {
+          const res = await runValidateCoupon(code, accepted)
+          if (cancelled) return
+          if (res?.valid) {
+            next.push({
+              code: res.code || code,
+              discountCents: res.discountCents,
+              target: res.discountTarget === "shipping" ? "shipping" : "items",
+              type: res.type,
+              value: res.value,
+            })
+            accepted.push(code)
+          } else {
+            dropped = true
+          }
+        } catch (e) {
+          logError(e, "revalidate coupon (v2)")
+          // Keep the coupon as-is on a transient error rather than dropping it.
+          const existing = appliedCoupons.find((c) => c.code === code)
+          if (existing) { next.push(existing); accepted.push(code) }
         }
-      } catch (e) {
-        logError(e, "revalidate coupon (v2)")
       }
+      if (cancelled) return
+      setAppliedCoupons(next)
+      if (dropped) setCouponError("Some coupons no longer apply and were removed.")
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -962,14 +1044,26 @@ export default function CheckoutClientV2({
   // and can diverge (e.g. still 8.25% after a zone is set to 0), so we never
   // use it here. Unconfigured zone → 0, matching the server.
   const taxRate = activeZone?.effectiveSettings?.taxRate ?? 0
-  const discountCents = couponResult?.discountCents ?? 0
-  const couponTargetsShipping = couponResult?.discountTarget === "shipping"
-  // Shipping-target coupons reduce shipping (never below 0); items-target
-  // coupons reduce the taxable subtotal. Backend applies the same split.
-  const itemsDiscountCents = couponTargetsShipping ? 0 : discountCents
-  const shippingDiscountCents = couponTargetsShipping
-    ? Math.min(discountCents, shippingCents)
-    : 0
+  // Sum the per-coupon INCREMENTAL discounts (validate already computed each on
+  // the running subtotal, so summing them is correct). Shipping-target coupons
+  // reduce shipping (never below 0); items-target coupons reduce the taxable
+  // subtotal — the same split the backend applies.
+  const itemsDiscountCents = appliedCoupons
+    .filter((c) => c.target !== "shipping")
+    .reduce((s, c) => s + c.discountCents, 0)
+  const shippingDiscountCents = Math.min(
+    appliedCoupons.filter((c) => c.target === "shipping").reduce((s, c) => s + c.discountCents, 0),
+    shippingCents,
+  )
+  // Combined savings surfaced to the buyer ("You're saving $X").
+  const combinedDiscountCents = itemsDiscountCents + shippingDiscountCents
+  // Legacy alias: item-level discount, still consumed by the estimate summary.
+  const discountCents = itemsDiscountCents
+  const couponTargetsShipping = shippingDiscountCents > 0
+  const shippingCouponCode = appliedCoupons.find((c) => c.target === "shipping")?.code
+  // Stable key over the ordered applied set — drives the re-quote invalidation
+  // effect so adding OR removing ANY coupon re-mints the PaymentIntent.
+  const appliedCouponsKey = appliedCoupons.map((c) => `${c.code}:${c.discountCents}:${c.target}`).join("|")
   const taxableSubtotal = Math.max(0, subtotal - itemsDiscountCents)
   const tax = Math.round(taxableSubtotal * taxRate)
   const effectiveShippingCents = Math.max(0, shippingCents - shippingDiscountCents)
@@ -1015,10 +1109,14 @@ export default function CheckoutClientV2({
   // here the minted total stayed stale (the summary — and the charge — didn't
   // reflect the pickup discount). mintIntent already sends the pickup selection,
   // so re-minting re-quotes the correct total.
+  // appliedCouponsKey encodes the ENTIRE ordered coupon list (codes + each
+  // one's discount + target), so adding OR removing ANY coupon invalidates the
+  // minted quote and forces a re-mint against the correct total. Depending on a
+  // single code (the old behavior) would miss removals and stack changes.
   useEffect(() => {
     idempotencyKeyRef.current = null
     setCheckoutResult(null)
-  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard, couponCode, discountCents, allPickupSelected, groupMethod])
+  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard, appliedCouponsKey, allPickupSelected, groupMethod])
 
   // ── Amazon-way: the backend's minted order is the SINGLE source of truth for
   //    what the card will be charged. Once `checkoutResult` exists we display
@@ -1093,7 +1191,7 @@ export default function CheckoutClientV2({
         selectedShippingService: allPickupSelected ? "PICKUP" : (freeShippingApplies ? undefined : selectedQuote?.serviceCode),
         selectedShippingAmountCents: shippingCents,
         saveCard,
-        couponCodes: couponResult && couponCode ? [couponCode] : undefined,
+        couponCodes: appliedCoupons.length > 0 ? appliedCoupons.map((c) => c.code) : undefined,
         // Omitted entirely (undefined) unless at least one store in the cart
         // actually offers pickup — this is what keeps a ship-only cart's
         // checkout payload byte-for-byte identical to the pre-Pickup-Phase-2
@@ -1133,7 +1231,7 @@ export default function CheckoutClientV2({
       placingRef.current = false
       setMinting(false)
     }
-  }, [authToken, region, selectedAddress, effectiveItems, isBuyNow, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
+  }, [authToken, region, selectedAddress, effectiveItems, isBuyNow, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, appliedCoupons, profileName, profilePhone, sessionName, router])
 
   // ─── place order ───────────────────────────────────────────────────
   const paymentHandleRef = useRef<PaymentHandle | null>(null)
@@ -1697,29 +1795,55 @@ export default function CheckoutClientV2({
 
             {couponsEnabled && (
               <div className="mb-3 text-sm">
-                {couponResult ? (
-                  <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2">
-                    <span className="text-green-800">
-                      Code <span className="font-mono font-semibold">{couponResult.code}</span> applied
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleRemoveCoupon}
-                      className="text-xs font-semibold text-red-600 hover:underline"
-                    >
-                      Remove
-                    </button>
+                {/* Applied coupons — removable green chips (code · what it does · −amount). */}
+                {appliedCoupons.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {appliedCoupons.map((c) => (
+                      <div
+                        key={c.code}
+                        className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 px-3 py-2.5"
+                      >
+                        <span className="grid place-items-center h-5 w-5 shrink-0 rounded-full bg-emerald-600 text-white">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-mono text-[13px] font-bold tracking-wide text-gray-900 dark:text-gray-100">{c.code}</p>
+                          <p className="text-[11px] text-gray-500">{couponDescription(c)}</p>
+                        </div>
+                        <span className="text-[13px] font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                          -{formatCents(c.discountCents)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCoupon(c.code)}
+                          aria-label={`Remove coupon ${c.code}`}
+                          className="shrink-0 rounded p-0.5 text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ) : (
+                )}
+
+                {/* Input row: shown when nothing applied yet, or when the buyer
+                    revealed "another coupon" — always gated by the stack cap. */}
+                {appliedCoupons.length < maxStackableCoupons && (appliedCoupons.length === 0 || showAddCoupon) && (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-gray-700">Promo code</label>
+                    {appliedCoupons.length === 0 && (
+                      <label className="text-xs font-semibold text-gray-700">Promo code</label>
+                    )}
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={couponInput}
                         onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleApplyCoupon() } }}
                         placeholder="Enter code"
-                        className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                        className={cn(
+                          "flex-1 rounded-lg border px-3 py-2 text-sm font-mono uppercase tracking-wide placeholder:font-sans placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-brand-gold/40",
+                          couponError ? "border-red-300" : "border-gray-200",
+                        )}
                       />
                       <button
                         type="button"
@@ -1730,7 +1854,43 @@ export default function CheckoutClientV2({
                         {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
                       </button>
                     </div>
-                    {couponError && <p className="text-xs text-red-600">{couponError}</p>}
+                    {couponError && (
+                      <p className="flex items-center gap-1.5 text-xs text-red-600">
+                        <AlertCircle className="h-3 w-3 shrink-0" /> {couponError}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* "＋ Have another coupon?" — reveals the next input, up to the cap. */}
+                {appliedCoupons.length > 0 && appliedCoupons.length < maxStackableCoupons && !showAddCoupon && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddCoupon(true); setCouponError(null) }}
+                    className="mt-1 inline-flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-400"
+                  >
+                    <span className="grid place-items-center h-5 w-5 rounded-full border border-dashed border-emerald-600 dark:border-emerald-500">
+                      <Plus className="h-3 w-3" />
+                    </span>
+                    Have another coupon?
+                  </button>
+                )}
+
+                {/* At the cap: hide the add control, confirm the max. */}
+                {appliedCoupons.length >= maxStackableCoupons && (
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    You’ve applied the maximum of {maxStackableCoupons} coupon{maxStackableCoupons === 1 ? "" : "s"}.
+                  </p>
+                )}
+
+                {/* Combined savings line. */}
+                {combinedDiscountCents > 0 && (
+                  <div className="mt-3 flex items-center justify-between border-t border-dashed border-gray-200 pt-3">
+                    <span className="text-[13px] font-semibold text-gray-700">You’re saving</span>
+                    <span className="text-[15px] font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                      {formatCents(combinedDiscountCents)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -1741,10 +1901,10 @@ export default function CheckoutClientV2({
                 <dt className="text-gray-600">Items ({effectiveItems.length})</dt>
                 <dd className="text-gray-900 tabular-nums">{formatCents(dSubtotal)}</dd>
               </div>
-              {dDiscount > 0 && !couponTargetsShipping && (couponResult || checkoutResult?.couponAutoApplied) && (
+              {dDiscount > 0 && (appliedCoupons.length > 0 || checkoutResult?.couponAutoApplied) && (
                 <div className="flex justify-between italic text-green-700">
                   <dt>
-                    Discount ({couponResult?.code ?? checkoutResult?.couponCode})
+                    Coupon savings
                     {checkoutResult?.couponAutoApplied && (
                       <span className="ml-2 not-italic text-[11px] font-semibold text-green-700">
                         🎉 applied automatically
@@ -1767,7 +1927,7 @@ export default function CheckoutClientV2({
                   ) : null}
                   {couponTargetsShipping && shippingDiscountCents > 0 && (
                     <span className="ml-2 text-[11px] font-semibold text-green-700">
-                      {effectiveShippingCents === 0 ? "Waived" : "Discounted"} by {couponResult?.code}
+                      {effectiveShippingCents === 0 ? "Waived" : "Discounted"}{shippingCouponCode ? ` by ${shippingCouponCode}` : ""}
                     </span>
                   )}
                 </dt>

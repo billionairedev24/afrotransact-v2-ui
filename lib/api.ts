@@ -1925,6 +1925,10 @@ export interface CheckoutResponse {
   shippingCostCents: number
   totalCents: number
   couponCode: string | null
+  /** Authoritative per-coupon breakdown of what actually applied at checkout
+   *  (stacking). `discountCents` is aggregate item discount; `couponCode` is
+   *  the first code (legacy). Omitted when no coupon applied. */
+  appliedCoupons?: { code: string; discountCents: number; target: "items" | "shipping" | string }[]
   /** true when couponCode was auto-applied from an email-bound coupon (buyer
    *  didn't type it) — the summary shows an "applied automatically" badge. */
   couponAutoApplied?: boolean
@@ -1949,6 +1953,10 @@ export interface PickupLocationDto {
   hours?: string
   instructions?: string
   prepTime?: string
+  // Pickup-point coordinates (from config); used with the buyer's coords to
+  // show straight-line distance at checkout.
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export interface ShippingQuoteOption {
@@ -2032,6 +2040,9 @@ export interface CouponData {
   scope: "site_wide" | "product" | "store" | "category"
   scopeId: string | null
   discountTarget: "items" | "shipping"
+  /** Whether this coupon can be combined with other coupons (stacking).
+   *  false = exclusive (must be the only coupon on the order). Defaults true. */
+  stackable: boolean
   sellerId: string | null
   regionId: string | null
   startsAt: string
@@ -2052,6 +2063,8 @@ export interface CouponCreateRequest {
   scope?: string
   scopeId?: string
   discountTarget?: "items" | "shipping"
+  /** Whether this coupon may be stacked with others. Defaults true server-side. */
+  stackable?: boolean
   regionId?: string
   startsAt?: string
   expiresAt: string
@@ -2063,8 +2076,15 @@ export interface ValidateCouponResponse {
   code: string
   type: string
   value: number
+  /** INCREMENTAL discount this code adds on top of any already-applied codes
+   *  (server computes it against the running, already-reduced subtotal). */
   discountCents: number
   discountTarget?: "items" | "shipping"
+  /** Whether this coupon can be combined with others. false = exclusive. */
+  stackable?: boolean
+  /** Machine reason on rejection: duplicate | max_reached | exclusive |
+   *  exclusive_present | ineligible. */
+  reason?: "duplicate" | "max_reached" | "exclusive" | "exclusive_present" | "ineligible" | string
   error: string | null
 }
 
@@ -2100,13 +2120,25 @@ export function toggleAdminCoupon(token: string, id: string) {
   return api<CouponData>(`/api/v1/admin/coupons/${id}/toggle`, { method: "POST", token })
 }
 
-export function validateCoupon(token: string, code: string, subtotalCents: number, regionId?: string, shippingCents?: number, zoneId?: string) {
+export function validateCoupon(
+  token: string,
+  code: string,
+  subtotalCents: number,
+  regionId?: string,
+  shippingCents?: number,
+  zoneId?: string,
+  /** Codes already applied to the cart (uppercased). The backend returns the
+   *  INCREMENTAL discount this code adds against the running subtotal and
+   *  rejects duplicates / exclusives / over-cap so the shown discount matches
+   *  what checkout computes. `subtotalCents` is the ORIGINAL cart subtotal. */
+  appliedCodes?: string[],
+) {
   return api<ValidateCouponResponse>("/api/v1/coupons/validate", {
     method: "POST",
     // Backend prefers zoneId (coupons_enabled lives on service zones); regionId
     // is a legacy fallback. Send both when we have them — the backend picks
     // zoneId first. Mirrors the shipping-quote path.
-    body: { code, subtotalCents, shippingCents, regionId, zoneId },
+    body: { code, subtotalCents, shippingCents, regionId, zoneId, appliedCodes },
     token,
   })
 }
@@ -2236,6 +2268,10 @@ export interface PickupLocationSettings {
   hours: string
   instructions: string
   prep_time: string
+  // Coordinates of the pickup point (captured via address autocomplete). Used
+  // to show buyers the straight-line distance from their delivery address.
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export interface PickupSettings {
@@ -2265,6 +2301,22 @@ export function getReferralSettings() {
 
 export function updateReferralSettings(token: string, data: ReferralSettings) {
   return api<ReferralSettings>("/api/v1/admin/config/referral-settings", { method: "PUT", body: data, token })
+}
+
+/** Coupon stacking configuration. `max_stackable_coupons` in 1..10 (1 disables
+ *  stacking — buyers can apply only a single coupon). */
+export interface CouponSettings {
+  max_stackable_coupons: number
+}
+
+/** Public — no auth. The storefront reads the cap off the zone-resolve bundle at
+ *  checkout; this is the dedicated endpoint the admin settings screen uses. */
+export function getCouponSettings() {
+  return api<CouponSettings>("/api/v1/config/coupon-settings")
+}
+
+export function updateCouponSettings(token: string, data: CouponSettings) {
+  return api<CouponSettings>("/api/v1/admin/config/coupon-settings", { method: "PUT", body: data, token })
 }
 
 // ── Admin ──
@@ -2481,6 +2533,9 @@ export interface ResolvedZoneSettings {
   freeShippingThresholdCents: number | null
   shippingMode: "per_lb" | "flat" | null
   flatShippingCents: number | null
+  /** Coupon stacking cap surfaced on the zone-resolve bundle (default 2 when
+   *  absent). Checkout reads this to know how many coupons a buyer may stack. */
+  maxStackableCoupons: number | null
 }
 
 export interface ZoneFeature {
@@ -2528,6 +2583,7 @@ interface RawResolvedSettings {
   free_shipping_threshold_cents?: number | null
   shipping_mode?: "per_lb" | "flat" | null
   flat_shipping_cents?: number | null
+  max_stackable_coupons?: number | null
 }
 
 interface RawZoneFeature {
@@ -2569,6 +2625,7 @@ function mapSettings(s: RawResolvedSettings | null | undefined): ResolvedZoneSet
     freeShippingThresholdCents: s?.free_shipping_threshold_cents ?? null,
     shippingMode: s?.shipping_mode ?? null,
     flatShippingCents: s?.flat_shipping_cents ?? null,
+    maxStackableCoupons: s?.max_stackable_coupons ?? null,
   }
 }
 

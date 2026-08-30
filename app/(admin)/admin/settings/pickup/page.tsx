@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Loader2, Save, MapPin } from "lucide-react"
 import { toast } from "sonner"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
 import {
   ApiError,
   getAdminPickupSettings,
@@ -176,6 +177,34 @@ export default function AdminPickupSettingsPage() {
                 className={INPUT_CLASS}
               />
               <p className="text-[11px] text-gray-400 mt-1">Shown to buyers at checkout next to the pickup option.</p>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Find address (autocomplete)</label>
+              <AddressAutocomplete
+                value={settings.pickup_location.line1}
+                onChange={(v) => updateLocation("line1", v)}
+                onSelect={(parts) => setSettings((prev) => ({
+                  ...prev,
+                  pickup_location: {
+                    ...prev.pickup_location,
+                    line1: parts.line1,
+                    line2: parts.line2 || prev.pickup_location.line2,
+                    city: parts.city || prev.pickup_location.city,
+                    region: parts.state || prev.pickup_location.region,
+                    postal_code: parts.zip || prev.pickup_location.postal_code,
+                    latitude: parts.lat ?? prev.pickup_location.latitude ?? null,
+                    longitude: parts.lng ?? prev.pickup_location.longitude ?? null,
+                  },
+                }))}
+                placeholder="Start typing the pickup address…"
+              />
+              <p className="text-[11px] text-gray-400 mt-1">
+                Pick from suggestions to auto-fill the fields below and capture coordinates
+                (used to show buyers how far the pickup point is from their address).
+                {settings.pickup_location.latitude != null && settings.pickup_location.longitude != null && (
+                  <span className="ml-1 font-medium text-emerald-600">Coordinates captured ✓</span>
+                )}
+              </p>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">Address line 1</label>

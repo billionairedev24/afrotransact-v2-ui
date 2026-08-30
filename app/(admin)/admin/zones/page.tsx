@@ -16,9 +16,11 @@ import { getAccessToken } from "@/lib/auth-helpers"
 import {
   createAdminZone,
   deleteAdminZone,
+  getCouponSettings,
   listAdminZones,
   listPlatformFeatures,
   updateAdminZone,
+  updateCouponSettings,
   upsertPlatformFeature,
   type PlatformFeature,
   type ServiceZone,
@@ -101,6 +103,10 @@ export default function AdminZonesPage() {
   const [showRootModal, setShowRootModal] = useState(false)
   const [platformFeatures, setPlatformFeatures] = useState<PlatformFeature[]>([])
   const [platformSavingKey, setPlatformSavingKey] = useState<string | null>(null)
+  // Coupon stacking cap (global config). Kept as a string so the input can be
+  // edited/blanked freely; committed 1..10 on blur/save.
+  const [maxCoupons, setMaxCoupons] = useState<string>("")
+  const [maxCouponsSaving, setMaxCouponsSaving] = useState(false)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -127,7 +133,34 @@ export default function AdminZonesPage() {
         logError(err, "AdminZones.loadPlatformFeatures")
       }
     })()
+    ;(async () => {
+      try {
+        const s = await getCouponSettings()
+        setMaxCoupons(String(s.max_stackable_coupons))
+      } catch (err) {
+        logError(err, "AdminZones.loadCouponSettings")
+      }
+    })()
   }, [reload])
+
+  async function saveMaxCoupons() {
+    const n = Math.max(1, Math.min(10, Math.round(Number(maxCoupons))))
+    if (!Number.isFinite(n)) { setMaxCoupons(""); return }
+    setMaxCoupons(String(n))
+    setMaxCouponsSaving(true)
+    try {
+      const token = await getAccessToken()
+      if (!token) return
+      const saved = await updateCouponSettings(token, { max_stackable_coupons: n })
+      setMaxCoupons(String(saved.max_stackable_coupons))
+      toast.success("Max coupons per order updated")
+    } catch (err) {
+      logError(err, "AdminZones.saveCouponSettings")
+      toast.error(friendlyMessage(err, "Could not update max coupons per order."))
+    } finally {
+      setMaxCouponsSaving(false)
+    }
+  }
 
   async function togglePlatformFeature(key: string) {
     const current = platformFeatures.find((f) => f.featureKey === key)
@@ -282,6 +315,30 @@ export default function AdminZonesPage() {
             )
           })}
         </ul>
+
+        {/* Coupon stacking cap — how many coupons a buyer may apply per order.
+            Global config (config service), sits next to the Coupons toggle. */}
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-foreground">Max coupons per order</div>
+            <div className="truncate text-xs text-muted-foreground">How many coupons a buyer can stack at checkout. 1 disables stacking.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={10}
+              value={maxCoupons}
+              disabled={maxCouponsSaving}
+              onChange={(e) => setMaxCoupons(e.target.value)}
+              onBlur={() => void saveMaxCoupons()}
+              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+              className="w-16 rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-primary/60 disabled:opacity-50"
+              aria-label="Max coupons per order"
+            />
+            {maxCouponsSaving && <Loader2 className="animate-spin text-muted-foreground" size={14} />}
+          </div>
+        </div>
       </section>
 
       <div>
