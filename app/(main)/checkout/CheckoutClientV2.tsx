@@ -1614,40 +1614,10 @@ export default function CheckoutClientV2({
             )}
           </Section>
 
-          {/* 3. Payment method */}
+          {/* 3. Review items — payment moved to the sticky summary panel so the
+              card entry is always visible next to Pay (no scrolling past items). */}
           <Section
             n={3}
-            title="Payment method"
-            subtitle={selectedSavedCardId
-              ? `Saved card •••• ${savedCards.find((c) => c.stripePmId === selectedSavedCardId)?.last4 ?? "????"}`
-              : "Use a new card"}
-            disabled={!selectedAddress || !selectedQuoteId}
-          >
-            {(!selectedAddress || !selectedQuoteId) ? (
-              <p className="text-sm text-gray-500">Select an address and delivery option above.</p>
-            ) : !stripeAvailable ? (
-              <div className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
-                Card payments via Stripe are not available in this region yet.
-              </div>
-            ) : (
-              <InlinePayment
-                ref={paymentHandleRef}
-                clientSecret={checkoutResult?.paymentClientSecret ?? null}
-                checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
-                totalCents={dTotal}
-                saveCard={saveCard}
-                onSaveCardChange={setSaveCard}
-                savedCards={savedCards}
-                selectedSavedCardId={selectedSavedCardId}
-                onSelectedSavedCardChange={setSelectedSavedCardId}
-                onError={setPlaceError}
-              />
-            )}
-          </Section>
-
-          {/* 4. Review items */}
-          <Section
-            n={4}
             title="Review items"
             subtitle={`${effectiveItems.length} item${effectiveItems.length === 1 ? "" : "s"} in your order`}
           >
@@ -1842,6 +1812,33 @@ export default function CheckoutClientV2({
                 <AlertCircle className="h-3 w-3 inline mr-1" /> {placeError}
               </div>
             )}
+
+            {/* Payment — lives in the sticky summary panel next to Pay so the
+                card entry is always on screen; buyers no longer scroll past a
+                long item list to find it (or hit Pay before entering a card). */}
+            <div className="mt-4 border-t border-gray-200 pt-4">
+              <h3 className="mb-2.5 text-sm font-bold text-gray-900">Payment</h3>
+              {(!selectedAddress || !selectedQuoteId) ? (
+                <p className="text-sm text-gray-500">Add an address and choose delivery above to enter your card.</p>
+              ) : !stripeAvailable ? (
+                <div className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
+                  Card payments via Stripe are not available in this region yet.
+                </div>
+              ) : (
+                <InlinePayment
+                  ref={paymentHandleRef}
+                  clientSecret={checkoutResult?.paymentClientSecret ?? null}
+                  checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
+                  totalCents={dTotal}
+                  saveCard={saveCard}
+                  onSaveCardChange={setSaveCard}
+                  savedCards={savedCards}
+                  selectedSavedCardId={selectedSavedCardId}
+                  onSelectedSavedCardChange={setSelectedSavedCardId}
+                  onError={setPlaceError}
+                />
+              )}
+            </div>
 
             <PlaceOrderButton
               disabled={placeDisabled}
