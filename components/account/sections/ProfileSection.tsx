@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { Loader2, User as UserIcon, Mail, Phone, CheckCircle2 } from "lucide-react"
+import { Loader2, User as UserIcon, Mail, Phone, CheckCircle2, CalendarDays } from "lucide-react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getUserProfile, updateUserProfile, type UserProfile } from "@/lib/api"
 
@@ -19,6 +19,8 @@ export function ProfileSection() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [phone, setPhone] = useState("")
   const [dirty, setDirty] = useState(false)
 
@@ -36,6 +38,8 @@ export function ProfileSection() {
         const p = await getUserProfile(token)
         if (cancelled) return
         setProfile(p)
+        setFirstName(p.firstName ?? "")
+        setLastName(p.lastName ?? "")
         setPhone(p.phone ?? "")
       } finally {
         if (!cancelled) setLoading(false)
@@ -50,8 +54,15 @@ export function ProfileSection() {
     try {
       const token = await getAccessToken()
       if (!token) return
-      const updated = await updateUserProfile(token, { phone: phone.trim() || null })
+      const updated = await updateUserProfile(token, {
+        firstName: firstName.trim() || null,
+        lastName: lastName.trim() || null,
+        phone: phone.trim() || null,
+      })
       setProfile(updated)
+      setFirstName(updated.firstName ?? "")
+      setLastName(updated.lastName ?? "")
+      setPhone(updated.phone ?? "")
       setDirty(false)
       toast.success("Profile updated")
     } catch {
@@ -70,26 +81,57 @@ export function ProfileSection() {
   }
   if (!profile) return null
 
-  const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || "—"
+  const memberSince = (() => {
+    if (!profile.createdAt) return null
+    const d = new Date(profile.createdAt)
+    return Number.isNaN(d.getTime())
+      ? null
+      : d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+  })()
 
   return (
     <div className="space-y-4">
+      {/* Editable identity */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <ReadRow icon={UserIcon} label="Full name" value={fullName} />
-        <ReadRow icon={Mail} label="Email" value={profile.email} verified />
+        <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2">
+          <TextRow
+            id="profile-first-name"
+            icon={UserIcon}
+            label="First name"
+            value={firstName}
+            placeholder="First name"
+            autoComplete="given-name"
+            onChange={(v) => { setFirstName(v); setDirty(true) }}
+          />
+          <TextRow
+            id="profile-last-name"
+            icon={UserIcon}
+            label="Last name"
+            value={lastName}
+            placeholder="Last name"
+            autoComplete="family-name"
+            onChange={(v) => { setLastName(v); setDirty(true) }}
+          />
+        </div>
         <PhoneRow
           value={phone}
           onChange={(v) => { setPhone(v); setDirty(true) }}
         />
       </div>
 
+      {/* Read-only account facts */}
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <ReadRow icon={Mail} label="Email" value={profile.email} verified />
+        {memberSince && <ReadRow icon={CalendarDays} label="Member since" value={memberSince} />}
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/40 px-5 py-3">
         <p className="text-xs text-muted-foreground">
-          Name and email come from your sign-in account.{" "}
+          Your email is your sign-in and can&apos;t be changed here —{" "}
           <Link href="/help" className="font-semibold underline underline-offset-2 hover:no-underline">
-            Contact support
+            contact support
           </Link>{" "}
-          to change them.
+          if you need to update it.
         </p>
         <button
           type="button"
@@ -100,6 +142,46 @@ export function ProfileSection() {
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           {saving ? "Saving…" : "Save changes"}
         </button>
+      </div>
+    </div>
+  )
+}
+
+function TextRow({
+  id,
+  icon: Icon,
+  label,
+  value,
+  placeholder,
+  autoComplete,
+  onChange,
+}: {
+  id: string
+  icon: typeof UserIcon
+  label: string
+  value: string
+  placeholder?: string
+  autoComplete?: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="flex items-center gap-4 bg-card px-5 py-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <label htmlFor={id} className="text-xs uppercase tracking-wide text-muted-foreground">
+          {label}
+        </label>
+        <input
+          id={id}
+          type="text"
+          autoComplete={autoComplete}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="mt-1 w-full bg-transparent text-sm font-semibold text-foreground placeholder:text-muted-foreground/60 outline-none"
+        />
       </div>
     </div>
   )
