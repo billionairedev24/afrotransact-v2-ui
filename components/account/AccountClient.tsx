@@ -29,8 +29,6 @@ import { getBuyerOrders, getWishlist, getReferralMe } from "@/lib/api"
 import { OrdersSection } from "@/components/account/sections/OrdersSection"
 import { RecipientsSection } from "@/components/account/sections/RecipientsSection"
 import { PreordersSection } from "@/components/account/sections/PreordersSection"
-import { FollowedSellersSection } from "@/components/account/sections/FollowedSellersSection"
-import { ReviewsToWriteSection } from "@/components/account/sections/ReviewsToWriteSection"
 import { WalletSection } from "@/components/account/sections/WalletSection"
 import { ProfileSection } from "@/components/account/sections/ProfileSection"
 import { SecuritySection } from "@/components/account/sections/SecuritySection"
@@ -79,12 +77,6 @@ const SECTIONS: SectionDef[] = [
   { id: "preorders", label: "My preorders", headerLabel: "My preorders", icon: "⏳",
     description: "Campaign pledges you've committed to. You're charged only when the campaign locks.",
     Component: PreordersSection },
-  { id: "sellers", label: "Followed sellers", headerLabel: "Followed sellers", icon: "🏪",
-    description: "Shops you follow. Get first word on new drops, restocks, and campaigns.",
-    Component: FollowedSellersSection },
-  { id: "reviews", label: "Reviews to write", headerLabel: "Reviews to write", icon: "⭐",
-    description: "Rate and review the items you've received.",
-    Component: ReviewsToWriteSection },
   { id: "wallet", label: "Wallet & credit", headerLabel: "Wallet & credit", icon: "💳",
     description: "Store credit and referral earnings. Applied automatically at checkout.",
     Component: WalletSection },
@@ -119,12 +111,7 @@ function sectionFromHash(): SectionId {
   return SECTION_IDS.has(hash) ? (hash as SectionId) : DEFAULT_SECTION
 }
 
-function initialOf(name: string, email: string): string {
-  const src = (name || email || "?").trim()
-  return src ? src[0]!.toUpperCase() : "?"
-}
-
-export function AccountClient({ firstName, email }: { firstName: string; email: string }) {
+export function AccountClient({ email }: { firstName?: string; email: string }) {
   const [activeSection, setActiveSection] = useState<SectionId>(DEFAULT_SECTION)
 
   useEffect(() => {
@@ -203,18 +190,7 @@ export function AccountClient({ firstName, email }: { firstName: string; email: 
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 sm:px-6 py-6 lg:py-10">
-      {/* Greeting header */}
-      <header className="mb-6 flex items-center gap-4 rounded-3xl border border-border bg-card px-5 py-5 shadow-sm sm:px-7 sm:py-6">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-gold text-2xl font-black text-brand-gold-foreground shadow-[0_2px_8px_rgba(255,212,0,0.35)]">
-          {initialOf(firstName, email)}
-        </div>
-        <div className="min-w-0">
-          <h1 className="font-display text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-            {firstName ? `Hi, ${firstName}` : "Your Account"}
-          </h1>
-          <p className="mt-0.5 truncate text-sm text-muted-foreground">{email}</p>
-        </div>
-      </header>
+      {/* Greeting intentionally omitted — the navbar already greets the user. */}
 
       {/* Mobile: horizontal scrollable chip bar */}
       <nav aria-label="Account sections" className="mb-6 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden">
