@@ -224,49 +224,96 @@ export interface KcUserSession {
   /** epoch millis */
   lastAccess?: number
   clients?: Record<string, string>
+  /** True when this is an OFFLINE session (offline_access) — needed to revoke it. */
+  offline?: boolean
 }
 
-/**
- * Lists the user's active Keycloak SSO sessions (one per signed-in device).
- * Returns [] on any failure — the account "active devices" view degrades to
- * empty rather than erroring.
- */
-export async function listUserSessions(userId: string): Promise<KcUserSession[]> {
-  const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
-  const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
-  const access_token = await getKeycloakAdminAccessToken()
-  if (!access_token) return []
+let cachedClientUuid: string | null = null
+
+/** Resolves (and caches) the internal UUID of a client from its clientId. */
+async function getClientUuid(
+  kcBase: string,
+  realm: string,
+  accessToken: string,
+  clientId: string,
+): Promise<string | null> {
+  if (cachedClientUuid) return cachedClientUuid
   try {
-    const res = await fetch(`${kcBase}/admin/realms/${realm}/users/${userId}/sessions`, {
-      headers: { Authorization: `Bearer ${access_token}` },
+    const res = await fetch(
+      `${kcBase}/admin/realms/${realm}/clients?clientId=${encodeURIComponent(clientId)}`,
+      { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" },
+    )
+    if (!res.ok) return null
+    const arr = (await res.json()) as Array<{ id: string }>
+    cachedClientUuid = arr?.[0]?.id ?? null
+    return cachedClientUuid
+  } catch {
+    return null
+  }
+}
+
+async function fetchSessions(url: string, accessToken: string, offline: boolean): Promise<KcUserSession[]> {
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     })
     if (!res.ok) {
       const t = await res.text().catch(() => "")
-      console.error("[keycloak-admin] GET user sessions failed", res.status, t.slice(0, 300))
+      console.error("[keycloak-admin] GET sessions failed", offline ? "(offline)" : "(online)", res.status, t.slice(0, 200))
       return []
     }
-    return (await res.json()) as KcUserSession[]
+    const list = (await res.json()) as KcUserSession[]
+    return list.map((s) => ({ ...s, offline }))
   } catch (e) {
-    console.error("[keycloak-admin] listUserSessions", e)
+    console.error("[keycloak-admin] fetchSessions", e)
     return []
   }
 }
 
 /**
- * Revokes a single Keycloak SSO session by id (signs that device out).
- * Returns true on success.
+ * Lists the user's active sessions (one per signed-in device). Merges ONLINE
+ * and OFFLINE sessions — because the app logs in with `offline_access`, real
+ * sessions are stored as offline ones, which `/users/{id}/sessions` (online
+ * only) doesn't return. Returns [] on failure — the view degrades to empty.
  */
-export async function deleteUserSession(sessionId: string): Promise<boolean> {
+export async function listUserSessions(userId: string): Promise<KcUserSession[]> {
+  const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
+  const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
+  const clientId = optionalEnv("KEYCLOAK_CLIENT_ID", "afrotransact-web")
+  const access_token = await getKeycloakAdminAccessToken()
+  if (!access_token) return []
+
+  const clientUuid = await getClientUuid(kcBase, realm, access_token, clientId)
+  const [online, offline] = await Promise.all([
+    fetchSessions(`${kcBase}/admin/realms/${realm}/users/${userId}/sessions`, access_token, false),
+    clientUuid
+      ? fetchSessions(`${kcBase}/admin/realms/${realm}/users/${userId}/offline-sessions/${clientUuid}`, access_token, true)
+      : Promise.resolve([] as KcUserSession[]),
+  ])
+
+  // Dedupe by session id — a session can surface in both lists; prefer online.
+  const byId = new Map<string, KcUserSession>()
+  for (const s of [...online, ...offline]) {
+    if (!byId.has(s.id)) byId.set(s.id, s)
+  }
+  return [...byId.values()]
+}
+
+/**
+ * Revokes a single Keycloak session by id (signs that device out). Offline
+ * sessions need the `isOffline=true` flag. Returns true on success.
+ */
+export async function deleteUserSession(sessionId: string, offline = false): Promise<boolean> {
   const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
   const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
   const access_token = await getKeycloakAdminAccessToken()
   if (!access_token) return false
   try {
-    const res = await fetch(
-      `${kcBase}/admin/realms/${realm}/sessions/${encodeURIComponent(sessionId)}`,
-      { method: "DELETE", headers: { Authorization: `Bearer ${access_token}` } },
-    )
+    const url =
+      `${kcBase}/admin/realms/${realm}/sessions/${encodeURIComponent(sessionId)}` +
+      (offline ? "?isOffline=true" : "")
+    const res = await fetch(url, { method: "DELETE", headers: { Authorization: `Bearer ${access_token}` } })
     if (!res.ok) {
       const t = await res.text().catch(() => "")
       console.error("[keycloak-admin] DELETE session failed", res.status, t.slice(0, 300))

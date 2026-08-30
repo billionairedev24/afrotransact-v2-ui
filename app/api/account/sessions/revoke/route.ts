@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
-import { listUserSessions, deleteUserSession } from "@/lib/keycloak-admin"
+import { listUserSessions, deleteUserSession, type KcUserSession } from "@/lib/keycloak-admin"
 
 export const dynamic = "force-dynamic"
 
@@ -32,21 +32,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 })
   }
 
-  const owned = new Set((await listUserSessions(userId)).map((s) => s.id))
+  const sessions = await listUserSessions(userId)
+  const byId = new Map(sessions.map((s) => [s.id, s]))
 
-  let targets: string[] = []
+  let targets: KcUserSession[] = []
   if (body.allExceptCurrent) {
-    targets = [...owned].filter((id) => id !== currentSid)
+    targets = sessions.filter((s) => s.id !== currentSid)
   } else if (body.sessionId) {
-    if (!owned.has(body.sessionId)) {
+    const s = byId.get(body.sessionId)
+    if (!s) {
       return NextResponse.json({ error: "not_your_session" }, { status: 403 })
     }
-    targets = [body.sessionId]
+    targets = [s]
   } else {
     return NextResponse.json({ error: "nothing_to_revoke" }, { status: 400 })
   }
 
-  const results = await Promise.all(targets.map((id) => deleteUserSession(id)))
+  const results = await Promise.all(targets.map((s) => deleteUserSession(s.id, s.offline)))
   const revoked = results.filter(Boolean).length
   return NextResponse.json({ ok: true, revoked, requested: targets.length })
 }
