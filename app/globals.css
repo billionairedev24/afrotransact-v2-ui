@@ -195,6 +195,15 @@
     @apply border-border;
   }
 
+  html {
+    /* Always reserve the scrollbar gutter. Opening a Sheet/modal locks body
+       scroll (overflow:hidden); without a reserved gutter the scrollbar
+       vanishes, the viewport widens by its width, and fixed top bars jump
+       right — the misaligned header you see when a sheet opens in the
+       admin/seller panels. Reserving the gutter keeps the layout stable. */
+    scrollbar-gutter: stable;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
