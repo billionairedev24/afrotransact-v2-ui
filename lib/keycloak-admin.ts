@@ -204,6 +204,38 @@ export async function addRealmRoleToUser(userId: string, roleName: string): Prom
   }
 }
 
+/**
+ * Sends Keycloak's built-in "verify your email" email to the user. Used by the
+ * app-level verification gate (soft-verify model): registration no longer
+ * blocks on verification, so the app triggers the email and gates sensitive
+ * actions until `email_verified` flips true. Returns true on success.
+ */
+export async function sendVerifyEmail(userId: string): Promise<boolean> {
+  const kcBase = kcIssuerServer.replace(/\/realms\/.*$/, "")
+  const realm = optionalEnv("KEYCLOAK_REALM", "afrotransact")
+  const clientId = optionalEnv("KEYCLOAK_CLIENT_ID", "afrotransact-web")
+  const access_token = await getKeycloakAdminAccessToken()
+  if (!access_token) return false
+  try {
+    // client_id + redirect_uri so the post-verify "back to application" link
+    // returns the user to our app, not a Keycloak page.
+    const appBase = (process.env.NEXTAUTH_URL || "http://localhost:3001").replace(/\/$/, "")
+    const url =
+      `${kcBase}/admin/realms/${realm}/users/${userId}/send-verify-email` +
+      `?client_id=${encodeURIComponent(clientId)}` +
+      `&redirect_uri=${encodeURIComponent(appBase + "/?reason=email_verified")}`
+    const res = await fetch(url, { method: "PUT", headers: { Authorization: `Bearer ${access_token}` } })
+    if (!res.ok) {
+      const t = await res.text().catch(() => "")
+      console.error("[keycloak-admin] send-verify-email failed", res.status, t.slice(0, 300))
+    }
+    return res.ok
+  } catch (e) {
+    console.error("[keycloak-admin] sendVerifyEmail", e)
+    return false
+  }
+}
+
 export async function grantSellerEntitlements(userId: string): Promise<{
   registrationOk: boolean
   realmRoleOk: boolean

@@ -7,6 +7,8 @@ import { CartMergeProvider } from "@/components/providers/CartMergeProvider"
 import { WishlistSyncProvider } from "@/components/providers/WishlistSyncProvider"
 import { ReferralClaimProvider } from "@/components/providers/ReferralClaimProvider"
 import { DeviceSessionProvider } from "@/components/providers/DeviceSessionProvider"
+import { VerifyEmailBanner } from "@/components/providers/VerifyEmailBanner"
+import { SellerIntentProvider } from "@/components/providers/SellerIntentProvider"
 import { SessionGuard } from "@/components/providers/SessionGuard"
 import { PostLoginRedirect } from "@/components/providers/PostLoginRedirect"
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
@@ -37,6 +39,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <WishlistSyncProvider>
               <ReferralClaimProvider>
               <DeviceSessionProvider>
+              <SellerIntentProvider>
+              <VerifyEmailBanner />
               {children}
             <LoadingOverlay />
             <Toaster
@@ -50,6 +54,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 },
               }}
             />
+              </SellerIntentProvider>
               </DeviceSessionProvider>
               </ReferralClaimProvider>
               </WishlistSyncProvider>

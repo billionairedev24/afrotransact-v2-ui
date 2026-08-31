@@ -65,30 +65,21 @@ function RegisterRedirect() {
         // flow (e.g. an abandoned login) so THIS registration's callback isn't
         // rejected with "state cookie was created for a different provider".
         await fetch("/api/auth/reset-oauth-state", { method: "POST" }).catch(() => {})
+
+        // ONE registration provider for buyer AND seller. Seller intent is no
+        // longer a Keycloak param/provider — it's a cookie the post-login
+        // SellerIntentProvider reads to call /api/auth/grant-seller, which makes
+        // the seller role + attribute DURABLE on the Keycloak account (survives
+        // cross-device email verification). 30-min TTL covers register → (soft
+        // verify) → land back authenticated on this same browser.
         if (isSeller) {
-          // Persist seller intent so /auth/login can route back to the
-          // onboarding flow if the user verifies their email on another
-          // device (no live session when they return).
-          try {
-            localStorage.setItem(
-              "afro_register_intent",
-              JSON.stringify({ callbackUrl: "/dashboard/onboarding", role: "seller" }),
-            )
-          } catch {
-            // localStorage unavailable (SSR / private mode) — proceed anyway.
-          }
-          await signIn(
-            "keycloak-register-seller",
-            { callbackUrl: "/dashboard/onboarding", registration_role: "seller" },
-            referralCode ? { referralCode } : undefined,
-          )
-        } else {
-          await signIn(
-            "keycloak-register",
-            { callbackUrl: searchParams.get("callbackUrl") || "/" },
-            referralCode ? { referralCode } : undefined,
-          )
+          document.cookie = "atx_seller_intent=1; path=/; max-age=1800; SameSite=Lax"
         }
+        await signIn(
+          "keycloak-register",
+          { callbackUrl: isSeller ? "/" : (searchParams.get("callbackUrl") || "/") },
+          referralCode ? { referralCode } : undefined,
+        )
       } catch {
         // Allow the user to manually retry via a refresh if NextAuth throws.
         startedRef.current = false

@@ -1278,6 +1278,12 @@ export default function CheckoutClientV2({
 
   async function handlePlaceOrder() {
     setPlaceError(null)
+    // Verification gate (defense-in-depth beyond the disabled button): a
+    // signed-in but unverified buyer cannot place an order.
+    if (session?.status === "authenticated" && session?.data?.user?.emailVerified === false) {
+      setPlaceError("Please verify your email before placing your order — check your inbox for the verification link.")
+      return
+    }
     // The exact number on the Place-order button at the instant it was clicked.
     const shownTotalAtClick = dTotal
     let result = checkoutResult
@@ -1317,6 +1323,12 @@ export default function CheckoutClientV2({
   else if (!stripeAvailable) disabledReason = "Payment is unavailable in this region"
   else if (selectedSavedCardId === null && !checkoutResult && !minting) disabledReason = null // new-card path: minting on click
   if (requoting) disabledReason = "Updating delivery options…"
+  // App-level email-verification gate: a signed-in but unverified buyer cannot
+  // place an order. (Guests have no account to verify — they're not gated
+  // here.) Overrides the reasons above so it always wins when it applies.
+  const emailUnverified =
+    session?.status === "authenticated" && session?.data?.user?.emailVerified === false
+  if (emailUnverified) disabledReason = "Verify your email to place your order"
   const placeDisabled = disabledReason !== null || minting || placingRef.current || paying || requoting || ratesUnavailable
 
   // ─── empty cart guard ─────────────────────────────────────────────

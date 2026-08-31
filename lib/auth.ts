@@ -183,10 +183,7 @@ function keycloakRegisterBase(id: string, name: string): OAuthConfig<Record<stri
     clientSecret: kcClientSecret,
     authorization: {
       url: `${kcIssuerPublic}/protocol/openid-connect/registrations`,
-      params: { 
-        scope: kcScope,
-        registration_role: "seller" // Default to buyer, can be overridden by signIn params
-      },
+      params: { scope: kcScope },
     },
     token: {
       url: `${kcIssuerServer}/protocol/openid-connect/token`,
@@ -208,28 +205,17 @@ function keycloakRegisterBase(id: string, name: string): OAuthConfig<Record<stri
   }
 }
 
-function KeycloakRegisterProvider(): OAuthConfig<Record<string, unknown>> {
-  const provider = keycloakRegisterBase("keycloak-register", "Keycloak Register")
-  if (provider.authorization && typeof provider.authorization !== "string") {
-    provider.authorization.params = { ...provider.authorization.params, registration_role: "buyer" }
-  }
-  return provider
-}
-
-/**
- * Seller-specific registration provider. Identical OAuth flow, but the
- * distinct provider ID lets the jwt callback detect seller intent
- * without cookies — works across devices after the first auth completes.
- */
-function KeycloakRegisterSellerProvider(): OAuthConfig<Record<string, unknown>> {
-  return keycloakRegisterBase("keycloak-register-seller", "Keycloak Register Seller")
-}
-
 export const authOptions: NextAuthOptions = {
+  // TWO providers: login + registration. Buyer and seller both register through
+  // the SAME provider — seller intent is no longer a Keycloak param/attribute
+  // set at registration; it's an app cookie the post-login SellerIntentProvider
+  // turns into a durable grant. Removing the 3rd (seller) provider removes a
+  // whole class of NextAuth "state cookie created for a different provider"
+  // OAuthCallback errors; the login↔register race is covered by
+  // /api/auth/reset-oauth-state.
   providers: [
     keycloakLoginProvider(),
-    KeycloakRegisterProvider(),
-    KeycloakRegisterSellerProvider(),
+    keycloakRegisterBase("keycloak-register", "Keycloak Register"),
   ],
 
   pages: {
@@ -265,7 +251,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ token, account, user, profile }): Promise<any> {
+    async jwt({ token, account, user, profile, trigger }): Promise<any> {
       if (account && user) {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
@@ -290,19 +276,35 @@ export const authOptions: NextAuthOptions = {
         token.roles = appRolesOnly(flatRoles ?? nestedRoles)
 
         token.registrationRole = claims?.registration_role as string | undefined
+        // Email verification is now enforced at the APP level (a gate on
+        // checkout / seller go-live), not by blocking Keycloak login. Carry the
+        // claim so the app can gate. It refreshes to true on the next token
+        // refresh after the user clicks their verification link.
+        token.emailVerified = claims?.email_verified === true
 
-        // Grant seller entitlements (user attribute + realm role) when:
-        // 1. User registered via the seller-specific provider, OR
-        // 2. User has registration_role=seller attribute (from Keycloak) but
-        //    doesn't yet have the seller realm role (e.g. logged in after
-        //    email verification via the regular keycloak provider).
+        // Belt-and-suspenders: if a user already carries the durable
+        // `registration_role=seller` attribute (written by /api/auth/grant-seller)
+        // but somehow lacks the seller realm role, grant it on login. New
+        // self-service sellers are granted by the post-login SellerIntentProvider;
+        // this just heals any account whose role and attribute drifted.
         const roles = token.roles as string[] | undefined
         const needsSellerGrant =
-          account.provider === "keycloak-register-seller" ||
-          (token.registrationRole === "seller" && !roles?.includes("seller"))
+          token.registrationRole === "seller" && !roles?.includes("seller")
         if (needsSellerGrant) {
           const { registrationOk, realmRoleOk } = await grantSellerEntitlements(user.id as string)
           if (registrationOk || realmRoleOk) token.registrationRole = "seller"
+        }
+      }
+
+      // Client called useSession().update() — e.g. the verify-email banner's
+      // "I've verified" button. Force a fresh token so email_verified / roles
+      // update immediately instead of waiting out the access-token lifespan.
+      if (trigger === "update" && token.refreshToken) {
+        try {
+          return await refreshAccessToken(token)
+        } catch {
+          token.error = "RefreshTokenError"
+          return token
         }
       }
 
@@ -345,6 +347,7 @@ export const authOptions: NextAuthOptions = {
       }
       session.user.roles = token.roles ?? []
       session.user.registrationRole = token.registrationRole
+      session.user.emailVerified = token.emailVerified === true
 
       return session
     },
@@ -427,6 +430,7 @@ async function refreshAccessToken(token: {
 
   let roles = token.roles as string[] | undefined
   let registrationRole = token.registrationRole as string | undefined
+  let emailVerified = token.emailVerified as boolean | undefined
   if (refreshedTokens.access_token) {
     try {
       const payload = JSON.parse(
@@ -438,6 +442,11 @@ async function refreshAccessToken(token: {
       if (fresh) roles = appRolesOnly(fresh)
       if (payload.registration_role) {
         registrationRole = payload.registration_role as string
+      }
+      // Picks up email_verified=true after the user clicks their verify link,
+      // so the app-level verification gate lifts on the next refresh.
+      if (typeof payload.email_verified === "boolean") {
+        emailVerified = payload.email_verified
       }
     } catch {
       // Keep existing values if token decode fails
@@ -454,6 +463,7 @@ async function refreshAccessToken(token: {
       ?? Math.floor(Date.now() / 1000) + (refreshedTokens.expires_in as number ?? 300),
     roles,
     registrationRole,
+    emailVerified,
     error: undefined,
   }
 }
