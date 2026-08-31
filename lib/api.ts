@@ -1924,6 +1924,9 @@ export interface CheckoutResponse {
   taxCents: number
   shippingCostCents: number
   totalCents: number
+  /** Store credit (referral/wallet) auto-applied at checkout, capped at the
+   *  total. The card is charged totalCents - storeCreditAppliedCents. */
+  storeCreditAppliedCents: number
   couponCode: string | null
   /** Authoritative per-coupon breakdown of what actually applied at checkout
    *  (stacking). `discountCents` is aggregate item discount; `couponCode` is

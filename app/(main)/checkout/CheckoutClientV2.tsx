@@ -55,6 +55,7 @@ import {
   Clock,
   Info,
   Check,
+  Wallet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatDistance } from "@/lib/format"
@@ -1131,6 +1132,11 @@ export default function CheckoutClientV2({
   const dTax = checkoutResult?.taxCents ?? tax
   const dShipping = checkoutResult?.shippingCostCents ?? effectiveShippingCents
   const dTotal = checkoutResult?.totalCents ?? total
+  // Store credit (referral/wallet) auto-applied by the backend at checkout,
+  // capped at the total. Only known once the order is minted (checkoutResult);
+  // the card is charged dTotal - dCredit.
+  const dCredit = checkoutResult?.storeCreditAppliedCents ?? 0
+  const dCharge = Math.max(0, dTotal - dCredit)
 
   const mintIntent = useCallback(async () => {
     if (placingRef.current) return null
@@ -1695,13 +1701,16 @@ export default function CheckoutClientV2({
                                   Arrives in {DELIVERY_ETA_HOURS} hours
                                 </p>
                               </div>
-                              {/* Delivery is ONE order-level fee shown once in the order
-                                  summary — never stamped per group here (that reads as a
-                                  per-seller split), and never as a bare "Standard delivery"
-                                  label. The option shows only the ETA (under the name) plus
-                                  a "Free" flag when the order qualifies for free delivery. */}
-                              {freeShippingApplies && (
+                              {/* Show the delivery PRICE on the option so the buyer sees
+                                  the shipping cost. This is the ONE order-level delivery
+                                  fee (the same value shown once in the summary) — when
+                                  several sellers ship, they share this single fee; it is
+                                  never multiplied per seller. "Free" when the order
+                                  qualifies for free delivery. */}
+                              {freeShippingApplies ? (
                                 <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
+                              ) : (
+                                <span className="text-sm font-bold text-foreground tabular-nums">{fmtShip(q.amountCents)}</span>
                               )}
                             </label>
                           )
@@ -1952,9 +1961,23 @@ export default function CheckoutClientV2({
                 )}
               </div>
               <div className="flex justify-between border-t border-gray-200 pt-2 mt-2">
-                <dt className="text-base font-bold text-gray-900">{totalsAreFinal ? "Order total" : "Estimated total"}</dt>
-                <dd className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dTotal)}</dd>
+                <dt className={cn("font-bold text-gray-900", dCredit > 0 ? "text-sm" : "text-base")}>{totalsAreFinal ? "Order total" : "Estimated total"}</dt>
+                <dd className={cn("font-bold text-gray-900 tabular-nums", dCredit > 0 ? "text-sm" : "text-base")}>{formatCents(dTotal)}</dd>
               </div>
+              {dCredit > 0 && (
+                <>
+                  <div className="flex justify-between italic text-emerald-700 dark:text-emerald-400">
+                    <dt className="inline-flex items-center gap-1.5">
+                      <Wallet className="h-3.5 w-3.5" /> Store credit applied
+                    </dt>
+                    <dd className="tabular-nums">-{formatCents(dCredit)}</dd>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-200 pt-2 mt-1">
+                    <dt className="text-base font-bold text-gray-900">You&apos;ll be charged</dt>
+                    <dd className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dCharge)}</dd>
+                  </div>
+                </>
+              )}
             </dl>
             {pickupGroups.length > 0 && pickupSavingsCents > 0 && (
               <div className="mt-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-[12px] font-semibold px-3 py-2 inline-flex items-center gap-2">
@@ -2025,8 +2048,8 @@ export default function CheckoutClientV2({
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white p-3 lg:hidden">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-500">{totalsAreFinal ? "Order total" : "Estimated total"}</p>
-            <p className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dTotal)}</p>
+            <p className="text-xs text-gray-500">{dCredit > 0 ? "You'll be charged" : (totalsAreFinal ? "Order total" : "Estimated total")}</p>
+            <p className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dCharge)}</p>
           </div>
           <PlaceOrderButton
             disabled={placeDisabled}
