@@ -61,6 +61,10 @@ function RegisterRedirect() {
     void (async () => {
       try {
         const referralCode = getReferralCodeCookie()
+        // Clear any stale OAuth state/PKCE cookie from a prior or interleaved
+        // flow (e.g. an abandoned login) so THIS registration's callback isn't
+        // rejected with "state cookie was created for a different provider".
+        await fetch("/api/auth/reset-oauth-state", { method: "POST" }).catch(() => {})
         if (isSeller) {
           // Persist seller intent so /auth/login can route back to the
           // onboarding flow if the user verifies their email on another
