@@ -7,7 +7,7 @@ import { CartMergeProvider } from "@/components/providers/CartMergeProvider"
 import { WishlistSyncProvider } from "@/components/providers/WishlistSyncProvider"
 import { ReferralClaimProvider } from "@/components/providers/ReferralClaimProvider"
 import { DeviceSessionProvider } from "@/components/providers/DeviceSessionProvider"
-import { VerifyEmailBanner } from "@/components/providers/VerifyEmailBanner"
+import { VerifyEmailGate } from "@/components/providers/VerifyEmailGate"
 import { SellerIntentProvider } from "@/components/providers/SellerIntentProvider"
 import { SessionGuard } from "@/components/providers/SessionGuard"
 import { PostLoginRedirect } from "@/components/providers/PostLoginRedirect"
@@ -40,7 +40,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <ReferralClaimProvider>
               <DeviceSessionProvider>
               <SellerIntentProvider>
-              <VerifyEmailBanner />
+              <VerifyEmailGate />
               {children}
             <LoadingOverlay />
             <Toaster
