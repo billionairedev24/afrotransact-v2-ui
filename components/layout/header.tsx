@@ -38,7 +38,6 @@ import {
 import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
-import { useSignOut } from "@/hooks/useSignOut"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
 import { DeliverToPicker } from "@/components/buyer/DeliverToPicker"
 import { AiNavButton } from "@/components/ai/AiWidget"
@@ -179,7 +178,6 @@ export function Header() {
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
   const cartSyncing = useCartStore((s) => s.syncing)
   const { cartReady } = useCartHydration()
-  const signOut = useSignOut()
 
   const isAuthenticated = status === "authenticated"
   const userName = session?.user?.name
@@ -578,13 +576,21 @@ export function Header() {
                         </div>
 
                         <div className="border-t border-border py-1">
-                          <button
-                            onClick={() => { setUserMenuOpen(false); signOut() }}
+                          {/* Native <a href> so the browser navigates on click via
+                              its default action — independent of React's synthetic
+                              onClick (which was intermittently not firing here, so
+                              clicking Sign Out did nothing). The full-page GET to
+                              /api/auth/signout does the clean logout (app session +
+                              KC SSO + atx_* cookies) and reloading resets client
+                              cart state, so no JS handler is required. */}
+                          <a
+                            href="/api/auth/signout"
+                            onClick={() => setUserMenuOpen(false)}
                             className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
                           >
                             <LogOut className="h-4 w-4" />
                             Sign Out
-                          </button>
+                          </a>
                         </div>
                       </>
                     ) : (
@@ -887,17 +893,14 @@ export function Header() {
               {/* ── Footer ── */}
               <div className="shrink-0 border-t border-border px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
                 {isAuthenticated ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      closeMobileMenu()
-                      void signOut()
-                    }}
+                  <a
+                    href="/api/auth/signout"
+                    onClick={() => closeMobileMenu()}
                     className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-3 text-sm font-bold uppercase tracking-wider text-red-600 transition-colors hover:bg-red-50 active:bg-red-100"
                   >
                     <LogOut className="h-4 w-4" strokeWidth={2.25} />
                     Sign Out
-                  </button>
+                  </a>
                 ) : (
                   <p className="text-center text-sm font-semibold text-muted-foreground">AfroTransact</p>
                 )}
