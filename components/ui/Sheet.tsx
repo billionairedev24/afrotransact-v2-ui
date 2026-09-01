@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -13,6 +14,14 @@ interface SheetProps {
 }
 
 export function Sheet({ open, onClose, children, className, side = "right" }: SheetProps) {
+  // Render into a portal on <body> so the overlay is NEVER affected by the
+  // layout flow/spacing of wherever it happens to be mounted. Without this, a
+  // parent utility like `space-y-*` adds a top margin to this `fixed inset-0`
+  // element and pushes the whole sheet (and its close button) down — the
+  // "unneeded space above the X" bug.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   useEffect(() => {
     if (!open) return
     function handleEsc(e: KeyboardEvent) {
@@ -26,7 +35,9 @@ export function Sheet({ open, onClose, children, className, side = "right" }: Sh
     }
   }, [open, onClose])
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <div
       className={cn(
         "fixed inset-0 z-50 transition-opacity duration-200",
@@ -48,7 +59,8 @@ export function Sheet({ open, onClose, children, className, side = "right" }: Sh
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -78,7 +90,7 @@ export function SheetHeader({
 
 export function SheetBody({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6", className)}>
+    <div className={cn("min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide scroll-smooth px-4 py-5 sm:px-6", className)}>
       {children}
     </div>
   )

@@ -28,6 +28,7 @@ This release spans the storefront (`afrotransact-v2-ui`) and the backend service
 ### Fixed
 - Intermittent "We couldn't sign you in" (OAuth state-cookie) errors on login and registration.
 - "Save this card" wiped entered card details; a false "Placing order…" spinner appeared when toggling it.
+- Sheet/drawer overlays: fixed an extra gap above the close button (overlays now portal to `<body>` so parent layout spacing can't shift them) and hid the scrollbar while keeping scroll smooth.
 - Server-side validation across data-entry forms; malformed emails rejected at registration with inline errors (no stuck spinners).
 - `login_sessions` migration version collision (V10 → V13); stale shipping/invite tests.
 
@@ -41,4 +42,4 @@ This release spans the storefront (`afrotransact-v2-ui`) and the backend service
 - The Keycloak realm update runs automatically on deploy via `import-realm.sh` (`verifyEmail=false`, remove the retired SPI listener/action, shorter access-token lifespan).
 - No new secrets required; SMTP is already configured.
 
-[0.2.0]: https://github.com/afrotransact-inc/afrotransact-victory/compare/main...dev
+[0.2.0]: https://github.com/billionairedev24/afrotransact-v2-ui/compare/v0.1.0...v0.2.0
