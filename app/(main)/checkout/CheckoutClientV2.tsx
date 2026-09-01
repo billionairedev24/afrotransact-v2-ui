@@ -2244,13 +2244,20 @@ const InlinePayment = forwardRef<PaymentHandle, InlinePaymentProps>(function Inl
   props,
   ref,
 ) {
-  const { clientSecret, totalCents, saveCard } = props
+  // clientSecret is forwarded to the form via {...props} for confirm; it is
+  // deliberately NOT used to key <Elements> (see note below).
+  const { totalCents, saveCard } = props
   return (
-    // `key` forces a full remount when the PaymentIntent or save-card option
-    // changes, mirroring the legacy PaymentStep's behavior to avoid stale
-    // PaymentIntent references in Stripe Elements.
+    // IMPORTANT: do NOT key this on clientSecret or saveCard. In deferred mode
+    // (mode:"payment") the PaymentElement holds NO PaymentIntent reference —
+    // the clientSecret is supplied only at confirm time — and `amount` +
+    // `setupFutureUsage` are applied in place via elements.update() when the
+    // `options` prop changes. Keying on clientSecret/saveCard forced a full
+    // remount of <Elements>, which tore down the PaymentElement iframe and
+    // WIPED the card the buyer had already typed whenever they ticked "save
+    // card" (or the PI re-minted). A stable key keeps the iframe mounted; Stripe
+    // updates the option in place, and the re-minted PI still syncs at confirm.
     <Elements
-      key={`${clientSecret ?? "no-pi"}|${saveCard ? "sfu" : "no-sfu"}`}
       stripe={getV2Stripe()}
       options={{
         mode: "payment",

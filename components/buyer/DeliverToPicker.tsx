@@ -61,10 +61,13 @@ async function googleForwardGeocode(postalCode: string, country: string): Promis
 }
 
 function locationLabel(loc: BuyerLocation): string {
-  if (loc.postalCode) return loc.postalCode
+  // Prefer the human-readable place name over the raw ZIP — "Georgetown, TX"
+  // reads better than "78626". Fall back to the postal code only when we have
+  // no resolved city/state.
   if (loc.city && loc.state) return `${loc.city}, ${loc.state}`
   if (loc.city) return loc.city
   if (loc.state) return loc.state
+  if (loc.postalCode) return loc.postalCode
   return "Near you"
 }
 import { cn } from "@/lib/utils"
