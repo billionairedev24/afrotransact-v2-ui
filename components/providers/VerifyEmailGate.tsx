@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useRef, useState } from "react"
-import { useSession, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { Mail, Loader2, LogOut } from "lucide-react"
 
@@ -86,8 +86,8 @@ export function VerifyEmailGate() {
       className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
     >
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center shadow-xl sm:p-8">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/50">
-          <Mail className="h-6 w-6 text-amber-700 dark:text-amber-400" />
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
+          <Mail className="h-6 w-6 text-[hsl(var(--brand-gold-ink))]" />
         </div>
         <h2 id="verify-gate-title" className="text-lg font-bold text-foreground">
           Verify your email to continue
@@ -103,7 +103,7 @@ export function VerifyEmailGate() {
             type="button"
             onClick={iVerified}
             disabled={checking}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
           >
             {checking && <Loader2 className="h-4 w-4 animate-spin" />} I&apos;ve verified — continue
           </button>
@@ -117,7 +117,14 @@ export function VerifyEmailGate() {
           </button>
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={() => {
+              // Hard navigation to the server signout route: it clears ALL
+              // NextAuth cookies (host + domain scoped), best-effort KC logout,
+              // and 302s home. More reliable than the client signOut() here,
+              // and prompt=login on the next sign-in lets them pick a different
+              // account despite Keycloak's lingering SSO cookie.
+              window.location.href = "/api/auth/signout"
+            }}
             className="mt-1 inline-flex w-full items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
             <LogOut className="h-3.5 w-3.5" /> Sign out / use a different account

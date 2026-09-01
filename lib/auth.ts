@@ -248,6 +248,32 @@ export const authOptions: NextAuthOptions = {
         secure: useSecureCookies,
       },
     },
+    // OAuth transaction cookies (state + PKCE). NextAuth defaults these to a
+    // 15-min maxAge; a self-registration where the user lingers on Keycloak's
+    // form (or bounces through a referral link + sign-out first) can outlive
+    // that, and the callback then fails with "State cookie was missing." Give
+    // them 30 min of headroom and pin the localhost-vs-prod flags explicitly so
+    // they always match the names /api/auth/reset-oauth-state clears.
+    state: {
+      name: `${cookiePrefix}next-auth.state`,
+      options: {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: useSecureCookies,
+        maxAge: 60 * 30,
+      },
+    },
+    pkceCodeVerifier: {
+      name: `${cookiePrefix}next-auth.pkce.code_verifier`,
+      options: {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: useSecureCookies,
+        maxAge: 60 * 30,
+      },
+    },
   },
 
   callbacks: {
