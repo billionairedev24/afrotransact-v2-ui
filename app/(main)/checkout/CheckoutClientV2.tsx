@@ -1286,27 +1286,31 @@ export default function CheckoutClientV2({
     }
     // The exact number on the Place-order button at the instant it was clicked.
     const shownTotalAtClick = dTotal
-    let result = checkoutResult
-    if (!result) result = await mintIntent()
-    if (!result) return
-    // ── Amazon-way gate #1 ──────────────────────────────────────────────
-    // The freshly-minted order total MUST equal what the buyer just reviewed.
-    // If the cart/price drifted (e.g. a mint-on-click surfaced a different
-    // final total than the estimate), do NOT charge — show the real total and
-    // make them place the order again against the authoritative number.
-    if (result.totalCents !== shownTotalAtClick) {
-      setPlaceError(
-        `Your order total updated to ${formatCents(result.totalCents)}. Please review it above, then place your order again.`,
-      )
-      return
-    }
-    const handle = paymentHandleRef.current
-    if (!handle) {
-      setPlaceError("Payment isn't ready yet. Please wait a moment and try again.")
-      return
-    }
+    // Mark "placing" for the WHOLE flow — mint-on-click AND confirm — so the CTA
+    // spinner reflects a real placement. A background re-mint (e.g. toggling
+    // "save this card") sets `minting` but NOT `paying`, so it no longer shows a
+    // misleading "Placing order…" spinner on the button.
     setPaying(true)
     try {
+      let result = checkoutResult
+      if (!result) result = await mintIntent()
+      if (!result) return
+      // ── Amazon-way gate #1 ──────────────────────────────────────────────
+      // The freshly-minted order total MUST equal what the buyer just reviewed.
+      // If the cart/price drifted (e.g. a mint-on-click surfaced a different
+      // final total than the estimate), do NOT charge — show the real total and
+      // make them place the order again against the authoritative number.
+      if (result.totalCents !== shownTotalAtClick) {
+        setPlaceError(
+          `Your order total updated to ${formatCents(result.totalCents)}. Please review it above, then place your order again.`,
+        )
+        return
+      }
+      const handle = paymentHandleRef.current
+      if (!handle) {
+        setPlaceError("Payment isn't ready yet. Please wait a moment and try again.")
+        return
+      }
       const ok = await handle.confirmPayment()
       if (ok) await handlePaymentComplete()
     } finally {
@@ -2039,7 +2043,7 @@ export default function CheckoutClientV2({
 
             <PlaceOrderButton
               disabled={placeDisabled}
-              loading={minting || paying}
+              loading={paying}
               disabledReason={disabledReason}
               onClick={handlePlaceOrder}
               className="hidden lg:flex mt-4 w-full"
@@ -2065,7 +2069,7 @@ export default function CheckoutClientV2({
           </div>
           <PlaceOrderButton
             disabled={placeDisabled}
-            loading={minting}
+            loading={paying}
             disabledReason={disabledReason}
             onClick={handlePlaceOrder}
             className="flex-1"
