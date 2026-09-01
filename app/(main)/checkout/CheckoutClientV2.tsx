@@ -2030,7 +2030,13 @@ export default function CheckoutClientV2({
                   ref={paymentHandleRef}
                   clientSecret={checkoutResult?.paymentClientSecret ?? null}
                   checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
-                  totalCents={dTotal}
+                  // The PaymentIntent is minted for the CHARGE (order total minus
+                  // any applied store credit), so the Stripe amount and the
+                  // pi.amount verification must use dCharge — NOT dTotal. Passing
+                  // dTotal made pi.amount (charge) != totalCents (order total)
+                  // whenever store credit applied, falsely blocking payment with
+                  // "Your order total changed."
+                  totalCents={dCharge}
                   saveCard={saveCard}
                   onSaveCardChange={setSaveCard}
                   savedCards={savedCards}
