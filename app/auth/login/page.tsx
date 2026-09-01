@@ -78,10 +78,10 @@ function LoginRedirect() {
       const callbackUrl = resolveCallbackUrl(
         new URLSearchParams(searchParams.toString()),
       )
-      // Clear any stale OAuth state/PKCE cookie from a prior or interleaved
-      // register flow so this login's callback isn't rejected as belonging to
-      // "a different provider".
-      await fetch("/api/auth/reset-oauth-state", { method: "POST" }).catch(() => {})
+      // NOTE: do NOT pre-clear state/PKCE here. signIn() sets fresh ones for
+      // this flow, so the old reset step was redundant — and it raced: deleting
+      // next-auth.state right before signIn set it could wipe the state cookie,
+      // making the callback fail with "State cookie was missing" (OAuthCallback).
       await signIn("keycloak", { callbackUrl })
     } catch {
       setIsLoading(false)

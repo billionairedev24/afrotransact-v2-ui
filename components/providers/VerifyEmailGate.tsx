@@ -31,21 +31,25 @@ export function VerifyEmailGate() {
   useEffect(() => {
     if (!unverified || autoSent.current) return
     autoSent.current = true
-    // Re-send the verification link once per browser session so a user who
-    // landed here without the email (or after it expired) still gets one.
+    // Auto-send the verification link once per ACCOUNT per browser session. The
+    // key is scoped to the user's email so registering a second account in the
+    // same session still triggers a send — a plain "atx_verify_email_sent" flag
+    // left over from a previous account would otherwise suppress it (the bug
+    // where the email "wasn't sent until I resent it").
+    const sentKey = `atx_verify_email_sent:${session?.user?.email ?? "unknown"}`
     try {
-      if (sessionStorage.getItem("atx_verify_email_sent")) return
+      if (sessionStorage.getItem(sentKey)) return
     } catch {
       /* sessionStorage unavailable — fall through and send */
     }
     void fetch("/api/auth/send-verify-email", { method: "POST" })
       .then((r) => {
         if (r.ok) {
-          try { sessionStorage.setItem("atx_verify_email_sent", "1") } catch { /* ignore */ }
+          try { sessionStorage.setItem(sentKey, "1") } catch { /* ignore */ }
         }
       })
       .catch(() => {})
-  }, [unverified])
+  }, [unverified, session?.user?.email])
 
   if (!unverified) return null
 

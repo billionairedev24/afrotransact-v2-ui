@@ -61,10 +61,13 @@ function RegisterRedirect() {
     void (async () => {
       try {
         const referralCode = getReferralCodeCookie()
-        // Clear any stale OAuth state/PKCE cookie from a prior or interleaved
-        // flow (e.g. an abandoned login) so THIS registration's callback isn't
-        // rejected with "state cookie was created for a different provider".
-        await fetch("/api/auth/reset-oauth-state", { method: "POST" }).catch(() => {})
+        // NOTE: we intentionally do NOT pre-clear the OAuth state/PKCE cookies
+        // here. signIn() sets a FRESH next-auth.state for this flow anyway, so
+        // the old "reset-oauth-state before signIn" step was redundant — and it
+        // raced: its delete of next-auth.state could land AFTER signIn set it,
+        // wiping the state cookie (but not callback-url, which it never touched)
+        // → the callback then failed with "State cookie was missing." Letting
+        // signIn own the state cookie end-to-end fixes that.
 
         // ONE registration provider for buyer AND seller. Seller intent is no
         // longer a Keycloak param/provider — it's a cookie the post-login

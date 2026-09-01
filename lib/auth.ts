@@ -209,10 +209,11 @@ export const authOptions: NextAuthOptions = {
   // TWO providers: login + registration. Buyer and seller both register through
   // the SAME provider — seller intent is no longer a Keycloak param/attribute
   // set at registration; it's an app cookie the post-login SellerIntentProvider
-  // turns into a durable grant. Removing the 3rd (seller) provider removes a
+  // turns into a durable grant. Removing the 3rd (seller) provider removed a
   // whole class of NextAuth "state cookie created for a different provider"
-  // OAuthCallback errors; the login↔register race is covered by
-  // /api/auth/reset-oauth-state.
+  // OAuthCallback errors. Each signIn() sets a fresh next-auth.state, so we no
+  // longer pre-clear cookies before sign-in (that step raced signIn and wiped
+  // the state cookie → "State cookie was missing").
   providers: [
     keycloakLoginProvider(),
     keycloakRegisterBase("keycloak-register", "Keycloak Register"),
@@ -252,8 +253,7 @@ export const authOptions: NextAuthOptions = {
     // 15-min maxAge; a self-registration where the user lingers on Keycloak's
     // form (or bounces through a referral link + sign-out first) can outlive
     // that, and the callback then fails with "State cookie was missing." Give
-    // them 30 min of headroom and pin the localhost-vs-prod flags explicitly so
-    // they always match the names /api/auth/reset-oauth-state clears.
+    // them 30 min of headroom and pin the localhost-vs-prod flags explicitly.
     state: {
       name: `${cookiePrefix}next-auth.state`,
       options: {
