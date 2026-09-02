@@ -23,6 +23,11 @@ import { useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useRef, useState } from "react"
 import { ArrowRight, Loader2 } from "lucide-react"
 
+// Per-tab counter (sessionStorage) bounding the silent retry of a transient
+// OAuthCallback "state mismatch". See the mount effect in LoginRedirect.
+const OAUTH_RETRY_KEY = "atx_oauth_retry"
+const MAX_AUTO_RETRY = 1
+
 function getSellerIntentCallbackUrl(): string | null {
   try {
     const raw = localStorage.getItem("afro_register_intent")
@@ -71,6 +76,9 @@ function LoginRedirect() {
 
   const startedRef = useRef(false)
   const [isLoading, setIsLoading] = useState(false)
+  // True while a transient OAuthCallback error is being silently retried — the
+  // page shows the spinner (a redirect is imminent) instead of the error card.
+  const [willAutoRetry, setWillAutoRetry] = useState(false)
 
   async function triggerKeycloakSignIn() {
     setIsLoading(true)
@@ -89,16 +97,57 @@ function LoginRedirect() {
   }
 
   /**
-   * Auto-redirect to Keycloak once on mount.
+   * Auto-redirect to Keycloak on mount.
    *
-   * IMPORTANT: if `error` is present (OAuth/sign-in failed server-side — e.g. Keycloak unreachable,
-   * ECONNRESET, bad issuer), do NOT retry automatically or the UI will spin in an infinite redirect loop.
-   * The user clears the failure via "Try again" which calls triggerKeycloakSignIn() explicitly.
+   * NextAuth v4 keeps a SINGLE `next-auth.state` / PKCE cookie per browser, so
+   * two overlapping sign-in flows (a second signIn while a first Keycloak page
+   * is still open, back/forward into this route, or a signout→signin overlap)
+   * make the later flow overwrite the earlier flow's cookie. Completing the
+   * earlier Keycloak page then fails the callback with "state mismatch" →
+   * `error=OAuthCallback`. That failure is TRANSIENT: a fresh sign-in sets fresh
+   * cookies and succeeds. So we auto-retry `OAuthCallback` ONCE before falling
+   * back to the manual error screen.
+   *
+   * The retry count lives in sessionStorage (per-tab, and it survives the
+   * round-trip out to Keycloak and back), capped at MAX_AUTO_RETRY so a
+   * genuinely-broken provider (Keycloak down, bad issuer) can never spin in an
+   * infinite redirect loop — after the cap we show the manual "Try again" card.
+   * Any other error code is surfaced immediately without an auto-retry.
    */
   useEffect(() => {
     if (startedRef.current) return
-    if (error) return
     if (reason && manualReasons.has(reason)) return
+
+    if (error) {
+      if (error === "OAuthCallback") {
+        let attempts = 0
+        try {
+          attempts = parseInt(sessionStorage.getItem(OAUTH_RETRY_KEY) || "0", 10)
+        } catch {
+          attempts = 0
+        }
+        if (attempts < MAX_AUTO_RETRY) {
+          try {
+            sessionStorage.setItem(OAUTH_RETRY_KEY, String(attempts + 1))
+          } catch {}
+          startedRef.current = true
+          setWillAutoRetry(true)
+          void triggerKeycloakSignIn()
+          return
+        }
+        // Auto-retry exhausted — reset so a future fresh attempt can self-heal
+        // again, and fall through to the manual error card below.
+        try {
+          sessionStorage.removeItem(OAUTH_RETRY_KEY)
+        } catch {}
+      }
+      return
+    }
+
+    // Clean load — clear any stale retry marker and start the flow.
+    try {
+      sessionStorage.removeItem(OAUTH_RETRY_KEY)
+    } catch {}
     startedRef.current = true
     void triggerKeycloakSignIn()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,8 +217,10 @@ function LoginRedirect() {
 
   // --- Auto-redirect path -----------------------------------------------------
 
-  // Surface OAuth / callback errors — no auto-retry from useEffect (prevents infinite redirect loops).
-  if (error) {
+  // Surface OAuth / callback errors — but while a transient OAuthCallback is
+  // being silently retried (willAutoRetry), fall through to the spinner: a
+  // redirect back to Keycloak is imminent, so the error card would only flash.
+  if (error && !willAutoRetry) {
     console.error("auth.error", { code: error })
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4 px-4 text-center">
