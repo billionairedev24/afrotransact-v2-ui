@@ -168,7 +168,23 @@ export default function AdminOrdersPage() {
     }),
     col.accessor("totalCents", {
       header: "Total",
-      cell: (info) => <span className="font-medium text-gray-900">{formatCents(info.getValue(), info.row.original.currency)}</span>,
+      cell: (info) => {
+        const currency = info.row.original.currency
+        const credit = info.row.original.raw.storeCreditAppliedCents ?? 0
+        if (credit > 0) {
+          // Store credit is house-funded, so the card is only charged the net.
+          // Show the actual charge as the figure, with the gross order total
+          // struck through above it — matches "Charged to card" in the detail
+          // drawer and "You paid" on the customer receipt.
+          return (
+            <span className="flex flex-col leading-tight">
+              <span className="text-xs text-gray-400 line-through tabular-nums">{formatCents(info.getValue(), currency)}</span>
+              <span className="font-medium text-gray-900 tabular-nums">{formatCents(info.getValue() - credit, currency)}</span>
+            </span>
+          )
+        }
+        return <span className="font-medium text-gray-900 tabular-nums">{formatCents(info.getValue(), currency)}</span>
+      },
     }),
     col.display({
       id: "actions",
