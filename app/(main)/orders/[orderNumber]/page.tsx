@@ -892,6 +892,18 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
                 <span className="text-foreground">Grand total</span>
                 <span className="tabular-nums text-brand-green">{formatCents(order.totalCents, order.currency)}</span>
               </div>
+              {(order.storeCreditAppliedCents ?? 0) > 0 && (
+                <>
+                  <div className="flex items-center justify-between py-1.5 text-brand-green">
+                    <span>Store credit applied</span>
+                    <span className="tabular-nums font-semibold">−{formatCents(order.storeCreditAppliedCents ?? 0, order.currency)}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-sm font-bold">
+                    <span className="text-foreground">You paid</span>
+                    <span className="tabular-nums text-foreground">{formatCents(order.totalCents - (order.storeCreditAppliedCents ?? 0), order.currency)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </section>
 
