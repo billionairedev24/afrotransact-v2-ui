@@ -6,6 +6,108 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 This release spans the storefront (`afrotransact-v2-ui`) and the backend services (`refined`).
 
+## [0.3.0] - 2026-09-02
+
+Follow-up release refining the 0.2.0 work from live testing: store-credit
+visibility across every surface, a reworked sign-out that reliably sticks, the
+seller onboarding path unblocked, receipt/email polish, and the address
+autocomplete migrated to Google's new Places API.
+
+### Storefront (`afrotransact-v2-ui`)
+
+**Auth & sign-out**
+- Reworked sign-out to be reliable and final. It now lands on a dedicated,
+  inert `/auth/signed-out` page that is exempt from every
+  auto-re-authentication path (the session guard, the post-login seller
+  redirect, and the login page's auto sign-in), so a still-warm Keycloak SSO
+  can no longer silently re-log the user in and bounce them back into the app.
+- Converted the remaining sign-out controls (seller onboarding header, seller
+  dashboard shell) from button + click handlers to real links — the synthetic
+  click was unreliable and silently did nothing.
+- Automatic re-auth call sites (seller onboarding, order detail) now go through
+  a guarded sign-in wrapper that stands down during a short post-sign-out
+  window, as defense in depth.
+- Auto-recovery from the transient "We couldn't sign you in" (OAuth
+  state-mismatch) error caused by two overlapping sign-in flows sharing one
+  NextAuth state cookie: the login page now silently retries once instead of
+  dead-ending.
+
+**Store credit visibility**
+- Order detail page shows "Store credit applied" and "You paid" (card charge =
+  total − credit).
+- Admin orders list Total column reflects the amount actually charged when
+  house-funded store credit was applied (gross struck through), matching the
+  order drawer and the customer receipt.
+
+**Seller onboarding**
+- Fixed the storefront landing-page "flash" before the locked onboarding
+  screen — a signed-in seller now sees a brief redirect spinner instead of the
+  home page painting and being yanked away.
+
+**Address autocomplete (all address fields)**
+- Migrated the shared address field from the deprecated
+  `google.maps.places.Autocomplete` to the supported `PlaceAutocompleteElement`,
+  loaded via the async `importLibrary` pattern (clears both the "loaded without
+  loading=async" and the Autocomplete-deprecation console warnings). One shared
+  component, so onboarding, the seller store, checkout, and admin pickup are all
+  migrated at once.
+- Rendered as a normal bordered address input (no search-bar magnifier),
+  matching its sibling fields, with inline prediction and prefill preserved.
+- Added `https://places.googleapis.com` to the CSP `connect-src` so the new
+  Places API requests are not blocked.
+- Hid the scrollbar on the "Add a new address" checkout modal.
+
+**Other**
+- Deliver-to label prefers city/state over a bare postal code.
+
+### `order-service`
+- The downloaded PDF receipt now includes redeemed store credit and the amount
+  charged. The order service builds the `ReceiptData` it sends to the
+  notification service and was omitting `store_credit_applied_cents`.
+
+### `notification-service`
+- Emailed PDF receipts render product thumbnails again: some CDN WebP images
+  decode to 16-bit depth, which gofpdf rejects, so the thumbnail silently
+  vanished — they are now re-encoded to 8-bit before embedding.
+- Emailed receipt and confirmation show "Store credit applied" and "Amount
+  charged" rows when house-funded credit is redeemed.
+- Email footer uses branded Instagram / LinkedIn / WhatsApp icons, referenced
+  via the environment-aware base URL (localhost in dev, the prod domain in
+  prod) instead of a hardcoded domain.
+- Internal admin order alert shows the order date only (no clock time).
+
+### `seller-service`
+- Unblocked seller onboarding start, which was returning 500 with a duplicate-
+  key violation on `uk_sellers_business_name_ci`. The case-insensitive unique
+  indexes on `business_name` and `contact_email` are now PARTIAL (excluding
+  blank/NULL), so a new seller row created before the business name is entered
+  no longer collides with another blank-name row (migration `V27`).
+
+### Keycloak theme
+- The email-verification link now shows "Verification successful — Your email
+  address has been verified" instead of the generic "Your account has been
+  updated."
+- Removed the duplicate second "Email verified" app screen after verification —
+  the Keycloak success page now continues straight to sign-in.
+
+### Email brand assets
+- Added Instagram (gradient), LinkedIn, and WhatsApp brand-icon PNGs under the
+  storefront's `public/brand/` for the email footer (served from the
+  storefront domain).
+
+### Deployment notes
+- The CSP change (`places.googleapis.com`) ships with the storefront build — no
+  secret.
+- The Google Maps API key was rotated: set the new value in
+  `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (local `.env.local` + prod secret) or maps
+  won't load. "Places API (New)" must be enabled on the Google Cloud project
+  and present in the key's API-restriction allowlist.
+- `seller-service` migration `V27` runs automatically on deploy (Flyway).
+- The email footer icons must be deployed with the storefront (committed to
+  `public/brand/`), and `notification-service` needs `APP_BASE_URL` /
+  `FRONTEND_URL` set to the prod storefront URL (already required for existing
+  footer links).
+
 ## [0.2.0] - 2026-09-01
 
 ### Added
@@ -42,4 +144,5 @@ This release spans the storefront (`afrotransact-v2-ui`) and the backend service
 - The Keycloak realm update runs automatically on deploy via `import-realm.sh` (`verifyEmail=false`, remove the retired SPI listener/action, shorter access-token lifespan).
 - No new secrets required; SMTP is already configured.
 
+[0.3.0]: https://github.com/billionairedev24/afrotransact-v2-ui/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/billionairedev24/afrotransact-v2-ui/compare/v0.1.0...v0.2.0
