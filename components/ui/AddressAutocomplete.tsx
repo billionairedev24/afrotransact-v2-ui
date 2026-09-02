@@ -142,8 +142,6 @@ export function AddressAutocomplete({
 
         const el = new places.PlaceAutocompleteElement({
           includedRegionCodes: ["us"],
-          // Street-level addresses only (mirrors the old types:["address"]).
-          includedPrimaryTypes: ["street_address", "premise", "subpremise"],
           placeholder,
         })
         if (initialValueRef.current) el.value = initialValueRef.current
