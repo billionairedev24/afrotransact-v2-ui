@@ -28,6 +28,18 @@ import { ArrowRight, Loader2 } from "lucide-react"
 const OAUTH_RETRY_KEY = "atx_oauth_retry"
 const MAX_AUTO_RETRY = 1
 
+// Short-lived marker set by /api/auth/signout. While present, this page must
+// NOT auto-fire signIn — otherwise a seller who just signed out and got routed
+// here (home → /dashboard → /auth/login) would be silently re-authenticated
+// against a Keycloak SSO cookie that hadn't finished clearing, bouncing them
+// straight back in. READ-ONLY: it must NOT be cleared here, or the other
+// auto-signIn sites (onboarding, orders) would stop seeing it and re-auth. It
+// self-expires via Max-Age; a user-initiated "Sign in" click is never guarded.
+function hasSignedOutMarker(): boolean {
+  if (typeof document === "undefined") return false
+  return document.cookie.split(";").some((c) => c.trim().startsWith("atx-signed-out="))
+}
+
 function getSellerIntentCallbackUrl(): string | null {
   try {
     const raw = localStorage.getItem("afro_register_intent")
@@ -79,6 +91,10 @@ function LoginRedirect() {
   // True while a transient OAuthCallback error is being silently retried — the
   // page shows the spinner (a redirect is imminent) instead of the error card.
   const [willAutoRetry, setWillAutoRetry] = useState(false)
+  // True when we arrived here immediately after a sign-out — suppress the
+  // auto-signIn and show a manual "signed out" screen so a lingering Keycloak
+  // SSO session can't silently re-authenticate the user.
+  const [justSignedOut, setJustSignedOut] = useState(false)
 
   async function triggerKeycloakSignIn() {
     setIsLoading(true)
@@ -118,6 +134,14 @@ function LoginRedirect() {
     if (startedRef.current) return
     if (reason && manualReasons.has(reason)) return
 
+    // Just signed out → do NOT auto-signIn (a lingering Keycloak SSO would
+    // silently re-log the user in). Show the manual signed-out screen instead.
+    if (hasSignedOutMarker()) {
+      startedRef.current = true
+      setJustSignedOut(true)
+      return
+    }
+
     if (error) {
       if (error === "OAuthCallback") {
         let attempts = 0
@@ -154,6 +178,40 @@ function LoginRedirect() {
   }, [reason, error])
 
   // --- Manual confirm screens -------------------------------------------------
+
+  if (justSignedOut) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-6 px-4 text-center">
+        <div className="w-full max-w-[380px] rounded-2xl border border-border bg-card p-8 shadow-sm space-y-5">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 mx-auto">
+            <svg className="h-7 w-7 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-bold text-foreground">You&apos;ve been signed out</h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              You&apos;re signed out of AfroTransact. Sign in again whenever you&apos;re ready.
+            </p>
+          </div>
+          <button
+            onClick={triggerKeycloakSignIn}
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-3 text-sm font-semibold text-brand-gold-foreground shadow-md transition-all hover:brightness-110 disabled:opacity-80 disabled:cursor-wait"
+          >
+            {isLoading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" />Signing in&hellip;</>
+            ) : (
+              <>Sign in<ArrowRight className="h-4 w-4" /></>
+            )}
+          </button>
+          <Link href="/" className="block text-sm text-muted-foreground hover:text-foreground">
+            Back to home
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (reason === "inactive") {
     return (

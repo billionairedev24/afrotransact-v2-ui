@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, usePathname } from "next/navigation"
-import { getAccessToken } from "@/lib/auth-helpers"
+import { getAccessToken, isSignedOutRecently } from "@/lib/auth-helpers"
 import { isSellerDashboardOnboardingReady } from "@/lib/seller-dashboard-access"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
@@ -104,6 +104,15 @@ export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
     if (!session?.user?.id || checkedRef.current) return
     checkedRef.current = true
 
+    // Just signed out (marker set by /api/auth/signout): do NOT route the user
+    // anywhere. A stale client session could still read as an authenticated
+    // seller for a beat and bounce them dashboard→login→re-auth. READ-ONLY —
+    // must not clear the marker, or the other auto-signIn sites stop seeing it.
+    if (isSignedOutRecently()) {
+      setCheckSettled(true)
+      return
+    }
+
     if (isRedirectExemptPath(pathname) || isAdmin) {
       setCheckSettled(true)
       return
@@ -148,6 +157,7 @@ export function PostLoginRedirect({ children }: { children: React.ReactNode }) {
     isSeller &&
     !isAdmin &&
     !isRedirectExemptPath(pathname) &&
+    !isSignedOutRecently() &&
     !checkSettled
 
   if (shouldBlock) return <RedirectingSpinner />

@@ -21,9 +21,9 @@
 import { use, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { signIn, useSession } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { toast } from "sonner"
-import { getAccessToken } from "@/lib/auth-helpers"
+import { getAccessToken, autoSignInKeycloak } from "@/lib/auth-helpers"
 import { RequestReturnButton } from "@/components/returns/RequestReturnButton"
 import {
   getOrderByNumber,
@@ -716,7 +716,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   useEffect(() => {
     if (sessionStatus === "loading") return
     if (sessionStatus !== "authenticated") {
-      signIn("keycloak", { callbackUrl: `/orders/${orderNumber}` })
+      // Guarded: stands down right after a sign-out so a warm Keycloak SSO
+      // can't silently re-authenticate the user here.
+      autoSignInKeycloak({ callbackUrl: `/orders/${orderNumber}` })
       return
     }
     let cancelled = false

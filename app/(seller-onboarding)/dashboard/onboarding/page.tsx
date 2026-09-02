@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { useSession, signIn } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { toast } from "sonner"
@@ -33,7 +33,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react"
-import { getAccessToken } from "@/lib/auth-helpers"
+import { getAccessToken, autoSignInKeycloak } from "@/lib/auth-helpers"
 import {
   startOnboarding,
   getCurrentSeller,
@@ -492,8 +492,12 @@ export default function SellerOnboardingPage() {
   async function withToken<T>(fn: (token: string) => Promise<T>): Promise<T | null> {
     const token = await getAccessToken()
     if (!token) {
-      toast.error("Session expired. Please sign in again.")
-      void signIn("keycloak", { callbackUrl: "/dashboard/onboarding" })
+      // Guarded auto-signIn: stands down if the user just signed out, so a
+      // token-loss re-auth here can't silently re-log them in against a
+      // still-warm Keycloak SSO and bounce them back into onboarding.
+      if (autoSignInKeycloak({ callbackUrl: "/dashboard/onboarding" })) {
+        toast.error("Session expired. Please sign in again.")
+      }
       return null
     }
     return fn(token)

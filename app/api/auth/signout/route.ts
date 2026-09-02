@@ -105,16 +105,48 @@ async function keycloakLogoutUrl(req: NextRequest, desiredReturn?: string): Prom
 }
 
 /**
+ * Sets a short-lived, client-readable marker so the app suppresses ALL
+ * auto-re-authentication for a brief window right after sign-out. This closes a
+ * race that made sign-out "not work" for sellers: sign-out clears the app
+ * session and redirects through Keycloak's end-session, but a seller landing on
+ * home is auto-routed /dashboard → /auth/login → signIn("keycloak"), and if the
+ * Keycloak SSO cookie hasn't finished clearing, that signIn silently re-logs the
+ * user in — bouncing them back into the dashboard/onboarding. With this marker
+ * present, /auth/login skips its auto-signIn and PostLoginRedirect skips its
+ * dashboard redirect, so the user stays signed out. Non-HttpOnly so client code
+ * can read it; short Max-Age so it self-expires. Explicitly NOT prefixed atx_ so
+ * clearAppCookies (which expires atx_* cookies) never wipes it in the same
+ * response.
+ */
+function setSignedOutMarker(response: NextResponse) {
+  // 15s: long enough to cover the sign-out → Keycloak-end-session → land
+  // round-trip during which an auto-signIn could race a still-warm SSO; short
+  // enough that it never blocks a genuine sign-in the user attempts moments
+  // later (and user-initiated sign-in is never guarded anyway).
+  const parts = ["atx-signed-out=1", "Path=/", "Max-Age=15", "SameSite=Lax"]
+  if (useSecureCookies) parts.push("Secure")
+  response.headers.append("Set-Cookie", parts.join("; "))
+  if (cookieDomain) {
+    response.headers.append("Set-Cookie", `${parts.join("; ")}; Domain=${cookieDomain}`)
+  }
+}
+
+/**
  * GET — used as a hard-navigation target (e.g. the VerifyEmailGate "sign out"
  * link, or a plain <a href>). Clears cookies and 302s the browser straight to
  * Keycloak's end-session endpoint, which deletes the SSO cookie and bounces
  * back to the home page.
  */
 export async function GET(req: NextRequest) {
-  const url = await keycloakLogoutUrl(req)
+  // Deliberate sign-out lands on the inert /auth/signed-out page (exempt from
+  // SessionGuard, PostLoginRedirect, and auto-signIn) so nothing can silently
+  // re-authenticate against a still-warm Keycloak SSO. POST (NextAuth client
+  // signOut, e.g. SessionGuard's inactivity bail-out) keeps its own callbackUrl.
+  const url = await keycloakLogoutUrl(req, "/auth/signed-out")
   const response = NextResponse.redirect(url, { status: 302 })
   clearNextAuthCookies(req, response)
   clearAppCookies(req, response)
+  setSignedOutMarker(response)
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate")
   return response
 }
@@ -140,6 +172,7 @@ export async function POST(req: NextRequest) {
   const response = NextResponse.json({ url })
   clearNextAuthCookies(req, response)
   clearAppCookies(req, response)
+  setSignedOutMarker(response)
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate")
   return response
 }
