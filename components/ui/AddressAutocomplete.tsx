@@ -143,6 +143,9 @@ export function AddressAutocomplete({
         const el = new places.PlaceAutocompleteElement({
           includedRegionCodes: ["us"],
           placeholder,
+          // Drop the leading magnifier so it reads as a normal address input,
+          // not a search bar (prediction still works via the dropdown).
+          noInputIcon: true,
         })
         if (initialValueRef.current) el.value = initialValueRef.current
         el.style.width = "100%"

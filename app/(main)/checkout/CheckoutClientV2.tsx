@@ -2090,7 +2090,7 @@ export default function CheckoutClientV2({
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setAddrModalOpen(false) }}
         >
-          <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-hide scroll-smooth">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-bold text-gray-900">{addrEditingId ? "Edit address" : "Add a new address"}</h3>
               <button type="button" onClick={() => setAddrModalOpen(false)} className="text-gray-400 hover:text-gray-900">×</button>
