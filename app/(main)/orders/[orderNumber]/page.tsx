@@ -304,7 +304,7 @@ function PickupCard({ sub }: { sub: SubOrderDto }) {
         {loc.instructions && <p className="text-sm text-muted-foreground">{loc.instructions}</p>}
       </div>
       <p className="mt-4 rounded-lg bg-card/70 px-3 py-2 text-[11px] font-semibold text-muted-foreground">
-        Bring your order number and a photo ID when you collect.
+        Show your confirmation email or a photo ID when you collect.
       </p>
     </div>
   )

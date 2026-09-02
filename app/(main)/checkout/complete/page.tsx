@@ -178,7 +178,7 @@ function PickupCard({ subOrder }: { subOrder: SubOrderDto }) {
       </div>
 
       <p className="mt-4 rounded-lg bg-card/70 px-3 py-2 text-[11px] font-semibold text-muted-foreground">
-        Bring your order number and a photo ID when you collect.
+        Show your confirmation email or a photo ID when you collect.
       </p>
     </div>
   )
@@ -317,6 +317,21 @@ function OrderSummaryCard({
           <span className="text-base font-bold text-foreground">Total</span>
           <span className="text-base font-extrabold tabular-nums text-foreground">{fmtMoney(order?.totalCents, currency)}</span>
         </div>
+        {!!order?.storeCreditAppliedCents && order.storeCreditAppliedCents > 0 && (
+          <>
+            <SummaryRow
+              label="Store credit applied"
+              value={`−${fmtMoney(order.storeCreditAppliedCents, currency)}`}
+              accent="green"
+            />
+            <div className="flex items-center justify-between border-t border-border pt-2">
+              <span className="text-sm font-bold text-foreground">You paid</span>
+              <span className="text-sm font-extrabold tabular-nums text-foreground">
+                {fmtMoney((order?.totalCents ?? 0) - order.storeCreditAppliedCents, currency)}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

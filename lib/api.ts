@@ -1781,6 +1781,10 @@ export interface OrderDto {
   taxCents: number
   shippingCostCents: number
   totalCents: number
+  // House-funded store credit redeemed on this order. The card was charged
+  // totalCents - storeCreditAppliedCents. Absorbed by the house — it never
+  // reduces what the seller is paid.
+  storeCreditAppliedCents?: number
   currency: string
   shippingAddress: string | null
   placedAt: string

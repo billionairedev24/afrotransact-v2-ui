@@ -396,6 +396,18 @@ function AdminOrderDetailSheet({
                   <span>Order total</span>
                   <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents, order.currency)}</span>
                 </div>
+                {(order.raw.storeCreditAppliedCents ?? 0) > 0 && (
+                  <>
+                    <div className="flex justify-between gap-4 text-green-700">
+                      <span>Store credit (house-funded)</span>
+                      <span className="font-mono tabular-nums">−{formatCents(order.raw.storeCreditAppliedCents ?? 0, order.currency)}</span>
+                    </div>
+                    <div className="flex justify-between gap-4 border-t border-input pt-2 font-semibold text-gray-900">
+                      <span>Charged to card</span>
+                      <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents - (order.raw.storeCreditAppliedCents ?? 0), order.currency)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

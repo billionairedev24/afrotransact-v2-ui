@@ -469,6 +469,12 @@ function OrderDetailModal({
               <span>Order total</span>
               <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents, order.currency)}</span>
             </div>
+            {(order.raw.storeCreditAppliedCents ?? 0) > 0 && (
+              <div className="flex justify-between gap-4 pt-1 text-xs text-gray-500">
+                <span>Store credit used (house-funded — doesn&apos;t affect your earnings)</span>
+                <span className="font-mono tabular-nums">−{formatCents(order.raw.storeCreditAppliedCents ?? 0, order.currency)}</span>
+              </div>
+            )}
           </div>
         </div>
 
