@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect } from "react"
 import { MapPin } from "lucide-react"
 import { friendlyMessage } from "@/lib/errors"
 
@@ -10,7 +10,7 @@ import { friendlyMessage } from "@/lib/errors"
 declare global {
   interface Window {
     google: typeof google
-    __googleMapsCallback?: () => void
+    __afroGmapsReady?: () => void
   }
 }
 
@@ -36,50 +36,36 @@ interface AddressAutocompleteProps {
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
 
-let googleMapsLoading = false
-let googleMapsLoaded = false
+// Single in-flight promise for the Places library across every instance of
+// this component. Uses the async loader pattern: load the Maps JS core with
+// `loading=async` (no `libraries=` param → no "loaded without loading=async"
+// warning), then pull the Places library on demand via importLibrary. That
+// also gives us PlaceAutocompleteElement, the supported replacement for the
+// deprecated google.maps.places.Autocomplete.
+let placesPromise: Promise<google.maps.PlacesLibrary> | null = null
 
-function loadGoogleMapsScript(): Promise<void> {
-  if (googleMapsLoaded && window.google?.maps?.places) return Promise.resolve()
-  if (googleMapsLoading) {
-    return new Promise((resolve) => {
-      const check = setInterval(() => {
-        if (googleMapsLoaded) {
-          clearInterval(check)
-          resolve()
-        }
-      }, 100)
-    })
-  }
-
-  googleMapsLoading = true
-
-  return new Promise((resolve, reject) => {
-    if (!GOOGLE_MAPS_API_KEY) {
-      googleMapsLoading = false
-      reject(new Error("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set"))
-      return
+function loadPlacesLibrary(): Promise<google.maps.PlacesLibrary> {
+  if (placesPromise) return placesPromise
+  placesPromise = (async () => {
+    if (!GOOGLE_MAPS_API_KEY) throw new Error("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set")
+    if (!window.google?.maps?.importLibrary) {
+      await new Promise<void>((resolve, reject) => {
+        window.__afroGmapsReady = () => resolve()
+        const script = document.createElement("script")
+        script.src =
+          `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}` +
+          `&loading=async&callback=__afroGmapsReady`
+        script.async = true
+        script.onerror = () => reject(new Error("Failed to load Google Maps script"))
+        document.head.appendChild(script)
+      })
     }
-
-    window.__googleMapsCallback = () => {
-      googleMapsLoaded = true
-      googleMapsLoading = false
-      resolve()
-    }
-
-    const script = document.createElement("script")
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=__googleMapsCallback`
-    script.async = true
-    script.defer = true
-    script.onerror = () => {
-      googleMapsLoading = false
-      reject(new Error("Failed to load Google Maps script"))
-    }
-    document.head.appendChild(script)
-  })
+    return (await window.google.maps.importLibrary("places")) as google.maps.PlacesLibrary
+  })()
+  return placesPromise
 }
 
-function extractAddressParts(place: google.maps.places.PlaceResult): AddressParts {
+function extractAddressParts(place: google.maps.places.Place): AddressParts {
   const parts: AddressParts = {
     line1: "",
     line2: "",
@@ -87,29 +73,31 @@ function extractAddressParts(place: google.maps.places.PlaceResult): AddressPart
     state: "",
     zip: "",
     country: "",
-    lat: place.geometry?.location?.lat() ?? null,
-    lng: place.geometry?.location?.lng() ?? null,
+    lat: place.location?.lat() ?? null,
+    lng: place.location?.lng() ?? null,
   }
 
   let streetNumber = ""
   let route = ""
 
-  for (const component of place.address_components ?? []) {
+  for (const component of place.addressComponents ?? []) {
     const types = component.types
+    const long = component.longText ?? ""
+    const short = component.shortText ?? ""
     if (types.includes("street_number")) {
-      streetNumber = component.long_name
+      streetNumber = long
     } else if (types.includes("route")) {
-      route = component.long_name
+      route = long
     } else if (types.includes("subpremise")) {
-      parts.line2 = component.long_name
+      parts.line2 = long
     } else if (types.includes("locality") || types.includes("sublocality_level_1")) {
-      parts.city = component.long_name
+      parts.city = long
     } else if (types.includes("administrative_area_level_1")) {
-      parts.state = component.short_name
+      parts.state = short
     } else if (types.includes("postal_code")) {
-      parts.zip = component.long_name
+      parts.zip = long
     } else if (types.includes("country")) {
-      parts.country = component.short_name
+      parts.country = short
     }
   }
 
@@ -126,47 +114,85 @@ export function AddressAutocomplete({
   className = "",
   disabled = false,
 }: AddressAutocompleteProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
-  const [loaded, setLoaded] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const elementRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Keep the latest callbacks in refs so the element's (once-attached) event
+  // listeners always call the current props without re-creating the element.
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  const onSelectRef = useRef(onSelect)
+  onSelectRef.current = onSelect
+  // Snapshot the initial value for prefill only — the element owns its text
+  // after mount, so we deliberately do NOT re-sync it on every value change
+  // (that would clobber what the user is typing).
+  const initialValueRef = useRef(value)
 
   useEffect(() => {
     if (!GOOGLE_MAPS_API_KEY) {
       setError("Google Maps API key not configured")
       return
     }
+    let cancelled = false
 
-    loadGoogleMapsScript()
-      .then(() => setLoaded(true))
-      .catch((err) => setError(friendlyMessage(err, "Could not load address autocomplete.")))
+    loadPlacesLibrary()
+      .then((places) => {
+        if (cancelled || !containerRef.current || elementRef.current) return
+
+        const el = new places.PlaceAutocompleteElement({
+          includedRegionCodes: ["us"],
+          // Street-level addresses only (mirrors the old types:["address"]).
+          includedPrimaryTypes: ["street_address", "premise", "subpremise"],
+          placeholder,
+        })
+        if (initialValueRef.current) el.value = initialValueRef.current
+        el.style.width = "100%"
+
+        // Free typing: keep the parent's line1 in sync as the user types, so a
+        // manually entered address (not picked from the dropdown) is still
+        // captured — matches the old controlled-input behavior.
+        el.addEventListener("input", () => {
+          onChangeRef.current(el.value ?? "")
+        })
+
+        el.addEventListener("gmp-select", async (event) => {
+          try {
+            const place = event.placePrediction.toPlace()
+            await place.fetchFields({
+              fields: ["addressComponents", "location", "formattedAddress"],
+            })
+            const parts = extractAddressParts(place)
+            onChangeRef.current(place.formattedAddress ?? parts.line1)
+            onSelectRef.current(parts)
+          } catch {
+            /* selection fetch failed — leave the typed text as-is */
+          }
+        })
+
+        containerRef.current.appendChild(el)
+        elementRef.current = el
+      })
+      .catch((err) => {
+        if (!cancelled) setError(friendlyMessage(err, "Could not load address autocomplete."))
+      })
+
+    return () => {
+      cancelled = true
+      elementRef.current?.remove()
+      elementRef.current = null
+    }
+    // Mount once; callbacks are read from refs so we never re-create the element.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const initAutocomplete = useCallback(() => {
-    if (!loaded || !inputRef.current || autocompleteRef.current) return
-
-    const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-      types: ["address"],
-      componentRestrictions: { country: "us" },
-      fields: ["address_components", "geometry", "formatted_address"],
-    })
-
-    autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace()
-      if (!place.address_components) return
-
-      const parts = extractAddressParts(place)
-      onChange(place.formatted_address ?? parts.line1)
-      onSelect(parts)
-    })
-
-    autocompleteRef.current = autocomplete
-  }, [loaded, onChange, onSelect])
-
+  // Reflect disabled changes onto the live element.
   useEffect(() => {
-    initAutocomplete()
-  }, [initAutocomplete])
+    if (elementRef.current) elementRef.current.disabled = disabled
+  }, [disabled])
 
+  // Fallback: no API key or the library failed to load. A plain controlled
+  // input keeps the form usable (manual entry still flows through onChange).
   if (error) {
     return (
       <div className="relative">
@@ -182,18 +208,15 @@ export function AddressAutocomplete({
     )
   }
 
+  // The PlaceAutocompleteElement web component renders its own input inside
+  // this container. gmap-*-autocomplete styling is limited to the element box;
+  // we match width and the rounded/bordered look of our other fields via the
+  // wrapper and the element's exposed CSS variables.
   return (
-    <div className="relative">
-      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/60" />
-      <input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={loaded ? placeholder : "Loading address lookup…"}
-        disabled={disabled || !loaded}
-        autoComplete="off"
-        className={`w-full rounded-xl border border-border bg-muted pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 transition-colors ${className}`}
-      />
-    </div>
+    <div
+      ref={containerRef}
+      className={`address-autocomplete w-full ${className}`}
+      data-placeholder={placeholder}
+    />
   )
 }

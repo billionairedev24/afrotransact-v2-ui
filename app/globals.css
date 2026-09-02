@@ -346,3 +346,29 @@ body.storefront-preview footer {
     margin: 12mm;
   }
 }
+
+/* ── Google PlaceAutocompleteElement (address autocomplete) ───────────────────
+   The web component renders its own input in shadow DOM, so styling reach is
+   limited to the host element box + a few exposed CSS custom properties. Make
+   the host full-width and give it the same rounded/bordered/muted look as our
+   other form inputs so it blends into address forms. */
+.address-autocomplete {
+  display: block;
+  width: 100%;
+}
+.address-autocomplete gmp-place-autocomplete {
+  width: 100%;
+  /* Exposed theming hooks (Maps JS "weekly"): keep in sync with our tokens. */
+  --gmp-mat-color-surface: var(--muted, #f4f4f5);
+  --gmp-mat-color-on-surface: var(--foreground, #0a0a0a);
+  --gmp-mat-color-on-surface-variant: var(--muted-foreground, #71717a);
+  --gmp-mat-color-outline: var(--border, #e4e4e7);
+  --gmp-mat-color-primary: var(--primary, #067457);
+  border: 1px solid var(--border, #e4e4e7);
+  border-radius: 0.75rem; /* rounded-xl */
+  background: var(--muted, #f4f4f5);
+  font-size: 0.875rem;
+}
+.address-autocomplete gmp-place-autocomplete:focus-within {
+  border-color: color-mix(in srgb, var(--primary, #067457) 60%, transparent);
+}
