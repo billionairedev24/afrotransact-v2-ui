@@ -10,9 +10,16 @@ const enforceHttps = process.env.ENFORCE_HTTPS === 'true'
 const isProd = process.env.NODE_ENV === 'production'
 const devImageHosts = isProd ? [] : ['https://loremflickr.com']
 
+// 'unsafe-eval' is required ONLY in development (React/Next use eval for HMR and
+// enhanced debugging); it is NOT needed in production and is dropped there to
+// shrink the XSS surface. See node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md.
+const scriptSrc = isProd
+  ? "script-src 'self' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com"
+  : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com"
+
 const cspDirectives = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com",
+  scriptSrc,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   `img-src 'self' data: blob: https://*.afrotransact.com https://cdn.afrotransact.com https://images.unsplash.com https://source.unsplash.com https://maps.gstatic.com https://maps.googleapis.com https://utfs.io https://*.ufs.sh https://*.uploadthing.com https://*.ingest.uploadthing.com ${devImageHosts.join(' ')}`.trim(),
   "font-src 'self' https://fonts.gstatic.com",
