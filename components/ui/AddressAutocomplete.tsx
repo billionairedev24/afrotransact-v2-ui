@@ -192,6 +192,19 @@ export function AddressAutocomplete({
     if (elementRef.current) elementRef.current.disabled = disabled
   }, [disabled])
 
+  // Keep the element's text in sync when the parent changes `value` AFTER mount
+  // — e.g. selecting a saved address at checkout, or switching which address is
+  // being edited without remounting the form. Without this the box stays stale
+  // (blank street field) while city/state/zip populate. Skip while the field is
+  // focused so we never clobber what the user is actively typing: focusing the
+  // element's shadow input retargets document.activeElement to the host element.
+  useEffect(() => {
+    const el = elementRef.current
+    if (!el) return
+    if (document.activeElement === el) return
+    if ((el.value ?? "") !== value) el.value = value
+  }, [value])
+
   // Fallback: no API key or the library failed to load. A plain controlled
   // input keeps the form usable (manual entry still flows through onChange).
   if (error) {
