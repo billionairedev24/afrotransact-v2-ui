@@ -117,6 +117,11 @@ export function AddressAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null)
   const elementRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // True once the user has typed but not yet picked a suggestion — so the
+  // structured parts (city/state/zip) aren't populated. Drives a hint nudging
+  // them to select from the dropdown, avoiding a dead-end where they type a full
+  // address, don't select, and the form fails validation with no explanation.
+  const [needsSelection, setNeedsSelection] = useState(false)
 
   // Keep the latest callbacks in refs so the element's (once-attached) event
   // listeners always call the current props without re-creating the element.
@@ -154,7 +159,11 @@ export function AddressAutocomplete({
         // manually entered address (not picked from the dropdown) is still
         // captured — matches the old controlled-input behavior.
         el.addEventListener("input", () => {
-          onChangeRef.current(el.value ?? "")
+          const text = el.value ?? ""
+          onChangeRef.current(text)
+          // Typing invalidates any prior selection → parts are stale until they
+          // pick again. (A programmatic prefill via el.value doesn't fire input.)
+          setNeedsSelection(text.trim().length > 0)
         })
 
         el.addEventListener("gmp-select", async (event) => {
@@ -166,6 +175,7 @@ export function AddressAutocomplete({
             const parts = extractAddressParts(place)
             onChangeRef.current(place.formattedAddress ?? parts.line1)
             onSelectRef.current(parts)
+            setNeedsSelection(false)
           } catch {
             /* selection fetch failed — leave the typed text as-is */
           }
@@ -227,10 +237,17 @@ export function AddressAutocomplete({
   // we match width and the rounded/bordered look of our other fields via the
   // wrapper and the element's exposed CSS variables.
   return (
-    <div
-      ref={containerRef}
-      className={`address-autocomplete w-full ${className}`}
-      data-placeholder={placeholder}
-    />
+    <div className="w-full">
+      <div
+        ref={containerRef}
+        className={`address-autocomplete w-full ${className}`}
+        data-placeholder={placeholder}
+      />
+      {needsSelection && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Pick a suggestion from the list to fill in city, state &amp; ZIP.
+        </p>
+      )}
+    </div>
   )
 }
