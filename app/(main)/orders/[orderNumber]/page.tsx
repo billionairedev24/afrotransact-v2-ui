@@ -582,12 +582,14 @@ function OrderItem({
 /* ─────────────────────── Sub-order section ─────────────────────── */
 
 function SubOrderTracker({
-  sub, placedAt, single, storeName,
+  sub, placedAt, single, storeName, index, total,
 }: {
   sub: SubOrderDto
   placedAt: string
   single: boolean
   storeName: string
+  index: number
+  total: number
 }) {
   const pickup = isPickupSub(sub)
   const headline = statusHeadline(sub.fulfillmentStatus, sub.trackingNumber, pickup)
@@ -598,6 +600,13 @@ function SubOrderTracker({
     <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
+          {/* Multi-seller orders ship in separate packages — number each so two
+              trackers read as "2 shipments", not a duplicate. */}
+          {!single && (
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Shipment {index} of {total}
+            </p>
+          )}
           <h3 className="text-sm font-bold text-foreground">
             {pickup ? "Pickup status" : "Delivery status"}
           </h3>
@@ -832,13 +841,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
       <div id="tracking" className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Left: tracking + items per shipment, grouped by seller/sub-order */}
         <div className="flex flex-col gap-4">
-          {order.subOrders.map((so) => (
+          {!single && (
+            <p className="text-sm text-muted-foreground">
+              This order ships in {order.subOrders.length} packages from different sellers — each has its own tracking below.
+            </p>
+          )}
+          {order.subOrders.map((so, i) => (
             <SubOrderTracker
               key={so.id}
               sub={so}
               placedAt={placedAt}
               single={single}
               storeName={storeDisplayName(so.storeId, storeNames.get(so.storeId))}
+              index={i + 1}
+              total={order.subOrders.length}
             />
           ))}
 
