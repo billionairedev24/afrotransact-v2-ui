@@ -6,6 +6,77 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 This release spans the storefront (`afrotransact-v2-ui`) and the backend services (`refined`).
 
+## [0.4.0] - 2026-09-03
+
+A hardening, reliability, and performance release. It closes P0 money-safety
+gaps in the seller-payout and refund paths, makes cross-service events durable
+(transactional outbox + dead-letter queues), tightens authorization, cuts
+read-path latency on the hottest buyer surfaces, and begins carving the
+overgrown order service apart. No feature changes to the buyer flow; behavior
+is preserved throughout.
+
+### Money safety (backend)
+
+- **Seller payouts can no longer double-pay.** The nightly settlement moved the
+  Stripe transfer out of the big database transaction: a batch is committed in a
+  `transferring` state (excluded from re-bundling) *before* the transfer, keyed
+  with a deterministic idempotency key, and a reconcile pass adopts or requeues
+  any batch left stranded by a crash.
+- **Admins are alerted when a payout batch fails**, with a CSV of every transfer
+  in the batch attached.
+- **Payouts now reconcile to the ledger** (`seller_payable` is debited when cash
+  actually transfers, not just credited at sale).
+- **Refunds are idempotent** — a redelivered `payment.refunded` can't
+  double-count a sub-order refund.
+
+### Event durability & reliability (backend)
+
+- **Transactional outbox** in the payment and order services + **standardized
+  dead-letter queues** across payment and accounting, so a broker blip can never
+  silently drop a ledger posting or an order confirmation, and poison messages
+  are quarantined instead of retried-then-skipped.
+- **Accounting is order-independent** for `payment.completed` (flat events park
+  and drain instead of being dropped).
+
+### Security & authorization
+
+- **Exact admin-role checks** (a substring test let `store-admin` /
+  `admin-readonly` through); **internal endpoints are no longer externally
+  reachable** through the gateway; and the storefront **CSP drops
+  `'unsafe-eval'` in production**.
+
+### Performance
+
+- Killed the biggest N+1s: the **buy-box grid** (~120–160 queries/page → ~4–5),
+  the **buyer order list**, and the **home rails** (30+ serial catalog
+  round-trips → 2–3). Added catalog **HTTP caching**, ledger **composite
+  indexes**, chart-of-accounts / Stripe-customer **caches**, **concurrent
+  receipt-thumbnail** fetching, and configurable **Kafka consumer concurrency**.
+- **PDP images** now served through `next/image` (avif/webp, sized, prioritized).
+
+### Storefront
+
+- **Order detail: one delivery tracker, per-item status.** Multi-seller orders
+  showed a duplicate-looking timeline per seller; there is now a single
+  order-level tracker, with each item showing its own fulfillment status.
+- **Admin email templates page** reworked so selecting a group no longer hides
+  the others, every template (including the seller-payout-failed admin alert) is
+  visible, with search + UI/UX polish.
+- **Admin users** now show each email masked with a show/hide eye toggle.
+
+### Architecture (groundwork)
+
+- Extracted the checkout↔order boundary in code (`OrderMaterializer` seam,
+  `CheckoutOrchestrator` facade, internal coupon/store-credit facades) — the
+  contracts the checkout and promotions services will later be split along. No
+  behavior change.
+
+### Operational notes
+
+- No new required secrets. One new Kafka topic
+  (`platform.settings.events.DLT`); the outbox tables + indexes apply via Flyway
+  on deploy. See `docs/next-release-0.4.0-config-and-secrets.md` (refined).
+
 ## [0.3.0] - 2026-09-02
 
 Follow-up release refining the 0.2.0 work from live testing: store-credit
