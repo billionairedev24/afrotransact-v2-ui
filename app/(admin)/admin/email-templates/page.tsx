@@ -22,6 +22,8 @@ import {
   Send,
   X,
   Copy,
+  Search,
+  ChevronDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -49,14 +51,28 @@ const CATEGORY_LABELS: Record<string, string> = {
   custom: "Custom",
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  order: "bg-blue-100 text-blue-700",
-  payment: "bg-emerald-100 text-emerald-700",
-  seller: "bg-amber-100 text-amber-700",
-  admin: "bg-purple-100 text-purple-700",
-  user: "bg-sky-100 text-sky-700",
-  system: "bg-gray-100 text-gray-600",
-  custom: "bg-pink-100 text-pink-700",
+// Preferred display order for category groups. Unknown categories are
+// appended alphabetically after these.
+const CATEGORY_ORDER = [
+  "order",
+  "payment",
+  "seller",
+  "admin",
+  "user",
+  "transactional",
+  "marketing",
+  "system",
+  "custom",
+]
+
+const CATEGORY_DOTS: Record<string, string> = {
+  order: "bg-blue-500",
+  payment: "bg-emerald-500",
+  seller: "bg-amber-500",
+  admin: "bg-purple-500",
+  user: "bg-sky-500",
+  system: "bg-gray-400",
+  custom: "bg-pink-500",
 }
 
 const STARTER_HTML = `<h1 style="color:#171717;font-size:24px;margin:0 0 8px;">Your Template Title</h1>
@@ -187,7 +203,11 @@ export default function EmailTemplatesPage() {
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
-  const [filterCategory, setFilterCategory] = useState("")
+  // Free-text search across name / slug / description / category.
+  const [search, setSearch] = useState("")
+  // Categories the admin has explicitly collapsed. Every group is expanded
+  // by default; collapsing one never affects its siblings.
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
   const [viewMode, setViewMode] = useState<ViewMode>("list")
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -219,7 +239,10 @@ export default function EmailTemplatesPage() {
     try {
       const token = await getAccessToken()
       if (!token) return
-      const list = await getEmailTemplates(token, filterCategory || undefined)
+      // Always fetch the full set and group client-side. Fetching per-category
+      // (the old behaviour) is exactly what made clicking one group hide every
+      // other group, and buried admin-only templates like admin_payout_failed.
+      const list = await getEmailTemplates(token)
       setTemplates(list ?? [])
     } catch (e: unknown) {
       logError(e, "loading email templates")
@@ -227,7 +250,7 @@ export default function EmailTemplatesPage() {
     } finally {
       setLoading(false)
     }
-  }, [filterCategory])
+  }, [])
 
   useEffect(() => {
     if (status === "authenticated") loadTemplates()
@@ -486,7 +509,38 @@ export default function EmailTemplatesPage() {
     editNotes !== (selected.admin_notes ?? "")
   )
 
-  const categories = Array.from(new Set(templates.map(t => t.category)))
+  const toggleGroup = (cat: string) =>
+    setCollapsedGroups(prev => ({ ...prev, [cat]: !prev[cat] }))
+
+  // Every template returned by the API is shown. `_layout` is an internal
+  // wrapper (not a real email), so it stays hidden from the grouped list.
+  const listable = templates.filter(t => t.slug !== "_layout")
+
+  const query = search.trim().toLowerCase()
+  const matches = query
+    ? listable.filter(t =>
+        t.name.toLowerCase().includes(query) ||
+        t.slug.toLowerCase().includes(query) ||
+        (t.description ?? "").toLowerCase().includes(query) ||
+        (CATEGORY_LABELS[t.category] ?? t.category).toLowerCase().includes(query),
+      )
+    : listable
+
+  // Group by category, then order groups by CATEGORY_ORDER (unknowns last, A→Z).
+  const grouped = new Map<string, EmailTemplate[]>()
+  for (const t of matches) {
+    const bucket = grouped.get(t.category)
+    if (bucket) bucket.push(t)
+    else grouped.set(t.category, [t])
+  }
+  const orderedCategories = Array.from(grouped.keys()).sort((a, b) => {
+    const ia = CATEGORY_ORDER.indexOf(a)
+    const ib = CATEGORY_ORDER.indexOf(b)
+    if (ia !== -1 && ib !== -1) return ia - ib
+    if (ia !== -1) return -1
+    if (ib !== -1) return 1
+    return (CATEGORY_LABELS[a] ?? a).localeCompare(CATEGORY_LABELS[b] ?? b)
+  })
 
   if (loading) {
     return (
@@ -1059,72 +1113,128 @@ export default function EmailTemplatesPage() {
         </Button>
       </div>
 
-      {/* Category filter */}
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <button
-          onClick={() => setFilterCategory("")}
-          className={cn(
-            "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-            filterCategory === ""
-              ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
-              : "bg-muted text-muted-foreground hover:bg-muted/85",
-          )}
-        >
-          All ({templates.length})
-        </button>
-        {categories.filter(c => c !== "system").map(cat => {
-          const count = templates.filter(t => t.category === cat).length
-          return (
+      {/* Search filters across all groups at once; it narrows what each group
+          shows but never collapses or removes the sibling groups. */}
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search templates by name, slug, or category…"
+            className="w-full rounded-lg border border-input bg-white py-2 pl-9 pr-9 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary/35 transition-colors"
+          />
+          {search && (
             <button
-              key={cat}
-              onClick={() => setFilterCategory(cat)}
-              className={cn(
-                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                filterCategory === cat
-                  ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
-                  : "bg-muted text-muted-foreground hover:bg-muted/85",
-              )}
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600"
             >
-              {CATEGORY_LABELS[cat] ?? cat} ({count})
+              <X className="h-4 w-4" />
             </button>
-          )
-        })}
+          )}
+        </div>
+        <div className="shrink-0 text-xs text-gray-400">
+          {listable.length} template{listable.length === 1 ? "" : "s"} · {orderedCategories.length} categor{orderedCategories.length === 1 ? "y" : "ies"}
+        </div>
       </div>
 
-      {/* Template list */}
-      <div className="grid min-w-0 gap-3">
-        {templates
-          .filter(t => t.slug !== "_layout" || filterCategory === "system")
-          .map(tpl => (
-          <button
-            key={tpl.slug}
-            type="button"
-            onClick={() => selectTemplate(tpl.slug)}
-            disabled={loadingDetail}
-            className="group flex min-w-0 w-full max-w-full items-center gap-4 rounded-xl border border-input bg-white p-4 text-left transition-all hover:border-primary/40 hover:shadow-sm"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 transition-colors group-hover:bg-brand-gold/10">
-              <Mail className="h-5 w-5 text-gray-400 transition-colors group-hover:text-foreground" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="min-w-0 truncate font-medium text-gray-900">{tpl.name}</span>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_COLORS[tpl.category] ?? "bg-gray-100 text-gray-600"}`}>
-                  {CATEGORY_LABELS[tpl.category] ?? tpl.category}
-                </span>
-                {!tpl.is_default && (
-                  <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-foreground">Customized</span>
+      {/* Grouped, always-visible accordion. Every category is its own section;
+          collapsing one never removes the others. */}
+      {orderedCategories.length === 0 ? (
+        <div className="flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-input bg-white py-16 text-center">
+          <Mail className="h-8 w-8 text-gray-300" />
+          <p className="text-sm font-medium text-gray-600">
+            {query ? "No templates match your search" : "No email templates yet"}
+          </p>
+          {query && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="text-xs font-medium text-foreground underline underline-offset-2 hover:opacity-80"
+            >
+              Clear search
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="min-w-0 space-y-4">
+          {orderedCategories.map(cat => {
+            const items = grouped.get(cat) ?? []
+            // Searching implies intent to see matches — force-expand while a
+            // query is active, otherwise respect the admin's collapse choice.
+            const collapsed = !query && collapsedGroups[cat]
+            return (
+              <section
+                key={cat}
+                id={`group-${cat}`}
+                className="min-w-0 overflow-hidden rounded-xl border border-input bg-white"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(cat)}
+                  aria-expanded={!collapsed}
+                  className="flex w-full min-w-0 items-center gap-3 border-b border-input/60 bg-gray-50/60 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-gray-400 transition-transform",
+                      collapsed && "-rotate-90",
+                    )}
+                  />
+                  <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", CATEGORY_DOTS[cat] ?? "bg-gray-300")} />
+                  <span className="min-w-0 truncate text-sm font-semibold text-gray-900">
+                    {CATEGORY_LABELS[cat] ?? cat}
+                  </span>
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    {items.length}
+                  </span>
+                </button>
+
+                {!collapsed && (
+                  <div className="min-w-0 divide-y divide-gray-100">
+                    {items.map(tpl => {
+                      const isActive = selected?.slug === tpl.slug
+                      return (
+                        <button
+                          key={tpl.slug}
+                          type="button"
+                          onClick={() => selectTemplate(tpl.slug)}
+                          disabled={loadingDetail}
+                          className={cn(
+                            "group flex min-w-0 w-full max-w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-brand-gold/5 disabled:opacity-60",
+                            isActive && "bg-brand-gold/10",
+                          )}
+                        >
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 transition-colors group-hover:bg-brand-gold/15">
+                            <Mail className="h-4 w-4 text-gray-400 transition-colors group-hover:text-foreground" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className="min-w-0 truncate font-medium text-gray-900">{tpl.name}</span>
+                              {!tpl.is_default && (
+                                <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-foreground">Customized</span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 truncate text-xs text-gray-400 font-mono">{tpl.slug}</p>
+                            {tpl.description && (
+                              <p className="mt-0.5 truncate text-sm text-gray-500">{tpl.description}</p>
+                            )}
+                          </div>
+                          <div className="shrink-0 text-xs text-gray-400">v{tpl.version}</div>
+                          <ChevronRight className="h-4 w-4 shrink-0 text-gray-300 transition-colors group-hover:text-foreground" />
+                        </button>
+                      )
+                    })}
+                  </div>
                 )}
-              </div>
-              <p className="mt-0.5 truncate text-sm text-gray-500">{tpl.description}</p>
-            </div>
-            <div className="flex-shrink-0 text-xs text-gray-400">
-              v{tpl.version}
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-foreground flex-shrink-0 transition-colors" />
-          </button>
-        ))}
-      </div>
+              </section>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
