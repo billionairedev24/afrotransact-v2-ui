@@ -535,6 +535,19 @@ function OrderItem({
             {formatCents(item.totalPriceCents)}
             {eachLabel}
           </p>
+          {/* Per-item status (Amazon-style): each item reflects its own
+              sub-order's fulfillment state, so a mixed-progress order is clear. */}
+          {(() => {
+            const b = statusBadge(sub.fulfillmentStatus)
+            return (
+              <span className={cn(
+                "mt-2 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                b.tone,
+              )}>
+                <b.Icon className="h-3 w-3" /> {b.label}
+              </span>
+            )
+          })()}
           {alreadyReviewed && (
             <span className="inline-flex items-center gap-1 mt-2 text-xs text-green-600 font-medium">
               <BadgeCheck className="h-3.5 w-3.5" /> Reviewed
@@ -581,41 +594,34 @@ function OrderItem({
 
 /* ─────────────────────── Sub-order section ─────────────────────── */
 
-function SubOrderTracker({
-  sub, placedAt, single, storeName, index, total,
+/**
+ * One order-level delivery tracker (Amazon-style): a single status timeline for
+ * the whole order, NOT one per seller. Tracking numbers and delivery photos are
+ * aggregated across sub-orders (shown plainly, without per-store headers), and
+ * per-item status lives on each item in the items list below.
+ */
+function OrderDeliveryTracker({
+  status, placedAt, pickup, badge, subOrders,
 }: {
-  sub: SubOrderDto
+  status: string
   placedAt: string
-  single: boolean
-  storeName: string
-  index: number
-  total: number
+  pickup: boolean
+  badge: ReturnType<typeof statusBadge>
+  subOrders: SubOrderDto[]
 }) {
-  const pickup = isPickupSub(sub)
-  const headline = statusHeadline(sub.fulfillmentStatus, sub.trackingNumber, pickup)
-  const badge = statusBadge(sub.fulfillmentStatus)
-  const isDelivered = sub.fulfillmentStatus === "delivered" || sub.fulfillmentStatus === "completed"
+  const headline = statusHeadline(status, undefined, pickup)
+  const pickupSubs = subOrders.filter((s) => isPickupSub(s))
+  const tracked = subOrders.filter((s) => !!s.trackingNumber)
+  const proofs = subOrders.filter(
+    (s) => (s.fulfillmentStatus === "delivered" || s.fulfillmentStatus === "completed") && s.deliveryProofImageUrl,
+  )
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
       <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          {/* Multi-seller orders ship in separate packages — number each so two
-              trackers read as "2 shipments", not a duplicate. */}
-          {!single && (
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Shipment {index} of {total}
-            </p>
-          )}
-          <h3 className="text-sm font-bold text-foreground">
-            {pickup ? "Pickup status" : "Delivery status"}
-          </h3>
-          {!single && (
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-              <Store className="h-3 w-3" /> {storeName}
-            </p>
-          )}
-        </div>
+        <h3 className="text-sm font-bold text-foreground">
+          {pickup ? "Pickup status" : "Delivery status"}
+        </h3>
         <span className={cn(
           "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
           badge.tone,
@@ -624,44 +630,41 @@ function SubOrderTracker({
         </span>
       </div>
       <p className="mb-5 text-base font-bold text-foreground">{headline}</p>
-      {pickup ? (
-        <>
-          <FulfillmentStepper status={sub.fulfillmentStatus} placedAt={placedAt} pickup />
-          <PickupCard sub={sub} />
-        </>
-      ) : (
-        <>
-          <FulfillmentStepper status={sub.fulfillmentStatus} placedAt={placedAt} pickup={false} />
-          {sub.trackingNumber && (
-            <div className="mt-5 flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-3">
+      <FulfillmentStepper status={status} placedAt={placedAt} pickup={pickup} />
+
+      {pickupSubs.map((s) => <PickupCard key={s.id} sub={s} />)}
+
+      {tracked.length > 0 && (
+        <div className="mt-5 flex flex-col gap-2">
+          {tracked.map((s) => (
+            <div key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-3">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Tracking number</p>
-                <p className="mt-0.5 font-mono text-sm font-semibold text-foreground">
-                  {sub.trackingNumber}
-                </p>
+                <p className="mt-0.5 font-mono text-sm font-semibold text-foreground">{s.trackingNumber}</p>
               </div>
-              {sub.shippingCarrier && (
-                <span className="text-xs text-muted-foreground">{sub.shippingCarrier}</span>
+              {s.shippingCarrier && (
+                <span className="text-xs text-muted-foreground">{s.shippingCarrier}</span>
               )}
             </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
-      {isDelivered && sub.deliveryProofImageUrl && (
-        <div className="mt-5">
+
+      {proofs.map((s) => (
+        <div key={s.id} className="mt-5">
           <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-            Delivery photo{sub.deliveryProofUploadedAt ? ` · ${new Date(sub.deliveryProofUploadedAt).toLocaleString()}` : ""}
+            Delivery photo{s.deliveryProofUploadedAt ? ` · ${new Date(s.deliveryProofUploadedAt).toLocaleString()}` : ""}
           </p>
           {/* Native <img> — proof photos come from external CDN (uploadthing/etc.);
               skip next/image so we don't need every possible host in remotePatterns. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={sub.deliveryProofImageUrl}
+            src={s.deliveryProofImageUrl}
             alt="Delivery photo"
             className="max-h-80 rounded-lg border border-border bg-muted object-contain"
           />
         </div>
-      )}
+      ))}
     </section>
   )
 }
@@ -800,7 +803,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   }
 
   const placedAt = order.placedAt || order.createdAt
-  const single = order.subOrders.length === 1
   const overallStatus = order.status
   const allItems = order.subOrders.flatMap((so) => so.items)
   const totalItems = allItems.reduce((sum, i) => sum + i.quantity, 0)
@@ -839,24 +841,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
       </p>
 
       <div id="tracking" className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        {/* Left: tracking + items per shipment, grouped by seller/sub-order */}
+        {/* Left: ONE order-level delivery tracker, then the items (grouped by
+            seller for attribution) with a per-item status. */}
         <div className="flex flex-col gap-4">
-          {!single && (
-            <p className="text-sm text-muted-foreground">
-              This order ships in {order.subOrders.length} packages from different sellers — each has its own tracking below.
-            </p>
-          )}
-          {order.subOrders.map((so, i) => (
-            <SubOrderTracker
-              key={so.id}
-              sub={so}
-              placedAt={placedAt}
-              single={single}
-              storeName={storeDisplayName(so.storeId, storeNames.get(so.storeId))}
-              index={i + 1}
-              total={order.subOrders.length}
-            />
-          ))}
+          <OrderDeliveryTracker
+            status={overallStatus}
+            placedAt={placedAt}
+            pickup={allPickup}
+            badge={badge}
+            subOrders={order.subOrders}
+          />
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="mb-4 text-sm font-bold text-foreground">
