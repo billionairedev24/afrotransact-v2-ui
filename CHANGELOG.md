@@ -62,7 +62,7 @@ is preserved throughout.
 - **Admin email templates page** reworked so selecting a group no longer hides
   the others, every template (including the seller-payout-failed admin alert) is
   visible, with search + UI/UX polish.
-- **Admin users** now show each email masked with a show/hide eye toggle.
+- **Admin users** now show each user's email and phone number masked with a show/hide eye toggle, so admins can reach out as needed.
 
 ### Architecture (groundwork)
 
