@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { CreditCard, Loader2, ShieldCheck, Star, Trash2 } from "lucide-react"
+import { CreditCard, Loader2, ShieldCheck } from "lucide-react"
 import {
   deleteSavedPaymentMethod,
   getUserProfile,
@@ -13,18 +13,8 @@ import {
 } from "@/lib/api"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { friendlyMessage } from "@/lib/errors"
-
-function formatBrand(brand: string | null): string {
-  if (!brand) return "Card"
-  return brand.charAt(0).toUpperCase() + brand.slice(1)
-}
-
-function formatExpiry(month: number | null, year: number | null): string {
-  if (!month || !year) return ""
-  const mm = month.toString().padStart(2, "0")
-  const yy = year.toString().slice(-2)
-  return `${mm}/${yy}`
-}
+import { confirmDialog } from "@/components/ui/confirm"
+import { PaymentCard } from "@/components/account/PaymentCard"
 
 export function PaymentsSection() {
   const { status } = useSession()
@@ -37,6 +27,9 @@ export function PaymentsSection() {
    *  customer default, which is set separately and we don't write to. */
   const [defaultPmId, setDefaultPmId] = useState<string | null>(null)
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null)
+  /** Account holder name, used as the card-holder line (Stripe doesn't return
+   *  a per-card cardholder name to us; the account owner is the closest truth). */
+  const [holderName, setHolderName] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     const token = await getAccessToken()
@@ -50,6 +43,7 @@ export function PaymentsSection() {
       ])
       setMethods(list)
       setDefaultPmId(profile.defaultPaymentMethodId ?? null)
+      setHolderName([profile.firstName, profile.lastName].filter(Boolean).join(" ") || null)
     } catch (e) {
       setError(friendlyMessage(e, "Failed to load saved cards."))
     } finally {
@@ -84,6 +78,17 @@ export function PaymentsSection() {
 
   const handleDelete = useCallback(
     async (id: string) => {
+      const card = (methods ?? []).find((x) => x.id === id)
+      const label = card ? `${(card.brand ?? "card")} ending in ${card.last4 ?? "••••"}` : "this card"
+      if (
+        !(await confirmDialog({
+          title: "Remove this card?",
+          description: `${label} will be removed from your account. You can add it again at checkout.`,
+          confirmLabel: "Remove",
+          variant: "danger",
+        }))
+      )
+        return
       const token = await getAccessToken()
       if (!token) return
       setDeletingId(id)
@@ -138,65 +143,23 @@ export function PaymentsSection() {
           Loading saved cards…
         </div>
       ) : methods && methods.length > 0 ? (
-        <ul className="space-y-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           {methods.map((m) => (
-            <li
+            <PaymentCard
               key={m.id}
-              className="flex items-center justify-between gap-4 rounded-2xl border border-input bg-card px-5 py-4"
-            >
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted">
-                  <CreditCard className="h-5 w-5 text-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground truncate">
-                      {formatBrand(m.brand)} ending in {m.last4 ?? "••••"}
-                    </p>
-                    {m.stripePmId === defaultPmId && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-gold-foreground">
-                        <Star className="h-3 w-3 fill-current" />
-                        Default
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {formatExpiry(m.expMonth, m.expYear) || "Expiry unavailable"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {m.stripePmId !== defaultPmId && (
-                  <button
-                    onClick={() => handleSetDefault(m.stripePmId)}
-                    disabled={settingDefaultId === m.stripePmId}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                    title="Use this card for 1-click reorder"
-                  >
-                    {settingDefaultId === m.stripePmId ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Star className="h-3.5 w-3.5" />
-                    )}
-                    Set default
-                  </button>
-                )}
-                <button
-                  onClick={() => handleDelete(m.id)}
-                  disabled={deletingId === m.id}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                >
-                  {deletingId === m.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
-                  )}
-                  Remove
-                </button>
-              </div>
-            </li>
+              brand={m.brand}
+              last4={m.last4}
+              expMonth={m.expMonth}
+              expYear={m.expYear}
+              holderName={holderName}
+              isDefault={m.stripePmId === defaultPmId}
+              settingDefault={settingDefaultId === m.stripePmId}
+              deleting={deletingId === m.id}
+              onSetDefault={() => handleSetDefault(m.stripePmId)}
+              onDelete={() => handleDelete(m.id)}
+            />
           ))}
-        </ul>
+        </div>
       ) : (
         <div className="rounded-2xl border border-input bg-card px-6 py-16 text-center">
           <CreditCard className="mx-auto h-14 w-14 text-muted-foreground" />
