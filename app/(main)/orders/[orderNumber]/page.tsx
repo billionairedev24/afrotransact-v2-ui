@@ -274,7 +274,7 @@ function PickupCard({ sub }: { sub: SubOrderDto }) {
   if (!loc) return null
   const addressLine = [loc.city, loc.region].filter(Boolean).join(", ") + (loc.postalCode ? ` ${loc.postalCode}` : "")
   return (
-    <div className="mt-6 relative overflow-hidden rounded-2xl border border-brand-green/30 bg-brand-green-soft/50 p-5">
+    <div className="relative overflow-hidden rounded-2xl border border-brand-green/30 bg-brand-green-soft/50 p-5">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-green text-brand-green-foreground">
           <Store className="h-5 w-5" />
@@ -307,6 +307,44 @@ function PickupCard({ sub }: { sub: SubOrderDto }) {
         Show your confirmation email or a photo ID when you collect.
       </p>
     </div>
+  )
+}
+
+/**
+ * A pickup is a physical place, not a seller. Two sub-orders collected at the
+ * same counter must show ONE card — otherwise a mixed-seller cart renders the
+ * identical "Collect in store" card twice. Dedupe by location identity (no id
+ * on the DTO, so name + address), keeping the first sub-order per location.
+ */
+function dedupePickupsByLocation(subs: SubOrderDto[]): SubOrderDto[] {
+  const seen = new Set<string>()
+  const out: SubOrderDto[] = []
+  for (const s of subs) {
+    const loc = s.pickupLocation
+    if (!loc) continue
+    const key = [loc.name, loc.line1, loc.city, loc.postalCode]
+      .map((v) => (v ?? "").trim().toLowerCase())
+      .join("|")
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(s)
+  }
+  return out
+}
+
+/** "Where to collect" — one card per unique pickup location. */
+function PickupLocations({ subOrders }: { subOrders: SubOrderDto[] }) {
+  const locations = dedupePickupsByLocation(subOrders.filter((s) => isPickupSub(s)))
+  if (locations.length === 0) return null
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <h3 className="mb-4 text-sm font-bold text-foreground">
+        {locations.length > 1 ? "Where to collect" : "Where to collect your order"}
+      </h3>
+      <div className="flex flex-col gap-4">
+        {locations.map((s) => <PickupCard key={s.id} sub={s} />)}
+      </div>
+    </section>
   )
 }
 
@@ -610,7 +648,6 @@ function OrderDeliveryTracker({
   subOrders: SubOrderDto[]
 }) {
   const headline = statusHeadline(status, undefined, pickup)
-  const pickupSubs = subOrders.filter((s) => isPickupSub(s))
   const tracked = subOrders.filter((s) => !!s.trackingNumber)
   const proofs = subOrders.filter(
     (s) => (s.fulfillmentStatus === "delivered" || s.fulfillmentStatus === "completed") && s.deliveryProofImageUrl,
@@ -631,8 +668,6 @@ function OrderDeliveryTracker({
       </div>
       <p className="mb-5 text-base font-bold text-foreground">{headline}</p>
       <FulfillmentStepper status={status} placedAt={placedAt} pickup={pickup} />
-
-      {pickupSubs.map((s) => <PickupCard key={s.id} sub={s} />)}
 
       {tracked.length > 0 && (
         <div className="mt-5 flex flex-col gap-2">
@@ -841,8 +876,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
       </p>
 
       <div id="tracking" className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        {/* Left: ONE order-level delivery tracker, then the items (grouped by
-            seller for attribution) with a per-item status. */}
+        {/* Left: ONE order-level tracker, then the items (grouped by seller for
+            attribution) with a per-item status, then where to collect. Items sit
+            directly under the status — not buried below the pickup location. */}
         <div className="flex flex-col gap-4">
           <OrderDeliveryTracker
             status={overallStatus}
@@ -867,6 +903,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
               ))}
             </div>
           </section>
+
+          <PickupLocations subOrders={order.subOrders} />
         </div>
 
         {/* Right: order summary + shipping + payment */}

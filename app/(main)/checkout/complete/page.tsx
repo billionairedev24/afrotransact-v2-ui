@@ -184,6 +184,29 @@ function PickupCard({ subOrder }: { subOrder: SubOrderDto }) {
   )
 }
 
+/**
+ * A pickup is a physical place, not a seller. Two sub-orders collected at the
+ * same counter must show ONE card, not one per seller — otherwise a mixed cart
+ * renders the identical "Collect in store" card twice. Dedupe by location
+ * identity (no id on the DTO, so name + address), keeping the first sub-order
+ * as the representative for each unique location.
+ */
+function dedupePickupsByLocation(subs: SubOrderDto[]): SubOrderDto[] {
+  const seen = new Set<string>()
+  const out: SubOrderDto[] = []
+  for (const s of subs) {
+    const loc = s.pickupLocation
+    if (!loc) continue
+    const key = [loc.name, loc.line1, loc.city, loc.postalCode]
+      .map((v) => (v ?? "").trim().toLowerCase())
+      .join("|")
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(s)
+  }
+  return out
+}
+
 type FulfillmentShape = "allPickup" | "allShip" | "mixed"
 
 function getFulfillmentShape(order: OrderDto | null): FulfillmentShape {
@@ -253,7 +276,7 @@ function MixedSections({ pickupSubOrders }: { pickupSubOrders: SubOrderDto[] }) 
         </p>
         <StatusTracker steps={PICKUP_JOURNEY} />
         <div className="mt-5 space-y-3">
-          {pickupSubOrders.map((s) => <PickupCard key={s.id} subOrder={s} />)}
+          {dedupePickupsByLocation(pickupSubOrders).map((s) => <PickupCard key={s.id} subOrder={s} />)}
         </div>
       </div>
     </div>
@@ -376,7 +399,7 @@ function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
               />
               {shape === "allPickup" && (
                 <div className="mt-6 space-y-3">
-                  {pickupSubOrders.map((s) => <PickupCard key={s.id} subOrder={s} />)}
+                  {dedupePickupsByLocation(pickupSubOrders).map((s) => <PickupCard key={s.id} subOrder={s} />)}
                 </div>
               )}
             </div>
