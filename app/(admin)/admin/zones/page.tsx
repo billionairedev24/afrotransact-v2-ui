@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { Dialog, DialogBody, DialogFooter, DialogHeader } from "@/components/ui/Dialog"
+import { confirmDialog } from "@/components/ui/confirm"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   createAdminZone,
@@ -227,7 +228,7 @@ export default function AdminZonesPage() {
   }
 
   async function handleDelete(zone: ServiceZone) {
-    if (!confirm(`Delete zone "${zone.displayName}"? This will also remove all child zones and their feature flags.`)) return
+    if (!(await confirmDialog({ title: `Delete zone ""?`, description: "This will also remove all child zones and their feature flags.", confirmLabel: "Delete", variant: "danger" }))) return
     try {
       const token = await getAccessToken()
       if (!token) return

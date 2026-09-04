@@ -6,6 +6,7 @@ import { createColumnHelper } from "@tanstack/react-table"
 import { Loader2, Mail, RefreshCcw, Ban, CheckCircle2, Clock, ShieldOff, MailX, Send } from "lucide-react"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
+import { confirmDialog } from "@/components/ui/confirm"
 import { getAccessToken } from "@/lib/auth-helpers"
 import {
   listSellerInvites,
@@ -175,8 +176,8 @@ export default function InvitesPage() {
             </button>
             <button
               disabled={!canAct || revoke.isPending}
-              onClick={() => {
-                if (confirm(`Revoke invite for ${inv.email}? This disables their Keycloak user.`)) {
+              onClick={async () => {
+                if (await confirmDialog({ title: `Revoke invite for ?`, description: "This disables their Keycloak user.", confirmLabel: "Revoke", variant: "danger" })) {
                   revoke.mutate(inv.id)
                 }
               }}

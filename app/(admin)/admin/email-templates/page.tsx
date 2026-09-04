@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { confirmDialog } from "@/components/ui/confirm"
 import { logError } from "@/lib/errors"
 import { toast } from "sonner"
 import {
@@ -381,7 +382,7 @@ export default function EmailTemplatesPage() {
 
   const handleReset = async () => {
     if (!selected) return
-    if (!confirm("Reset this template to its default content? Your edits will be lost.")) return
+    if (!(await confirmDialog({ title: "Reset this template?", description: "It reverts to its default content — your edits will be lost.", confirmLabel: "Reset", variant: "danger" }))) return
     setResetting(true)
     try {
       const token = await getAccessToken()
@@ -437,7 +438,7 @@ export default function EmailTemplatesPage() {
 
   const handleDelete = async () => {
     if (!selected) return
-    if (!confirm(`Permanently delete "${selected.name}"? This cannot be undone.`)) return
+    if (!(await confirmDialog({ title: `Delete ""?`, description: "This cannot be undone.", confirmLabel: "Delete", variant: "danger" }))) return
     try {
       const token = await getAccessToken()
       if (!token) return

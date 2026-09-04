@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { confirmDialog } from "@/components/ui/confirm"
 import { useActiveStore } from "@/stores/active-store"
 import { Sheet, SheetHeader, SheetBody, SheetFooter } from "@/components/ui/Sheet"
 import {
@@ -253,7 +254,7 @@ export default function SellerDealsPage() {
   }
 
   async function handleDelete(d: DealData) {
-    if (!confirm(`Delete "${d.title}"?`)) return
+    if (!(await confirmDialog({ title: `Delete ""?`, confirmLabel: "Delete", variant: "danger" }))) return
     const token = await getAccessToken()
     if (!token) return
     try {

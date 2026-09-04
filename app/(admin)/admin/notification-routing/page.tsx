@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { confirmDialog } from "@/components/ui/confirm"
 import { toast } from "sonner"
 import { logError } from "@/lib/errors"
 import {
@@ -312,11 +313,14 @@ export default function NotificationRoutingPage() {
   // ── Remove an entire email (all its subscriptions) ────────────────────
   const handleRemoveEmail = async (g: EmailGroup) => {
     if (
-      !confirm(
-        `Remove ${g.email} from all ${g.subscriptions.length} alert${
+      !(await confirmDialog({
+        title: `Remove ${g.email}?`,
+        description: `This removes all ${g.subscriptions.length} alert${
           g.subscriptions.length > 1 ? "s" : ""
-        }? This cannot be undone.`,
-      )
+        } for this address. This cannot be undone.`,
+        confirmLabel: "Remove",
+        variant: "danger",
+      }))
     )
       return
     try {

@@ -15,6 +15,7 @@ import {
   type ServiceZone,
 } from "@/lib/api"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { confirmDialog } from "@/components/ui/confirm"
 import { friendlyMessage, logError } from "@/lib/errors"
 
 // Dollars <-> cents helpers. Inputs are in dollars; blank means "don't override".
@@ -140,7 +141,7 @@ export default function ZoneOverridesPage() {
   }
 
   async function handleDelete(g: ZoneOverrideGroup) {
-    if (!confirm(`Delete "${g.name}"? Its zones fall back to the normal hierarchy.`)) return
+    if (!(await confirmDialog({ title: `Delete ""?`, description: "Its zones fall back to the normal hierarchy.", confirmLabel: "Delete", variant: "danger" }))) return
     try {
       const token = await getAccessToken()
       if (!token) throw new Error("No token")

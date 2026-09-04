@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { confirmDialog } from "@/components/ui/confirm"
 import {
   getSellerCoupons, createSellerCoupon, updateSellerCoupon, deleteSellerCoupon,
 } from "@/lib/api"
@@ -70,7 +71,7 @@ export default function SellerCouponsPage() {
   }
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!confirm("Delete this coupon?")) return
+    if (!(await confirmDialog({ title: "Delete this coupon?", confirmLabel: "Delete", variant: "danger" }))) return
     const token = await getAccessToken()
     if (!token) return
     await deleteSellerCoupon(token, id)

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { confirmDialog } from "@/components/ui/confirm"
 import {
   getAddresses,
   createAddress,
@@ -84,7 +85,7 @@ export function AddressesSection() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this address?")) return
+    if (!(await confirmDialog({ title: "Delete this address?", confirmLabel: "Delete", variant: "danger" }))) return
     const token = await getAccessToken()
     if (!token) return
     try {

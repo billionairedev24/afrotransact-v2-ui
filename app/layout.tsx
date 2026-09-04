@@ -6,6 +6,7 @@ import { AiChatOverlay } from "@/components/ai/AiWidget"
 import { WhatsAppFab } from "@/components/support/WhatsAppFab"
 import { ReferralCapture } from "@/components/referral/ReferralCapture"
 import { Toaster } from "sonner"
+import { ConfirmDialogHost } from "@/components/ui/confirm"
 import { SITE_URL } from "@/lib/site"
 import "./globals.css"
 
@@ -63,6 +64,7 @@ export default function RootLayout({
           <AiChatOverlay />
           <WhatsAppFab />
           <Toaster position="bottom-right" richColors closeButton />
+          <ConfirmDialogHost />
         </Providers>
       </body>
     </html>

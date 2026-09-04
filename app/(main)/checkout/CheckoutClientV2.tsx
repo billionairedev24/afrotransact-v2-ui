@@ -58,6 +58,7 @@ import {
   Wallet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { confirmDialog } from "@/components/ui/confirm"
 import { formatDistance } from "@/lib/format"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { features } from "@/lib/features"
@@ -522,7 +523,7 @@ export default function CheckoutClientV2({
 
   async function handleDeleteAddress(id: string) {
     if (!authToken) return
-    if (!confirm("Delete this address?")) return
+    if (!(await confirmDialog({ title: "Delete this address?", confirmLabel: "Delete", variant: "danger" }))) return
     try {
       await deleteAddress(authToken, id)
     } catch (e) {
