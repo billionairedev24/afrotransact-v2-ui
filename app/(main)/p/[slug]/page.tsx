@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCatalogItemBuyBoxBySlug, type CatalogItemBuyBox } from "@/lib/api"
 import { RemoteImage } from "@/components/ui/remote-image"
+import { StarRating } from "@/components/products/StarRating"
+import ProductReviews from "@/components/reviews/ProductReviews"
 import { BuyBoxClient } from "./BuyBoxClient"
 
 /**
@@ -99,6 +101,11 @@ export default async function CatalogPDP({ params }: { params: Promise<Params> }
             )}
             <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-foreground tracking-tight">{item.title}</h1>
             <p className="mt-1 text-[11px] font-mono text-muted-foreground">{item.itemNumber}</p>
+            {item.buyBox?.productId && (item.buyBox.reviewCount ?? 0) > 0 && (
+              <a href="#reviews" className="mt-2 inline-flex items-center gap-1.5 hover:underline">
+                <StarRating rating={item.buyBox.avgRating ?? 0} count={item.buyBox.reviewCount ?? 0} size="md" />
+              </a>
+            )}
           </header>
 
           <BuyBoxClient item={item} primaryImageUrl={primary?.url ?? null} />
@@ -120,6 +127,14 @@ export default async function CatalogPDP({ params }: { params: Promise<Params> }
           )}
         </section>
       </div>
+
+      {/* Reviews — winning offer's product (v1). Cross-seller aggregation is a
+          fast-follow; keyed on the buy-box offer's catalog.products.id. */}
+      {item.buyBox?.productId && (
+        <section id="reviews" className="mt-10 scroll-mt-24">
+          <ProductReviews productId={item.buyBox.productId} />
+        </section>
+      )}
     </main>
   )
 }

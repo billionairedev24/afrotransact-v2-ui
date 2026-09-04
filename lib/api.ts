@@ -4573,6 +4573,11 @@ export interface OfferSummary {
   currency: string
   stockQuantity: number
   condition: string
+  /** catalog.products.id backing this offer — the key reviews are filed under. */
+  productId?: string | null
+  /** Denormalized rating for this offer's product (null when no reviews yet). */
+  avgRating?: number | null
+  reviewCount?: number | null
 }
 
 export interface CatalogItemBuyBox {
