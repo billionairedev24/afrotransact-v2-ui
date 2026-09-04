@@ -220,7 +220,7 @@ export default function AbandonedCheckoutsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="px-5 py-3">Order #</th>
+                <th className="px-5 py-3">Cart</th>
                 <th className="px-5 py-3">Customer</th>
                 <th className="px-5 py-3">Contents</th>
                 <th className="px-5 py-3">Subtotal</th>
