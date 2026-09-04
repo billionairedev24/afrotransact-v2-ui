@@ -37,11 +37,9 @@ interface AddressAutocompleteProps {
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
 
 // Single in-flight promise for the Places library across every instance of
-// this component. Uses the async loader pattern: load the Maps JS core with
-// `loading=async` (no `libraries=` param → no "loaded without loading=async"
-// warning), then pull the Places library on demand via importLibrary. That
-// also gives us PlaceAutocompleteElement, the supported replacement for the
-// deprecated google.maps.places.Autocomplete.
+// this component. Load the Maps JS core with `loading=async` (no `libraries=`
+// param → no "loaded without loading=async" warning), then pull Places on
+// demand via importLibrary.
 let placesPromise: Promise<google.maps.PlacesLibrary> | null = null
 
 function loadPlacesLibrary(): Promise<google.maps.PlacesLibrary> {
@@ -65,7 +63,8 @@ function loadPlacesLibrary(): Promise<google.maps.PlacesLibrary> {
   return placesPromise
 }
 
-function extractAddressParts(place: google.maps.places.Place): AddressParts {
+// Legacy Autocomplete's getPlace() returns snake_case address_components.
+function extractAddressParts(place: google.maps.places.PlaceResult): AddressParts {
   const parts: AddressParts = {
     line1: "",
     line2: "",
@@ -73,31 +72,29 @@ function extractAddressParts(place: google.maps.places.Place): AddressParts {
     state: "",
     zip: "",
     country: "",
-    lat: place.location?.lat() ?? null,
-    lng: place.location?.lng() ?? null,
+    lat: place.geometry?.location?.lat() ?? null,
+    lng: place.geometry?.location?.lng() ?? null,
   }
 
   let streetNumber = ""
   let route = ""
 
-  for (const component of place.addressComponents ?? []) {
+  for (const component of place.address_components ?? []) {
     const types = component.types
-    const long = component.longText ?? ""
-    const short = component.shortText ?? ""
     if (types.includes("street_number")) {
-      streetNumber = long
+      streetNumber = component.long_name
     } else if (types.includes("route")) {
-      route = long
+      route = component.long_name
     } else if (types.includes("subpremise")) {
-      parts.line2 = long
+      parts.line2 = component.long_name
     } else if (types.includes("locality") || types.includes("sublocality_level_1")) {
-      parts.city = long
+      parts.city = component.long_name
     } else if (types.includes("administrative_area_level_1")) {
-      parts.state = short
+      parts.state = component.short_name
     } else if (types.includes("postal_code")) {
-      parts.zip = long
+      parts.zip = component.long_name
     } else if (types.includes("country")) {
-      parts.country = short
+      parts.country = component.short_name
     }
   }
 
@@ -106,6 +103,14 @@ function extractAddressParts(place: google.maps.places.Place): AddressParts {
   return parts
 }
 
+/**
+ * Address field with Google Places autocomplete. We render our OWN controlled
+ * <input> and attach Places Autocomplete to it — rather than Google's
+ * PlaceAutocompleteElement web component, whose input lives in a CLOSED shadow
+ * root we can't style (it drew an un-removable blue focus outline). This input
+ * uses our standard field styling, and the prediction dropdown (.pac-container)
+ * is themed in globals.css.
+ */
 export function AddressAutocomplete({
   value,
   onChange,
@@ -114,25 +119,17 @@ export function AddressAutocomplete({
   className = "",
   disabled = false,
 }: AddressAutocompleteProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const elementRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // True once the user has typed but not yet picked a suggestion — so the
-  // structured parts (city/state/zip) aren't populated. Drives a hint nudging
-  // them to select from the dropdown, avoiding a dead-end where they type a full
-  // address, don't select, and the form fails validation with no explanation.
+  // True once the user typed but hasn't picked a suggestion — so the structured
+  // parts (city/state/zip) aren't populated yet. Drives a nudge to select.
   const [needsSelection, setNeedsSelection] = useState(false)
 
-  // Keep the latest callbacks in refs so the element's (once-attached) event
-  // listeners always call the current props without re-creating the element.
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
-  // Snapshot the initial value for prefill only — the element owns its text
-  // after mount, so we deliberately do NOT re-sync it on every value change
-  // (that would clobber what the user is typing).
-  const initialValueRef = useRef(value)
 
   useEffect(() => {
     if (!GOOGLE_MAPS_API_KEY) {
@@ -143,46 +140,23 @@ export function AddressAutocomplete({
 
     loadPlacesLibrary()
       .then((places) => {
-        if (cancelled || !containerRef.current || elementRef.current) return
+        if (cancelled || !inputRef.current || autocompleteRef.current) return
 
-        const el = new places.PlaceAutocompleteElement({
-          includedRegionCodes: ["us"],
-          placeholder,
-          // Drop the leading magnifier so it reads as a normal address input,
-          // not a search bar (prediction still works via the dropdown).
-          noInputIcon: true,
+        const ac = new places.Autocomplete(inputRef.current, {
+          fields: ["address_components", "geometry", "formatted_address"],
+          componentRestrictions: { country: "us" },
+          types: ["address"],
         })
-        if (initialValueRef.current) el.value = initialValueRef.current
-        el.style.width = "100%"
+        autocompleteRef.current = ac
 
-        // Free typing: keep the parent's line1 in sync as the user types, so a
-        // manually entered address (not picked from the dropdown) is still
-        // captured — matches the old controlled-input behavior.
-        el.addEventListener("input", () => {
-          const text = el.value ?? ""
-          onChangeRef.current(text)
-          // Typing invalidates any prior selection → parts are stale until they
-          // pick again. (A programmatic prefill via el.value doesn't fire input.)
-          setNeedsSelection(text.trim().length > 0)
+        ac.addListener("place_changed", () => {
+          const place = ac.getPlace()
+          if (!place || !place.address_components) return
+          const parts = extractAddressParts(place)
+          onChangeRef.current(place.formatted_address ?? parts.line1)
+          onSelectRef.current(parts)
+          setNeedsSelection(false)
         })
-
-        el.addEventListener("gmp-select", async (event) => {
-          try {
-            const place = event.placePrediction.toPlace()
-            await place.fetchFields({
-              fields: ["addressComponents", "location", "formattedAddress"],
-            })
-            const parts = extractAddressParts(place)
-            onChangeRef.current(place.formattedAddress ?? parts.line1)
-            onSelectRef.current(parts)
-            setNeedsSelection(false)
-          } catch {
-            /* selection fetch failed — leave the typed text as-is */
-          }
-        })
-
-        containerRef.current.appendChild(el)
-        elementRef.current = el
       })
       .catch((err) => {
         if (!cancelled) setError(friendlyMessage(err, "Could not load address autocomplete."))
@@ -190,33 +164,22 @@ export function AddressAutocomplete({
 
     return () => {
       cancelled = true
-      elementRef.current?.remove()
-      elementRef.current = null
+      if (autocompleteRef.current) {
+        window.google?.maps?.event?.clearInstanceListeners(autocompleteRef.current)
+        autocompleteRef.current = null
+      }
     }
-    // Mount once; callbacks are read from refs so we never re-create the element.
+    // Mount once; callbacks are read from refs so we never re-create it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Reflect disabled changes onto the live element.
-  useEffect(() => {
-    if (elementRef.current) elementRef.current.disabled = disabled
-  }, [disabled])
+  // Standard field styling — identical to the sibling City/State/ZIP inputs, so
+  // the focus ring is our gold one (no stray blue shadow-DOM outline).
+  const inputClass =
+    "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground " +
+    "placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary " +
+    className
 
-  // Keep the element's text in sync when the parent changes `value` AFTER mount
-  // — e.g. selecting a saved address at checkout, or switching which address is
-  // being edited without remounting the form. Without this the box stays stale
-  // (blank street field) while city/state/zip populate. Skip while the field is
-  // focused so we never clobber what the user is actively typing: focusing the
-  // element's shadow input retargets document.activeElement to the host element.
-  useEffect(() => {
-    const el = elementRef.current
-    if (!el) return
-    if (document.activeElement === el) return
-    if ((el.value ?? "") !== value) el.value = value
-  }, [value])
-
-  // Fallback: no API key or the library failed to load. A plain controlled
-  // input keeps the form usable (manual entry still flows through onChange).
   if (error) {
     return (
       <div className="relative">
@@ -226,22 +189,26 @@ export function AddressAutocomplete({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full rounded-xl border border-border bg-muted pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 transition-colors ${className}`}
+          className={`h-10 w-full rounded-md border border-border bg-background pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${className}`}
         />
       </div>
     )
   }
 
-  // The PlaceAutocompleteElement web component renders its own input inside
-  // this container. gmap-*-autocomplete styling is limited to the element box;
-  // we match width and the rounded/bordered look of our other fields via the
-  // wrapper and the element's exposed CSS variables.
   return (
     <div className="w-full">
-      <div
-        ref={containerRef}
-        className={`address-autocomplete w-full ${className}`}
-        data-placeholder={placeholder}
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value)
+          setNeedsSelection(e.target.value.trim().length > 0)
+        }}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoComplete="off"
+        className={inputClass}
       />
       {needsSelection && (
         <p className="mt-1 text-xs text-muted-foreground">

@@ -347,68 +347,46 @@ body.storefront-preview footer {
   }
 }
 
-/* ── Google PlaceAutocompleteElement (address autocomplete) ───────────────────
-   The web component renders its input inside a CLOSED shadow root, so styling
-   its own box is unreliable. Instead the WRAPPER div is the visible bordered
-   field (a plain div's border always renders) and the element sits transparent
-   inside it. Tokens are HSL channel triplets, so they MUST be wrapped in hsl(). */
-.address-autocomplete {
-  display: block;
-  width: 100%;
+/* ── Google Places autocomplete dropdown (legacy .pac-container) ──────────────
+   We render our OWN <input> (styled like every other field) and attach Places
+   Autocomplete to it, so the input needs no special CSS. Only the prediction
+   panel Google appends to <body> is styled here, to match the theme. */
+.pac-container {
   border: 1px solid hsl(var(--border));
-  border-radius: 0.375rem; /* rounded-md — matches the City/State/ZIP inputs */
+  border-radius: 0.5rem;
   background: hsl(var(--card));
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  margin-top: 4px;
+  font-family: inherit;
+  overflow: hidden;
+  z-index: 60;
 }
-/* Match inputClass focus exactly: primary border + 1px primary ring. The
-   wrapper is the ONLY focus indicator — the element's own outline is killed
-   below (that was the stray blue box). */
-.address-autocomplete:focus-within {
-  border-color: hsl(var(--primary));
-  box-shadow: 0 0 0 1px hsl(var(--primary));
-}
-.address-autocomplete gmp-place-autocomplete {
-  display: block;
-  width: 100%;
-  background: transparent;
+.pac-item {
+  padding: 0.45rem 0.75rem;
+  border-top: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
   font-size: 0.875rem;
-  color: hsl(var(--foreground));
-  /* The surface tokens colour BOTH the input box AND the prediction dropdown.
-     They must be OPAQUE — a transparent surface left the dropdown with no
-     background (rendered black) and made the input read as disabled. Use the
-     card colour so the field matches sibling inputs and the dropdown is a solid,
-     theme-aware panel. The wrapper border is the only visible outline. */
-  --gmp-mat-color-surface: hsl(var(--card));
-  --gmp-mat-color-surface-container: hsl(var(--card));
-  --gmp-mat-color-surface-container-low: hsl(var(--card));
-  --gmp-mat-color-surface-container-high: hsl(var(--card));
-  --gmp-mat-color-surface-container-highest: hsl(var(--card));
-  --gmp-mat-color-on-surface: hsl(var(--foreground));
-  --gmp-mat-color-on-surface-variant: hsl(var(--muted-foreground));
-  --gmp-mat-color-outline: transparent;
-  --gmp-mat-color-outline-variant: hsl(var(--border));
-  --gmp-mat-color-primary: hsl(var(--primary));
+  cursor: pointer;
 }
-/* Hover/selected prediction row: a subtle tint instead of the default dark. */
-.address-autocomplete gmp-place-autocomplete::part(prediction-item):hover,
-.address-autocomplete gmp-place-autocomplete::part(prediction-item-selected) {
+.pac-item:first-child {
+  border-top: none;
+}
+.pac-item:hover,
+.pac-item-selected {
   background: hsl(var(--muted));
 }
-/* Kill the element's OWN focus chrome (Chrome draws a blue outline on the
-   internal input). The wrapper's :focus-within ring is the only indicator, so
-   the field reads as one clean box like its neighbours. Belt-and-suspenders:
-   the host outline + the exposed input part, resting and focused. */
-.address-autocomplete gmp-place-autocomplete,
-.address-autocomplete gmp-place-autocomplete:focus,
-.address-autocomplete gmp-place-autocomplete:focus-within,
-.address-autocomplete gmp-place-autocomplete:focus-visible {
-  outline: none;
+.pac-item-query {
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
 }
-.address-autocomplete gmp-place-autocomplete::part(input),
-.address-autocomplete gmp-place-autocomplete::part(input):focus,
-.address-autocomplete gmp-place-autocomplete::part(input):focus-visible {
-  outline: none;
-  box-shadow: none;
-  border: none;
-  background: transparent;
+.pac-matched {
+  font-weight: 600;
+}
+/* Hide Google's magnifier icon so it reads as an address field, not a search box. */
+.pac-icon {
+  display: none;
+}
+.hdpi.pac-logo::after,
+.pac-logo::after {
+  margin: 4px 8px;
 }
