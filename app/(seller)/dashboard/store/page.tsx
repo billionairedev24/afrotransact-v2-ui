@@ -59,6 +59,16 @@ type FormData = {
   shipFromState: string
   shipFromZip: string
   shipFromCountry: string
+  pickupOffered: boolean
+  pickupSameAsBusiness: boolean
+  pickupLine1: string
+  pickupLine2: string
+  pickupCity: string
+  pickupState: string
+  pickupZip: string
+  pickupCountry: string
+  pickupHours: string
+  pickupInstructions: string
   allowedCarriers: string[]
   logoUrl: string
   bannerUrl: string
@@ -88,6 +98,16 @@ function storeToForm(store: any): FormData {
       shipFromState: "",
       shipFromZip: "",
       shipFromCountry: "US",
+      pickupOffered: false,
+      pickupSameAsBusiness: true,
+      pickupLine1: "",
+      pickupLine2: "",
+      pickupCity: "",
+      pickupState: "",
+      pickupZip: "",
+      pickupCountry: "US",
+      pickupHours: "",
+      pickupInstructions: "",
       allowedCarriers: ["usps", "ups", "fedex"],
       logoUrl: "",
       bannerUrl: "",
@@ -113,6 +133,16 @@ function storeToForm(store: any): FormData {
     shipFromState: store.shipFromState ?? "",
     shipFromZip: store.shipFromZip ?? "",
     shipFromCountry: store.shipFromCountry ?? "US",
+    pickupOffered: store.pickupOffered ?? false,
+    pickupSameAsBusiness: store.pickupSameAsBusiness ?? true,
+    pickupLine1: store.pickupLine1 ?? "",
+    pickupLine2: store.pickupLine2 ?? "",
+    pickupCity: store.pickupCity ?? "",
+    pickupState: store.pickupState ?? "",
+    pickupZip: store.pickupZip ?? "",
+    pickupCountry: store.pickupCountry ?? "US",
+    pickupHours: store.pickupHours ?? "",
+    pickupInstructions: store.pickupInstructions ?? "",
     allowedCarriers: store.allowedCarriers ?? ["usps", "ups", "fedex"],
     logoUrl: store.logoUrl ?? "",
     bannerUrl: store.bannerUrl ?? "",
@@ -351,6 +381,16 @@ export default function StoreSettingsPage() {
           shipFromState: form.shipFromSameAsBusiness ? null : form.shipFromState.trim() || null,
           shipFromZip: form.shipFromSameAsBusiness ? null : form.shipFromZip.trim() || null,
           shipFromCountry: form.shipFromSameAsBusiness ? "US" : form.shipFromCountry.trim() || "US",
+          pickupOffered: form.pickupOffered,
+          pickupSameAsBusiness: form.pickupSameAsBusiness,
+          pickupLine1: form.pickupSameAsBusiness ? null : form.pickupLine1.trim() || null,
+          pickupLine2: form.pickupSameAsBusiness ? null : form.pickupLine2.trim() || null,
+          pickupCity: form.pickupSameAsBusiness ? null : form.pickupCity.trim() || null,
+          pickupState: form.pickupSameAsBusiness ? null : form.pickupState.trim() || null,
+          pickupZip: form.pickupSameAsBusiness ? null : form.pickupZip.trim() || null,
+          pickupCountry: form.pickupSameAsBusiness ? "US" : form.pickupCountry.trim() || "US",
+          pickupHours: form.pickupHours.trim() || null,
+          pickupInstructions: form.pickupInstructions.trim() || null,
           allowedCarriers: form.allowedCarriers,
           logoUrl: form.logoUrl.trim() || null,
           bannerUrl: form.bannerUrl.trim() || null,
@@ -381,6 +421,16 @@ export default function StoreSettingsPage() {
           shipFromState: form.shipFromSameAsBusiness ? null : form.shipFromState.trim() || null,
           shipFromZip: form.shipFromSameAsBusiness ? null : form.shipFromZip.trim() || null,
           shipFromCountry: form.shipFromSameAsBusiness ? "US" : form.shipFromCountry.trim() || "US",
+          pickupOffered: form.pickupOffered,
+          pickupSameAsBusiness: form.pickupSameAsBusiness,
+          pickupLine1: form.pickupSameAsBusiness ? null : form.pickupLine1.trim() || null,
+          pickupLine2: form.pickupSameAsBusiness ? null : form.pickupLine2.trim() || null,
+          pickupCity: form.pickupSameAsBusiness ? null : form.pickupCity.trim() || null,
+          pickupState: form.pickupSameAsBusiness ? null : form.pickupState.trim() || null,
+          pickupZip: form.pickupSameAsBusiness ? null : form.pickupZip.trim() || null,
+          pickupCountry: form.pickupSameAsBusiness ? "US" : form.pickupCountry.trim() || "US",
+          pickupHours: form.pickupHours.trim() || null,
+          pickupInstructions: form.pickupInstructions.trim() || null,
           allowedCarriers: form.allowedCarriers,
           shippingMode: form.shippingMode,
           shippingRadiusMeters,
@@ -913,6 +963,146 @@ export default function StoreSettingsPage() {
             )}
           </div>
         </section>}
+
+        {/* Store pickup — let buyers collect their order from the store. */}
+        <section className="rounded-lg border border-border bg-card p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+              <MapPin className="h-4 w-4 text-foreground" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Store pickup</h2>
+              <p className="text-sm text-muted-foreground">
+                Let customers collect their order from your location instead of shipping.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <div>
+              <label className="inline-flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={form.pickupOffered}
+                  onChange={(e) => update("pickupOffered", e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-foreground"
+                />
+                Offer in-store pickup — let customers collect their order from your location
+              </label>
+            </div>
+
+            {form.pickupOffered && (
+              <div className="space-y-5">
+                <div>
+                  <label className="inline-flex items-center gap-2 text-sm text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={form.pickupSameAsBusiness}
+                      onChange={(e) => update("pickupSameAsBusiness", e.target.checked)}
+                      className="h-4 w-4 rounded border-border text-foreground"
+                    />
+                    Pickup address same as business address
+                  </label>
+                </div>
+
+                {!form.pickupSameAsBusiness && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-foreground">
+                        Pickup street address
+                      </label>
+                      <AddressAutocomplete
+                        value={form.pickupLine1}
+                        onChange={(v) => update("pickupLine1", v)}
+                        onSelect={(parts) => {
+                          setForm((prev) => ({
+                            ...prev,
+                            pickupLine1: parts.line1,
+                            pickupCity: parts.city || prev.pickupCity,
+                            pickupState: parts.state || prev.pickupState,
+                            pickupZip: parts.zip || prev.pickupZip,
+                            pickupCountry: (parts.country || prev.pickupCountry || "US").toUpperCase(),
+                          }))
+                          setValidationErrors([])
+                          setError(null)
+                          setSuccess(false)
+                        }}
+                        placeholder="Start typing your pickup address…"
+                        className={`${inputClass} !rounded-md`}
+                      />
+                    </div>
+                    <input
+                      value={form.pickupLine2}
+                      onChange={(e) => update("pickupLine2", e.target.value)}
+                      placeholder="Apt, suite, unit (optional)"
+                      className={inputClass}
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <input
+                        value={form.pickupCity}
+                        onChange={(e) => update("pickupCity", e.target.value)}
+                        placeholder="City"
+                        className={inputClass}
+                      />
+                      <input
+                        value={form.pickupState}
+                        onChange={(e) => update("pickupState", e.target.value)}
+                        placeholder="State"
+                        className={inputClass}
+                      />
+                      <input
+                        value={form.pickupZip}
+                        onChange={(e) => update("pickupZip", e.target.value)}
+                        placeholder="ZIP"
+                        className={inputClass}
+                      />
+                      <input
+                        value={form.pickupCountry}
+                        onChange={(e) => update("pickupCountry", e.target.value)}
+                        placeholder="Country (US)"
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label
+                    htmlFor="pickupHours"
+                    className="mb-1.5 block text-sm font-medium text-foreground"
+                  >
+                    Pickup hours
+                  </label>
+                  <input
+                    id="pickupHours"
+                    type="text"
+                    value={form.pickupHours}
+                    onChange={(e) => update("pickupHours", e.target.value)}
+                    placeholder="Mon–Sat, 9:00am–6:00pm"
+                    className={inputClass}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="pickupInstructions"
+                    className="mb-1.5 block text-sm font-medium text-foreground"
+                  >
+                    Pickup instructions
+                  </label>
+                  <textarea
+                    id="pickupInstructions"
+                    rows={3}
+                    value={form.pickupInstructions}
+                    onChange={(e) => update("pickupInstructions", e.target.value)}
+                    placeholder="Bring your order number and a photo ID to the front counter."
+                    className={textareaClass}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* Returns Policy — per-store. Shown verbatim on PDP & checkout. */}
         <section className="rounded-lg border border-border bg-card p-6">

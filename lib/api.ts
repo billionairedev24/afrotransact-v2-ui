@@ -1456,6 +1456,16 @@ export interface StoreDetail {
   shipFromState?: string | null
   shipFromZip?: string | null
   shipFromCountry?: string | null
+  pickupOffered?: boolean | null
+  pickupSameAsBusiness?: boolean | null
+  pickupLine1?: string | null
+  pickupLine2?: string | null
+  pickupCity?: string | null
+  pickupState?: string | null
+  pickupZip?: string | null
+  pickupCountry?: string | null
+  pickupHours?: string | null
+  pickupInstructions?: string | null
   allowedCarriers?: string[] | null
   returnsSupported?: boolean
   returnWindowDays?: number | null
