@@ -2151,13 +2151,16 @@ export function validateCoupon(
    *  rejects duplicates / exclusives / over-cap so the shown discount matches
    *  what checkout computes. `subtotalCents` is the ORIGINAL cart subtotal. */
   appliedCodes?: string[],
+  /** Per-line cart breakdown so a store/product-scoped coupon's preview discount
+   *  is computed on only its own items — matching what checkout charges. */
+  lines?: { storeId: string; productId: string; subtotalCents: number }[],
 ) {
   return api<ValidateCouponResponse>("/api/v1/coupons/validate", {
     method: "POST",
     // Backend prefers zoneId (coupons_enabled lives on service zones); regionId
     // is a legacy fallback. Send both when we have them — the backend picks
     // zoneId first. Mirrors the shipping-quote path.
-    body: { code, subtotalCents, shippingCents, regionId, zoneId, appliedCodes },
+    body: { code, subtotalCents, shippingCents, regionId, zoneId, appliedCodes, lines },
     token,
   })
 }

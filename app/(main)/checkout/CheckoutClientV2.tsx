@@ -949,8 +949,15 @@ export default function CheckoutClientV2({
     // Prefer the resolved service-zone id; region.id stays as the legacy
     // fallback — same XOR-preference the shipping-quote call uses.
     const zoneId = activeZoneId
-    return await validateCoupon(authToken, code, subtotal, region?.id, shippingCents, zoneId, priorCodes)
-  }, [authToken, subtotal, region?.id, shippingCents, activeZoneId])
+    // Per-line breakdown so a store/product coupon's preview discount is scoped
+    // to its own items (matches the charge; keeps the client total in sync).
+    const lines = effectiveItems.map((it) => ({
+      storeId: it.storeId,
+      productId: it.productId,
+      subtotalCents: it.price * it.quantity,
+    }))
+    return await validateCoupon(authToken, code, subtotal, region?.id, shippingCents, zoneId, priorCodes, lines)
+  }, [authToken, subtotal, region?.id, shippingCents, activeZoneId, effectiveItems])
 
   async function handleApplyCoupon() {
     const code = couponInput.trim().toUpperCase()
