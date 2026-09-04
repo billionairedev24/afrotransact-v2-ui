@@ -4,6 +4,7 @@ import { headers } from "next/headers"
 import { getServerSession } from "next-auth"
 import { ShieldOff, Mail } from "lucide-react"
 import { authOptions } from "@/lib/auth"
+import { getServerAccessToken } from "@/lib/server-token"
 import {
   isSellerSuspended,
   parseSellerMeResponse,
@@ -45,7 +46,7 @@ export default async function SuspendedSellerPage() {
     process.env.SELLER_API_INTERNAL_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:8080"
-  const token = (session as { accessToken?: string }).accessToken
+  const token = await getServerAccessToken()
 
   let suspensionReason: string | null = null
   let suspendedAt: string | null = null

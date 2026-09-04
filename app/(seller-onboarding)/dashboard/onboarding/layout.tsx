@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { headers } from "next/headers"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { getServerAccessToken } from "@/lib/server-token"
 import {
   isSellerSuspended,
   parseSellerMeResponse,
@@ -23,7 +24,7 @@ export default async function OnboardingLayout({
   // onboarding wizard — that's the UX bug where a suspended seller
   // logs in and feels like they're being asked to register again.
   // Mirrors the same check in app/(seller)/layout.tsx.
-  const token = (session as { accessToken?: string }).accessToken
+  const token = await getServerAccessToken()
   if (token) {
     try {
       const h = await headers()

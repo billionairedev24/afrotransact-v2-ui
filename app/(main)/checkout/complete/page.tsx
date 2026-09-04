@@ -365,10 +365,11 @@ function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
   const [order, setOrder] = useState<OrderDto | null>(null)
 
   useEffect(() => {
-    const token = (session as { accessToken?: string } | null)?.accessToken
-    if (!orderNumber || !token) return
+    // Auth presence (not a secret): the /api/gw proxy attaches the real token.
+    const uid = (session as { user?: { id?: string } } | null)?.user?.id
+    if (!orderNumber || !uid) return
     let cancelled = false
-    getOrderByNumber(token, orderNumber)
+    getOrderByNumber(uid, orderNumber)
       .then((o) => { if (!cancelled) setOrder(o) })
       .catch(() => { /* summary is best-effort; the confirmation stands without it */ })
     return () => { cancelled = true }

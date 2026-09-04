@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { getServerAccessToken } from "@/lib/server-token"
 import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
   const size = searchParams.get("size") || "500"
 
   try {
-    const token = (session as any).accessToken ?? ""
+    const token = (await getServerAccessToken()) ?? ""
     const params = new URLSearchParams({ page, size })
     if (search) params.set("search", search)
 

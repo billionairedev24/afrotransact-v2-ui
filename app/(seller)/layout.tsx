@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { getServerAccessToken } from "@/lib/server-token"
 import { SellerShell } from "@/components/seller/SellerShell"
 import type { SellerInfo } from "@/lib/api"
 import {
@@ -43,7 +44,7 @@ export default async function SellerLayout({
     process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:8080"
 
-  const token = session.accessToken
+  const token = await getServerAccessToken()
   if (!token) {
     redirect("/auth/login?callbackUrl=/dashboard")
   }

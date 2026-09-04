@@ -358,7 +358,10 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
-      session.accessToken = token.accessToken
+      // BFF: the Keycloak access token is NOT exposed to the browser. It stays
+      // in the JWT cookie (set in the jwt() callback) and is read server-side by
+      // the /api/gw proxy + getServerAccessToken(). Only non-secret identity is
+      // returned to the client here.
       session.error = token.error
       session.sid = token.sid
 

@@ -52,9 +52,9 @@ export function ReferralClaimProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (status !== "authenticated") return
-    const token = session?.accessToken as string | undefined
     const userId = (session?.user as { id?: string } | undefined)?.id
-    if (!token || !userId) return
+    if (!userId) return
+    const token = userId // non-secret marker; proxy attaches the real token
 
     const code = readReferralCookie()
     if (!code) return
@@ -86,7 +86,7 @@ export function ReferralClaimProvider({ children }: { children: React.ReactNode 
         logError(e, "referral claim")
       }
     })()
-  }, [status, session?.accessToken, session?.user])
+  }, [status, session?.user])
 
   return <>{children}</>
 }

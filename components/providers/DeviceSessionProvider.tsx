@@ -18,17 +18,19 @@ export function DeviceSessionProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (status !== "authenticated") return
-    const token = session?.accessToken as string | undefined
+    // Token no longer needed client-side — the /api/gw proxy attaches it. Pass
+    // the user id as a non-secret presence marker; only `sid` is required data.
+    const uid = session?.user?.id as string | undefined
     const sid = session?.sid as string | undefined
-    if (!token || !sid) return
+    if (!uid || !sid) return
     if (pingedForSid.current === sid) return
     pingedForSid.current = sid
     const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""
-    void pingLoginSession(token, sid, ua).catch(() => {
+    void pingLoginSession(uid, sid, ua).catch(() => {
       // Non-fatal — device just won't be labeled. Allow a retry on next change.
       pingedForSid.current = null
     })
-  }, [status, session?.accessToken, session?.sid])
+  }, [status, session?.user?.id, session?.sid])
 
   return <>{children}</>
 }
