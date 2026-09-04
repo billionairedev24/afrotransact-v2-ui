@@ -15,6 +15,7 @@ import { toast } from "sonner"
 import { Plus, Ticket, Pencil, X } from "lucide-react"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
+import { Sheet, SheetBody } from "@/components/ui/Sheet"
 import { createColumnHelper } from "@tanstack/react-table"
 
 function fmtDate(iso: string) {
@@ -308,16 +309,27 @@ export default function AdminCouponsPage() {
           page is coupon CRUD only, so operators aren't editing the same
           flag in two places. */}
 
-      {(showForm || editing) && (
-        <CouponForm
-          coupon={editing}
-          isAdmin
-          // Seller-owned coupons open in view-only mode; site-wide stay editable.
-          readOnly={!!editing?.sellerId}
-          onSubmit={editing ? (d) => handleUpdate(editing.id, d) : handleCreate}
-          onCancel={() => { setShowForm(false); setEditing(null) }}
-        />
-      )}
+      {/* Coupon create/view/edit opens in a side sheet (not inline above the
+          list). Keyed so the form remounts — and re-seeds its fields — each
+          time a different coupon (or create) is opened. */}
+      <Sheet
+        open={showForm || !!editing}
+        onClose={() => { setShowForm(false); setEditing(null) }}
+      >
+        <SheetBody>
+          {(showForm || editing) && (
+            <CouponForm
+              key={editing?.id ?? "new"}
+              coupon={editing}
+              isAdmin
+              // Seller-owned coupons open in view-only mode; site-wide stay editable.
+              readOnly={!!editing?.sellerId}
+              onSubmit={editing ? (d) => handleUpdate(editing.id, d) : handleCreate}
+              onCancel={() => { setShowForm(false); setEditing(null) }}
+            />
+          )}
+        </SheetBody>
+      </Sheet>
 
       {!loading && coupons.length === 0 && !showForm && !editing ? (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
@@ -434,7 +446,7 @@ function CouponForm({
   const selectAttrs = readOnly ? { disabled: true } : {}
 
   return (
-    <form onSubmit={readOnly ? (e) => e.preventDefault() : handleSubmit} className="rounded-xl border border-input bg-white p-6 space-y-4">
+    <form onSubmit={readOnly ? (e) => e.preventDefault() : handleSubmit} className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">
           {readOnly ? "View Coupon (seller-owned, read-only)" : coupon ? "Edit Coupon" : "Create Site-Wide Coupon"}
