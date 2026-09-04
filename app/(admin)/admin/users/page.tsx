@@ -269,10 +269,6 @@ export default function UsersPage() {
             </div>
             <div className="min-w-0">
               <p className="truncate font-medium text-gray-900">{displayName(user)}</p>
-              <MaskedEmail email={info.getValue()} className="truncate text-xs text-gray-500" />
-              {user.phone && (
-                <MaskedPhone phone={user.phone} className="truncate text-xs text-gray-500" />
-              )}
             </div>
           </div>
         )
@@ -286,6 +282,18 @@ export default function UsersPage() {
           user.username.toLowerCase().includes(search)
         )
       },
+    }),
+    col.accessor((row) => row.email, {
+      id: "emailAddr",
+      header: "Email",
+      cell: (info) => <MaskedEmail email={info.getValue()} className="text-sm text-gray-600" />,
+      enableSorting: false,
+    }),
+    col.accessor((row) => row.phone, {
+      id: "phone",
+      header: "Phone",
+      cell: (info) => <MaskedPhone phone={info.getValue()} className="text-sm text-gray-600" />,
+      enableSorting: false,
     }),
     col.display({
       id: "roles",
