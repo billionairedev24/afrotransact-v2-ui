@@ -442,42 +442,10 @@ function OrderDetailModal({
           )
         })()}
 
-        <div className="rounded-xl border border-input bg-gray-50 p-4 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Customer payment (whole order)</p>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-mono tabular-nums text-gray-900">{formatCents(order.raw.subtotalCents, order.currency)}</span>
-            </div>
-            {(order.raw.discountCents ?? 0) > 0 && (
-              <div className="flex justify-between gap-4 text-green-700">
-                <span>
-                  {order.raw.couponCode ? `Coupon (${order.raw.couponCode})` : "Coupon / savings"}
-                </span>
-                <span className="font-mono tabular-nums">−{formatCents(order.raw.discountCents ?? 0, order.currency)}</span>
-              </div>
-            )}
-            <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Tax collected</span>
-              <span className="font-mono tabular-nums text-gray-900">{formatCents(order.raw.taxCents ?? 0, order.currency)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Shipping collected</span>
-              <span className="font-mono tabular-nums text-gray-900">{formatCents(order.raw.shippingCostCents ?? 0, order.currency)}</span>
-            </div>
-            <div className="flex justify-between gap-4 border-t border-input pt-2 font-semibold text-gray-900">
-              <span>Order total</span>
-              <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents, order.currency)}</span>
-            </div>
-            {(order.raw.storeCreditAppliedCents ?? 0) > 0 && (
-              <div className="flex justify-between gap-4 pt-1 text-xs text-gray-500">
-                <span>Store credit used (house-funded — doesn&apos;t affect your earnings)</span>
-                <span className="font-mono tabular-nums">−{formatCents(order.raw.storeCreditAppliedCents ?? 0, order.currency)}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
+        {/* A seller only ever sees THEIR sub-order — never the whole order's
+            totals, other sellers' items, or the platform coupon. The service
+            already scopes the payload to this store; the single panel below is
+            that store's slice. */}
         {(() => {
           const slice = order.relevantSubs.reduce(
             (acc, sub) => {
