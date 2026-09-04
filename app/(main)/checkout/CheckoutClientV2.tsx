@@ -1812,7 +1812,11 @@ export default function CheckoutClientV2({
 
         {/* Right rail: Order summary */}
         <aside className="lg:col-span-1">
-          <div className="lg:sticky lg:top-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="lg:sticky lg:top-24 flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            {/* On mobile the payment form comes first and the order summary
+                sits directly beneath it (flex order); desktop keeps the summary
+                on top of the sticky rail. */}
+            <div className="order-2 mt-4 border-t border-gray-200 pt-4 lg:order-1 lg:mt-0 lg:border-0 lg:pt-0">
             <h2 className="text-lg font-bold text-gray-900 mb-3">Order summary</h2>
 
             {couponsEnabled && (
@@ -2013,11 +2017,13 @@ export default function CheckoutClientV2({
                 <AlertCircle className="h-3 w-3 inline mr-1" /> {placeError}
               </div>
             )}
+            </div>
 
             {/* Payment — lives in the sticky summary panel next to Pay so the
                 card entry is always on screen; buyers no longer scroll past a
-                long item list to find it (or hit Pay before entering a card). */}
-            <div className="mt-4 border-t border-gray-200 pt-4">
+                long item list to find it (or hit Pay before entering a card).
+                On mobile it renders FIRST (order-1) so the summary sits under it. */}
+            <div className="order-1 lg:order-2 lg:mt-4 lg:border-t lg:border-gray-200 lg:pt-4">
               <h3 className="mb-2.5 text-sm font-bold text-gray-900">Payment</h3>
               {(!selectedAddress || !selectedQuoteId) ? (
                 <p className="text-sm text-gray-500">Add an address and choose delivery above to enter your card.</p>
@@ -2047,6 +2053,7 @@ export default function CheckoutClientV2({
               )}
             </div>
 
+            <div className="order-3">
             <PlaceOrderButton
               disabled={placeDisabled}
               loading={paying}
@@ -2062,6 +2069,7 @@ export default function CheckoutClientV2({
               <a href="/terms" className="underline">Terms</a> and{" "}
               <a href="/privacy" className="underline">Privacy Policy</a>.
             </p>
+            </div>
           </div>
         </aside>
       </div>
