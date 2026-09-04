@@ -205,9 +205,10 @@ export default function EmailTemplatesPage() {
   const [loadingDetail, setLoadingDetail] = useState(false)
   // Free-text search across name / slug / description / category.
   const [search, setSearch] = useState("")
-  // Categories the admin has explicitly collapsed. Every group is expanded
-  // by default; collapsing one never affects its siblings.
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
+  // Categories the admin has explicitly expanded. Every group starts COLLAPSED;
+  // the admin expands the ones they want, and expanding/collapsing one never
+  // affects its siblings. (An active search force-expands matching groups.)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
   const [viewMode, setViewMode] = useState<ViewMode>("list")
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -510,7 +511,7 @@ export default function EmailTemplatesPage() {
   )
 
   const toggleGroup = (cat: string) =>
-    setCollapsedGroups(prev => ({ ...prev, [cat]: !prev[cat] }))
+    setExpandedGroups(prev => ({ ...prev, [cat]: !prev[cat] }))
 
   // Every template returned by the API is shown. `_layout` is an internal
   // wrapper (not a real email), so it stays hidden from the grouped list.
@@ -1165,7 +1166,7 @@ export default function EmailTemplatesPage() {
             const items = grouped.get(cat) ?? []
             // Searching implies intent to see matches — force-expand while a
             // query is active, otherwise respect the admin's collapse choice.
-            const collapsed = !query && collapsedGroups[cat]
+            const collapsed = !query && !expandedGroups[cat]
             return (
               <section
                 key={cat}
