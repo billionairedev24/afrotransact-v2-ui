@@ -3,6 +3,18 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:8080"
 
+/**
+ * BFF-aware URL for a gateway path. In the browser, route through the
+ * same-origin proxy (/api/gw) which attaches the access token server-side from
+ * the HttpOnly session — the token never touches JS. On the server, hit the
+ * gateway directly. The proxy strips any client Authorization and re-attaches
+ * the real token, so callers need only swap the URL. Use for the raw fetches
+ * that bypass `api()`.
+ */
+export function gatewayUrl(path: string): string {
+  return typeof window !== "undefined" ? `/api/gw${path}` : `${API_BASE}${path}`
+}
+
 /** Default request budget in ms. One slow downstream shouldn't hang the UI forever. */
 const DEFAULT_TIMEOUT_MS = 15_000
 
@@ -39,7 +51,12 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     "Content-Type": "application/json",
     ...(extraHeaders as Record<string, string>),
   }
-  if (token) headers["Authorization"] = `Bearer ${token}`
+  // BFF: in the browser we call the same-origin proxy (/api/gw), which attaches
+  // the access token server-side from the HttpOnly session — so we NEVER send
+  // the token from JS. On the server (SSR / route handlers) we call the gateway
+  // directly and forward the caller-supplied token as before.
+  const isBrowser = typeof window !== "undefined"
+  if (token && !isBrowser) headers["Authorization"] = `Bearer ${token}`
 
   // When Server Components want a cached fetch, pass `next: { revalidate, tags }`.
   // Otherwise default to fresh data (no-store) for authenticated/mutating calls.
@@ -56,9 +73,10 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     ? anySignal([signal, timeoutCtrl.signal])
     : timeoutCtrl.signal
 
+  const url = isBrowser ? `/api/gw${path}` : `${API_BASE}${path}`
   let res: Response
   try {
-    res = await fetch(`${API_BASE}${path}`, {
+    res = await fetch(url, {
       ...rest,
       ...cacheOpts,
       headers,
@@ -1821,7 +1839,7 @@ export function getOrderByNumber(token: string, orderNumber: string) {
  * callers can toast an error.
  */
 export async function downloadReceipt(token: string, orderNumber: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/v1/orders/${orderNumber}/receipt`, {
+  const res = await fetch(gatewayUrl(`/api/v1/orders/${orderNumber}/receipt`), {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) {
@@ -3431,7 +3449,7 @@ export function updateEmailTemplate(
 }
 
 export function previewEmailTemplate(token: string, slug: string, body: { html_body?: string; data?: Record<string, unknown> }) {
-  return fetch(`${API_BASE}/api/admin/email-templates/${slug}/preview`, {
+  return fetch(gatewayUrl(`/api/admin/email-templates/${slug}/preview`), {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
@@ -3451,7 +3469,7 @@ export function createEmailTemplate(token: string, body: {
 }
 
 export function deleteEmailTemplate(token: string, slug: string) {
-  return fetch(`${API_BASE}/api/admin/email-templates/${slug}`, {
+  return fetch(gatewayUrl(`/api/admin/email-templates/${slug}`), {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -3462,7 +3480,7 @@ export function sendTestEmail(token: string, slug: string, body: { to: string; d
 }
 
 export function previewRawTemplate(token: string, body: { html_body: string; use_layout: boolean; variables?: VariableDef[]; data?: Record<string, unknown> }) {
-  return fetch(`${API_BASE}/api/admin/email-templates/preview`, {
+  return fetch(gatewayUrl(`/api/admin/email-templates/preview`), {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
@@ -3502,7 +3520,7 @@ export function addNotificationRecipient(token: string, body: { event_type: stri
 }
 
 export function removeNotificationRecipient(token: string, id: string) {
-  return fetch(`${API_BASE}/api/admin/notification-recipients/${id}`, {
+  return fetch(gatewayUrl(`/api/admin/notification-recipients/${id}`), {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -4174,7 +4192,7 @@ export function trackEvent(payload: TrackEventPayload, token?: string): void {
     ...payload,
     client_id: payload.client_id ?? getOrCreateClientId(),
   }
-  fetch(`${API_BASE}/api/v1/ai/events/track`, {
+  fetch(gatewayUrl(`/api/v1/ai/events/track`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

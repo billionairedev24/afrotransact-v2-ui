@@ -1,20 +1,28 @@
 import { getSession, signIn } from "next-auth/react"
 
 /**
- * Get a fresh Keycloak access token by triggering a server-side session refresh.
- * Returns null if the session is missing or has a RefreshTokenError
- * (the SessionGuard will force re-authentication in that case).
+ * Auth-presence check (BFF).
+ *
+ * The access token no longer lives in the browser — it's held server-side and
+ * attached by the /api/gw proxy. Callers historically did
+ * `const token = await getAccessToken(); if (!token) …` and then passed `token`
+ * to `api()`/raw fetches. That contract is preserved: this returns a truthy
+ * NON-SECRET marker (the user id) when a usable session exists, and null
+ * otherwise — so caller gates still work. The returned value is NOT a bearer
+ * token; the proxy strips any Authorization the browser sends and re-attaches
+ * the real token. Returns null on RefreshTokenError so the SessionGuard can
+ * force re-authentication.
  */
 export async function getAccessToken(): Promise<string | null> {
   const session = await getSession() as {
-    accessToken?: string
     error?: string
+    user?: { id?: string }
   } | null
 
-  if (!session?.accessToken) return null
+  if (!session?.user?.id) return null
   if (session.error === "RefreshTokenError") return null
 
-  return session.accessToken
+  return session.user.id
 }
 
 /** True while the short-lived sign-out marker cookie (set by /api/auth/signout)

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
-import { getSubscription, getPublicPlans, type SubscriptionPlan } from "@/lib/api"
+import { getSubscription, getPublicPlans, gatewayUrl, type SubscriptionPlan } from "@/lib/api"
 import {
   isSellerDashboardOnboardingReady,
   parseSellerMeResponse,
@@ -48,9 +48,8 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
 
         // First check if the seller's onboarding is complete.
         // If not, redirect to onboarding instead of showing subscription paywall.
-        const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
         try {
-          const sellerRes = await fetch(`${API_BASE}/api/v1/seller/me`, {
+          const sellerRes = await fetch(gatewayUrl(`/api/v1/seller/me`), {
             headers: { Authorization: `Bearer ${token}` },
           })
           const sellerRow = await parseSellerMeResponse(sellerRes)

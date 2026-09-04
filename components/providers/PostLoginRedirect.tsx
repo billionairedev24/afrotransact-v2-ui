@@ -5,8 +5,7 @@ import { useSession } from "next-auth/react"
 import { useRouter, usePathname } from "next/navigation"
 import { getAccessToken, isSignedOutRecently } from "@/lib/auth-helpers"
 import { isSellerDashboardOnboardingReady } from "@/lib/seller-dashboard-access"
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
+import { gatewayUrl } from "@/lib/api"
 
 /**
  * Pages where a signed-in seller is allowed to stay — the post-login redirect
@@ -41,7 +40,7 @@ function isRedirectExemptPath(pathname: string | null): boolean {
 
 async function fetchUserRole(token: string): Promise<string | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/users/me`, {
+    const res = await fetch(gatewayUrl(`/api/v1/users/me`), {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) {
@@ -56,7 +55,7 @@ async function fetchUserRole(token: string): Promise<string | null> {
 
 async function fetchOnboardingStatus(token: string): Promise<string | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/seller/me`, {
+    const res = await fetch(gatewayUrl(`/api/v1/seller/me`), {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) {

@@ -4,9 +4,8 @@ import { useCallback, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useAiStore, type ProductCard } from "@/stores/ai-store"
 import { useCartStore } from "@/stores/cart-store"
+import { gatewayUrl } from "@/lib/api"
 import { useTextToSpeech } from "./useTextToSpeech"
-
-const AI_BASE = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/ai`
 
 const ACKS = [
   "On it! 🔍",
@@ -103,14 +102,14 @@ export function useAiChat() {
 
       appendToMessage(assistantMsg.id, randomAck())
 
-      const token = (session as any)?.accessToken as string | undefined
+      // BFF: hit the same-origin proxy; it attaches the token server-side and
+      // streams the SSE response through. No token in the browser.
       const headers: Record<string, string> = { "Content-Type": "application/json" }
-      if (token) headers["Authorization"] = `Bearer ${token}`
 
       let fullResponse = ""
 
       try {
-        const res = await fetch(`${AI_BASE}/chat/stream`, {
+        const res = await fetch(gatewayUrl("/api/v1/ai/chat/stream"), {
           method: "POST",
           headers,
           body: JSON.stringify({
