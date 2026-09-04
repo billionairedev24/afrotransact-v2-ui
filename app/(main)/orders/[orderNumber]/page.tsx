@@ -659,7 +659,7 @@ function OrderDeliveryTracker({
               skip next/image so we don't need every possible host in remotePatterns. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={s.deliveryProofImageUrl}
+            src={s.deliveryProofImageUrl ?? undefined}
             alt="Delivery photo"
             className="max-h-80 rounded-lg border border-border bg-muted object-contain"
           />
