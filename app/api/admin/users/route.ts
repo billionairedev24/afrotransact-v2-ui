@@ -12,6 +12,7 @@ export interface AdminUserDTO {
   firstName: string
   lastName: string
   email: string
+  phone: string
   emailVerified: boolean
   enabled: boolean
   createdTimestamp: number
@@ -68,6 +69,7 @@ export async function GET(request: Request) {
       firstName: p.firstName ?? "",
       lastName: p.lastName ?? "",
       email: p.email ?? "",
+      phone: p.phone ?? "",
       emailVerified: true,
       enabled: true,
       createdTimestamp: p.createdAt ? new Date(p.createdAt).getTime() : 0,
