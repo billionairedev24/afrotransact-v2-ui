@@ -312,7 +312,7 @@ function OrderDetailModal({
   onClose: () => void
   onStatusUpdated: (updated: OrderDto) => void
 }) {
-  const [updating, setUpdating] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
   const [trackingInput, setTrackingInput] = useState("")
   const [uploadingProof, setUploadingProof] = useState(false)
   // Ref on the hidden file input so we can auto-open the picker the moment
@@ -325,7 +325,7 @@ function OrderDetailModal({
 
   async function handleUpdateStatus(newStatus: string) {
     if (!subOrderId) return
-    setUpdating(true)
+    setUpdatingStatus(newStatus)
     try {
       const token = await getAccessToken()
       if (!token) return
@@ -343,7 +343,7 @@ function OrderDetailModal({
     } catch (err) {
       toast.error(friendlyMessage(err, "Failed to update status"))
     } finally {
-      setUpdating(false)
+      setUpdatingStatus(null)
     }
   }
 
@@ -416,9 +416,9 @@ function OrderDetailModal({
             <p className="mt-1 text-sm text-gray-600">{formatDate(order.placedAt)}</p>
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Your storefront</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Order total</p>
             <p className="mt-1 text-sm font-medium text-gray-900">{formatCents(order.totalCents, order.currency)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">Including tax &amp; shipping for your items</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Including tax &amp; shipping</p>
           </div>
         </div>
 
@@ -460,28 +460,28 @@ function OrderDetailModal({
           const sliceTotal = slice.sub + slice.shipping + slice.tax - slice.disc
           return (
             <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-700">Your store on this order</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-700">Order summary</p>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-600">Subtotal (your items)</span>
+                  <span className="text-gray-600">Subtotal</span>
                   <span className="font-mono tabular-nums text-gray-900">{formatCents(slice.sub, order.currency)}</span>
                 </div>
                 {slice.disc > 0 && (
                   <div className="flex justify-between gap-4 text-green-700">
-                    <span>Coupon / discounts attributed here</span>
+                    <span>Discount</span>
                     <span className="font-mono tabular-nums">−{formatCents(slice.disc, order.currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-600">Shipping (your shipments)</span>
+                  <span className="text-gray-600">Shipping</span>
                   <span className="font-mono tabular-nums text-gray-900">{formatCents(slice.shipping, order.currency)}</span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-600">Tax attributed to your subtotal</span>
+                  <span className="text-gray-600">Tax</span>
                   <span className="font-mono tabular-nums text-gray-900">{formatCents(slice.tax, order.currency)}</span>
                 </div>
                 <div className="flex justify-between gap-4 border-t border-primary/15 pt-2 font-semibold text-gray-900">
-                  <span>Your storefront total</span>
+                  <span>Total</span>
                   <span className="font-mono tabular-nums">{formatCents(sliceTotal, order.currency)}</span>
                 </div>
               </div>
@@ -508,14 +508,14 @@ function OrderDetailModal({
               {SELLER_STATUSES.map((s) => (
                 <button
                   key={s}
-                  disabled={updating || s === currentFulfillment}
+                  disabled={updatingStatus !== null || s === currentFulfillment}
                   onClick={() => handleUpdateStatus(s)}
                   className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40
                     ${s === currentFulfillment
                       ? "border-primary/40 bg-primary/10 text-foreground"
                       : "border-input text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                 >
-                  {updating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (FULFILLMENT_BADGE[s]?.icon ?? <Package className="h-3.5 w-3.5" />)}
+                  {updatingStatus === s ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (FULFILLMENT_BADGE[s]?.icon ?? <Package className="h-3.5 w-3.5" />)}
                   {s.charAt(0).toUpperCase() + s.slice(1)}
                 </button>
               ))}
