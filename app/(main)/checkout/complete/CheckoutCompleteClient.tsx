@@ -474,7 +474,7 @@ function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
               href={orderNumber ? `/orders/${orderNumber}` : "/orders"}
               className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover"
             >
-              {orderNumber ? "Track your order" : "View orders"} <ArrowRight className="h-4 w-4" />
+              {orderNumber ? (fulfilled ? "View this order" : "Track your order") : "View orders"} <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               href="/"
