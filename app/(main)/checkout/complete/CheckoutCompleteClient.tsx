@@ -82,9 +82,32 @@ const PICKUP_JOURNEY = [
   { key: "collected", label: "Picked up", Icon: PackageCheck },
 ]
 
+// Map a sub-order fulfillment status onto a journey step so a REVISITED
+// confirmation reflects real progress (e.g. an already-collected pickup) rather
+// than always showing "just placed".
+const PICKUP_RANK: Record<string, number> = {
+  placed: 0, confirmed: 0, pending: 0, paid: 0, awaiting_payment: 0,
+  preparing: 1, processing: 1, packaged: 1,
+  ready_for_pickup: 2,
+  picked_up: 3, collected: 3, delivered: 3, completed: 3,
+}
+const SHIP_RANK: Record<string, number> = {
+  placed: 0, confirmed: 0, pending: 0, paid: 0, awaiting_payment: 0,
+  preparing: 1, processing: 1, packaged: 1,
+  shipped: 2, dispatched: 2, out_for_delivery: 2,
+  delivered: 3, completed: 3,
+}
+function furthestStep(shape: FulfillmentShape, subs: SubOrderDto[]): number {
+  if (subs.length === 0) return 0
+  const rank = shape === "allPickup" ? PICKUP_RANK : SHIP_RANK
+  return subs.reduce((max, s) => {
+    const r = rank[(s.fulfillmentStatus ?? "").toLowerCase()] ?? 0
+    return r > max ? r : max
+  }, 0)
+}
+
 /** Horizontal stepper — completed/active/upcoming states with a connecting progress line. */
-function StatusTracker({ steps, title }: { steps: typeof SHIP_JOURNEY; title?: string }) {
-  const active = 0 // just placed
+function StatusTracker({ steps, title, active = 0 }: { steps: typeof SHIP_JOURNEY; title?: string; active?: number }) {
   return (
     <div>
       {title && (
@@ -233,9 +256,27 @@ const HERO_COPY: Record<FulfillmentShape, { title: string; body: string }> = {
   },
 }
 
+// Past-tense hero for an order that's already been fulfilled — shown when the
+// confirmation page is revisited after pickup/delivery so it doesn't falsely
+// read as a brand-new order.
+const HERO_COPY_DONE: Record<FulfillmentShape, { title: string; body: string }> = {
+  allShip: {
+    title: "Your order was delivered",
+    body: "This order is complete. Your receipt is in your email, and full details live in your orders.",
+  },
+  allPickup: {
+    title: "You've picked up this order",
+    body: "This order is complete — thanks for collecting it. Your receipt is in your email, and full details live in your orders.",
+  },
+  mixed: {
+    title: "This order is complete",
+    body: "Every part of this order has been fulfilled. Your receipt is in your email, and full details live in your orders.",
+  },
+}
+
 /** Hero: success mark, per-shape headline, reassurance line, order number stamp. */
-function Hero({ shape, orderNumber }: { shape: FulfillmentShape; orderNumber?: string | null }) {
-  const hero = HERO_COPY[shape]
+function Hero({ shape, orderNumber, fulfilled }: { shape: FulfillmentShape; orderNumber?: string | null; fulfilled?: boolean }) {
+  const hero = (fulfilled ? HERO_COPY_DONE : HERO_COPY)[shape]
   return (
     <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-center sm:gap-6 sm:text-left">
       <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
@@ -379,12 +420,16 @@ function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
   const currency = order?.currency ?? "USD"
   const shape = getFulfillmentShape(order)
   const pickupSubOrders = (order?.subOrders ?? []).filter((s) => s.deliveryMethod === "pickup")
+  // Reflect real progress on a revisit (e.g. an already-collected pickup),
+  // instead of always rendering the just-placed confirmation.
+  const activeStep = furthestStep(shape, order?.subOrders ?? [])
+  const fulfilled = activeStep >= 3
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
       {/* Hero */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-        <Hero shape={shape} orderNumber={orderNumber} />
+        <Hero shape={shape} orderNumber={orderNumber} fulfilled={fulfilled} />
       </div>
 
       {/* Two-column: tracker/fulfillment (left) + sticky order summary (right) */}
@@ -397,6 +442,7 @@ function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
               <StatusTracker
                 steps={shape === "allPickup" ? PICKUP_JOURNEY : SHIP_JOURNEY}
                 title={shape === "allPickup" ? "Pickup status" : "Delivery status"}
+                active={activeStep}
               />
               {shape === "allPickup" && (
                 <div className="mt-6 space-y-3">
@@ -406,19 +452,21 @@ function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
             </div>
           )}
 
-          {/* What's next */}
-          <div className="flex items-start gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-sm text-muted-foreground shadow-sm">
-            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-brand-gold" />
-            <p>
-              We&rsquo;ll email your receipt now and another note the moment{" "}
-              {shape === "allPickup"
-                ? "your order is ready for pickup"
-                : shape === "mixed"
-                  ? "each part of your order ships or is ready to collect"
-                  : "your order ships"}
-              . You can track everything from your orders anytime.
-            </p>
-          </div>
+          {/* What's next — only relevant before the order is fulfilled. */}
+          {!fulfilled && (
+            <div className="flex items-start gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-sm text-muted-foreground shadow-sm">
+              <Mail className="mt-0.5 h-4 w-4 shrink-0 text-brand-gold" />
+              <p>
+                We&rsquo;ll email your receipt now and another note the moment{" "}
+                {shape === "allPickup"
+                  ? "your order is ready for pickup"
+                  : shape === "mixed"
+                    ? "each part of your order ships or is ready to collect"
+                    : "your order ships"}
+                . You can track everything from your orders anytime.
+              </p>
+            </div>
+          )}
 
           {/* CTAs */}
           <div className="flex flex-wrap gap-3">

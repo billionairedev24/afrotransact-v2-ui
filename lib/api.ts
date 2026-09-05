@@ -1054,6 +1054,7 @@ export interface RefundDto {
   id: string
   paymentId: string
   orderId: string
+  orderNumber?: string | null
   subOrderId: string | null
   amountCents: number
   currency: string
@@ -1091,6 +1092,11 @@ export function adminListRefundsByOrder(token: string, orderId: string) {
 
 export function adminListRefundsByOrderNumber(token: string, orderNumber: string) {
   return api<RefundDto[]>(`/api/v1/admin/refunds/by-order-number/${orderNumber}`, { token })
+}
+
+/** Admin ledger of all refunds issued, newest first (order numbers resolved). */
+export function adminListAllRefunds(token: string, page = 0, size = 25) {
+  return api<Page<RefundDto>>(`/api/v1/admin/refunds?page=${page}&size=${size}`, { token })
 }
 
 // ── Returns (buyer + seller) ─────────────────────────────────────────────────
