@@ -8,11 +8,11 @@ import {
   ClipboardList,
   Loader2,
   Eye,
-  CreditCard,
   Package,
   Truck,
 } from "lucide-react"
 import { getStatusStyle } from "@/lib/status-config"
+import { CardBrandMark } from "@/components/account/CardBrandMark"
 import { isHouseStore } from "@/lib/house-store"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
@@ -380,11 +380,11 @@ function AdminOrderDetailSheet({
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Payment</p>
-                <div className="mt-1 flex items-center gap-1.5 overflow-hidden">
-                   <CreditCard className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                <div className="mt-1 flex items-center gap-2 overflow-hidden">
+                   <CardBrandMark brand={order.raw.paymentMethod ?? null} />
                    <p className="text-sm text-gray-900 truncate">
-                     {order.raw.paymentMethod || "Stripe"}
-                     {order.raw.last4 ? ` •••• ${order.raw.last4}` : ""}
+                     {order.raw.paymentMethod || "Card"}
+                     {order.raw.last4 ? ` ending in ${order.raw.last4}` : ""}
                    </p>
                 </div>
               </div>

@@ -41,7 +41,7 @@ import {
 } from "@/lib/api"
 import { statusBadge } from "@/components/orders/status"
 import {
-  ArrowLeft, Package, Truck, CheckCircle, Clock, Loader2, XCircle,
+  ArrowLeft, Package, Truck, CheckCircle, CheckCircle2, Clock, Loader2, XCircle,
   CreditCard, MapPin, Star, BadgeCheck, Home, ShoppingBag, Store, FileDown, ShieldAlert,
 } from "lucide-react"
 
@@ -290,18 +290,28 @@ function FulfillmentStepper({
 
 /* ─────────────────────── Pickup card ─────────────────────── */
 
+/** True once the buyer has physically collected this pickup sub-order. */
+function isCollectedSub(sub: SubOrderDto): boolean {
+  return ["picked_up", "collected", "delivered", "completed"].includes(
+    (sub.fulfillmentStatus ?? "").toLowerCase(),
+  )
+}
+
 function PickupCard({ sub }: { sub: SubOrderDto }) {
   const loc = sub.pickupLocation
   if (!loc) return null
+  const collected = isCollectedSub(sub)
   const addressLine = [loc.city, loc.region].filter(Boolean).join(", ") + (loc.postalCode ? ` ${loc.postalCode}` : "")
   return (
     <div className="relative overflow-hidden rounded-2xl border border-brand-green/30 bg-brand-green-soft/50 p-5">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-green text-brand-green-foreground">
-          <Store className="h-5 w-5" />
+          {collected ? <CheckCircle2 className="h-5 w-5" /> : <Store className="h-5 w-5" />}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-brand-green">Collect in store</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-brand-green">
+            {collected ? "Picked up at" : "Collect in store"}
+          </p>
           <p className="mt-0.5 text-base font-bold text-foreground">{loc.name || "Store pickup"}</p>
         </div>
       </div>
@@ -316,17 +326,25 @@ function PickupCard({ sub }: { sub: SubOrderDto }) {
             </span>
           </p>
         )}
-        {(loc.hours || loc.prepTime) && (
+        {/* Hours / "Ready in" are forward-looking — only relevant before pickup. */}
+        {!collected && (loc.hours || loc.prepTime) && (
           <p className="flex items-start gap-2 text-sm text-muted-foreground">
             <Clock className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
             <span>{[loc.hours, loc.prepTime && `Ready in ${loc.prepTime}`].filter(Boolean).join(" · ")}</span>
           </p>
         )}
-        {loc.instructions && <p className="text-sm text-muted-foreground">{loc.instructions}</p>}
+        {!collected && loc.instructions && <p className="text-sm text-muted-foreground">{loc.instructions}</p>}
       </div>
-      <p className="mt-4 rounded-lg bg-card/70 px-3 py-2 text-[11px] font-semibold text-muted-foreground">
-        Show your confirmation email or a photo ID when you collect.
-      </p>
+      {/* Only nudge for ID before collection; after pickup it's just history. */}
+      {collected ? (
+        <p className="mt-4 flex items-center gap-1.5 rounded-lg bg-card/70 px-3 py-2 text-[11px] font-semibold text-brand-green">
+          <CheckCircle2 className="h-3.5 w-3.5" /> Collected — thanks for picking up.
+        </p>
+      ) : (
+        <p className="mt-4 rounded-lg bg-card/70 px-3 py-2 text-[11px] font-semibold text-muted-foreground">
+          Show your confirmation email or a photo ID when you collect.
+        </p>
+      )}
     </div>
   )
 }
@@ -357,11 +375,14 @@ function dedupePickupsByLocation(subs: SubOrderDto[]): SubOrderDto[] {
 function PickupLocations({ subOrders }: { subOrders: SubOrderDto[] }) {
   const locations = dedupePickupsByLocation(subOrders.filter((s) => isPickupSub(s)))
   if (locations.length === 0) return null
+  // Past-tense header once every shown pickup has been collected.
+  const allCollected = locations.every((s) => isCollectedSub(s))
+  const header = allCollected
+    ? (locations.length > 1 ? "Where you picked up" : "Picked up")
+    : (locations.length > 1 ? "Where to collect" : "Where to collect your order")
   return (
     <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
-      <h3 className="mb-4 text-sm font-bold text-foreground">
-        {locations.length > 1 ? "Where to collect" : "Where to collect your order"}
-      </h3>
+      <h3 className="mb-4 text-sm font-bold text-foreground">{header}</h3>
       <div className="flex flex-col gap-4">
         {locations.map((s) => <PickupCard key={s.id} sub={s} />)}
       </div>
@@ -669,6 +690,11 @@ function OrderDeliveryTracker({
   subOrders: SubOrderDto[]
 }) {
   const headline = statusHeadline(status, undefined, pickup)
+  // A collected pickup is not "Delivered" — the shared status badge maps
+  // delivered/completed to "Delivered" regardless of channel, so relabel it
+  // for pickup so the pill matches the "Picked up" reality.
+  const isCollected = ["delivered", "completed", "picked_up", "collected"].includes(status.toLowerCase())
+  const badgeLabel = pickup && isCollected ? "Picked up" : badge.label
   const tracked = subOrders.filter((s) => !!s.trackingNumber)
   const proofs = subOrders.filter(
     (s) => (s.fulfillmentStatus === "delivered" || s.fulfillmentStatus === "completed") && s.deliveryProofImageUrl,
@@ -684,7 +710,7 @@ function OrderDeliveryTracker({
           "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
           badge.tone,
         )}>
-          <badge.Icon className="h-3 w-3" /> {badge.label}
+          <badge.Icon className="h-3 w-3" /> {badgeLabel}
         </span>
       </div>
       <p className="mb-5 text-base font-bold text-foreground">{headline}</p>
