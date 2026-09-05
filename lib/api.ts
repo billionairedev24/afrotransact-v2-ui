@@ -1225,6 +1225,28 @@ export function withdrawDispute(token: string, disputeId: string) {
   return api<DisputeDto>(`/api/v1/disputes/${disputeId}/withdraw`, { method: "POST", token })
 }
 
+export function sellerListDisputes(token: string, storeId: string, status?: DisputeStatus[], page = 0, size = 20) {
+  const params = new URLSearchParams()
+  ;(status ?? []).forEach((s) => params.append("status", s))
+  params.set("page", String(page))
+  params.set("size", String(size))
+  return api<PagedDisputes>(`/api/v1/disputes/store/${storeId}?${params.toString()}`, { token })
+}
+
+export function sellerRespondDispute(
+  token: string,
+  storeId: string,
+  disputeId: string,
+  body: { response: "accept" | "contest"; sellerNotes?: string },
+) {
+  return api<DisputeDto>(`/api/v1/disputes/${disputeId}/respond`, {
+    method: "POST",
+    body,
+    token,
+    headers: { "X-Store-Id": storeId },
+  })
+}
+
 export function adminListDisputes(token: string, status?: DisputeStatus[], page = 0, size = 20) {
   const params = new URLSearchParams()
   ;(status ?? []).forEach((s) => params.append("status", s))

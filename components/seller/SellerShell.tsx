@@ -38,6 +38,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/products",     label: "Products",       icon: Package         },
   { href: "/dashboard/orders",       label: "Orders",        icon: ShoppingCart    },
   { href: "/dashboard/returns",      label: "Returns",        icon: RotateCcw       },
+  { href: "/dashboard/disputes",     label: "Disputes",       icon: ShieldAlert     },
   { href: "/dashboard/upload",       label: "Media Library",  icon: Upload         },
   { href: "/dashboard/reviews",      label: "Reviews",        icon: Star            },
   { href: "/dashboard/coupons",      label: "Coupons",        icon: Ticket          },
