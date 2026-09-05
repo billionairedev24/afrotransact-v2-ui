@@ -339,7 +339,11 @@ export const authOptions: NextAuthOptions = {
       // refresh token has expired past Keycloak's SSO idle TTL falls through to
       // the refresh below, which fails and sets error=RefreshTokenError → the
       // SessionGuard performs a full sign-out.)
-      const EXPIRY_BUFFER_MS = 60_000
+      // Refresh only in the last few seconds of the token's life — NOT a full
+      // 60s, which (with a 60s Keycloak access-token lifespan) made this branch
+      // false for the token's ENTIRE life, forcing a refresh on every single
+      // request and racing the rotating refresh token across parallel calls.
+      const EXPIRY_BUFFER_MS = 10_000
       if (token.expiresAt && Date.now() < token.expiresAt * 1000 - EXPIRY_BUFFER_MS) {
         return token
       }
@@ -432,12 +436,36 @@ export const authOptions: NextAuthOptions = {
   },
 }
 
-async function refreshAccessToken(token: {
+// De-dupe concurrent refreshes: a page that fires several API calls at once
+// would otherwise trigger several parallel refreshes with the SAME refresh
+// token. Keycloak rotates the refresh token on first use, so all but the
+// winner would fail → RefreshTokenError → spurious 401s. Sharing one in-flight
+// promise per refresh token (within this Node process) makes them all await the
+// single refresh instead of racing it.
+const inflightRefreshes = new Map<string, Promise<Record<string, unknown>>>()
+
+function refreshAccessToken(token: {
   refreshToken?: string
   accessToken?: string
   expiresAt?: number
   [key: string]: unknown
-}) {
+}): Promise<Record<string, unknown>> {
+  const key = token.refreshToken ?? ""
+  const existing = inflightRefreshes.get(key)
+  if (existing) return existing
+  const p = doRefreshAccessToken(token).finally(() => {
+    inflightRefreshes.delete(key)
+  })
+  inflightRefreshes.set(key, p)
+  return p
+}
+
+async function doRefreshAccessToken(token: {
+  refreshToken?: string
+  accessToken?: string
+  expiresAt?: number
+  [key: string]: unknown
+}): Promise<Record<string, unknown>> {
   const tokenUrl = `${kcIssuerServer}/protocol/openid-connect/token`
 
   const response = await fetch(tokenUrl, {
