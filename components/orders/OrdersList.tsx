@@ -34,6 +34,7 @@ import {
 } from "lucide-react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { getBuyerOrders, reorderOrder, downloadReceipt, getStoreById, type OrderDto, type Page } from "@/lib/api"
+import { WriteReviewModal } from "@/components/reviews/WriteReviewModal"
 import { logError, friendlyMessage } from "@/lib/errors"
 import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
@@ -410,6 +411,7 @@ function OrderCard({
   const soldByLabel = sellerNames.join(" & ")
 
   const [downloadingReceipt, setDownloadingReceipt] = useState(false)
+  const [showReview, setShowReview] = useState(false)
   async function handleDownloadReceipt() {
     if (downloadingReceipt) return
     setDownloadingReceipt(true)
@@ -486,13 +488,14 @@ function OrderCard({
           </Link>
         )}
         {canReview && (
-          <Link
-            href={`${detailsHref}#review`}
+          <button
+            type="button"
+            onClick={() => setShowReview(true)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand-green px-3.5 py-2 text-xs font-semibold text-white hover:brightness-95"
           >
             <Star className="h-3.5 w-3.5" />
             Write a review
-          </Link>
+          </button>
         )}
         {canReorder && (
           <button
@@ -525,6 +528,9 @@ function OrderCard({
         </Link>
       </div>
       </div>
+      {showReview && (
+        <WriteReviewModal order={order} onClose={() => setShowReview(false)} />
+      )}
     </li>
   )
 }
