@@ -25,6 +25,7 @@ import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { getAccessToken, autoSignInKeycloak } from "@/lib/auth-helpers"
 import { RequestReturnButton } from "@/components/returns/RequestReturnButton"
+import { ReportProblemButton } from "@/components/disputes/ReportProblemButton"
 import { CardBrandMark } from "@/components/account/CardBrandMark"
 import {
   getOrderByNumber,
@@ -719,9 +720,12 @@ function SubOrderItems({
         <p className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
           🏪 Sold by {storeName}
         </p>
-        {isDelivered && (
-          <RequestReturnButton sub={sub} orderNumber={orderNumber} />
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {isDelivered && <RequestReturnButton sub={sub} orderNumber={orderNumber} />}
+          {/* A dispute needs no send-back and applies before delivery too
+              (e.g. "didn't receive my order"), so it's offered more broadly. */}
+          <ReportProblemButton sub={sub} orderNumber={orderNumber} />
+        </div>
       </div>
       <div className="flex flex-col gap-5">
         {sub.items.map((item) => (

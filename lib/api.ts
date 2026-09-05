@@ -1168,6 +1168,79 @@ export function cancelReturn(token: string, returnId: string) {
   return api<ReturnDto>(`/api/v1/returns/${returnId}/cancel`, { method: "POST", token })
 }
 
+// ── Disputes (distinct from returns — no send-back) ──────────────────────────
+
+export type DisputeType = "not_received" | "not_as_described" | "damaged" | "unauthorized" | "other"
+export type DisputeStatus =
+  | "open" | "needs_info" | "seller_responded" | "escalated"
+  | "resolved_refund" | "resolved_declined" | "withdrawn"
+
+export interface DisputeDto {
+  id: string
+  orderId: string
+  orderNumber: string
+  subOrderId: string
+  storeId: string
+  house: boolean
+  type: DisputeType
+  status: DisputeStatus
+  items: Array<{ orderItemId: string; quantity: number }>
+  buyerNotes?: string | null
+  evidenceUrls: string[]
+  sellerNotes?: string | null
+  resolutionNotes?: string | null
+  refundAmountCents?: number | null
+  sellerResponseDueAt?: string | null
+  createdAt: string
+  updatedAt: string
+  resolvedAt?: string | null
+}
+
+export interface CreateDisputeRequest {
+  orderNumber: string
+  subOrderId: string
+  type: DisputeType
+  buyerNotes?: string
+  evidenceUrls?: string[]
+  items?: Array<{ orderItemId: string; quantity: number }>
+}
+
+export interface PagedDisputes {
+  content: DisputeDto[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export function createDispute(token: string, body: CreateDisputeRequest) {
+  return api<DisputeDto>(`/api/v1/disputes`, { method: "POST", body, token })
+}
+
+export function listMyDisputes(token: string, page = 0, size = 20) {
+  return api<PagedDisputes>(`/api/v1/disputes/me?page=${page}&size=${size}`, { token })
+}
+
+export function withdrawDispute(token: string, disputeId: string) {
+  return api<DisputeDto>(`/api/v1/disputes/${disputeId}/withdraw`, { method: "POST", token })
+}
+
+export function adminListDisputes(token: string, status?: DisputeStatus[], page = 0, size = 20) {
+  const params = new URLSearchParams()
+  ;(status ?? []).forEach((s) => params.append("status", s))
+  params.set("page", String(page))
+  params.set("size", String(size))
+  return api<PagedDisputes>(`/api/v1/disputes/admin?${params.toString()}`, { token })
+}
+
+export function adminResolveDispute(
+  token: string,
+  disputeId: string,
+  body: { decision: "refund" | "decline"; refundAmountCents?: number; resolutionNotes?: string },
+) {
+  return api<DisputeDto>(`/api/v1/disputes/${disputeId}/resolve`, { method: "POST", body, token })
+}
+
 export function sellerListReturns(token: string, storeId: string, status?: ReturnStatus[], page = 0, size = 20) {
   const params = new URLSearchParams()
   params.set("page", String(page))
