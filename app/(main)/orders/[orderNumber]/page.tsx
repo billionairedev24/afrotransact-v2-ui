@@ -25,6 +25,7 @@ import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { getAccessToken, autoSignInKeycloak } from "@/lib/auth-helpers"
 import { RequestReturnButton } from "@/components/returns/RequestReturnButton"
+import { CardBrandMark } from "@/components/account/CardBrandMark"
 import {
   getOrderByNumber,
   checkReviewEligibility,
@@ -1002,9 +1003,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
                       <CreditCard className="h-4 w-4 text-muted-foreground" />
                       Payment
                     </h3>
-                    <p className="flex items-center gap-2 text-sm text-foreground">
-                      <CreditCard className="h-4 w-4 text-muted-foreground" /> {pay}
-                    </p>
+                    <div className="flex items-center gap-2.5 text-sm text-foreground">
+                      <CardBrandMark brand={order.paymentMethod ?? null} />
+                      <span>{pay}</span>
+                    </div>
                   </section>
                 )}
               </>
