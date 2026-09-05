@@ -29,6 +29,8 @@ import { ReportProblemButton } from "@/components/disputes/ReportProblemButton"
 import { CardBrandMark } from "@/components/account/CardBrandMark"
 import {
   getOrderByNumber,
+  listMyDisputes,
+  type DisputeDto,
   checkReviewEligibility,
   createReview,
   getStoreById,
@@ -40,8 +42,25 @@ import {
 import { statusBadge } from "@/components/orders/status"
 import {
   ArrowLeft, Package, Truck, CheckCircle, Clock, Loader2, XCircle,
-  CreditCard, MapPin, Star, BadgeCheck, Home, ShoppingBag, Store, FileDown,
+  CreditCard, MapPin, Star, BadgeCheck, Home, ShoppingBag, Store, FileDown, ShieldAlert,
 } from "lucide-react"
+
+const DISPUTE_TYPE_LABEL: Record<string, string> = {
+  not_received: "Not received",
+  not_as_described: "Not as described",
+  damaged: "Damaged / defective",
+  unauthorized: "Unauthorized charge",
+  other: "Other",
+}
+const DISPUTE_STATUS_LABEL: Record<string, string> = {
+  open: "Under review",
+  needs_info: "Needs more info",
+  seller_responded: "Seller responded",
+  escalated: "Escalated",
+  resolved_refund: "Refunded",
+  resolved_declined: "Not approved",
+  withdrawn: "Withdrawn",
+}
 import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
 import { logError } from "@/lib/errors"
@@ -722,9 +741,10 @@ function SubOrderItems({
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {isDelivered && <RequestReturnButton sub={sub} orderNumber={orderNumber} />}
-          {/* A dispute needs no send-back and applies before delivery too
-              (e.g. "didn't receive my order"), so it's offered more broadly. */}
-          <ReportProblemButton sub={sub} orderNumber={orderNumber} />
+          {/* You can only report a problem on something you've received, so this
+              is gated on delivery just like returns (covers "marked delivered
+              but not received" too). */}
+          {isDelivered && <ReportProblemButton sub={sub} orderNumber={orderNumber} />}
         </div>
       </div>
       <div className="flex flex-col gap-5">
@@ -746,6 +766,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   const [error, setError] = useState<string | null>(null)
   const [storeNames, setStoreNames] = useState<Map<string, string>>(new Map())
   const [downloadingReceipt, setDownloadingReceipt] = useState(false)
+  const [disputes, setDisputes] = useState<DisputeDto[]>([])
 
   async function handleDownloadReceipt() {
     if (downloadingReceipt) return
@@ -780,6 +801,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
         if (!token || cancelled) return
         const data = await getOrderByNumber(token, orderNumber)
         if (!cancelled) setOrder(data)
+        // The buyer's disputes for THIS order (best-effort — the order still
+        // renders if this fails).
+        try {
+          const dRes = await listMyDisputes(token, 0, 50)
+          if (!cancelled) setDisputes(dRes.content.filter((x) => x.orderNumber === orderNumber))
+        } catch { /* non-fatal */ }
       } catch (e) {
         logError(e, "loading order")
         if (!cancelled) setError("Failed to load order")
@@ -902,6 +929,27 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
             badge={badge}
             subOrders={order.subOrders}
           />
+
+          {disputes.length > 0 && (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50/40 p-4 shadow-sm sm:p-5">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground">
+                <ShieldAlert className="h-4 w-4 text-amber-600" /> Reported problems
+              </h3>
+              <ul className="space-y-2">
+                {disputes.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-card px-3 py-2 text-sm">
+                    <span className="font-medium text-foreground">{DISPUTE_TYPE_LABEL[d.type] ?? d.type}</span>
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                      {DISPUTE_STATUS_LABEL[d.status] ?? d.status.replace(/_/g, " ")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-muted-foreground">
+                We&rsquo;ll email you as your report is reviewed — no need to ship anything back.
+              </p>
+            </section>
+          )}
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
             <h3 className="mb-4 text-sm font-bold text-foreground">
