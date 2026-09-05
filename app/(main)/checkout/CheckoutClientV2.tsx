@@ -67,6 +67,7 @@ import { useBuyNowStore } from "@/stores/buy-now-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
+import { CardBrandMark } from "@/components/account/CardBrandMark"
 import { PhoneInput, normalizeToE164 } from "@/components/ui/PhoneInput"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
@@ -2430,9 +2431,7 @@ function InlinePaymentForm({
                   onChange={() => onSelectedSavedCardChange(card.stripePmId)}
                   className="h-4 w-4 accent-brand-gold shrink-0"
                 />
-                <div className="flex h-9 w-14 items-center justify-center rounded-md border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 shrink-0">
-                  <CreditCard className="h-4 w-4 text-gray-500" />
-                </div>
+                <CardBrandMark brand={card.brand} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-gray-900">{brandLabel}</span>
