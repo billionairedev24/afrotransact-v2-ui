@@ -15,6 +15,7 @@ import { toast } from "sonner"
 import { Plus, Ticket, Pencil, X } from "lucide-react"
 import { DataTable } from "@/components/ui/DataTable"
 import { RowActions } from "@/components/ui/RowActions"
+import { Sheet, SheetBody } from "@/components/ui/Sheet"
 import { createColumnHelper } from "@tanstack/react-table"
 
 function fmtDate(iso: string) {
@@ -308,16 +309,27 @@ export default function AdminCouponsPage() {
           page is coupon CRUD only, so operators aren't editing the same
           flag in two places. */}
 
-      {(showForm || editing) && (
-        <CouponForm
-          coupon={editing}
-          isAdmin
-          // Seller-owned coupons open in view-only mode; site-wide stay editable.
-          readOnly={!!editing?.sellerId}
-          onSubmit={editing ? (d) => handleUpdate(editing.id, d) : handleCreate}
-          onCancel={() => { setShowForm(false); setEditing(null) }}
-        />
-      )}
+      {/* Coupon create/view/edit opens in a side sheet (not inline above the
+          list). Keyed so the form remounts — and re-seeds its fields — each
+          time a different coupon (or create) is opened. */}
+      <Sheet
+        open={showForm || !!editing}
+        onClose={() => { setShowForm(false); setEditing(null) }}
+      >
+        <SheetBody>
+          {(showForm || editing) && (
+            <CouponForm
+              key={editing?.id ?? "new"}
+              coupon={editing}
+              isAdmin
+              // Seller-owned coupons open in view-only mode; site-wide stay editable.
+              readOnly={!!editing?.sellerId}
+              onSubmit={editing ? (d) => handleUpdate(editing.id, d) : handleCreate}
+              onCancel={() => { setShowForm(false); setEditing(null) }}
+            />
+          )}
+        </SheetBody>
+      </Sheet>
 
       {!loading && coupons.length === 0 && !showForm && !editing ? (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
@@ -396,6 +408,9 @@ function CouponForm({
   const [discountTarget, setDiscountTarget] = useState<"items" | "shipping">(
     (coupon?.discountTarget as "items" | "shipping" | undefined) || "items",
   )
+  // Whether this coupon can be combined with other coupons (stacking). New
+  // coupons default to combinable; false makes it exclusive.
+  const [stackable, setStackable] = useState<boolean>(coupon?.stackable ?? true)
   const [expiresAt, setExpiresAt] = useState(coupon?.expiresAt ? coupon.expiresAt.slice(0, 16) : "")
   const [submitting, setSubmitting] = useState(false)
 
@@ -414,6 +429,7 @@ function CouponForm({
         perUserLimit: perUserLimit ? parseInt(perUserLimit) : undefined,
         scope,
         discountTarget,
+        stackable,
         expiresAt: new Date(expiresAt).toISOString(),
       })
     } catch (e) {
@@ -430,7 +446,7 @@ function CouponForm({
   const selectAttrs = readOnly ? { disabled: true } : {}
 
   return (
-    <form onSubmit={readOnly ? (e) => e.preventDefault() : handleSubmit} className="rounded-xl border border-input bg-white p-6 space-y-4">
+    <form onSubmit={readOnly ? (e) => e.preventDefault() : handleSubmit} className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">
           {readOnly ? "View Coupon (seller-owned, read-only)" : coupon ? "Edit Coupon" : "Create Site-Wide Coupon"}
@@ -491,6 +507,20 @@ function CouponForm({
           <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} className={inputCls} {...inputAttrs} />
         </div>
       </div>
+
+      <label className="flex items-start gap-2.5 rounded-xl border border-input bg-gray-50/60 px-4 py-3">
+        <input
+          type="checkbox"
+          checked={stackable}
+          onChange={e => setStackable(e.target.checked)}
+          disabled={readOnly}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-brand-gold"
+        />
+        <span className="text-sm">
+          <span className="font-medium text-gray-900">Can be combined with other coupons</span>
+          <span className="block text-xs text-gray-500">When off, this coupon is exclusive — it must be the only coupon on the order.</span>
+        </span>
+      </label>
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">{readOnly ? "Close" : "Cancel"}</button>

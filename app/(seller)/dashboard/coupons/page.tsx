@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { confirmDialog } from "@/components/ui/confirm"
 import {
   getSellerCoupons, createSellerCoupon, updateSellerCoupon, deleteSellerCoupon,
 } from "@/lib/api"
@@ -70,7 +71,7 @@ export default function SellerCouponsPage() {
   }
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!confirm("Delete this coupon?")) return
+    if (!(await confirmDialog({ title: "Delete this coupon?", confirmLabel: "Delete", variant: "danger" }))) return
     const token = await getAccessToken()
     if (!token) return
     await deleteSellerCoupon(token, id)
@@ -215,6 +216,9 @@ function CouponForm({
   const [discountTarget, setDiscountTarget] = useState<"items" | "shipping">(
     (coupon?.discountTarget as "items" | "shipping" | undefined) || "items",
   )
+  // Whether this coupon can be combined with other coupons (stacking). New
+  // coupons default to combinable; false makes it exclusive.
+  const [stackable, setStackable] = useState<boolean>(coupon?.stackable ?? true)
   const [expiresAt, setExpiresAt] = useState(coupon?.expiresAt ? coupon.expiresAt.slice(0, 16) : "")
   const [submitting, setSubmitting] = useState(false)
 
@@ -234,6 +238,7 @@ function CouponForm({
         perUserLimit: perUserLimit ? parseInt(perUserLimit) : undefined,
         scope,
         discountTarget,
+        stackable,
         expiresAt: new Date(expiresAt).toISOString(),
       })
     } catch (e) {
@@ -304,6 +309,19 @@ function CouponForm({
           <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} className={inputCls} />
         </div>
       </div>
+
+      <label className="flex items-start gap-2.5 rounded-xl border border-input bg-gray-50/60 px-4 py-3">
+        <input
+          type="checkbox"
+          checked={stackable}
+          onChange={e => setStackable(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-brand-gold"
+        />
+        <span className="text-sm">
+          <span className="font-medium text-gray-900">Can be combined with other coupons</span>
+          <span className="block text-xs text-gray-500">When off, this coupon is exclusive — it must be the only coupon on the order.</span>
+        </span>
+      </label>
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">Cancel</button>

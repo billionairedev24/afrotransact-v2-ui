@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect } from "react"
 import { MapPin } from "lucide-react"
 import { friendlyMessage } from "@/lib/errors"
 
@@ -10,7 +10,7 @@ import { friendlyMessage } from "@/lib/errors"
 declare global {
   interface Window {
     google: typeof google
-    __googleMapsCallback?: () => void
+    __afroGmapsReady?: () => void
   }
 }
 
@@ -36,49 +36,34 @@ interface AddressAutocompleteProps {
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
 
-let googleMapsLoading = false
-let googleMapsLoaded = false
+// Single in-flight promise for the Places library across every instance of
+// this component. Load the Maps JS core with `loading=async` (no `libraries=`
+// param → no "loaded without loading=async" warning), then pull Places on
+// demand via importLibrary.
+let placesPromise: Promise<google.maps.PlacesLibrary> | null = null
 
-function loadGoogleMapsScript(): Promise<void> {
-  if (googleMapsLoaded && window.google?.maps?.places) return Promise.resolve()
-  if (googleMapsLoading) {
-    return new Promise((resolve) => {
-      const check = setInterval(() => {
-        if (googleMapsLoaded) {
-          clearInterval(check)
-          resolve()
-        }
-      }, 100)
-    })
-  }
-
-  googleMapsLoading = true
-
-  return new Promise((resolve, reject) => {
-    if (!GOOGLE_MAPS_API_KEY) {
-      googleMapsLoading = false
-      reject(new Error("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set"))
-      return
+function loadPlacesLibrary(): Promise<google.maps.PlacesLibrary> {
+  if (placesPromise) return placesPromise
+  placesPromise = (async () => {
+    if (!GOOGLE_MAPS_API_KEY) throw new Error("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set")
+    if (!window.google?.maps?.importLibrary) {
+      await new Promise<void>((resolve, reject) => {
+        window.__afroGmapsReady = () => resolve()
+        const script = document.createElement("script")
+        script.src =
+          `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}` +
+          `&loading=async&callback=__afroGmapsReady`
+        script.async = true
+        script.onerror = () => reject(new Error("Failed to load Google Maps script"))
+        document.head.appendChild(script)
+      })
     }
-
-    window.__googleMapsCallback = () => {
-      googleMapsLoaded = true
-      googleMapsLoading = false
-      resolve()
-    }
-
-    const script = document.createElement("script")
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=__googleMapsCallback`
-    script.async = true
-    script.defer = true
-    script.onerror = () => {
-      googleMapsLoading = false
-      reject(new Error("Failed to load Google Maps script"))
-    }
-    document.head.appendChild(script)
-  })
+    return (await window.google.maps.importLibrary("places")) as google.maps.PlacesLibrary
+  })()
+  return placesPromise
 }
 
+// Legacy Autocomplete's getPlace() returns snake_case address_components.
 function extractAddressParts(place: google.maps.places.PlaceResult): AddressParts {
   const parts: AddressParts = {
     line1: "",
@@ -118,6 +103,14 @@ function extractAddressParts(place: google.maps.places.PlaceResult): AddressPart
   return parts
 }
 
+/**
+ * Address field with Google Places autocomplete. We render our OWN controlled
+ * <input> and attach Places Autocomplete to it — rather than Google's
+ * PlaceAutocompleteElement web component, whose input lives in a CLOSED shadow
+ * root we can't style (it drew an un-removable blue focus outline). This input
+ * uses our standard field styling, and the prediction dropdown (.pac-container)
+ * is themed in globals.css.
+ */
 export function AddressAutocomplete({
   value,
   onChange,
@@ -128,44 +121,64 @@ export function AddressAutocomplete({
 }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
-  const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // True once the user typed but hasn't picked a suggestion — so the structured
+  // parts (city/state/zip) aren't populated yet. Drives a nudge to select.
+  const [needsSelection, setNeedsSelection] = useState(false)
+
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  const onSelectRef = useRef(onSelect)
+  onSelectRef.current = onSelect
 
   useEffect(() => {
     if (!GOOGLE_MAPS_API_KEY) {
       setError("Google Maps API key not configured")
       return
     }
+    let cancelled = false
 
-    loadGoogleMapsScript()
-      .then(() => setLoaded(true))
-      .catch((err) => setError(friendlyMessage(err, "Could not load address autocomplete.")))
+    loadPlacesLibrary()
+      .then((places) => {
+        if (cancelled || !inputRef.current || autocompleteRef.current) return
+
+        const ac = new places.Autocomplete(inputRef.current, {
+          fields: ["address_components", "geometry", "formatted_address"],
+          componentRestrictions: { country: "us" },
+          types: ["address"],
+        })
+        autocompleteRef.current = ac
+
+        ac.addListener("place_changed", () => {
+          const place = ac.getPlace()
+          if (!place || !place.address_components) return
+          const parts = extractAddressParts(place)
+          onChangeRef.current(place.formatted_address ?? parts.line1)
+          onSelectRef.current(parts)
+          setNeedsSelection(false)
+        })
+      })
+      .catch((err) => {
+        if (!cancelled) setError(friendlyMessage(err, "Could not load address autocomplete."))
+      })
+
+    return () => {
+      cancelled = true
+      if (autocompleteRef.current) {
+        window.google?.maps?.event?.clearInstanceListeners(autocompleteRef.current)
+        autocompleteRef.current = null
+      }
+    }
+    // Mount once; callbacks are read from refs so we never re-create it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const initAutocomplete = useCallback(() => {
-    if (!loaded || !inputRef.current || autocompleteRef.current) return
-
-    const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-      types: ["address"],
-      componentRestrictions: { country: "us" },
-      fields: ["address_components", "geometry", "formatted_address"],
-    })
-
-    autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace()
-      if (!place.address_components) return
-
-      const parts = extractAddressParts(place)
-      onChange(place.formatted_address ?? parts.line1)
-      onSelect(parts)
-    })
-
-    autocompleteRef.current = autocomplete
-  }, [loaded, onChange, onSelect])
-
-  useEffect(() => {
-    initAutocomplete()
-  }, [initAutocomplete])
+  // Standard field styling — identical to the sibling City/State/ZIP inputs, so
+  // the focus ring is our gold one (no stray blue shadow-DOM outline).
+  const inputClass =
+    "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground " +
+    "placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary " +
+    className
 
   if (error) {
     return (
@@ -176,24 +189,32 @@ export function AddressAutocomplete({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full rounded-xl border border-border bg-muted pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 transition-colors ${className}`}
+          className={`h-10 w-full rounded-md border border-border bg-background pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${className}`}
         />
       </div>
     )
   }
 
   return (
-    <div className="relative">
-      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/60" />
+    <div className="w-full">
       <input
         ref={inputRef}
+        type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={loaded ? placeholder : "Loading address lookup…"}
-        disabled={disabled || !loaded}
+        onChange={(e) => {
+          onChange(e.target.value)
+          setNeedsSelection(e.target.value.trim().length > 0)
+        }}
+        placeholder={placeholder}
+        disabled={disabled}
         autoComplete="off"
-        className={`w-full rounded-xl border border-border bg-muted pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 transition-colors ${className}`}
+        className={inputClass}
       />
+      {needsSelection && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Pick a suggestion from the list to fill in city, state &amp; ZIP.
+        </p>
+      )}
     </div>
   )
 }

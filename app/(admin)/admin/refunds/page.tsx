@@ -14,6 +14,7 @@ import {
   adminCreateRefund,
   adminGetOrderByNumber,
   adminGetRefundQueue,
+  adminListAllRefunds,
   adminListRefundsByOrderNumber,
   adminListReturns,
   adminListOrderMessages,
@@ -51,7 +52,12 @@ const STATUS_BADGE: Record<string, string> = {
 
 export default function AdminRefundsPage() {
   const [view, setView] = useState<"queue" | "order">("queue")
-  const [tab, setTab] = useState<"refunds" | "returns">("refunds")
+  const [tab, setTab] = useState<"refunds" | "returns" | "issued">("refunds")
+
+  // Issued-refunds ledger state
+  const [issued, setIssued] = useState<RefundDto[]>([])
+  const [issuedLoading, setIssuedLoading] = useState(true)
+  const [issuedErr, setIssuedErr] = useState<string | null>(null)
 
   // Queue state
   const [queue, setQueue] = useState<AdminOrderLookup[]>([])
@@ -110,8 +116,29 @@ export default function AdminRefundsPage() {
     }
   }, [])
 
+  const loadIssued = useCallback(async () => {
+    setIssuedLoading(true)
+    setIssuedErr(null)
+    try {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not signed in")
+      const res = await adminListAllRefunds(token, 0, 50)
+      setIssued(res.content)
+    } catch (e) {
+      logError(e, "refunds.loadIssued")
+      if (e instanceof ApiError && e.status === 401) {
+        setIssuedErr("Your admin session has expired. Please sign in again.")
+      } else {
+        setIssuedErr(friendlyMessage(e, "Couldn't load issued refunds. Please try again."))
+      }
+    } finally {
+      setIssuedLoading(false)
+    }
+  }, [])
+
   useEffect(() => { void loadQueue() }, [loadQueue])
   useEffect(() => { void loadReturns() }, [loadReturns])
+  useEffect(() => { void loadIssued() }, [loadIssued])
 
   async function loadOrder(num: string) {
     const n = num.trim()
@@ -153,12 +180,14 @@ export default function AdminRefundsPage() {
               ? "Order detail, refund actions & customer messaging. Every refund routes through the canonical pipeline (durable record + Stripe idempotency + accounting event)."
               : tab === "refunds"
                 ? "Orders waiting on refund action. Cancelled orders, customer refund requests, and failed payments appear here automatically."
-                : "Return requests across all stores. Review buyer reasons and message customers directly."}
+                : tab === "returns"
+                  ? "Return requests across all stores. Review buyer reasons and message customers directly."
+                  : "Every refund issued, newest first — including dispute and return refunds. A durable record of what was refunded, how much, and why."}
           </p>
         </div>
         {view === "queue" && (
           <button
-            onClick={() => (tab === "refunds" ? void loadQueue() : void loadReturns())}
+            onClick={() => (tab === "refunds" ? void loadQueue() : tab === "returns" ? void loadReturns() : void loadIssued())}
             className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
           >
             <RefreshCcw className="h-4 w-4" /> Refresh
@@ -184,6 +213,14 @@ export default function AdminRefundsPage() {
             }`}
           >
             <Undo2 className="h-4 w-4" /> Returns
+          </button>
+          <button
+            onClick={() => setTab("issued")}
+            className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+              tab === "issued" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <CheckCircle2 className="h-4 w-4" /> Issued
           </button>
         </div>
       )}
@@ -214,8 +251,15 @@ export default function AdminRefundsPage() {
       {view === "queue" ? (
         tab === "refunds" ? (
           <RefundQueueView queue={queue} loading={queueLoading} err={queueErr} onOpen={(n) => loadOrder(n)} />
-        ) : (
+        ) : tab === "returns" ? (
           <ReturnsQueueView returns={returns} loading={returnsLoading} err={returnsErr} onOpen={(n) => loadOrder(n)} />
+        ) : (
+          <IssuedRefundsView
+            refunds={issued}
+            loading={issuedLoading}
+            err={issuedErr}
+            onOpen={(n) => n && loadOrder(n)}
+          />
         )
       ) : order ? (
         <OrderDetailView
@@ -228,12 +272,87 @@ export default function AdminRefundsPage() {
               order.orderNumber,
             ).catch(() => [])
             setRefunds(rs)
-            // Reload the queue too in case it changed
+            // Reload the queue + issued ledger too in case they changed
             void loadQueue()
+            void loadIssued()
           }}
         />
       ) : null}
     </main>
+  )
+}
+
+function RefundStatusPill({ status }: { status: string }) {
+  const map: Record<string, { cls: string; Icon: typeof CheckCircle2 }> = {
+    succeeded: { cls: "bg-emerald-50 text-emerald-700 border-emerald-200", Icon: CheckCircle2 },
+    pending:   { cls: "bg-amber-50 text-amber-700 border-amber-200", Icon: Clock },
+    failed:    { cls: "bg-red-50 text-red-700 border-red-200", Icon: XCircle },
+    cancelled: { cls: "bg-gray-100 text-gray-600 border-gray-200", Icon: XCircle },
+  }
+  const s = map[status] ?? { cls: "bg-gray-100 text-gray-600 border-gray-200", Icon: Clock }
+  return (
+    <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium ${s.cls}`}>
+      <s.Icon className="h-3 w-3" /> {status}
+    </span>
+  )
+}
+
+/** Ledger of every refund issued (dispute, return, cancel, admin) — so an admin
+ *  can confirm what was refunded without hunting per-order. */
+function IssuedRefundsView({
+  refunds, loading, err, onOpen,
+}: {
+  refunds: RefundDto[]
+  loading: boolean
+  err: string | null
+  onOpen: (orderNumber: string | null | undefined) => void
+}) {
+  if (loading) return <div className="text-sm text-muted-foreground">Loading issued refunds…</div>
+  if (err) return <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">{err}</div>
+  if (refunds.length === 0) {
+    return (
+      <div className="border border-dashed border-border rounded p-12 text-center">
+        <Banknote className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+        <div className="text-sm font-medium">No refunds issued yet.</div>
+        <div className="text-xs text-muted-foreground mt-1">Refunds you issue — from disputes, returns, or here — will appear in this ledger.</div>
+      </div>
+    )
+  }
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border">
+      <table className="w-full min-w-[720px] text-sm">
+        <thead>
+          <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
+            <th className="px-4 py-2.5 font-semibold">Order</th>
+            <th className="px-4 py-2.5 font-semibold text-right">Amount</th>
+            <th className="px-4 py-2.5 font-semibold">Reason</th>
+            <th className="px-4 py-2.5 font-semibold">Status</th>
+            <th className="px-4 py-2.5 font-semibold">By</th>
+            <th className="px-4 py-2.5 font-semibold">Date</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {refunds.map((r) => (
+            <tr key={r.id} className="hover:bg-muted/30">
+              <td className="px-4 py-3">
+                {r.orderNumber ? (
+                  <button onClick={() => onOpen(r.orderNumber)} className="font-mono text-sm font-semibold text-foreground hover:underline">
+                    {r.orderNumber}
+                  </button>
+                ) : (
+                  <span className="font-mono text-xs text-muted-foreground">{r.orderId.slice(0, 8)}…</span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-right font-bold tabular-nums">{fmt(r.amountCents, r.currency)}</td>
+              <td className="px-4 py-3 text-muted-foreground">{r.reason}</td>
+              <td className="px-4 py-3"><RefundStatusPill status={r.status} /></td>
+              <td className="px-4 py-3 capitalize text-muted-foreground">{r.initiatedBy}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 

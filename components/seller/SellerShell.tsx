@@ -24,7 +24,6 @@ import {
   RotateCcw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useSignOut } from "@/hooks/useSignOut"
 import { StoreSwitcher } from "@/components/seller/StoreSwitcher"
 import { StripeActionBanner } from "@/components/seller/StripeActionBanner"
 import type { SellerInfo } from "@/lib/api"
@@ -39,6 +38,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/products",     label: "Products",       icon: Package         },
   { href: "/dashboard/orders",       label: "Orders",        icon: ShoppingCart    },
   { href: "/dashboard/returns",      label: "Returns",        icon: RotateCcw       },
+  { href: "/dashboard/disputes",     label: "Disputes",       icon: ShieldAlert     },
   { href: "/dashboard/upload",       label: "Media Library",  icon: Upload         },
   { href: "/dashboard/reviews",      label: "Reviews",        icon: Star            },
   { href: "/dashboard/coupons",      label: "Coupons",        icon: Ticket          },
@@ -59,7 +59,6 @@ interface SellerShellProps {
 export function SellerShell({ children, userName, userEmail, seller }: SellerShellProps) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const signOut = useSignOut()
   const showSellerAnalytics = useSellerAnalyticsNavVisible()
   const navItems = NAV_ITEMS.filter(
     (item) => showSellerAnalytics || item.href !== "/dashboard/analytics",
@@ -158,15 +157,17 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
                 <HelpCircle className="h-5 w-5 mb-1" />
                 <span className="text-[10px]">Help Center</span>
               </Link>
-              <button
-                type="button"
-                onClick={() => { signOut() }}
+              {/* Real anchor, not button+onClick: the synthetic onClick proved
+                  unreliable for sign-out (fixed the same way on the main header,
+                  user menu, and onboarding header). The href always navigates. */}
+              <a
+                href="/api/auth/signout"
                 className="flex-1 flex flex-col items-center justify-center py-2 text-white/60 hover:text-red-400 transition-colors"
                 aria-label="Sign out"
               >
                 <LogOut className="h-5 w-5 mb-1" />
                 <span className="text-[10px]">Logout</span>
-              </button>
+              </a>
             </div>
           </div>
         </aside>
@@ -251,15 +252,14 @@ export function SellerShell({ children, userName, userEmail, seller }: SellerShe
                     <HelpCircle className="h-5 w-5 mb-1" />
                     <span className="text-[10px]">Help Center</span>
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => { signOut() }}
+                  <a
+                    href="/api/auth/signout"
                     className="flex-1 flex flex-col items-center justify-center py-2 text-white/60 hover:text-red-400 transition-colors"
                     aria-label="Sign out"
                   >
                     <LogOut className="h-5 w-5 mb-1" />
                     <span className="text-[10px]">Logout</span>
-                  </button>
+                  </a>
                 </div>
               </div>
             </aside>

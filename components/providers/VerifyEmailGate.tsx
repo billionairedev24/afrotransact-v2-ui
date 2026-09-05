@@ -1,0 +1,140 @@
+"use client"
+
+/**
+ * Hard email-verification gate.
+ *
+ * Keycloak enforces verification server-side (realm `verifyEmail: true`), so
+ * NO token is ever issued for an unverified account — going forward every
+ * authenticated session is already verified and this renders nothing.
+ *
+ * This gate is the app-side backstop for the transition window: any lingering
+ * session created before the hard gate was turned on (emailVerified === false)
+ * gets NO access to the app. Instead of a dismissible banner, it renders a
+ * full-screen blocking overlay. The user must verify their email and then sign
+ * in again — exactly the "verify first, then log in" model. It offers Resend,
+ * an "I've verified" refresh, and a Sign-out to switch accounts.
+ */
+
+import { useEffect, useRef, useState } from "react"
+import { useSession } from "next-auth/react"
+import { toast } from "sonner"
+import { Mail, Loader2, LogOut } from "lucide-react"
+
+export function VerifyEmailGate() {
+  const { data: session, status, update } = useSession()
+  const [sending, setSending] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const autoSent = useRef(false)
+
+  const unverified = status === "authenticated" && session?.user?.emailVerified === false
+
+  useEffect(() => {
+    if (!unverified || autoSent.current) return
+    autoSent.current = true
+    // Auto-send the verification link once per ACCOUNT per browser session. The
+    // key is scoped to the user's email so registering a second account in the
+    // same session still triggers a send — a plain "atx_verify_email_sent" flag
+    // left over from a previous account would otherwise suppress it (the bug
+    // where the email "wasn't sent until I resent it").
+    const sentKey = `atx_verify_email_sent:${session?.user?.email ?? "unknown"}`
+    try {
+      if (sessionStorage.getItem(sentKey)) return
+    } catch {
+      /* sessionStorage unavailable — fall through and send */
+    }
+    void fetch("/api/auth/send-verify-email", { method: "POST" })
+      .then((r) => {
+        if (r.ok) {
+          try { sessionStorage.setItem(sentKey, "1") } catch { /* ignore */ }
+        }
+      })
+      .catch(() => {})
+  }, [unverified, session?.user?.email])
+
+  if (!unverified) return null
+
+  async function resend() {
+    setSending(true)
+    try {
+      const res = await fetch("/api/auth/send-verify-email", { method: "POST" })
+      if (res.ok) toast.success("Verification email sent — check your inbox (and spam).")
+      else toast.error("Couldn't send the email right now. Try again shortly.")
+    } catch {
+      toast.error("Network error — please try again.")
+    } finally {
+      setSending(false)
+    }
+  }
+
+  async function iVerified() {
+    setChecking(true)
+    try {
+      const updated = await update() // forces a token refresh (jwt trigger === "update")
+      if ((updated?.user as { emailVerified?: boolean } | undefined)?.emailVerified) {
+        toast.success("Thanks — your email is verified!")
+      } else {
+        toast.message("We don't see it verified yet.", {
+          description: "Click the link in your email, then try again.",
+        })
+      }
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="verify-gate-title"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+    >
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center shadow-xl sm:p-8">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
+          <Mail className="h-6 w-6 text-[hsl(var(--brand-gold-ink))]" />
+        </div>
+        <h2 id="verify-gate-title" className="text-lg font-bold text-foreground">
+          Verify your email to continue
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Your account isn&apos;t active yet. We sent a verification link
+          {session?.user?.email ? <> to <span className="font-medium text-foreground">{session.user.email}</span></> : null}.
+          Click it, then continue — until then you can&apos;t access your account.
+        </p>
+
+        <div className="mt-6 flex flex-col gap-2.5">
+          <button
+            type="button"
+            onClick={iVerified}
+            disabled={checking}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+          >
+            {checking && <Loader2 className="h-4 w-4 animate-spin" />} I&apos;ve verified — continue
+          </button>
+          <button
+            type="button"
+            onClick={resend}
+            disabled={sending}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60"
+          >
+            {sending && <Loader2 className="h-4 w-4 animate-spin" />} Resend verification email
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              // Hard navigation to the server signout route: it clears ALL
+              // NextAuth cookies (host + domain scoped), best-effort KC logout,
+              // and 302s home. More reliable than the client signOut() here,
+              // and prompt=login on the next sign-in lets them pick a different
+              // account despite Keycloak's lingering SSO cookie.
+              window.location.href = "/api/auth/signout"
+            }}
+            className="mt-1 inline-flex w-full items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="h-3.5 w-3.5" /> Sign out / use a different account
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

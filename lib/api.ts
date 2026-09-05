@@ -3,6 +3,18 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:8080"
 
+/**
+ * BFF-aware URL for a gateway path. In the browser, route through the
+ * same-origin proxy (/api/gw) which attaches the access token server-side from
+ * the HttpOnly session — the token never touches JS. On the server, hit the
+ * gateway directly. The proxy strips any client Authorization and re-attaches
+ * the real token, so callers need only swap the URL. Use for the raw fetches
+ * that bypass `api()`.
+ */
+export function gatewayUrl(path: string): string {
+  return typeof window !== "undefined" ? `/api/gw${path}` : `${API_BASE}${path}`
+}
+
 /** Default request budget in ms. One slow downstream shouldn't hang the UI forever. */
 const DEFAULT_TIMEOUT_MS = 15_000
 
@@ -39,7 +51,12 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     "Content-Type": "application/json",
     ...(extraHeaders as Record<string, string>),
   }
-  if (token) headers["Authorization"] = `Bearer ${token}`
+  // BFF: in the browser we call the same-origin proxy (/api/gw), which attaches
+  // the access token server-side from the HttpOnly session — so we NEVER send
+  // the token from JS. On the server (SSR / route handlers) we call the gateway
+  // directly and forward the caller-supplied token as before.
+  const isBrowser = typeof window !== "undefined"
+  if (token && !isBrowser) headers["Authorization"] = `Bearer ${token}`
 
   // When Server Components want a cached fetch, pass `next: { revalidate, tags }`.
   // Otherwise default to fresh data (no-store) for authenticated/mutating calls.
@@ -56,9 +73,10 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     ? anySignal([signal, timeoutCtrl.signal])
     : timeoutCtrl.signal
 
+  const url = isBrowser ? `/api/gw${path}` : `${API_BASE}${path}`
   let res: Response
   try {
-    res = await fetch(`${API_BASE}${path}`, {
+    res = await fetch(url, {
       ...rest,
       ...cacheOpts,
       headers,
@@ -1036,6 +1054,7 @@ export interface RefundDto {
   id: string
   paymentId: string
   orderId: string
+  orderNumber?: string | null
   subOrderId: string | null
   amountCents: number
   currency: string
@@ -1073,6 +1092,11 @@ export function adminListRefundsByOrder(token: string, orderId: string) {
 
 export function adminListRefundsByOrderNumber(token: string, orderNumber: string) {
   return api<RefundDto[]>(`/api/v1/admin/refunds/by-order-number/${orderNumber}`, { token })
+}
+
+/** Admin ledger of all refunds issued, newest first (order numbers resolved). */
+export function adminListAllRefunds(token: string, page = 0, size = 25) {
+  return api<Page<RefundDto>>(`/api/v1/admin/refunds?page=${page}&size=${size}`, { token })
 }
 
 // ── Returns (buyer + seller) ─────────────────────────────────────────────────
@@ -1148,6 +1172,118 @@ export function listMyReturns(token: string, page = 0, size = 20) {
 
 export function cancelReturn(token: string, returnId: string) {
   return api<ReturnDto>(`/api/v1/returns/${returnId}/cancel`, { method: "POST", token })
+}
+
+// ── Disputes (distinct from returns — no send-back) ──────────────────────────
+
+export type DisputeType = "not_received" | "not_as_described" | "damaged" | "unauthorized" | "other"
+export type DisputeStatus =
+  | "open" | "needs_info" | "seller_responded" | "escalated"
+  | "resolved_refund" | "resolved_declined" | "withdrawn"
+
+export interface DisputeDto {
+  id: string
+  orderId: string
+  orderNumber: string
+  subOrderId: string
+  storeId: string
+  house: boolean
+  // Seller identity/contact — present only on the admin listing so ops can
+  // follow up when a buyer calls. Null for house disputes.
+  sellerStoreName?: string | null
+  sellerBusinessName?: string | null
+  sellerContactEmail?: string | null
+  sellerContactPhone?: string | null
+  type: DisputeType
+  status: DisputeStatus
+  items: Array<{
+    orderItemId: string
+    quantity: number
+    productTitle?: string | null
+    variantName?: string | null
+    imageUrl?: string | null
+    unitPriceCents?: number | null
+    lineTotalCents?: number | null
+  }>
+  // Refund-decision context (populated on listing views).
+  suggestedRefundCents?: number | null
+  subOrderSubtotalCents?: number | null
+  buyerNotes?: string | null
+  evidenceUrls: string[]
+  sellerNotes?: string | null
+  resolutionNotes?: string | null
+  refundAmountCents?: number | null
+  sellerResponseDueAt?: string | null
+  createdAt: string
+  updatedAt: string
+  resolvedAt?: string | null
+}
+
+export interface CreateDisputeRequest {
+  orderNumber: string
+  subOrderId: string
+  type: DisputeType
+  buyerNotes?: string
+  evidenceUrls?: string[]
+  items?: Array<{ orderItemId: string; quantity: number }>
+}
+
+export interface PagedDisputes {
+  content: DisputeDto[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+export function createDispute(token: string, body: CreateDisputeRequest) {
+  return api<DisputeDto>(`/api/v1/disputes`, { method: "POST", body, token })
+}
+
+export function listMyDisputes(token: string, page = 0, size = 20) {
+  return api<PagedDisputes>(`/api/v1/disputes/me?page=${page}&size=${size}`, { token })
+}
+
+export function withdrawDispute(token: string, disputeId: string) {
+  return api<DisputeDto>(`/api/v1/disputes/${disputeId}/withdraw`, { method: "POST", token })
+}
+
+export function sellerListDisputes(token: string, storeId: string, status?: DisputeStatus[], page = 0, size = 20) {
+  const params = new URLSearchParams()
+  ;(status ?? []).forEach((s) => params.append("status", s))
+  params.set("page", String(page))
+  params.set("size", String(size))
+  return api<PagedDisputes>(`/api/v1/disputes/store/${storeId}?${params.toString()}`, { token })
+}
+
+export function sellerRespondDispute(
+  token: string,
+  storeId: string,
+  disputeId: string,
+  body: { response: "accept" | "contest"; sellerNotes?: string },
+) {
+  return api<DisputeDto>(`/api/v1/disputes/${disputeId}/respond`, {
+    method: "POST",
+    body,
+    token,
+    headers: { "X-Store-Id": storeId },
+  })
+}
+
+export function adminListDisputes(token: string, status?: DisputeStatus[], page = 0, size = 20) {
+  const params = new URLSearchParams()
+  ;(status ?? []).forEach((s) => params.append("status", s))
+  params.set("page", String(page))
+  params.set("size", String(size))
+  return api<PagedDisputes>(`/api/v1/disputes/admin?${params.toString()}`, { token })
+}
+
+export function adminResolveDispute(
+  token: string,
+  disputeId: string,
+  body: { decision: "refund" | "decline"; refundAmountCents?: number; resolutionNotes?: string },
+) {
+  return api<DisputeDto>(`/api/v1/disputes/${disputeId}/resolve`, { method: "POST", body, token })
 }
 
 export function sellerListReturns(token: string, storeId: string, status?: ReturnStatus[], page = 0, size = 20) {
@@ -1456,6 +1592,16 @@ export interface StoreDetail {
   shipFromState?: string | null
   shipFromZip?: string | null
   shipFromCountry?: string | null
+  pickupOffered?: boolean | null
+  pickupSameAsBusiness?: boolean | null
+  pickupLine1?: string | null
+  pickupLine2?: string | null
+  pickupCity?: string | null
+  pickupState?: string | null
+  pickupZip?: string | null
+  pickupCountry?: string | null
+  pickupHours?: string | null
+  pickupInstructions?: string | null
   allowedCarriers?: string[] | null
   returnsSupported?: boolean
   returnWindowDays?: number | null
@@ -1776,11 +1922,18 @@ export interface OrderDto {
   subtotalCents: number
   discountCents?: number
   couponCode?: string | null
+  /** All coupons applied to the order, each with its own discount (stacking).
+   *  Empty/absent for pre-stacking orders — fall back to couponCode. */
+  appliedCoupons?: { code: string; discountCents: number; target: "items" | "shipping" | string }[]
   paymentMethod?: string | null
   last4?: string | null
   taxCents: number
   shippingCostCents: number
   totalCents: number
+  // House-funded store credit redeemed on this order. The card was charged
+  // totalCents - storeCreditAppliedCents. Absorbed by the house — it never
+  // reduces what the seller is paid.
+  storeCreditAppliedCents?: number
   currency: string
   shippingAddress: string | null
   placedAt: string
@@ -1799,6 +1952,29 @@ export function getBuyerOrders(token: string, page = 0, size = 20, q?: string) {
 
 export function getOrderByNumber(token: string, orderNumber: string) {
   return api<OrderDto>(`/api/v1/orders/${orderNumber}`, { token })
+}
+
+/**
+ * Downloads the order receipt PDF and triggers a browser save — no
+ * navigation, no browser PDF viewer tab. Throws on a non-ok response so
+ * callers can toast an error.
+ */
+export async function downloadReceipt(token: string, orderNumber: string): Promise<void> {
+  const res = await fetch(gatewayUrl(`/api/v1/orders/${orderNumber}/receipt`), {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to download receipt (${res.status})`)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `receipt-${orderNumber}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 export function getAdminOrders(token: string, page = 0, size = 20) {
@@ -1901,7 +2077,14 @@ export interface CheckoutResponse {
   taxCents: number
   shippingCostCents: number
   totalCents: number
+  /** Store credit (referral/wallet) auto-applied at checkout, capped at the
+   *  total. The card is charged totalCents - storeCreditAppliedCents. */
+  storeCreditAppliedCents: number
   couponCode: string | null
+  /** Authoritative per-coupon breakdown of what actually applied at checkout
+   *  (stacking). `discountCents` is aggregate item discount; `couponCode` is
+   *  the first code (legacy). Omitted when no coupon applied. */
+  appliedCoupons?: { code: string; discountCents: number; target: "items" | "shipping" | string }[]
   /** true when couponCode was auto-applied from an email-bound coupon (buyer
    *  didn't type it) — the summary shows an "applied automatically" badge. */
   couponAutoApplied?: boolean
@@ -1926,6 +2109,10 @@ export interface PickupLocationDto {
   hours?: string
   instructions?: string
   prepTime?: string
+  // Pickup-point coordinates (from config); used with the buyer's coords to
+  // show straight-line distance at checkout.
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export interface ShippingQuoteOption {
@@ -1957,6 +2144,8 @@ export interface StorePickupOption {
   eligible: boolean
   reason?: string
   option?: ShippingQuoteOption
+  /** Straight-line distance (miles) from the buyer to the pickup point; null when unavailable. */
+  distanceMiles?: number | null
 }
 
 export interface ShippingQuoteResponse {
@@ -2009,6 +2198,9 @@ export interface CouponData {
   scope: "site_wide" | "product" | "store" | "category"
   scopeId: string | null
   discountTarget: "items" | "shipping"
+  /** Whether this coupon can be combined with other coupons (stacking).
+   *  false = exclusive (must be the only coupon on the order). Defaults true. */
+  stackable: boolean
   sellerId: string | null
   regionId: string | null
   startsAt: string
@@ -2029,6 +2221,8 @@ export interface CouponCreateRequest {
   scope?: string
   scopeId?: string
   discountTarget?: "items" | "shipping"
+  /** Whether this coupon may be stacked with others. Defaults true server-side. */
+  stackable?: boolean
   regionId?: string
   startsAt?: string
   expiresAt: string
@@ -2040,8 +2234,15 @@ export interface ValidateCouponResponse {
   code: string
   type: string
   value: number
+  /** INCREMENTAL discount this code adds on top of any already-applied codes
+   *  (server computes it against the running, already-reduced subtotal). */
   discountCents: number
   discountTarget?: "items" | "shipping"
+  /** Whether this coupon can be combined with others. false = exclusive. */
+  stackable?: boolean
+  /** Machine reason on rejection: duplicate | max_reached | exclusive |
+   *  exclusive_present | ineligible. */
+  reason?: "duplicate" | "max_reached" | "exclusive" | "exclusive_present" | "ineligible" | string
   error: string | null
 }
 
@@ -2077,13 +2278,28 @@ export function toggleAdminCoupon(token: string, id: string) {
   return api<CouponData>(`/api/v1/admin/coupons/${id}/toggle`, { method: "POST", token })
 }
 
-export function validateCoupon(token: string, code: string, subtotalCents: number, regionId?: string, shippingCents?: number, zoneId?: string) {
+export function validateCoupon(
+  token: string,
+  code: string,
+  subtotalCents: number,
+  regionId?: string,
+  shippingCents?: number,
+  zoneId?: string,
+  /** Codes already applied to the cart (uppercased). The backend returns the
+   *  INCREMENTAL discount this code adds against the running subtotal and
+   *  rejects duplicates / exclusives / over-cap so the shown discount matches
+   *  what checkout computes. `subtotalCents` is the ORIGINAL cart subtotal. */
+  appliedCodes?: string[],
+  /** Per-line cart breakdown so a store/product-scoped coupon's preview discount
+   *  is computed on only its own items — matching what checkout charges. */
+  lines?: { storeId: string; productId: string; subtotalCents: number }[],
+) {
   return api<ValidateCouponResponse>("/api/v1/coupons/validate", {
     method: "POST",
     // Backend prefers zoneId (coupons_enabled lives on service zones); regionId
     // is a legacy fallback. Send both when we have them — the backend picks
     // zoneId first. Mirrors the shipping-quote path.
-    body: { code, subtotalCents, shippingCents, regionId, zoneId },
+    body: { code, subtotalCents, shippingCents, regionId, zoneId, appliedCodes, lines },
     token,
   })
 }
@@ -2213,6 +2429,10 @@ export interface PickupLocationSettings {
   hours: string
   instructions: string
   prep_time: string
+  // Coordinates of the pickup point (captured via address autocomplete). Used
+  // to show buyers the straight-line distance from their delivery address.
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export interface PickupSettings {
@@ -2226,6 +2446,38 @@ export function getAdminPickupSettings(token: string) {
 
 export function putAdminPickupSettings(token: string, data: PickupSettings) {
   return api<PickupSettings>("/api/v1/admin/config/pickup", { method: "PUT", body: data, token })
+}
+
+export interface ReferralSettings {
+  enabled: boolean
+  reward_cents: number
+  currency: string
+  max_referrals_per_user: number
+}
+
+/** Public — no auth. Storefront (account hub Wallet, `?ref=` capture) reads this. */
+export function getReferralSettings() {
+  return api<ReferralSettings>("/api/v1/config/referral-settings")
+}
+
+export function updateReferralSettings(token: string, data: ReferralSettings) {
+  return api<ReferralSettings>("/api/v1/admin/config/referral-settings", { method: "PUT", body: data, token })
+}
+
+/** Coupon stacking configuration. `max_stackable_coupons` in 1..10 (1 disables
+ *  stacking — buyers can apply only a single coupon). */
+export interface CouponSettings {
+  max_stackable_coupons: number
+}
+
+/** Public — no auth. The storefront reads the cap off the zone-resolve bundle at
+ *  checkout; this is the dedicated endpoint the admin settings screen uses. */
+export function getCouponSettings() {
+  return api<CouponSettings>("/api/v1/config/coupon-settings")
+}
+
+export function updateCouponSettings(token: string, data: CouponSettings) {
+  return api<CouponSettings>("/api/v1/admin/config/coupon-settings", { method: "PUT", body: data, token })
 }
 
 // ── Admin ──
@@ -2442,6 +2694,9 @@ export interface ResolvedZoneSettings {
   freeShippingThresholdCents: number | null
   shippingMode: "per_lb" | "flat" | null
   flatShippingCents: number | null
+  /** Coupon stacking cap surfaced on the zone-resolve bundle (default 2 when
+   *  absent). Checkout reads this to know how many coupons a buyer may stack. */
+  maxStackableCoupons: number | null
 }
 
 export interface ZoneFeature {
@@ -2489,6 +2744,7 @@ interface RawResolvedSettings {
   free_shipping_threshold_cents?: number | null
   shipping_mode?: "per_lb" | "flat" | null
   flat_shipping_cents?: number | null
+  max_stackable_coupons?: number | null
 }
 
 interface RawZoneFeature {
@@ -2530,6 +2786,7 @@ function mapSettings(s: RawResolvedSettings | null | undefined): ResolvedZoneSet
     freeShippingThresholdCents: s?.free_shipping_threshold_cents ?? null,
     shippingMode: s?.shipping_mode ?? null,
     flatShippingCents: s?.flat_shipping_cents ?? null,
+    maxStackableCoupons: s?.max_stackable_coupons ?? null,
   }
 }
 
@@ -3313,7 +3570,7 @@ export function updateEmailTemplate(
 }
 
 export function previewEmailTemplate(token: string, slug: string, body: { html_body?: string; data?: Record<string, unknown> }) {
-  return fetch(`${API_BASE}/api/admin/email-templates/${slug}/preview`, {
+  return fetch(gatewayUrl(`/api/admin/email-templates/${slug}/preview`), {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
@@ -3333,7 +3590,7 @@ export function createEmailTemplate(token: string, body: {
 }
 
 export function deleteEmailTemplate(token: string, slug: string) {
-  return fetch(`${API_BASE}/api/admin/email-templates/${slug}`, {
+  return fetch(gatewayUrl(`/api/admin/email-templates/${slug}`), {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -3344,7 +3601,7 @@ export function sendTestEmail(token: string, slug: string, body: { to: string; d
 }
 
 export function previewRawTemplate(token: string, body: { html_body: string; use_layout: boolean; variables?: VariableDef[]; data?: Record<string, unknown> }) {
-  return fetch(`${API_BASE}/api/admin/email-templates/preview`, {
+  return fetch(gatewayUrl(`/api/admin/email-templates/preview`), {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
@@ -3384,7 +3641,7 @@ export function addNotificationRecipient(token: string, body: { event_type: stri
 }
 
 export function removeNotificationRecipient(token: string, id: string) {
-  return fetch(`${API_BASE}/api/admin/notification-recipients/${id}`, {
+  return fetch(gatewayUrl(`/api/admin/notification-recipients/${id}`), {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -4056,7 +4313,7 @@ export function trackEvent(payload: TrackEventPayload, token?: string): void {
     ...payload,
     client_id: payload.client_id ?? getOrCreateClientId(),
   }
-  fetch(`${API_BASE}/api/v1/ai/events/track`, {
+  fetch(gatewayUrl(`/api/v1/ai/events/track`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -4455,6 +4712,11 @@ export interface OfferSummary {
   currency: string
   stockQuantity: number
   condition: string
+  /** catalog.products.id backing this offer — the key reviews are filed under. */
+  productId?: string | null
+  /** Denormalized rating for this offer's product (null when no reviews yet). */
+  avgRating?: number | null
+  reviewCount?: number | null
 }
 
 export interface CatalogItemBuyBox {
@@ -4676,4 +4938,83 @@ export function voidOpex(token: string, id: string, reason: string) {
     token,
     body: { reason },
   })
+}
+
+// ── Referral + store credit (buyer "Wallet" section) ──────────────────────
+
+export interface ReferralMeDto {
+  enabled: boolean
+  code?: string
+  link?: string
+  rewardCents?: number
+  currency?: string
+  referredCount?: number
+}
+
+export interface StoreCreditEntryDto {
+  deltaCents: number
+  reason: string
+  orderNumber?: string
+  createdAt: string
+}
+
+export interface StoreCreditMeDto {
+  balanceCents: number
+  currency: string
+  entries: StoreCreditEntryDto[]
+}
+
+export interface ReferralClaimResponseDto {
+  granted: boolean
+  /** Denial reason when granted=false: disabled | invalid_code | self | not_new | already | referrer_cap_reached */
+  reason?: string
+  rewardCents?: number
+  currency?: string
+}
+
+/**
+ * Claims a referral code for the CURRENT (newly-registered) buyer. Grants store
+ * credit to BOTH the referrer and this buyer on first success. Idempotent and
+ * guarded server-side (self / already-claimed / new-account-window / cap), so
+ * it is safe to call on every authenticated load while an `atx_ref` cookie is
+ * present.
+ */
+export function claimReferral(token: string, referralCode: string) {
+  return api<ReferralClaimResponseDto>("/api/v1/referral/claim", {
+    method: "POST",
+    body: { referralCode },
+    token,
+  })
+}
+
+export function getReferralMe(token: string) {
+  return api<ReferralMeDto>("/api/v1/referral/me", { token })
+}
+
+export function getStoreCreditMe(token: string) {
+  return api<StoreCreditMeDto>("/api/v1/store-credit/me", { token })
+}
+
+// ── Login sessions / active devices (Account → Login & security) ──────────
+
+/** Per-session device fingerprint captured for the account "active devices" view. */
+export interface LoginSessionDeviceDto {
+  sessionId: string
+  userAgent?: string | null
+  firstSeen: string
+  lastSeen: string
+}
+
+/** Records the current session's device (idempotent upsert keyed by sessionId). */
+export function pingLoginSession(token: string, sessionId: string, userAgent: string) {
+  return api<void>("/api/v1/users/me/login-sessions", {
+    method: "POST",
+    body: { sessionId, userAgent },
+    token,
+  })
+}
+
+/** Fetches every captured device fingerprint for the current user. */
+export function getLoginSessionDevices(token: string) {
+  return api<LoginSessionDeviceDto[]>("/api/v1/users/me/login-sessions", { token })
 }

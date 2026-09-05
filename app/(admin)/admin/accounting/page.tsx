@@ -4,9 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { BookOpen, Download, ScrollText, Scale, TrendingUp, Wallet, Landmark } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
+import { confirmDialog, promptDialog } from "@/components/ui/confirm"
+import { toast } from "sonner"
 import {
   ApiError,
   getAccounts,
+  getStoreById,
   getPnl,
   getScopedSummary,
   getReconciliation,
@@ -119,7 +122,18 @@ export default function AdminAccountingPage() {
     try {
       const token = await getAccessToken()
       if (!token) return
-      setAccounts(await getAccounts(token))
+      const accs = await getAccounts(token)
+      // The ledger names seller accounts "Seller <id-prefix>". Resolve the real
+      // store name (same as the orders/users pages) so the dropdown is legible;
+      // fall back to the ledger label if a store can't be resolved.
+      const sellers = accs.filter((a) => a.kind === "seller")
+      const resolved = await Promise.allSettled(sellers.map((a) => getStoreById(a.id)))
+      const nameById = new Map<string, string>()
+      resolved.forEach((r, i) => {
+        if (r.status === "fulfilled" && r.value?.name) nameById.set(sellers[i].id, r.value.name)
+      })
+      setAccounts(accs.map((a) =>
+        a.kind === "seller" && nameById.has(a.id) ? { ...a, name: nameById.get(a.id)! } : a))
     } catch (e) {
       logError(e, "accounting.loadAccounts")
     } finally {
@@ -271,14 +285,14 @@ export default function AdminAccountingPage() {
       await Promise.all([loadOpex(), loadPnlAndSummary()])
     } catch (e) {
       logError(e, "accounting.recordOpex")
-      alert(friendlyMessage(e, "Couldn't record that cost. Please try again."))
+      toast.error(friendlyMessage(e, "Couldn't record that cost. Please try again."))
     } finally {
       setOpexSubmitting(false)
     }
   }
 
   async function handleVoidOpex(id: string) {
-    const reason = window.prompt("Reason for voiding this cost?")
+    const reason = await promptDialog({ title: "Void this cost?", description: "Add a reason (shown in the ledger audit trail).", placeholder: "Reason for voiding", multiline: true })
     if (reason === null) return
     try {
       const token = await getAccessToken()
@@ -287,12 +301,12 @@ export default function AdminAccountingPage() {
       await Promise.all([loadOpex(), loadPnlAndSummary()])
     } catch (e) {
       logError(e, "accounting.voidOpex")
-      alert(friendlyMessage(e, "Couldn't void that cost. Please try again."))
+      toast.error(friendlyMessage(e, "Couldn't void that cost. Please try again."))
     }
   }
 
   async function runBackfill() {
-    if (!confirm("Replay every existing payment and refund into the ledger. Safe to re-run — duplicates are skipped. Proceed?")) return
+    if (!(await confirmDialog({ title: "Replay payments into the ledger?", description: "Replays every existing payment and refund. Safe to re-run — duplicates are skipped.", confirmLabel: "Run backfill", variant: "primary" }))) return
     setBackfillRunning(true)
     setBackfillResult(null)
     try {

@@ -1,6 +1,9 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getCatalogItemBuyBoxBySlug, type CatalogItemBuyBox } from "@/lib/api"
+import { RemoteImage } from "@/components/ui/remote-image"
+import { StarRating } from "@/components/products/StarRating"
+import ProductReviews from "@/components/reviews/ProductReviews"
 import { BuyBoxClient } from "./BuyBoxClient"
 
 /**
@@ -62,16 +65,28 @@ export default async function CatalogPDP({ params }: { params: Promise<Params> }
         <section className="space-y-3">
           <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-muted">
             {primary ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={primary.url} alt={primary.altText ?? item.title} className="h-full w-full object-cover" />
+              // LCP element — priority so it's not lazy-loaded; served avif/webp + sized.
+              <RemoteImage
+                src={primary.url}
+                alt={primary.altText ?? item.title}
+                fill
+                priority
+                sizes="(min-width:1024px) 60vw, 100vw"
+                className="object-cover"
+              />
             ) : null}
           </div>
           {item.images.length > 1 && (
             <div className="grid grid-cols-5 gap-2">
               {item.images.map((img) => (
-                <div key={img.id} className="aspect-square overflow-hidden rounded-xl border border-border bg-muted">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt={img.altText ?? ""} className="h-full w-full object-cover" />
+                <div key={img.id} className="relative aspect-square overflow-hidden rounded-xl border border-border bg-muted">
+                  <RemoteImage
+                    src={img.url}
+                    alt={img.altText ?? ""}
+                    fill
+                    sizes="(min-width:1024px) 12vw, 20vw"
+                    className="object-cover"
+                  />
                 </div>
               ))}
             </div>
@@ -86,6 +101,11 @@ export default async function CatalogPDP({ params }: { params: Promise<Params> }
             )}
             <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-foreground tracking-tight">{item.title}</h1>
             <p className="mt-1 text-[11px] font-mono text-muted-foreground">{item.itemNumber}</p>
+            {item.buyBox?.productId && (item.buyBox.reviewCount ?? 0) > 0 && (
+              <a href="#reviews" className="mt-2 inline-flex items-center gap-1.5 hover:underline">
+                <StarRating rating={item.buyBox.avgRating ?? 0} count={item.buyBox.reviewCount ?? 0} size="md" />
+              </a>
+            )}
           </header>
 
           <BuyBoxClient item={item} primaryImageUrl={primary?.url ?? null} />
@@ -107,6 +127,14 @@ export default async function CatalogPDP({ params }: { params: Promise<Params> }
           )}
         </section>
       </div>
+
+      {/* Reviews — winning offer's product (v1). Cross-seller aggregation is a
+          fast-follow; keyed on the buy-box offer's catalog.products.id. */}
+      {item.buyBox?.productId && (
+        <section id="reviews" className="mt-10 scroll-mt-24">
+          <ProductReviews productId={item.buyBox.productId} />
+        </section>
+      )}
     </main>
   )
 }

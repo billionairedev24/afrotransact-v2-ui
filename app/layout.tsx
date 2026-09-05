@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next"
+import { Suspense } from "react"
 import { Inter, Fraunces } from "next/font/google"
 import { Providers } from "@/components/providers"
 import { AiChatOverlay } from "@/components/ai/AiWidget"
 import { WhatsAppFab } from "@/components/support/WhatsAppFab"
+import { ReferralCapture } from "@/components/referral/ReferralCapture"
 import { Toaster } from "sonner"
+import { ConfirmDialogHost } from "@/components/ui/confirm"
 import { SITE_URL } from "@/lib/site"
 import "./globals.css"
 
@@ -54,10 +57,14 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${fraunces.variable} font-sans bg-background text-foreground antialiased`}>
         <Providers>
+          <Suspense fallback={null}>
+            <ReferralCapture />
+          </Suspense>
           {children}
           <AiChatOverlay />
           <WhatsAppFab />
           <Toaster position="bottom-right" richColors closeButton />
+          <ConfirmDialogHost />
         </Providers>
       </body>
     </html>

@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
-import { Loader2, AlertCircle, ShoppingCart, CheckCircle2, Percent, DollarSign } from "lucide-react"
+import { Loader2, AlertCircle, ShoppingCart, CheckCircle2, Percent, DollarSign, Mail, Phone, Package, User } from "lucide-react"
 import { API_BASE, ApiError } from "@/lib/api"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { getAccessToken } from "@/lib/auth-helpers"
+import { Sheet, SheetHeader, SheetBody } from "@/components/ui/Sheet"
+import { MaskedEmail, MaskedPhone } from "@/components/admin/MaskedContact"
 
 interface DailyPoint {
   day: string
@@ -22,11 +24,22 @@ interface AnalyticsResponse {
   daily: DailyPoint[]
 }
 
+interface AbandonedItem {
+  productTitle?: string | null
+  variantName?: string | null
+  quantity?: number | null
+  unitPriceCents?: number | null
+  imageUrl?: string | null
+}
+
 interface AbandonedRow {
   id: string
   order_id: string
   order_number: string
   buyer_id: string
+  buyer_email: string | null
+  buyer_phone: string | null
+  items: AbandonedItem[] | null
   subtotal_cents: number | null
   total_cents: number | null
   currency: string
@@ -79,6 +92,7 @@ export default function AbandonedCheckoutsPage() {
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<AbandonedRow | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -152,8 +166,9 @@ export default function AbandonedCheckoutsPage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Abandoned Checkouts</h1>
         <p className="text-sm text-gray-600">
-          Carts that started checkout but never paid. The cadence sends a recovery email at
-          T+1h and (when relevant) T+24h with a one-tap resume link.
+          Signed-in customers who started checkout but never paid — with the contact info and
+          items needed to reach back out. Guests aren&apos;t recorded here (no way to contact
+          them; their cart lives only in their browser). Click a row for the full cart.
         </p>
       </header>
 
@@ -205,23 +220,46 @@ export default function AbandonedCheckoutsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="px-5 py-3">Order #</th>
-                <th className="px-5 py-3">Buyer</th>
+                <th className="px-5 py-3">Cart</th>
+                <th className="px-5 py-3">Customer</th>
+                <th className="px-5 py-3">Contents</th>
                 <th className="px-5 py-3">Subtotal</th>
-                <th className="px-5 py-3">Items</th>
                 <th className="px-5 py-3">Abandoned at</th>
                 <th className="px-5 py-3">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {list?.content.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50">
+                <tr
+                  key={row.id}
+                  onClick={() => setSelected(row)}
+                  className="cursor-pointer hover:bg-gray-50"
+                >
                   <td className="px-5 py-3 font-mono text-xs text-gray-800">{row.order_number}</td>
-                  <td className="px-5 py-3 font-mono text-xs text-gray-500" title={row.buyer_id}>
-                    {row.buyer_id.slice(0, 8)}…
+                  <td className="px-5 py-3">
+                    {row.buyer_email || row.buyer_phone ? (
+                      <div className="flex flex-col gap-0.5 text-xs">
+                        {row.buyer_email && <MaskedEmail email={row.buyer_email} className="text-gray-800" />}
+                        {row.buyer_phone && <MaskedPhone phone={row.buyer_phone} className="text-gray-500" />}
+                      </div>
+                    ) : (
+                      <span className="font-mono text-xs text-gray-400" title={row.buyer_id}>
+                        {row.buyer_id ? `${row.buyer_id.slice(0, 8)}…` : "—"}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-gray-700">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Package className="h-3.5 w-3.5 text-gray-400" aria-hidden />
+                      {row.item_count} {row.item_count === 1 ? "item" : "items"}
+                    </span>
+                    {row.items && row.items.length > 0 && (
+                      <div className="mt-0.5 max-w-[220px] truncate text-xs text-gray-400">
+                        {row.items.map((it) => it.productTitle).filter(Boolean).join(", ")}
+                      </div>
+                    )}
                   </td>
                   <td className="px-5 py-3">{formatMoney(row.subtotal_cents, row.currency)}</td>
-                  <td className="px-5 py-3">{row.item_count}</td>
                   <td className="px-5 py-3 text-gray-600">{formatDateTime(row.abandoned_at)}</td>
                   <td className="px-5 py-3">
                     {row.status === "recovered" ? (
@@ -271,6 +309,114 @@ export default function AbandonedCheckoutsPage() {
           </div>
         )}
       </section>
+
+      {/* Detail drawer */}
+      <Sheet open={!!selected} onClose={() => setSelected(null)}>
+        <SheetHeader onClose={() => setSelected(null)}>
+          {selected?.order_number ?? "Abandoned cart"}
+        </SheetHeader>
+        {selected && (
+          <SheetBody className="space-y-6">
+            {/* Status + timing */}
+            <div className="flex items-center gap-2">
+              {selected.status === "recovered" ? (
+                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                  Recovered
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">
+                  Abandoned
+                </span>
+              )}
+              <span className="text-xs text-gray-500">{formatDateTime(selected.abandoned_at)}</span>
+            </div>
+
+            {/* Customer */}
+            <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+              <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <User className="h-3.5 w-3.5" aria-hidden /> Customer
+              </h3>
+              <dl className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                  {selected.buyer_email ? (
+                    <MaskedEmail email={selected.buyer_email} className="text-gray-800" />
+                  ) : (
+                    <span className="text-gray-400">No email on file</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                  {selected.buyer_phone ? (
+                    <MaskedPhone phone={selected.buyer_phone} className="text-gray-800" />
+                  ) : (
+                    <span className="text-gray-400">No phone on file</span>
+                  )}
+                </div>
+                <div className="pt-1 font-mono text-[11px] text-gray-400" title={selected.buyer_id}>
+                  ID {selected.buyer_id || "—"}
+                </div>
+              </dl>
+            </div>
+
+            {/* Items */}
+            <div>
+              <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <Package className="h-3.5 w-3.5" aria-hidden /> Items left in cart
+              </h3>
+              {selected.items && selected.items.length > 0 ? (
+                <ul className="space-y-3">
+                  {selected.items.map((it, i) => (
+                    <li key={i} className="flex items-center gap-3">
+                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                        {it.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={it.imageUrl} alt={it.productTitle ?? "item"} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-gray-300">
+                            <Package className="h-5 w-5" aria-hidden />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-gray-800">
+                          {it.productTitle ?? "Item"}
+                        </div>
+                        {it.variantName && (
+                          <div className="truncate text-xs text-gray-500">{it.variantName}</div>
+                        )}
+                        <div className="text-xs text-gray-500">
+                          Qty {it.quantity ?? 1}
+                          {typeof it.unitPriceCents === "number" && (
+                            <> · {formatMoney(it.unitPriceCents, selected.currency)} each</>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  {selected.item_count} {selected.item_count === 1 ? "item" : "items"} — line-item
+                  detail wasn&apos;t captured for this cart.
+                </p>
+              )}
+            </div>
+
+            {/* Totals */}
+            <div className="space-y-1.5 border-t border-gray-100 pt-4 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal</span>
+                <span>{formatMoney(selected.subtotal_cents, selected.currency)}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-gray-900">
+                <span>Total</span>
+                <span>{formatMoney(selected.total_cents, selected.currency)}</span>
+              </div>
+            </div>
+          </SheetBody>
+        )}
+      </Sheet>
     </div>
   )
 }

@@ -55,8 +55,11 @@ import {
   Clock,
   Info,
   Check,
+  Wallet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { confirmDialog } from "@/components/ui/confirm"
+import { formatDistance } from "@/lib/format"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { features } from "@/lib/features"
 import { useCartStore, clearGuestCart } from "@/stores/cart-store"
@@ -64,6 +67,7 @@ import { useBuyNowStore } from "@/stores/buy-now-store"
 import { useCartHydration } from "@/components/providers/CartMergeProvider"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete"
+import { CardBrandMark } from "@/components/account/CardBrandMark"
 import { PhoneInput, normalizeToE164 } from "@/components/ui/PhoneInput"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { toast } from "sonner"
@@ -150,6 +154,24 @@ export type PaymentHandle = {
 
 function formatCents(v: number) {
   return `$${(v / 100).toFixed(2)}`
+}
+
+// One entry in the checkout's ordered stack of applied coupons. Order matters —
+// the backend applies them sequentially and `discountCents` is the incremental
+// discount THIS code contributed on top of the ones before it.
+type AppliedCoupon = {
+  code: string
+  discountCents: number
+  target: "items" | "shipping"
+  type: string
+  value: number
+}
+
+// Human label for what a coupon does, shown under its code on the chip.
+function couponDescription(c: AppliedCoupon): string {
+  if (c.target === "shipping") return "Free shipping"
+  if (c.type === "percentage") return `${(c.value / 100).toFixed(0)}% off items`
+  return `${formatCents(c.value)} off items`
 }
 
 type FlatQuote = ShippingQuoteOption & { carrier: string }
@@ -502,7 +524,7 @@ export default function CheckoutClientV2({
 
   async function handleDeleteAddress(id: string) {
     if (!authToken) return
-    if (!confirm("Delete this address?")) return
+    if (!(await confirmDialog({ title: "Delete this address?", confirmLabel: "Delete", variant: "danger" }))) return
     try {
       await deleteAddress(authToken, id)
     } catch (e) {
@@ -880,11 +902,22 @@ export default function CheckoutClientV2({
   // when the flag is missing so a broken feature fetch doesn't hide a
   // working coupon system.
   const couponsEnabled = effectiveFeatures["coupons_enabled"] !== false
-  const [couponCode, setCouponCode] = useState("")
+  // Max coupons a buyer may stack, read off the SAME zone-resolve bundle that
+  // carries coupons_enabled. Default 2 when absent (matches the backend
+  // default); clamp to ≥1 so a bad config never hides the coupon input.
+  const maxStackableCoupons = Math.max(1, activeZone?.effectiveSettings?.maxStackableCoupons ?? 2)
   const [couponInput, setCouponInput] = useState("")
-  const [couponResult, setCouponResult] = useState<ValidateCouponResponse | null>(null)
+  // Ordered list of applied coupons. Replaces the singular couponResult/couponCode.
+  // Each entry is what the backend validate call reported for that code, in the
+  // order the buyer applied them (order matters — discounts stack sequentially).
+  const [appliedCoupons, setAppliedCoupons] = useState<AppliedCoupon[]>([])
   const [couponError, setCouponError] = useState<string | null>(null)
   const [couponLoading, setCouponLoading] = useState(false)
+  // Whether the "add another coupon" input is revealed. After applying one, we
+  // collapse back to the "＋ Have another coupon?" affordance (mockup behavior).
+  const [showAddCoupon, setShowAddCoupon] = useState(false)
+
+  const appliedCodes = useMemo(() => appliedCoupons.map((c) => c.code), [appliedCoupons])
 
   const couponErrorMessage = useCallback((res: ValidateCouponResponse | null, fallback: string): string => {
     const raw = (res?.error ?? "").toLowerCase()
@@ -894,28 +927,70 @@ export default function CheckoutClientV2({
     return "That code isn’t valid"
   }, [])
 
-  const runValidateCoupon = useCallback(async (code: string): Promise<ValidateCouponResponse | null> => {
+  // Turn a rejection into a specific inline message. Prefer the machine `reason`
+  // (duplicate / max_reached / exclusive / exclusive_present / ineligible) so the
+  // buyer sees exactly why, falling back to the humanized error text.
+  const couponRejectionMessage = useCallback((res: ValidateCouponResponse | null, fallback: string): string => {
+    switch (res?.reason) {
+      case "duplicate": return "That coupon is already applied."
+      case "max_reached": return `You’ve applied the maximum of ${maxStackableCoupons} coupon${maxStackableCoupons === 1 ? "" : "s"}.`
+      case "exclusive": return `“${res.code}” can’t be combined with other coupons.`
+      case "exclusive_present": return "An exclusive coupon is already applied — remove it first."
+      case "ineligible":
+      default:
+        return couponErrorMessage(res, fallback)
+    }
+  }, [maxStackableCoupons, couponErrorMessage])
+
+  const runValidateCoupon = useCallback(async (code: string, priorCodes: string[]): Promise<ValidateCouponResponse | null> => {
     if (!authToken) return null
     // Pass shippingCents so a shipping-target coupon can compute its discount
-    // against the actual quoted shipping fee. Prefer the resolved service-zone
-    // id (that's where coupons_enabled is configured); region.id stays as the
-    // legacy fallback — same XOR-preference the shipping-quote call uses.
+    // against the actual quoted shipping fee, and priorCodes so the backend
+    // returns the INCREMENTAL discount this code adds on top of them (matching
+    // what checkout will compute). `subtotal` is the ORIGINAL cart subtotal.
+    // Prefer the resolved service-zone id; region.id stays as the legacy
+    // fallback — same XOR-preference the shipping-quote call uses.
     const zoneId = activeZoneId
-    return await validateCoupon(authToken, code, subtotal, region?.id, shippingCents, zoneId)
-  }, [authToken, subtotal, region?.id, shippingCents, activeZoneId])
+    // Per-line breakdown so a store/product coupon's preview discount is scoped
+    // to its own items (matches the charge; keeps the client total in sync).
+    const lines = effectiveItems.map((it) => ({
+      storeId: it.storeId,
+      productId: it.productId,
+      subtotalCents: it.price * it.quantity,
+    }))
+    return await validateCoupon(authToken, code, subtotal, region?.id, shippingCents, zoneId, priorCodes, lines)
+  }, [authToken, subtotal, region?.id, shippingCents, activeZoneId, effectiveItems])
 
   async function handleApplyCoupon() {
-    if (!couponsEnabled || !couponInput.trim() || !authToken) return
-    setCouponLoading(true)
+    const code = couponInput.trim().toUpperCase()
+    if (!couponsEnabled || !code || !authToken) return
     setCouponError(null)
+    // Fast client-side guards mirror the server cap/duplicate rules so the buyer
+    // gets instant feedback; the order service remains the source of truth.
+    if (appliedCoupons.length >= maxStackableCoupons) {
+      setCouponError(`You’ve applied the maximum of ${maxStackableCoupons} coupon${maxStackableCoupons === 1 ? "" : "s"}.`)
+      return
+    }
+    if (appliedCoupons.some((c) => c.code === code)) {
+      setCouponError("That coupon is already applied.")
+      return
+    }
+    setCouponLoading(true)
     try {
-      const res = await runValidateCoupon(couponInput.trim())
+      const res = await runValidateCoupon(code, appliedCodes)
       if (res?.valid) {
-        setCouponResult(res)
-        setCouponCode(couponInput.trim())
+        setAppliedCoupons((prev) => [...prev, {
+          code: res.code || code,
+          discountCents: res.discountCents,
+          target: res.discountTarget === "shipping" ? "shipping" : "items",
+          type: res.type,
+          value: res.value,
+        }])
         setCouponInput("")
+        // Collapse the input; buyer taps "＋ Have another coupon?" to add more.
+        setShowAddCoupon(false)
       } else {
-        setCouponError(couponErrorMessage(res, "That code isn’t valid"))
+        setCouponError(couponRejectionMessage(res, "That code isn’t valid"))
       }
     } catch (e) {
       logError(e, "validate coupon (v2)")
@@ -925,32 +1000,50 @@ export default function CheckoutClientV2({
     }
   }
 
-  function handleRemoveCoupon() {
-    setCouponResult(null)
-    setCouponCode("")
+  function handleRemoveCoupon(code: string) {
+    setAppliedCoupons((prev) => prev.filter((c) => c.code !== code))
     setCouponError(null)
   }
 
-  // Re-validate the applied coupon whenever the cart changes (min-spend may now
-  // fail) OR the destination address's zone changes (coupons_enabled and any
-  // shipping-target discount are zone-scoped, so a coupon valid in one zone may
-  // not apply in another — clear it if it no longer holds).
+  // Re-validate the WHOLE applied set whenever the cart changes (min-spend may
+  // now fail) OR the destination address's zone changes (coupons_enabled and any
+  // shipping-target discount are zone-scoped). Re-runs each code sequentially,
+  // passing the accumulating accepted set so incremental discounts stay correct,
+  // and drops any coupon that no longer holds.
   useEffect(() => {
-    if (!couponResult || !couponCode || !authToken) return
+    if (appliedCoupons.length === 0 || !authToken) return
     let cancelled = false
     ;(async () => {
-      try {
-        const res = await runValidateCoupon(couponCode)
-        if (cancelled) return
-        if (res?.valid) {
-          setCouponResult(res)
-        } else {
-          setCouponResult(null)
-          setCouponError(couponErrorMessage(res, "Coupon no longer applies"))
+      const codes = appliedCoupons.map((c) => c.code)
+      const next: AppliedCoupon[] = []
+      const accepted: string[] = []
+      let dropped = false
+      for (const code of codes) {
+        try {
+          const res = await runValidateCoupon(code, accepted)
+          if (cancelled) return
+          if (res?.valid) {
+            next.push({
+              code: res.code || code,
+              discountCents: res.discountCents,
+              target: res.discountTarget === "shipping" ? "shipping" : "items",
+              type: res.type,
+              value: res.value,
+            })
+            accepted.push(code)
+          } else {
+            dropped = true
+          }
+        } catch (e) {
+          logError(e, "revalidate coupon (v2)")
+          // Keep the coupon as-is on a transient error rather than dropping it.
+          const existing = appliedCoupons.find((c) => c.code === code)
+          if (existing) { next.push(existing); accepted.push(code) }
         }
-      } catch (e) {
-        logError(e, "revalidate coupon (v2)")
       }
+      if (cancelled) return
+      setAppliedCoupons(next)
+      if (dropped) setCouponError("Some coupons no longer apply and were removed.")
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -962,14 +1055,26 @@ export default function CheckoutClientV2({
   // and can diverge (e.g. still 8.25% after a zone is set to 0), so we never
   // use it here. Unconfigured zone → 0, matching the server.
   const taxRate = activeZone?.effectiveSettings?.taxRate ?? 0
-  const discountCents = couponResult?.discountCents ?? 0
-  const couponTargetsShipping = couponResult?.discountTarget === "shipping"
-  // Shipping-target coupons reduce shipping (never below 0); items-target
-  // coupons reduce the taxable subtotal. Backend applies the same split.
-  const itemsDiscountCents = couponTargetsShipping ? 0 : discountCents
-  const shippingDiscountCents = couponTargetsShipping
-    ? Math.min(discountCents, shippingCents)
-    : 0
+  // Sum the per-coupon INCREMENTAL discounts (validate already computed each on
+  // the running subtotal, so summing them is correct). Shipping-target coupons
+  // reduce shipping (never below 0); items-target coupons reduce the taxable
+  // subtotal — the same split the backend applies.
+  const itemsDiscountCents = appliedCoupons
+    .filter((c) => c.target !== "shipping")
+    .reduce((s, c) => s + c.discountCents, 0)
+  const shippingDiscountCents = Math.min(
+    appliedCoupons.filter((c) => c.target === "shipping").reduce((s, c) => s + c.discountCents, 0),
+    shippingCents,
+  )
+  // Combined savings surfaced to the buyer ("You're saving $X").
+  const combinedDiscountCents = itemsDiscountCents + shippingDiscountCents
+  // Legacy alias: item-level discount, still consumed by the estimate summary.
+  const discountCents = itemsDiscountCents
+  const couponTargetsShipping = shippingDiscountCents > 0
+  const shippingCouponCode = appliedCoupons.find((c) => c.target === "shipping")?.code
+  // Stable key over the ordered applied set — drives the re-quote invalidation
+  // effect so adding OR removing ANY coupon re-mints the PaymentIntent.
+  const appliedCouponsKey = appliedCoupons.map((c) => `${c.code}:${c.discountCents}:${c.target}`).join("|")
   const taxableSubtotal = Math.max(0, subtotal - itemsDiscountCents)
   const tax = Math.round(taxableSubtotal * taxRate)
   const effectiveShippingCents = Math.max(0, shippingCents - shippingDiscountCents)
@@ -1009,11 +1114,20 @@ export default function CheckoutClientV2({
   const idempotencyKeyRef = useRef<string | null>(null)
   const placingRef = useRef(false)
 
-  // Reset the PI whenever the inputs that determine its amount change.
+  // Reset the PI whenever the inputs that determine its amount change. This
+  // MUST include the pickup/ship selection (allPickupSelected + the per-group
+  // groupMethod): choosing free pickup zeroes shipping, so without invalidating
+  // here the minted total stayed stale (the summary — and the charge — didn't
+  // reflect the pickup discount). mintIntent already sends the pickup selection,
+  // so re-minting re-quotes the correct total.
+  // appliedCouponsKey encodes the ENTIRE ordered coupon list (codes + each
+  // one's discount + target), so adding OR removing ANY coupon invalidates the
+  // minted quote and forces a re-mint against the correct total. Depending on a
+  // single code (the old behavior) would miss removals and stack changes.
   useEffect(() => {
     idempotencyKeyRef.current = null
     setCheckoutResult(null)
-  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard, couponCode, discountCents])
+  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard, appliedCouponsKey, allPickupSelected, groupMethod])
 
   // ── Amazon-way: the backend's minted order is the SINGLE source of truth for
   //    what the card will be charged. Once `checkoutResult` exists we display
@@ -1027,6 +1141,11 @@ export default function CheckoutClientV2({
   const dTax = checkoutResult?.taxCents ?? tax
   const dShipping = checkoutResult?.shippingCostCents ?? effectiveShippingCents
   const dTotal = checkoutResult?.totalCents ?? total
+  // Store credit (referral/wallet) auto-applied by the backend at checkout,
+  // capped at the total. Only known once the order is minted (checkoutResult);
+  // the card is charged dTotal - dCredit.
+  const dCredit = checkoutResult?.storeCreditAppliedCents ?? 0
+  const dCharge = Math.max(0, dTotal - dCredit)
 
   const mintIntent = useCallback(async () => {
     if (placingRef.current) return null
@@ -1088,7 +1207,7 @@ export default function CheckoutClientV2({
         selectedShippingService: allPickupSelected ? "PICKUP" : (freeShippingApplies ? undefined : selectedQuote?.serviceCode),
         selectedShippingAmountCents: shippingCents,
         saveCard,
-        couponCodes: couponResult && couponCode ? [couponCode] : undefined,
+        couponCodes: appliedCoupons.length > 0 ? appliedCoupons.map((c) => c.code) : undefined,
         // Omitted entirely (undefined) unless at least one store in the cart
         // actually offers pickup — this is what keeps a ship-only cart's
         // checkout payload byte-for-byte identical to the pre-Pickup-Phase-2
@@ -1128,7 +1247,7 @@ export default function CheckoutClientV2({
       placingRef.current = false
       setMinting(false)
     }
-  }, [authToken, region, selectedAddress, effectiveItems, isBuyNow, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, profileName, profilePhone, sessionName, router])
+  }, [authToken, region, selectedAddress, effectiveItems, isBuyNow, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, appliedCoupons, profileName, profilePhone, sessionName, router])
 
   // ─── place order ───────────────────────────────────────────────────
   const paymentHandleRef = useRef<PaymentHandle | null>(null)
@@ -1168,29 +1287,39 @@ export default function CheckoutClientV2({
 
   async function handlePlaceOrder() {
     setPlaceError(null)
+    // Verification gate (defense-in-depth beyond the disabled button): a
+    // signed-in but unverified buyer cannot place an order.
+    if (session?.status === "authenticated" && session?.data?.user?.emailVerified === false) {
+      setPlaceError("Please verify your email before placing your order — check your inbox for the verification link.")
+      return
+    }
     // The exact number on the Place-order button at the instant it was clicked.
     const shownTotalAtClick = dTotal
-    let result = checkoutResult
-    if (!result) result = await mintIntent()
-    if (!result) return
-    // ── Amazon-way gate #1 ──────────────────────────────────────────────
-    // The freshly-minted order total MUST equal what the buyer just reviewed.
-    // If the cart/price drifted (e.g. a mint-on-click surfaced a different
-    // final total than the estimate), do NOT charge — show the real total and
-    // make them place the order again against the authoritative number.
-    if (result.totalCents !== shownTotalAtClick) {
-      setPlaceError(
-        `Your order total updated to ${formatCents(result.totalCents)}. Please review it above, then place your order again.`,
-      )
-      return
-    }
-    const handle = paymentHandleRef.current
-    if (!handle) {
-      setPlaceError("Payment isn't ready yet. Please wait a moment and try again.")
-      return
-    }
+    // Mark "placing" for the WHOLE flow — mint-on-click AND confirm — so the CTA
+    // spinner reflects a real placement. A background re-mint (e.g. toggling
+    // "save this card") sets `minting` but NOT `paying`, so it no longer shows a
+    // misleading "Placing order…" spinner on the button.
     setPaying(true)
     try {
+      let result = checkoutResult
+      if (!result) result = await mintIntent()
+      if (!result) return
+      // ── Amazon-way gate #1 ──────────────────────────────────────────────
+      // The freshly-minted order total MUST equal what the buyer just reviewed.
+      // If the cart/price drifted (e.g. a mint-on-click surfaced a different
+      // final total than the estimate), do NOT charge — show the real total and
+      // make them place the order again against the authoritative number.
+      if (result.totalCents !== shownTotalAtClick) {
+        setPlaceError(
+          `Your order total updated to ${formatCents(result.totalCents)}. Please review it above, then place your order again.`,
+        )
+        return
+      }
+      const handle = paymentHandleRef.current
+      if (!handle) {
+        setPlaceError("Payment isn't ready yet. Please wait a moment and try again.")
+        return
+      }
       const ok = await handle.confirmPayment()
       if (ok) await handlePaymentComplete()
     } finally {
@@ -1207,6 +1336,12 @@ export default function CheckoutClientV2({
   else if (!stripeAvailable) disabledReason = "Payment is unavailable in this region"
   else if (selectedSavedCardId === null && !checkoutResult && !minting) disabledReason = null // new-card path: minting on click
   if (requoting) disabledReason = "Updating delivery options…"
+  // App-level email-verification gate: a signed-in but unverified buyer cannot
+  // place an order. (Guests have no account to verify — they're not gated
+  // here.) Overrides the reasons above so it always wins when it applies.
+  const emailUnverified =
+    session?.status === "authenticated" && session?.data?.user?.emailVerified === false
+  if (emailUnverified) disabledReason = "Verify your email to place your order"
   const placeDisabled = disabledReason !== null || minting || placingRef.current || paying || requoting || ratesUnavailable
 
   // ─── empty cart guard ─────────────────────────────────────────────
@@ -1338,7 +1473,9 @@ export default function CheckoutClientV2({
               : freeShippingApplies
                 ? "Free — your order qualifies for free delivery"
                 : selectedQuote
-                  ? `${selectedQuote.serviceName} — ${fmtShip(selectedQuote.amountCents)}`
+                  // One delivery fee for the whole order — shown once in the
+                  // order summary, never here (and never split per seller).
+                  ? "Delivered by AfroTransact"
                   : "Choose a delivery option"}
             disabled={!selectedAddress}
           >
@@ -1375,10 +1512,10 @@ export default function CheckoutClientV2({
                     Contact support
                   </a>
                   <a
-                    href="mailto:support@afrotransact.com"
+                    href="mailto:hello@afrotransact.com"
                     className="inline-flex items-center justify-center rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-50"
                   >
-                    support@afrotransact.com
+                    hello@afrotransact.com
                   </a>
                 </div>
               </div>
@@ -1409,11 +1546,21 @@ export default function CheckoutClientV2({
                       <header className="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-border bg-muted/40">
                         <span
                           className={cn(
-                            "grid place-items-center h-9 w-9 rounded-xl flex-none text-sm font-bold",
-                            g.isHouse ? "bg-foreground text-brand-gold" : "bg-muted text-foreground",
+                            "grid place-items-center h-9 w-9 rounded-xl flex-none overflow-hidden",
+                            g.isHouse ? "bg-white border border-border" : "bg-muted text-foreground",
                           )}
                         >
-                          {g.isHouse ? "₳" : <Store className="h-4 w-4" />}
+                          {g.isHouse ? (
+                            <Image
+                              src="/brand/logo-mark.svg"
+                              alt="AfroTransact"
+                              width={22}
+                              height={22}
+                              className="h-[22px] w-[22px] object-contain"
+                            />
+                          ) : (
+                            <Store className="h-4 w-4" />
+                          )}
                         </span>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground truncate">
@@ -1434,9 +1581,9 @@ export default function CheckoutClientV2({
                           >
                             <MapPin className="h-3.5 w-3.5" />
                             {pickupDisplayEligible
-                              ? pickupOpt?.pickupLocation?.city
-                                ? `Collect in ${pickupOpt.pickupLocation.city}`
-                                : "Pickup available near you"
+                              ? storePickup?.distanceMiles != null
+                                ? `Pickup · ${formatDistance(storePickup.distanceMiles)} away`
+                                : "Pickup available"
                               : "Pickup not available here"}
                           </span>
                         )}
@@ -1579,19 +1726,16 @@ export default function CheckoutClientV2({
                                   Arrives in {DELIVERY_ETA_HOURS} hours
                                 </p>
                               </div>
-                              {/* Delivery is a single FLAT fee for the whole order
-                                  (shown once in the order summary), never a per-group
-                                  charge — so we don't stamp the dollar amount on each
-                                  group's option (that read as "$7.99 × N"). */}
+                              {/* Show the delivery PRICE on the option so the buyer sees
+                                  the shipping cost. This is the ONE order-level delivery
+                                  fee (the same value shown once in the summary) — when
+                                  several sellers ship, they share this single fee; it is
+                                  never multiplied per seller. "Free" when the order
+                                  qualifies for free delivery. */}
                               {freeShippingApplies ? (
                                 <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">Free</span>
-                              ) : couponTargetsShipping ? (
-                                <span className="text-sm tabular-nums">
-                                  <span className="mr-1.5 text-muted-foreground line-through">{fmtShip(shippingCents)}</span>
-                                  <span className="font-bold text-emerald-700 dark:text-emerald-400">Free</span>
-                                </span>
                               ) : (
-                                <span className="text-xs font-medium text-muted-foreground">Flat rate</span>
+                                <span className="text-sm font-bold text-foreground tabular-nums">{fmtShip(q.amountCents)}</span>
                               )}
                             </label>
                           )
@@ -1604,40 +1748,10 @@ export default function CheckoutClientV2({
             )}
           </Section>
 
-          {/* 3. Payment method */}
+          {/* 3. Review items — payment moved to the sticky summary panel so the
+              card entry is always visible next to Pay (no scrolling past items). */}
           <Section
             n={3}
-            title="Payment method"
-            subtitle={selectedSavedCardId
-              ? `Saved card •••• ${savedCards.find((c) => c.stripePmId === selectedSavedCardId)?.last4 ?? "????"}`
-              : "Use a new card"}
-            disabled={!selectedAddress || !selectedQuoteId}
-          >
-            {(!selectedAddress || !selectedQuoteId) ? (
-              <p className="text-sm text-gray-500">Select an address and delivery option above.</p>
-            ) : !stripeAvailable ? (
-              <div className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
-                Card payments via Stripe are not available in this region yet.
-              </div>
-            ) : (
-              <InlinePayment
-                ref={paymentHandleRef}
-                clientSecret={checkoutResult?.paymentClientSecret ?? null}
-                checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
-                totalCents={dTotal}
-                saveCard={saveCard}
-                onSaveCardChange={setSaveCard}
-                savedCards={savedCards}
-                selectedSavedCardId={selectedSavedCardId}
-                onSelectedSavedCardChange={setSelectedSavedCardId}
-                onError={setPlaceError}
-              />
-            )}
-          </Section>
-
-          {/* 4. Review items */}
-          <Section
-            n={4}
             title="Review items"
             subtitle={`${effectiveItems.length} item${effectiveItems.length === 1 ? "" : "s"} in your order`}
           >
@@ -1707,34 +1821,64 @@ export default function CheckoutClientV2({
 
         {/* Right rail: Order summary */}
         <aside className="lg:col-span-1">
-          <div className="lg:sticky lg:top-24 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="lg:sticky lg:top-24 flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            {/* On mobile the payment form comes first and the order summary
+                sits directly beneath it (flex order); desktop keeps the summary
+                on top of the sticky rail. */}
+            <div className="order-2 mt-4 border-t border-gray-200 pt-4 lg:order-1 lg:mt-0 lg:border-0 lg:pt-0">
             <h2 className="text-lg font-bold text-gray-900 mb-3">Order summary</h2>
 
             {couponsEnabled && (
               <div className="mb-3 text-sm">
-                {couponResult ? (
-                  <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2">
-                    <span className="text-green-800">
-                      Code <span className="font-mono font-semibold">{couponResult.code}</span> applied
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleRemoveCoupon}
-                      className="text-xs font-semibold text-red-600 hover:underline"
-                    >
-                      Remove
-                    </button>
+                {/* Applied coupons — removable green chips (code · what it does · −amount). */}
+                {appliedCoupons.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {appliedCoupons.map((c) => (
+                      <div
+                        key={c.code}
+                        className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 px-3 py-2.5"
+                      >
+                        <span className="grid place-items-center h-5 w-5 shrink-0 rounded-full bg-emerald-600 text-white">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-mono text-[13px] font-bold tracking-wide text-gray-900 dark:text-gray-100">{c.code}</p>
+                          <p className="text-[11px] text-gray-500">{couponDescription(c)}</p>
+                        </div>
+                        <span className="text-[13px] font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                          -{formatCents(c.discountCents)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCoupon(c.code)}
+                          aria-label={`Remove coupon ${c.code}`}
+                          className="shrink-0 rounded p-0.5 text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ) : (
+                )}
+
+                {/* Input row: shown when nothing applied yet, or when the buyer
+                    revealed "another coupon" — always gated by the stack cap. */}
+                {appliedCoupons.length < maxStackableCoupons && (appliedCoupons.length === 0 || showAddCoupon) && (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-gray-700">Promo code</label>
+                    {appliedCoupons.length === 0 && (
+                      <label className="text-xs font-semibold text-gray-700">Promo code</label>
+                    )}
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={couponInput}
                         onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleApplyCoupon() } }}
                         placeholder="Enter code"
-                        className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                        className={cn(
+                          "flex-1 rounded-lg border px-3 py-2 text-sm font-mono uppercase tracking-wide placeholder:font-sans placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-brand-gold/40",
+                          couponError ? "border-red-300" : "border-gray-200",
+                        )}
                       />
                       <button
                         type="button"
@@ -1745,7 +1889,43 @@ export default function CheckoutClientV2({
                         {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
                       </button>
                     </div>
-                    {couponError && <p className="text-xs text-red-600">{couponError}</p>}
+                    {couponError && (
+                      <p className="flex items-center gap-1.5 text-xs text-red-600">
+                        <AlertCircle className="h-3 w-3 shrink-0" /> {couponError}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* "＋ Have another coupon?" — reveals the next input, up to the cap. */}
+                {appliedCoupons.length > 0 && appliedCoupons.length < maxStackableCoupons && !showAddCoupon && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddCoupon(true); setCouponError(null) }}
+                    className="mt-1 inline-flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-400"
+                  >
+                    <span className="grid place-items-center h-5 w-5 rounded-full border border-dashed border-emerald-600 dark:border-emerald-500">
+                      <Plus className="h-3 w-3" />
+                    </span>
+                    Have another coupon?
+                  </button>
+                )}
+
+                {/* At the cap: hide the add control, confirm the max. */}
+                {appliedCoupons.length >= maxStackableCoupons && (
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    You’ve applied the maximum of {maxStackableCoupons} coupon{maxStackableCoupons === 1 ? "" : "s"}.
+                  </p>
+                )}
+
+                {/* Combined savings line. */}
+                {combinedDiscountCents > 0 && (
+                  <div className="mt-3 flex items-center justify-between border-t border-dashed border-gray-200 pt-3">
+                    <span className="text-[13px] font-semibold text-gray-700">You’re saving</span>
+                    <span className="text-[15px] font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                      {formatCents(combinedDiscountCents)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -1756,10 +1936,10 @@ export default function CheckoutClientV2({
                 <dt className="text-gray-600">Items ({effectiveItems.length})</dt>
                 <dd className="text-gray-900 tabular-nums">{formatCents(dSubtotal)}</dd>
               </div>
-              {dDiscount > 0 && !couponTargetsShipping && (couponResult || checkoutResult?.couponAutoApplied) && (
+              {dDiscount > 0 && (appliedCoupons.length > 0 || checkoutResult?.couponAutoApplied) && (
                 <div className="flex justify-between italic text-green-700">
                   <dt>
-                    Discount ({couponResult?.code ?? checkoutResult?.couponCode})
+                    Coupon savings
                     {checkoutResult?.couponAutoApplied && (
                       <span className="ml-2 not-italic text-[11px] font-semibold text-green-700">
                         🎉 applied automatically
@@ -1782,7 +1962,7 @@ export default function CheckoutClientV2({
                   ) : null}
                   {couponTargetsShipping && shippingDiscountCents > 0 && (
                     <span className="ml-2 text-[11px] font-semibold text-green-700">
-                      {effectiveShippingCents === 0 ? "Waived" : "Discounted"} by {couponResult?.code}
+                      {effectiveShippingCents === 0 ? "Waived" : "Discounted"}{shippingCouponCode ? ` by ${shippingCouponCode}` : ""}
                     </span>
                   )}
                 </dt>
@@ -1810,9 +1990,23 @@ export default function CheckoutClientV2({
                 )}
               </div>
               <div className="flex justify-between border-t border-gray-200 pt-2 mt-2">
-                <dt className="text-base font-bold text-gray-900">{totalsAreFinal ? "Order total" : "Estimated total"}</dt>
-                <dd className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dTotal)}</dd>
+                <dt className={cn("font-bold text-gray-900", dCredit > 0 ? "text-sm" : "text-base")}>{totalsAreFinal ? "Order total" : "Estimated total"}</dt>
+                <dd className={cn("font-bold text-gray-900 tabular-nums", dCredit > 0 ? "text-sm" : "text-base")}>{formatCents(dTotal)}</dd>
               </div>
+              {dCredit > 0 && (
+                <>
+                  <div className="flex justify-between italic text-emerald-700 dark:text-emerald-400">
+                    <dt className="inline-flex items-center gap-1.5">
+                      <Wallet className="h-3.5 w-3.5" /> Store credit applied
+                    </dt>
+                    <dd className="tabular-nums">-{formatCents(dCredit)}</dd>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-200 pt-2 mt-1">
+                    <dt className="text-base font-bold text-gray-900">You&apos;ll be charged</dt>
+                    <dd className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dCharge)}</dd>
+                  </div>
+                </>
+              )}
             </dl>
             {pickupGroups.length > 0 && pickupSavingsCents > 0 && (
               <div className="mt-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-[12px] font-semibold px-3 py-2 inline-flex items-center gap-2">
@@ -1832,10 +2026,46 @@ export default function CheckoutClientV2({
                 <AlertCircle className="h-3 w-3 inline mr-1" /> {placeError}
               </div>
             )}
+            </div>
 
+            {/* Payment — lives in the sticky summary panel next to Pay so the
+                card entry is always on screen; buyers no longer scroll past a
+                long item list to find it (or hit Pay before entering a card).
+                On mobile it renders FIRST (order-1) so the summary sits under it. */}
+            <div className="order-1 lg:order-2 lg:mt-4 lg:border-t lg:border-gray-200 lg:pt-4">
+              <h3 className="mb-2.5 text-sm font-bold text-gray-900">Payment</h3>
+              {(!selectedAddress || !selectedQuoteId) ? (
+                <p className="text-sm text-gray-500">Add an address and choose delivery above to enter your card.</p>
+              ) : !stripeAvailable ? (
+                <div className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
+                  Card payments via Stripe are not available in this region yet.
+                </div>
+              ) : (
+                <InlinePayment
+                  ref={paymentHandleRef}
+                  clientSecret={checkoutResult?.paymentClientSecret ?? null}
+                  checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
+                  // The PaymentIntent is minted for the CHARGE (order total minus
+                  // any applied store credit), so the Stripe amount and the
+                  // pi.amount verification must use dCharge — NOT dTotal. Passing
+                  // dTotal made pi.amount (charge) != totalCents (order total)
+                  // whenever store credit applied, falsely blocking payment with
+                  // "Your order total changed."
+                  totalCents={dCharge}
+                  saveCard={saveCard}
+                  onSaveCardChange={setSaveCard}
+                  savedCards={savedCards}
+                  selectedSavedCardId={selectedSavedCardId}
+                  onSelectedSavedCardChange={setSelectedSavedCardId}
+                  onError={setPlaceError}
+                />
+              )}
+            </div>
+
+            <div className="order-3">
             <PlaceOrderButton
               disabled={placeDisabled}
-              loading={minting || paying}
+              loading={paying}
               disabledReason={disabledReason}
               onClick={handlePlaceOrder}
               className="hidden lg:flex mt-4 w-full"
@@ -1848,6 +2078,7 @@ export default function CheckoutClientV2({
               <a href="/terms" className="underline">Terms</a> and{" "}
               <a href="/privacy" className="underline">Privacy Policy</a>.
             </p>
+            </div>
           </div>
         </aside>
       </div>
@@ -1856,12 +2087,12 @@ export default function CheckoutClientV2({
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white p-3 lg:hidden">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-500">{totalsAreFinal ? "Order total" : "Estimated total"}</p>
-            <p className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dTotal)}</p>
+            <p className="text-xs text-gray-500">{dCredit > 0 ? "You'll be charged" : (totalsAreFinal ? "Order total" : "Estimated total")}</p>
+            <p className="text-base font-bold text-gray-900 tabular-nums">{formatCents(dCharge)}</p>
           </div>
           <PlaceOrderButton
             disabled={placeDisabled}
-            loading={minting}
+            loading={paying}
             disabledReason={disabledReason}
             onClick={handlePlaceOrder}
             className="flex-1"
@@ -1876,7 +2107,7 @@ export default function CheckoutClientV2({
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setAddrModalOpen(false) }}
         >
-          <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-hide scroll-smooth">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-bold text-gray-900">{addrEditingId ? "Edit address" : "Add a new address"}</h3>
               <button type="button" onClick={() => setAddrModalOpen(false)} className="text-gray-400 hover:text-gray-900">×</button>
@@ -2040,13 +2271,20 @@ const InlinePayment = forwardRef<PaymentHandle, InlinePaymentProps>(function Inl
   props,
   ref,
 ) {
-  const { clientSecret, totalCents, saveCard } = props
+  // clientSecret is forwarded to the form via {...props} for confirm; it is
+  // deliberately NOT used to key <Elements> (see note below).
+  const { totalCents, saveCard } = props
   return (
-    // `key` forces a full remount when the PaymentIntent or save-card option
-    // changes, mirroring the legacy PaymentStep's behavior to avoid stale
-    // PaymentIntent references in Stripe Elements.
+    // IMPORTANT: do NOT key this on clientSecret or saveCard. In deferred mode
+    // (mode:"payment") the PaymentElement holds NO PaymentIntent reference —
+    // the clientSecret is supplied only at confirm time — and `amount` +
+    // `setupFutureUsage` are applied in place via elements.update() when the
+    // `options` prop changes. Keying on clientSecret/saveCard forced a full
+    // remount of <Elements>, which tore down the PaymentElement iframe and
+    // WIPED the card the buyer had already typed whenever they ticked "save
+    // card" (or the PI re-minted). A stable key keeps the iframe mounted; Stripe
+    // updates the option in place, and the re-minted PI still syncs at confirm.
     <Elements
-      key={`${clientSecret ?? "no-pi"}|${saveCard ? "sfu" : "no-sfu"}`}
       stripe={getV2Stripe()}
       options={{
         mode: "payment",
@@ -2193,9 +2431,7 @@ function InlinePaymentForm({
                   onChange={() => onSelectedSavedCardChange(card.stripePmId)}
                   className="h-4 w-4 accent-brand-gold shrink-0"
                 />
-                <div className="flex h-9 w-14 items-center justify-center rounded-md border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 shrink-0">
-                  <CreditCard className="h-4 w-4 text-gray-500" />
-                </div>
+                <CardBrandMark brand={card.brand} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-gray-900">{brandLabel}</span>

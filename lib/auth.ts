@@ -130,7 +130,18 @@ function keycloakLoginProvider(): OAuthConfig<Record<string, unknown>> {
     clientSecret: kcClientSecret,
     authorization: {
       url: `${kcIssuerPublic}/protocol/openid-connect/auth`,
-      params: { scope: kcScope },
+      // prompt=login forces Keycloak to show the login form on every explicit
+      // sign-in, even when a Keycloak SSO session cookie (KEYCLOAK_IDENTITY)
+      // still lives in the browser. Without it, clicking "Sign in" after a
+      // logout silently re-authenticated the SAME user off the lingering SSO
+      // cookie — so you could never switch accounts. Our /api/auth/signout
+      // clears the NextAuth cookies but cannot clear Keycloak's browser SSO
+      // cookie from the server side (a server-side fetch carries none of the
+      // user's cookies); id_token_hint isn't available for a silent RP-logout
+      // because we intentionally don't persist the id_token (see jwt() note),
+      // so forcing the prompt on login is the reliable fix. Cross-subdomain
+      // SSO is unaffected — that rides the shared NextAuth cookie, not KC's.
+      params: { scope: kcScope, prompt: "login" },
     },
     token: {
       url: `${kcIssuerServer}/protocol/openid-connect/token`,
@@ -172,10 +183,7 @@ function keycloakRegisterBase(id: string, name: string): OAuthConfig<Record<stri
     clientSecret: kcClientSecret,
     authorization: {
       url: `${kcIssuerPublic}/protocol/openid-connect/registrations`,
-      params: { 
-        scope: kcScope,
-        registration_role: "seller" // Default to buyer, can be overridden by signIn params
-      },
+      params: { scope: kcScope },
     },
     token: {
       url: `${kcIssuerServer}/protocol/openid-connect/token`,
@@ -197,28 +205,18 @@ function keycloakRegisterBase(id: string, name: string): OAuthConfig<Record<stri
   }
 }
 
-function KeycloakRegisterProvider(): OAuthConfig<Record<string, unknown>> {
-  const provider = keycloakRegisterBase("keycloak-register", "Keycloak Register")
-  if (provider.authorization && typeof provider.authorization !== "string") {
-    provider.authorization.params = { ...provider.authorization.params, registration_role: "buyer" }
-  }
-  return provider
-}
-
-/**
- * Seller-specific registration provider. Identical OAuth flow, but the
- * distinct provider ID lets the jwt callback detect seller intent
- * without cookies — works across devices after the first auth completes.
- */
-function KeycloakRegisterSellerProvider(): OAuthConfig<Record<string, unknown>> {
-  return keycloakRegisterBase("keycloak-register-seller", "Keycloak Register Seller")
-}
-
 export const authOptions: NextAuthOptions = {
+  // TWO providers: login + registration. Buyer and seller both register through
+  // the SAME provider — seller intent is no longer a Keycloak param/attribute
+  // set at registration; it's an app cookie the post-login SellerIntentProvider
+  // turns into a durable grant. Removing the 3rd (seller) provider removed a
+  // whole class of NextAuth "state cookie created for a different provider"
+  // OAuthCallback errors. Each signIn() sets a fresh next-auth.state, so we no
+  // longer pre-clear cookies before sign-in (that step raced signIn and wiped
+  // the state cookie → "State cookie was missing").
   providers: [
     keycloakLoginProvider(),
-    KeycloakRegisterProvider(),
-    KeycloakRegisterSellerProvider(),
+    keycloakRegisterBase("keycloak-register", "Keycloak Register"),
   ],
 
   pages: {
@@ -251,10 +249,35 @@ export const authOptions: NextAuthOptions = {
         secure: useSecureCookies,
       },
     },
+    // OAuth transaction cookies (state + PKCE). NextAuth defaults these to a
+    // 15-min maxAge; a self-registration where the user lingers on Keycloak's
+    // form (or bounces through a referral link + sign-out first) can outlive
+    // that, and the callback then fails with "State cookie was missing." Give
+    // them 30 min of headroom and pin the localhost-vs-prod flags explicitly.
+    state: {
+      name: `${cookiePrefix}next-auth.state`,
+      options: {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: useSecureCookies,
+        maxAge: 60 * 30,
+      },
+    },
+    pkceCodeVerifier: {
+      name: `${cookiePrefix}next-auth.pkce.code_verifier`,
+      options: {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: useSecureCookies,
+        maxAge: 60 * 30,
+      },
+    },
   },
 
   callbacks: {
-    async jwt({ token, account, user, profile }): Promise<any> {
+    async jwt({ token, account, user, profile, trigger }): Promise<any> {
       if (account && user) {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
@@ -269,6 +292,9 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
 
         const claims = profile as Record<string, unknown> | undefined
+        // Keycloak SSO session id — lets the account "active devices" view flag
+        // which session is the current one and revoke the others.
+        if (typeof claims?.sid === "string") token.sid = claims.sid
         const flatRoles = claims?.realm_roles as string[] | undefined
         const nestedRoles = (claims?.realm_access as { roles?: string[] })?.roles
         // Only the actual application roles — strip Keycloak-internal roles so
@@ -276,19 +302,35 @@ export const authOptions: NextAuthOptions = {
         token.roles = appRolesOnly(flatRoles ?? nestedRoles)
 
         token.registrationRole = claims?.registration_role as string | undefined
+        // Email verification is now enforced at the APP level (a gate on
+        // checkout / seller go-live), not by blocking Keycloak login. Carry the
+        // claim so the app can gate. It refreshes to true on the next token
+        // refresh after the user clicks their verification link.
+        token.emailVerified = claims?.email_verified === true
 
-        // Grant seller entitlements (user attribute + realm role) when:
-        // 1. User registered via the seller-specific provider, OR
-        // 2. User has registration_role=seller attribute (from Keycloak) but
-        //    doesn't yet have the seller realm role (e.g. logged in after
-        //    email verification via the regular keycloak provider).
+        // Belt-and-suspenders: if a user already carries the durable
+        // `registration_role=seller` attribute (written by /api/auth/grant-seller)
+        // but somehow lacks the seller realm role, grant it on login. New
+        // self-service sellers are granted by the post-login SellerIntentProvider;
+        // this just heals any account whose role and attribute drifted.
         const roles = token.roles as string[] | undefined
         const needsSellerGrant =
-          account.provider === "keycloak-register-seller" ||
-          (token.registrationRole === "seller" && !roles?.includes("seller"))
+          token.registrationRole === "seller" && !roles?.includes("seller")
         if (needsSellerGrant) {
           const { registrationOk, realmRoleOk } = await grantSellerEntitlements(user.id as string)
           if (registrationOk || realmRoleOk) token.registrationRole = "seller"
+        }
+      }
+
+      // Client called useSession().update() — e.g. the verify-email banner's
+      // "I've verified" button. Force a fresh token so email_verified / roles
+      // update immediately instead of waiting out the access-token lifespan.
+      if (trigger === "update" && token.refreshToken) {
+        try {
+          return await refreshAccessToken(token)
+        } catch {
+          token.error = "RefreshTokenError"
+          return token
         }
       }
 
@@ -316,8 +358,12 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
-      session.accessToken = token.accessToken
+      // BFF: the Keycloak access token is NOT exposed to the browser. It stays
+      // in the JWT cookie (set in the jwt() callback) and is read server-side by
+      // the /api/gw proxy + getServerAccessToken(). Only non-secret identity is
+      // returned to the client here.
       session.error = token.error
+      session.sid = token.sid
 
       if (token.id) {
         session.user.id = token.id
@@ -330,6 +376,7 @@ export const authOptions: NextAuthOptions = {
       }
       session.user.roles = token.roles ?? []
       session.user.registrationRole = token.registrationRole
+      session.user.emailVerified = token.emailVerified === true
 
       return session
     },
@@ -412,6 +459,7 @@ async function refreshAccessToken(token: {
 
   let roles = token.roles as string[] | undefined
   let registrationRole = token.registrationRole as string | undefined
+  let emailVerified = token.emailVerified as boolean | undefined
   if (refreshedTokens.access_token) {
     try {
       const payload = JSON.parse(
@@ -423,6 +471,11 @@ async function refreshAccessToken(token: {
       if (fresh) roles = appRolesOnly(fresh)
       if (payload.registration_role) {
         registrationRole = payload.registration_role as string
+      }
+      // Picks up email_verified=true after the user clicks their verify link,
+      // so the app-level verification gate lifts on the next refresh.
+      if (typeof payload.email_verified === "boolean") {
+        emailVerified = payload.email_verified
       }
     } catch {
       // Keep existing values if token decode fails
@@ -439,6 +492,7 @@ async function refreshAccessToken(token: {
       ?? Math.floor(Date.now() / 1000) + (refreshedTokens.expires_in as number ?? 300),
     roles,
     registrationRole,
+    emailVerified,
     error: undefined,
   }
 }

@@ -44,6 +44,8 @@ const FULFILLMENT_BADGE: Record<string, { label: string; className: string; icon
   delivered:           { label: "Delivered",        className: "bg-green-50 text-green-700",    icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
   delivery_exception:  { label: "Exception",        className: "bg-red-50 text-red-700",        icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
   returned:            { label: "Returned",         className: "bg-orange-50 text-orange-700",  icon: <Package className="h-3.5 w-3.5" /> },
+  ready_for_pickup:    { label: "Ready for pickup",  className: "bg-blue-50 text-blue-700",      icon: <Package className="h-3.5 w-3.5" /> },
+  picked_up:           { label: "Picked up",         className: "bg-green-50 text-green-700",    icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
 }
 
 function statusBadge(status: string) {
@@ -301,7 +303,11 @@ export default function SellerOrdersPage() {
   )
 }
 
-const SELLER_STATUSES = ["processing", "packaged", "dispatched"] as const
+// Seller-settable statuses differ by delivery type (the backend rejects the
+// wrong ones): a shipped order is packed/dispatched; a pickup order is made
+// ready then collected.
+const SHIP_STATUSES = ["processing", "packaged", "dispatched"] as const
+const PICKUP_STATUSES = ["ready_for_pickup", "picked_up"] as const
 
 function OrderDetailModal({
   order,
@@ -312,7 +318,7 @@ function OrderDetailModal({
   onClose: () => void
   onStatusUpdated: (updated: OrderDto) => void
 }) {
-  const [updating, setUpdating] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
   const [trackingInput, setTrackingInput] = useState("")
   const [uploadingProof, setUploadingProof] = useState(false)
   // Ref on the hidden file input so we can auto-open the picker the moment
@@ -320,12 +326,19 @@ function OrderDetailModal({
   const proofFileInputRef = useRef<HTMLInputElement | null>(null)
   const allItems = order ? order.relevantSubs.flatMap((sub) => sub.items) : []
   const currentFulfillment = order?.relevantSubs[0]?.fulfillmentStatus ?? "pending"
+  const isPickup = order?.relevantSubs[0]?.deliveryMethod === "pickup"
+  const sellerStatuses: readonly string[] = isPickup ? PICKUP_STATUSES : SHIP_STATUSES
+  // Forward-only: offer only statuses AHEAD of the current one (a status can't
+  // be undone). If the current status isn't in the track (e.g. "pending"),
+  // indexOf is -1 and all forward statuses show.
+  const currentIndex = sellerStatuses.indexOf(currentFulfillment)
+  const forwardStatuses = sellerStatuses.filter((_, i) => i > currentIndex)
   const subOrderId = order?.relevantSubs[0]?.id
   const existingProof = order?.relevantSubs[0]?.deliveryProofImageUrl ?? null
 
   async function handleUpdateStatus(newStatus: string) {
     if (!subOrderId) return
-    setUpdating(true)
+    setUpdatingStatus(newStatus)
     try {
       const token = await getAccessToken()
       if (!token) return
@@ -343,7 +356,7 @@ function OrderDetailModal({
     } catch (err) {
       toast.error(friendlyMessage(err, "Failed to update status"))
     } finally {
-      setUpdating(false)
+      setUpdatingStatus(null)
     }
   }
 
@@ -416,9 +429,9 @@ function OrderDetailModal({
             <p className="mt-1 text-sm text-gray-600">{formatDate(order.placedAt)}</p>
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Your storefront</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Order total</p>
             <p className="mt-1 text-sm font-medium text-gray-900">{formatCents(order.totalCents, order.currency)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">Including tax &amp; shipping for your items</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Including tax &amp; shipping</p>
           </div>
         </div>
 
@@ -442,36 +455,10 @@ function OrderDetailModal({
           )
         })()}
 
-        <div className="rounded-xl border border-input bg-gray-50 p-4 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Customer payment (whole order)</p>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-mono tabular-nums text-gray-900">{formatCents(order.raw.subtotalCents, order.currency)}</span>
-            </div>
-            {(order.raw.discountCents ?? 0) > 0 && (
-              <div className="flex justify-between gap-4 text-green-700">
-                <span>
-                  {order.raw.couponCode ? `Coupon (${order.raw.couponCode})` : "Coupon / savings"}
-                </span>
-                <span className="font-mono tabular-nums">−{formatCents(order.raw.discountCents ?? 0, order.currency)}</span>
-              </div>
-            )}
-            <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Tax collected</span>
-              <span className="font-mono tabular-nums text-gray-900">{formatCents(order.raw.taxCents ?? 0, order.currency)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Shipping collected</span>
-              <span className="font-mono tabular-nums text-gray-900">{formatCents(order.raw.shippingCostCents ?? 0, order.currency)}</span>
-            </div>
-            <div className="flex justify-between gap-4 border-t border-input pt-2 font-semibold text-gray-900">
-              <span>Order total</span>
-              <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents, order.currency)}</span>
-            </div>
-          </div>
-        </div>
-
+        {/* A seller only ever sees THEIR sub-order — never the whole order's
+            totals, other sellers' items, or the platform coupon. The service
+            already scopes the payload to this store; the single panel below is
+            that store's slice. */}
         {(() => {
           const slice = order.relevantSubs.reduce(
             (acc, sub) => {
@@ -486,28 +473,28 @@ function OrderDetailModal({
           const sliceTotal = slice.sub + slice.shipping + slice.tax - slice.disc
           return (
             <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-700">Your store on this order</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-700">Order summary</p>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-600">Subtotal (your items)</span>
+                  <span className="text-gray-600">Subtotal</span>
                   <span className="font-mono tabular-nums text-gray-900">{formatCents(slice.sub, order.currency)}</span>
                 </div>
                 {slice.disc > 0 && (
                   <div className="flex justify-between gap-4 text-green-700">
-                    <span>Coupon / discounts attributed here</span>
+                    <span>Discount</span>
                     <span className="font-mono tabular-nums">−{formatCents(slice.disc, order.currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-600">Shipping (your shipments)</span>
+                  <span className="text-gray-600">Shipping</span>
                   <span className="font-mono tabular-nums text-gray-900">{formatCents(slice.shipping, order.currency)}</span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-600">Tax attributed to your subtotal</span>
+                  <span className="text-gray-600">Tax</span>
                   <span className="font-mono tabular-nums text-gray-900">{formatCents(slice.tax, order.currency)}</span>
                 </div>
                 <div className="flex justify-between gap-4 border-t border-primary/15 pt-2 font-semibold text-gray-900">
-                  <span>Your storefront total</span>
+                  <span>Total</span>
                   <span className="font-mono tabular-nums">{formatCents(sliceTotal, order.currency)}</span>
                 </div>
               </div>
@@ -527,22 +514,22 @@ function OrderDetailModal({
           </div>
         )}
 
-        {subOrderId && !["delivered", "returned", "out_for_delivery", "delivery_exception"].includes(currentFulfillment) && (
+        {subOrderId && forwardStatuses.length > 0 && !["delivered", "picked_up", "returned", "out_for_delivery", "delivery_exception"].includes(currentFulfillment) && (
           <div className="rounded-xl border border-input bg-gray-50 p-4 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Update Fulfillment Status</p>
             <div className="flex flex-wrap gap-2">
-              {SELLER_STATUSES.map((s) => (
+              {forwardStatuses.map((s) => (
                 <button
                   key={s}
-                  disabled={updating || s === currentFulfillment}
+                  disabled={updatingStatus !== null || s === currentFulfillment}
                   onClick={() => handleUpdateStatus(s)}
                   className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40
                     ${s === currentFulfillment
                       ? "border-primary/40 bg-primary/10 text-foreground"
                       : "border-input text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                 >
-                  {updating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (FULFILLMENT_BADGE[s]?.icon ?? <Package className="h-3.5 w-3.5" />)}
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                  {updatingStatus === s ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (FULFILLMENT_BADGE[s]?.icon ?? <Package className="h-3.5 w-3.5" />)}
+                  {FULFILLMENT_BADGE[s]?.label ?? (s.charAt(0).toUpperCase() + s.slice(1))}
                 </button>
               ))}
             </div>

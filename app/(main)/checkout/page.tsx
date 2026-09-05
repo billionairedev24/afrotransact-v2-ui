@@ -25,6 +25,7 @@
 import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { getServerAccessToken } from "@/lib/server-token"
 import {
   loadCheckoutShippingContext,
   resolveServiceZone,
@@ -58,7 +59,7 @@ export default async function CheckoutPage() {
   }
 
   const session = await getServerSession(authOptions)
-  const token = (session as { accessToken?: string } | null)?.accessToken
+  const token = await getServerAccessToken()
 
   let initialContext: CheckoutShippingContext | null = null
   if (token) {

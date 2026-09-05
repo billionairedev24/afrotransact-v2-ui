@@ -32,47 +32,61 @@ export function Pagination({ page, totalPages, onPageChange, maxVisible = 5 }: P
   for (let i = startPage; i <= endPage; i++) pages.push(i)
 
   return (
-    <div className="mt-10 flex items-center justify-center gap-2">
-      <button
-        disabled={page <= 1}
-        onClick={() => onPageChange(page - 1)}
-        aria-label="Previous page"
-        className="h-10 w-10 rounded-lg flex items-center justify-center border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-      >
-        <ChevronRight className="h-4 w-4 rotate-180" />
-      </button>
+    <nav aria-label="Pagination" className="mt-10 flex flex-col items-center gap-3">
+      <div className="flex items-center gap-1.5">
+        <button
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+          aria-label="Previous page"
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-brand-gold hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+        >
+          <ChevronRight className="h-4 w-4 rotate-180" />
+        </button>
 
-      {startPage > 1 && (
-        <>
-          <PageButton onClick={() => onPageChange(1)} active={false}>1</PageButton>
-          {startPage > 2 && <span className="px-1 text-sm text-gray-400">&hellip;</span>}
-        </>
-      )}
+        {startPage > 1 && (
+          <>
+            <PageButton onClick={() => onPageChange(1)} active={false}>1</PageButton>
+            {startPage > 2 && <Ellipsis />}
+          </>
+        )}
 
-      {pages.map((p) => (
-        <PageButton key={p} onClick={() => onPageChange(p)} active={p === page}>
-          {p}
-        </PageButton>
-      ))}
-
-      {endPage < totalPages && (
-        <>
-          {endPage < totalPages - 1 && <span className="px-1 text-sm text-gray-400">&hellip;</span>}
-          <PageButton onClick={() => onPageChange(totalPages)} active={false}>
-            {totalPages}
+        {pages.map((p) => (
+          <PageButton key={p} onClick={() => onPageChange(p)} active={p === page}>
+            {p}
           </PageButton>
-        </>
-      )}
+        ))}
 
-      <button
-        disabled={page >= totalPages}
-        onClick={() => onPageChange(page + 1)}
-        aria-label="Next page"
-        className="h-10 w-10 rounded-lg flex items-center justify-center border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
-    </div>
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <Ellipsis />}
+            <PageButton onClick={() => onPageChange(totalPages)} active={false}>
+              {totalPages}
+            </PageButton>
+          </>
+        )}
+
+        <button
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+          aria-label="Next page"
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-brand-gold hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      <p className="text-xs text-muted-foreground tabular-nums">
+        Page <span className="font-semibold text-foreground">{page}</span> of {totalPages}
+      </p>
+    </nav>
+  )
+}
+
+function Ellipsis() {
+  return (
+    <span className="grid h-10 w-8 place-items-center text-sm text-muted-foreground" aria-hidden>
+      &hellip;
+    </span>
   )
 }
 
@@ -88,11 +102,12 @@ function PageButton({
   return (
     <button
       onClick={onClick}
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "h-10 w-10 rounded-lg text-sm font-semibold transition-colors",
+        "h-10 min-w-10 rounded-lg px-2 text-sm font-semibold tabular-nums transition-colors",
         active
-          ? "bg-brand-gold text-brand-gold-foreground shadow-sm"
-          : "border border-gray-200 bg-white text-foreground hover:border-brand-gold hover:bg-gray-50",
+          ? "bg-brand-gold text-brand-gold-foreground shadow-sm ring-1 ring-brand-gold/40"
+          : "border border-border bg-card text-foreground hover:border-brand-gold hover:bg-muted",
       )}
     >
       {children}

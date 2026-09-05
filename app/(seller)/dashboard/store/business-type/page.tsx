@@ -6,6 +6,7 @@ import { ChevronLeft, AlertTriangle, CheckCircle2, Clock, XCircle } from "lucide
 
 import { getAccessToken } from "@/lib/auth-helpers"
 import { friendlyMessage } from "@/lib/errors"
+import { confirmDialog } from "@/components/ui/confirm"
 import {
   getOpenBusinessTypeChange,
   submitBusinessTypeChange,
@@ -100,7 +101,12 @@ export default function BusinessTypeChangePage() {
 
   async function handleWithdraw() {
     if (!open) return
-    if (!confirm("Withdraw this request? You can resubmit afterwards.")) return
+    if (!(await confirmDialog({
+      title: "Withdraw this request?",
+      description: "You can resubmit afterwards.",
+      confirmLabel: "Withdraw",
+      variant: "danger",
+    }))) return
     setSubmitting(true)
     try {
       const token = await getAccessToken()

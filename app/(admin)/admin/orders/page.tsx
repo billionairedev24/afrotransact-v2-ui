@@ -8,11 +8,11 @@ import {
   ClipboardList,
   Loader2,
   Eye,
-  CreditCard,
   Package,
   Truck,
 } from "lucide-react"
 import { getStatusStyle } from "@/lib/status-config"
+import { CardBrandMark } from "@/components/account/CardBrandMark"
 import { isHouseStore } from "@/lib/house-store"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/DataTable"
@@ -85,6 +85,13 @@ const HOUSE_STORE_STATUSES = [
   { value: "processing",         label: "Processing",         variant: "normal"  },
   { value: "packaged",           label: "Packaged",           variant: "normal"  },
   ...ADMIN_STATUSES,
+] as const
+
+// Pickup sub-orders have their own two-step flow — the shipping statuses aren't
+// valid for them (the backend rejects "packaged"/"dispatched" on a pickup order).
+const PICKUP_STATUSES = [
+  { value: "ready_for_pickup",   label: "Ready for pickup",   variant: "normal"  },
+  { value: "picked_up",          label: "Picked up",          variant: "normal"  },
 ] as const
 
 const ADMIN_ORDERS_KEY = "admin-orders"
@@ -168,7 +175,23 @@ export default function AdminOrdersPage() {
     }),
     col.accessor("totalCents", {
       header: "Total",
-      cell: (info) => <span className="font-medium text-gray-900">{formatCents(info.getValue(), info.row.original.currency)}</span>,
+      cell: (info) => {
+        const currency = info.row.original.currency
+        const credit = info.row.original.raw.storeCreditAppliedCents ?? 0
+        if (credit > 0) {
+          // Store credit is house-funded, so the card is only charged the net.
+          // Show the actual charge as the figure, with the gross order total
+          // struck through above it — matches "Charged to card" in the detail
+          // drawer and "You paid" on the customer receipt.
+          return (
+            <span className="flex flex-col leading-tight">
+              <span className="text-xs text-gray-400 line-through tabular-nums">{formatCents(info.getValue(), currency)}</span>
+              <span className="font-medium text-gray-900 tabular-nums">{formatCents(info.getValue() - credit, currency)}</span>
+            </span>
+          )
+        }
+        return <span className="font-medium text-gray-900 tabular-nums">{formatCents(info.getValue(), currency)}</span>
+      },
     }),
     col.display({
       id: "actions",
@@ -357,11 +380,11 @@ function AdminOrderDetailSheet({
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Payment</p>
-                <div className="mt-1 flex items-center gap-1.5 overflow-hidden">
-                   <CreditCard className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                <div className="mt-1 flex items-center gap-2 overflow-hidden">
+                   <CardBrandMark brand={order.raw.paymentMethod ?? null} />
                    <p className="text-sm text-gray-900 truncate">
-                     {order.raw.paymentMethod || "Stripe"}
-                     {order.raw.last4 ? ` •••• ${order.raw.last4}` : ""}
+                     {order.raw.paymentMethod || "Card"}
+                     {order.raw.last4 ? ` ending in ${order.raw.last4}` : ""}
                    </p>
                 </div>
               </div>
@@ -396,6 +419,18 @@ function AdminOrderDetailSheet({
                   <span>Order total</span>
                   <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents, order.currency)}</span>
                 </div>
+                {(order.raw.storeCreditAppliedCents ?? 0) > 0 && (
+                  <>
+                    <div className="flex justify-between gap-4 text-green-700">
+                      <span>Store credit (house-funded)</span>
+                      <span className="font-mono tabular-nums">−{formatCents(order.raw.storeCreditAppliedCents ?? 0, order.currency)}</span>
+                    </div>
+                    <div className="flex justify-between gap-4 border-t border-input pt-2 font-semibold text-gray-900">
+                      <span>Charged to card</span>
+                      <span className="font-mono tabular-nums">{formatCents(order.raw.totalCents - (order.raw.storeCreditAppliedCents ?? 0), order.currency)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -483,7 +518,7 @@ function AdminOrderDetailSheet({
                 {/* Seller-managed steps — read-only for admin.
                     Skipped entirely for house-store sub-orders (AfroTransact-
                     fulfilled) because admin owns the whole lifecycle there. */}
-                {!isHouseStore(sub.storeId) && (sub.fulfillmentStatus === "pending" || sub.fulfillmentStatus === "processing" || sub.fulfillmentStatus === "packaged") && (
+                {!isHouseStore(sub.storeId) && sub.deliveryMethod !== "pickup" && (sub.fulfillmentStatus === "pending" || sub.fulfillmentStatus === "processing" || sub.fulfillmentStatus === "packaged") && (
                   <div className="flex items-start gap-2 rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2.5">
                     <Package className="h-3.5 w-3.5 shrink-0 text-indigo-400 mt-0.5" />
                     <p className="text-xs text-indigo-700">
@@ -496,17 +531,23 @@ function AdminOrderDetailSheet({
                 {/* Fulfillment controls. House-store subs get the full lifecycle
                     (processing → returned); external-seller subs only get the
                     delivery-team scope (dispatched onwards). */}
-                {sub.fulfillmentStatus !== "delivered" && sub.fulfillmentStatus !== "returned" &&
-                  (isHouseStore(sub.storeId) || (sub.fulfillmentStatus !== "pending" && sub.fulfillmentStatus !== "processing" && sub.fulfillmentStatus !== "packaged")) && (
+                {(sub.deliveryMethod === "pickup"
+                    ? (sub.fulfillmentStatus !== "picked_up" && sub.fulfillmentStatus !== "returned")
+                    : (sub.fulfillmentStatus !== "delivered" && sub.fulfillmentStatus !== "returned" &&
+                       (isHouseStore(sub.storeId) || (sub.fulfillmentStatus !== "pending" && sub.fulfillmentStatus !== "processing" && sub.fulfillmentStatus !== "packaged")))) && (
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2">
                       <Truck className="h-3.5 w-3.5 text-gray-400" />
                       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        {isHouseStore(sub.storeId) ? "Fulfillment Controls (AfroTransact)" : "Delivery Controls"}
+                        {sub.deliveryMethod === "pickup"
+                          ? "Pickup Controls"
+                          : isHouseStore(sub.storeId) ? "Fulfillment Controls (AfroTransact)" : "Delivery Controls"}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {(isHouseStore(sub.storeId) ? HOUSE_STORE_STATUSES : ADMIN_STATUSES).map((s) => (
+                      {(sub.deliveryMethod === "pickup"
+                          ? PICKUP_STATUSES
+                          : isHouseStore(sub.storeId) ? HOUSE_STORE_STATUSES : ADMIN_STATUSES).map((s) => (
                         <button
                           key={s.value}
                           disabled={!!updating || s.value === sub.fulfillmentStatus}

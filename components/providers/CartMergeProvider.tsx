@@ -113,9 +113,9 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
       setCartReady(true)
       return
     }
-    const token = session?.accessToken as string | undefined
     const userId = (session?.user as { id?: string } | undefined)?.id
-    if (!token || !userId) return
+    if (!userId) return
+    const token = userId // non-secret marker; proxy attaches the real token
     if (hydratedForUser.current === userId) return
     hydratedForUser.current = userId
 
@@ -151,13 +151,15 @@ export function CartMergeProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, (session?.user as { id?: string } | undefined)?.id, isBuyerCapable])
 
-  // Authenticated but no access token yet — don't block the UI forever.
+  // Authenticated but no identity resolved yet — don't block the UI forever.
+  // (The token is no longer on the session — it's server-side behind /api/gw —
+  // so we gate on the user id presence instead.)
   useEffect(() => {
     if (status !== "authenticated") return
     if (!isBuyerCapable) return
-    if (session?.accessToken) return
+    if (session?.user?.id) return
     setCartReady(true)
-  }, [status, session?.accessToken, isBuyerCapable])
+  }, [status, session?.user?.id, isBuyerCapable])
 
   // ── Unauthenticated: hydrate from guest sessionStorage; reset mode + cached server ids. ──
   //

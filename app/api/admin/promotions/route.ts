@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { getServerAccessToken } from "@/lib/server-token"
 import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
@@ -11,7 +12,7 @@ async function authedToken(): Promise<string | null> {
   if (!session?.user?.id) return null
   const roles = session.user.roles ?? []
   if (!roles.includes("admin")) return null
-  return (session as unknown as { accessToken?: string }).accessToken ?? ""
+  return (await getServerAccessToken()) ?? ""
 }
 
 export async function GET(request: Request) {

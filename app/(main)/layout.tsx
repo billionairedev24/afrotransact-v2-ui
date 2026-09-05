@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { HideOnCheckout } from "@/components/layout/HideOnCheckout"
 import { PromoSlot } from "@/components/marketing/PromoSlot"
 import { PromoPopupModal } from "@/components/marketing/PromoPopupModal"
 import { TickerBar } from "@/components/marketing/TickerBar"
@@ -21,8 +22,10 @@ export default function MainLayout({
       <main className="flex-1 pb-[env(safe-area-inset-bottom,0px)] md:pb-0">
         <GeoGate>{children}</GeoGate>
       </main>
-      <PromoSlot placement="FOOTER" className="mx-4 md:mx-6 lg:mx-8 mb-6" />
-      <Footer />
+      <HideOnCheckout>
+        <PromoSlot placement="FOOTER" className="mx-4 md:mx-6 lg:mx-8 mb-6" />
+        <Footer />
+      </HideOnCheckout>
       <PromoPopupModal />
     </div>
   )

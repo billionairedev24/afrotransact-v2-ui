@@ -195,6 +195,15 @@
     @apply border-border;
   }
 
+  html {
+    /* Always reserve the scrollbar gutter. Opening a Sheet/modal locks body
+       scroll (overflow:hidden); without a reserved gutter the scrollbar
+       vanishes, the viewport widens by its width, and fixed top bars jump
+       right — the misaligned header you see when a sheet opens in the
+       admin/seller panels. Reserving the gutter keeps the layout stable. */
+    scrollbar-gutter: stable;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -307,4 +316,77 @@
 body.storefront-preview header,
 body.storefront-preview footer {
   display: none !important;
+}
+
+/* Printable receipt (app/(main)/orders/[orderNumber]/receipt): on print, hide
+   everything on the page except the receipt itself — site header/footer,
+   ticker bar, promo popups, and the on-screen toolbar all live outside/inside
+   `.receipt-printable` and get blanked via the visibility trick so only the
+   receipt paper renders, full-bleed, on the page. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .receipt-printable,
+  .receipt-printable * {
+    visibility: visible;
+  }
+  .receipt-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .receipt-no-print {
+    display: none !important;
+  }
+  @page {
+    margin: 12mm;
+  }
+}
+
+/* ── Google Places autocomplete dropdown (legacy .pac-container) ──────────────
+   We render our OWN <input> (styled like every other field) and attach Places
+   Autocomplete to it, so the input needs no special CSS. Only the prediction
+   panel Google appends to <body> is styled here, to match the theme. */
+.pac-container {
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  background: hsl(var(--card));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  margin-top: 4px;
+  font-family: inherit;
+  overflow: hidden;
+  z-index: 60;
+}
+.pac-item {
+  padding: 0.45rem 0.75rem;
+  border-top: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.pac-item:first-child {
+  border-top: none;
+}
+.pac-item:hover,
+.pac-item-selected {
+  background: hsl(var(--muted));
+}
+.pac-item-query {
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+}
+.pac-matched {
+  font-weight: 600;
+}
+/* Hide Google's magnifier icon so it reads as an address field, not a search box. */
+.pac-icon {
+  display: none;
+}
+.hdpi.pac-logo::after,
+.pac-logo::after {
+  margin: 4px 8px;
 }

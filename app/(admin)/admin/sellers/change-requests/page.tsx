@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react"
 import { AlertTriangle, CheckCircle2, Clock, FileText, RefreshCcw } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
+import { confirmDialog, promptDialog } from "@/components/ui/confirm"
+import { toast } from "sonner"
 import {
   ApiError,
   adminListBusinessTypeChangeRequests,
@@ -59,19 +61,32 @@ export default function AdminBusinessTypeChangeRequestsPage() {
     let infoRequest: string | undefined
 
     if (decision === "rejected") {
-      adminNotes = window.prompt("Reason for rejection (shown to the seller):") ?? ""
+      adminNotes = (await promptDialog({
+        title: "Reject this change request?",
+        description: "Reason for rejection (shown to the seller):",
+        placeholder: "Reason for rejection",
+        multiline: true,
+        required: true,
+        confirmLabel: "Reject",
+      })) ?? ""
       if (!adminNotes.trim()) return
     } else if (decision === "needs_more_info") {
-      infoRequest = window.prompt(
-        "What does the seller need to provide? (shown verbatim in their dashboard):",
-      ) ?? ""
+      infoRequest = (await promptDialog({
+        title: "Request more info",
+        description: "What does the seller need to provide? (shown verbatim in their dashboard):",
+        placeholder: "What the seller must provide",
+        multiline: true,
+        required: true,
+        confirmLabel: "Send request",
+      })) ?? ""
       if (!infoRequest.trim()) return
     } else if (decision === "approved") {
-      if (!window.confirm(
-        `Approve change for seller ${req.sellerId.slice(0, 8)}…?\n\n` +
-        `${req.currentBusinessType} → ${req.newBusinessType}\n\n` +
-        `This will update their seller profile immediately.`,
-      )) return
+      if (!(await confirmDialog({
+        title: `Approve change for seller ${req.sellerId.slice(0, 8)}…?`,
+        description: `${req.currentBusinessType} → ${req.newBusinessType}\n\nThis updates their seller profile immediately.`,
+        confirmLabel: "Approve",
+        variant: "primary",
+      }))) return
     }
 
     setActing(req.id)
@@ -87,11 +102,11 @@ export default function AdminBusinessTypeChangeRequestsPage() {
     } catch (e) {
       logError(e, "changeRequests.resolve")
       if (e instanceof ApiError && e.status === 401) {
-        alert("Your admin session has expired. Please sign in again.")
+        toast.error("Your admin session has expired. Please sign in again.")
       } else if (e instanceof ApiError && e.status === 403) {
-        alert("You don't have permission to resolve change requests.")
+        toast.error("You don't have permission to resolve change requests.")
       } else {
-        alert(friendlyMessage(e, "Couldn't resolve the request. Please try again."))
+        toast.error(friendlyMessage(e, "Couldn't resolve the request. Please try again."))
       }
     } finally {
       setActing(null)

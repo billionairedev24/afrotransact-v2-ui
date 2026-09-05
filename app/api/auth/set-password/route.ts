@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { getServerAccessToken } from "@/lib/server-token"
 import { kcIssuerServer } from "@/lib/keycloak-issuers"
 
 function env(name: string, fallback: string) {
@@ -150,7 +151,7 @@ export async function POST(req: NextRequest) {
   // Step 1: Verify current password via ROPC — passes the access token so we
   // can extract preferred_username, which is what Keycloak expects in the
   // `username` field (not necessarily the email address).
-  const accessToken = (session as { accessToken?: string }).accessToken
+  const accessToken = (await getServerAccessToken())
   const valid = await verifyCurrentPassword(session.user.email, currentPassword, accessToken)
   if (!valid) {
     return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 })
@@ -240,7 +241,7 @@ async function sendPasswordChangedEmail(
   try {
     await fetch(
       `${kcBase}/admin/realms/${realm}/users/${encodeURIComponent(userId)}/execute-actions-email` +
-        `?redirect_uri=${encodeURIComponent(appUrl + "/account/settings")}&client_id=${env("KEYCLOAK_CLIENT_ID", "afrotransact-web")}`,
+        `?redirect_uri=${encodeURIComponent(appUrl + "/account")}&client_id=${env("KEYCLOAK_CLIENT_ID", "afrotransact-web")}`,
       {
         method: "PUT",
         headers: {

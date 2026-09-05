@@ -11,6 +11,13 @@ import { isHouseStore } from "@/lib/house-store"
  * "Delivers to 78701 ✓" / "Not available in your area" / soft prompt to
  * pick a delivery location. Mounted on PDP under the buy box and in the
  * cart drawer.
+ *
+ * Layout: every state renders as an icon + a single flowing text span
+ * (`flex items-start`, icon `shrink-0`). Keeping all copy in ONE span is
+ * deliberate — the earlier `inline-flex` over separate text fragments made
+ * the narrow buy-box column shrink each fragment to min-content and stack
+ * its words ("Delivers" / "to" · "Georgetown" · "$7.99" / "shipping"),
+ * which read as three disjoint columns. A single span wraps as one phrase.
  */
 export function ShippingEligibilityBadge({ storeId }: { storeId: string }) {
   const location = useBuyerLocation((s) => s.location)
@@ -45,21 +52,20 @@ export function ShippingEligibilityBadge({ storeId }: { storeId: string }) {
   if (isHouseStore(storeId)) {
     if (!location) {
       return (
-        <p className="text-xs text-gray-500 inline-flex items-center gap-1.5">
-          <MapPin className="h-3 w-3" />
+        <Line tone="muted" icon={<MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-gray-400" />}>
           Pick a delivery location to check availability.
-        </p>
+        </Line>
       )
     }
     const zoneStatus = resolvedZone?.status
     const outsideAreaOfOperation =
       zoneStatus === "coming_soon" || zoneStatus === "disabled" || zoneStatus === "not_serviced"
+    const cityLabel = location.city?.trim() || location.postalCode
     if (outsideAreaOfOperation) {
       return (
-        <p className="text-xs text-red-700 inline-flex items-center gap-1.5">
-          <AlertTriangle className="h-3.5 w-3.5" />
-          Not available in <span className="font-semibold">{location.city?.trim() || location.postalCode}</span> yet
-        </p>
+        <Line tone="error" icon={<AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}>
+          Not available in <span className="font-semibold">{cityLabel}</span> yet
+        </Line>
       )
     }
     // Only claim "Free delivery" when the zone actually ships free — i.e. it
@@ -67,13 +73,11 @@ export function ShippingEligibilityBadge({ storeId }: { storeId: string }) {
     // flat-rate / per-lb zone (e.g. Georgetown at $7.99) is serviceable but NOT
     // free, so it shows "Delivers to …" with the flat rate when known.
     const settings = resolvedZone?.effectiveSettings
-    const cityLabel = location.city?.trim() || location.postalCode
     if (settings?.freeShippingThresholdCents === -1) {
       return (
-        <p className="text-xs text-emerald-700 inline-flex items-center gap-1.5">
-          <CheckCircle2 className="h-3.5 w-3.5" />
+        <Line tone="ok" icon={<CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />}>
           Free delivery to <span className="font-semibold">{cityLabel}</span>
-        </p>
+        </Line>
       )
     }
     const flatCents =
@@ -81,60 +85,81 @@ export function ShippingEligibilityBadge({ storeId }: { storeId: string }) {
         ? settings.flatShippingCents
         : null
     return (
-      <p className="text-xs text-emerald-700 inline-flex items-center gap-1.5">
-        <CheckCircle2 className="h-3.5 w-3.5" />
+      <Line tone="ok" icon={<CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />}>
         Delivers to <span className="font-semibold">{cityLabel}</span>
         {flatCents != null && (
-          <span className="text-gray-500">· ${(flatCents / 100).toFixed(2)} shipping</span>
+          <span className="text-gray-500"> · ${(flatCents / 100).toFixed(2)} shipping</span>
         )}
-      </p>
+      </Line>
     )
   }
 
   if (!location) {
     return (
-      <p className="text-xs text-gray-500 inline-flex items-center gap-1.5">
-        <MapPin className="h-3 w-3" />
+      <Line tone="muted" icon={<MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-gray-400" />}>
         Pick a delivery location to check availability.
-      </p>
+      </Line>
     )
   }
 
   if (loading || !decision) {
     return (
-      <p className="text-xs text-gray-500 inline-flex items-center gap-1.5">
-        <Loader2 className="h-3 w-3 animate-spin" /> Checking delivery to {location.city?.trim() || location.postalCode}…
-      </p>
+      <Line tone="muted" icon={<Loader2 className="h-3.5 w-3.5 shrink-0 mt-0.5 animate-spin" />}>
+        Checking delivery to {location.city?.trim() || location.postalCode}…
+      </Line>
     )
   }
 
+  const cityLabel = location.city?.trim() || location.postalCode
+
   if (decision.result === "eligible") {
     return (
-      <p className="text-xs text-emerald-700 inline-flex items-center gap-1.5">
-        <CheckCircle2 className="h-3.5 w-3.5" />
-        Delivers to <span className="font-semibold">{location.city?.trim() || location.postalCode}</span>
+      <Line tone="ok" icon={<CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />}>
+        Delivers to <span className="font-semibold">{cityLabel}</span>
         {decision.distanceMeters != null && (
-          <span className="text-gray-500">· {(decision.distanceMeters / 1000).toFixed(0)} km away</span>
+          <span className="text-gray-500"> · {(decision.distanceMeters / 1000).toFixed(0)} km away</span>
         )}
-      </p>
+      </Line>
     )
   }
 
   if (decision.result === "not_eligible") {
     return (
-      <p className="text-xs text-red-700 inline-flex items-center gap-1.5">
-        <AlertTriangle className="h-3.5 w-3.5" />
-        Not available in <span className="font-semibold">{location.city?.trim() || location.postalCode}</span>
-        {decision.reason && <span className="text-red-700/80">· {decision.reason}</span>}
-      </p>
+      <Line tone="error" icon={<AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}>
+        Not available in <span className="font-semibold">{cityLabel}</span>
+        {decision.reason && <span className="text-red-700/80"> · {decision.reason}</span>}
+      </Line>
     )
   }
 
   // unknown — never alarm the buyer; delivery is confirmed at checkout.
   return (
-    <p className="text-xs text-gray-500 inline-flex items-center gap-1.5">
-      <MapPin className="h-3 w-3" />
+    <Line tone="muted" icon={<MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-gray-400" />}>
       Delivery confirmed at checkout.
+    </Line>
+  )
+}
+
+/**
+ * One delivery-status line: a fixed icon plus a single flowing text span.
+ * `items-start` + `mt-0.5` on the icon keeps it aligned to the first text
+ * line when the copy wraps to two lines.
+ */
+function Line({
+  tone,
+  icon,
+  children,
+}: {
+  tone: "ok" | "error" | "muted"
+  icon: React.ReactNode
+  children: React.ReactNode
+}) {
+  const toneClass =
+    tone === "ok" ? "text-emerald-700" : tone === "error" ? "text-red-700" : "text-gray-500"
+  return (
+    <p className={`flex items-start gap-1.5 text-xs leading-relaxed ${toneClass}`}>
+      {icon}
+      <span>{children}</span>
     </p>
   )
 }

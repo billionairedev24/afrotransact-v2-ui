@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { getServerAccessToken } from "@/lib/server-token"
 import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
@@ -15,7 +16,7 @@ export async function PATCH(request: Request) {
   if (!roles.includes("admin")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
-  const token = (session as unknown as { accessToken?: string }).accessToken ?? ""
+  const token = (await getServerAccessToken()) ?? ""
   const body = await request.text()
   try {
     const res = await fetch(`${API_BASE}/api/v1/admin/promotions/reorder`, {

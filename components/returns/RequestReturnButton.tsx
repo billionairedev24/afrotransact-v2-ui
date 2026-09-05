@@ -6,6 +6,7 @@ import { Package, X, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { requestReturn, type ReturnReason } from "@/lib/api"
 import { friendlyMessage } from "@/lib/errors"
+import { UploadDropzone } from "@/lib/uploadthing"
 
 interface SubOrderItem {
   id: string
@@ -65,19 +66,9 @@ function ReturnRequestModal({
   const [buyerNotes, setBuyerNotes] = useState("")
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
-  const [photoInput, setPhotoInput] = useState("")
+  const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-
-  function addPhoto() {
-    const u = photoInput.trim()
-    if (!u) return
-    try { new URL(u) } catch { setErr("Photo URL must be a valid http(s) link"); return }
-    if (photoUrls.length >= 10) { setErr("Up to 10 photos"); return }
-    setPhotoUrls((prev) => [...prev, u])
-    setPhotoInput("")
-    setErr(null)
-  }
   const [done, setDone] = useState(false)
 
   const selectedReason = REASONS.find((r) => r.value === reason)
@@ -211,37 +202,45 @@ function ReturnRequestModal({
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
                     Photos <span className="normal-case font-medium text-gray-500">(strongly recommended for {selectedReason.label.toLowerCase()})</span>
                   </label>
-                  <div className="flex items-stretch gap-2">
-                    <input
-                      type="url"
-                      value={photoInput}
-                      onChange={(e) => setPhotoInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPhoto() } }}
-                      placeholder="Paste an image URL (e.g. iCloud / Google Drive shared link)"
-                      className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  {photoUrls.length < 10 && (
+                    <UploadDropzone
+                      endpoint="returnPhoto"
+                      appearance={{
+                        container: "border border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 ut-uploading:opacity-70",
+                        button: "bg-gray-900 text-white text-xs font-bold px-3 py-1.5 rounded-md ut-uploading:bg-gray-400 ut-readying:bg-gray-400 after:bg-gray-700",
+                        allowedContent: "text-[11px] text-gray-500",
+                        label: "text-sm text-gray-700 hover:text-gray-900",
+                      }}
+                      config={{ mode: "auto" }}
+                      onUploadBegin={() => { setUploading(true); setErr(null) }}
+                      onClientUploadComplete={(res) => {
+                        setUploading(false)
+                        const urls = (res ?? []).map((file) => file.url).filter(Boolean)
+                        setPhotoUrls((prev) => [...prev, ...urls].slice(0, 10))
+                      }}
+                      onUploadError={(e) => { setUploading(false); setErr(e.message || "Photo upload failed — try again") }}
                     />
-                    <button type="button" onClick={addPhoto} disabled={!photoInput.trim()} className="px-3 py-2 rounded-md bg-gray-900 text-white text-xs font-bold disabled:opacity-40">
-                      Add
-                    </button>
-                  </div>
+                  )}
                   {photoUrls.length > 0 && (
-                    <ul className="mt-2 space-y-1">
+                    <ul className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5">
                       {photoUrls.map((u, i) => (
-                        <li key={i} className="flex items-center gap-2 text-xs">
-                          <span className="truncate flex-1 text-gray-700">{u}</span>
+                        <li key={i} className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={u} alt={`Return photo ${i + 1}`} className="h-full w-full object-cover" />
                           <button
                             type="button"
                             onClick={() => setPhotoUrls((prev) => prev.filter((_, j) => j !== i))}
-                            className="text-red-600 hover:underline"
+                            aria-label="Remove photo"
+                            className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
                           >
-                            Remove
+                            <X className="h-3 w-3" />
                           </button>
                         </li>
                       ))}
                     </ul>
                   )}
-                  <p className="text-[11px] text-gray-500 mt-1">
-                    Native upload widget is rolling out next; for now please paste image links.
+                  <p className="text-[11px] text-gray-500 mt-2">
+                    Up to 10 photos · PNG, JPG, WebP or GIF, max 8MB each.
                   </p>
                 </div>
               )}
@@ -264,10 +263,10 @@ function ReturnRequestModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || totalQty === 0}
+                  disabled={submitting || uploading || totalQty === 0}
                   className="px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-40"
                 >
-                  {submitting ? "Submitting…" : "Submit return"}
+                  {submitting ? "Submitting…" : uploading ? "Uploading…" : "Submit return"}
                 </button>
               </div>
             </footer>

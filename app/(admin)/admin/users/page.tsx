@@ -20,6 +20,8 @@ import {
   CheckCircle2,
   XCircle,
   Copy,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 
 interface AdminUser {
@@ -28,6 +30,7 @@ interface AdminUser {
   firstName: string
   lastName: string
   email: string
+  phone: string
   emailVerified: boolean
   enabled: boolean
   createdTimestamp: number
@@ -67,6 +70,72 @@ function formatDate(ts: number) {
 function displayName(user: AdminUser) {
   const full = [user.firstName, user.lastName].filter(Boolean).join(" ")
   return full || user.username
+}
+
+// Mask an email for at-rest display: reveal the first character of the local
+// part and the full domain, hide the middle — e.g. "s•••••@nerdlogiclabs.com".
+function maskEmail(email: string): string {
+  const at = email.indexOf("@")
+  if (at <= 0) return email
+  const local = email.slice(0, at)
+  const domain = email.slice(at)
+  const first = local[0]
+  const dots = "•".repeat(Math.min(Math.max(local.length - 1, 3), 6))
+  return `${first}${dots}${domain}`
+}
+
+// Per-instance masked email with its own reveal toggle, so revealing one row
+// never affects another.
+function MaskedEmail({ email, className }: { email: string; className?: string }) {
+  const [revealed, setRevealed] = useState(false)
+  if (!email) return <span className={className}>—</span>
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <span className={className}>{revealed ? email : maskEmail(email)}</span>
+      <button
+        type="button"
+        onClick={() => setRevealed((v) => !v)}
+        aria-label={revealed ? "Hide email" : "Show email"}
+        aria-pressed={revealed}
+        className="shrink-0 rounded p-0.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+      >
+        {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+      </button>
+    </span>
+  )
+}
+
+// Mask a phone for at-rest display: reveal the last 2 digits, mask the rest,
+// keeping any leading "+" — e.g. "+•••••••••42". Non-digits (spaces, dashes)
+// are dropped from the mask so the length isn't leaked precisely.
+function maskPhone(phone: string): string {
+  const trimmed = phone.trim()
+  const plus = trimmed.startsWith("+") ? "+" : ""
+  const digits = trimmed.replace(/\D/g, "")
+  if (digits.length < 2) return trimmed
+  const last = digits.slice(-2)
+  const dots = "•".repeat(Math.min(Math.max(digits.length - 2, 3), 9))
+  return `${plus}${dots}${last}`
+}
+
+// Per-instance masked phone with its own reveal toggle (mirrors MaskedEmail).
+function MaskedPhone({ phone, className }: { phone: string; className?: string }) {
+  const [revealed, setRevealed] = useState(false)
+  if (!phone) return <span className={className}>—</span>
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <span className={className}>{revealed ? phone : maskPhone(phone)}</span>
+      <button
+        type="button"
+        onClick={() => setRevealed((v) => !v)}
+        aria-label={revealed ? "Hide phone" : "Show phone"}
+        aria-pressed={revealed}
+        className="shrink-0 rounded p-0.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+      >
+        {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+      </button>
+    </span>
+  )
 }
 
 const col = createColumnHelper<AdminUser>()
@@ -200,7 +269,6 @@ export default function UsersPage() {
             </div>
             <div className="min-w-0">
               <p className="truncate font-medium text-gray-900">{displayName(user)}</p>
-              <p className="truncate text-xs text-gray-500">{info.getValue()}</p>
             </div>
           </div>
         )
@@ -214,6 +282,18 @@ export default function UsersPage() {
           user.username.toLowerCase().includes(search)
         )
       },
+    }),
+    col.accessor((row) => row.email, {
+      id: "emailAddr",
+      header: "Email",
+      cell: (info) => <MaskedEmail email={info.getValue()} className="text-sm text-gray-600" />,
+      enableSorting: false,
+    }),
+    col.accessor((row) => row.phone, {
+      id: "phone",
+      header: "Phone",
+      cell: (info) => <MaskedPhone phone={info.getValue()} className="text-sm text-gray-600" />,
+      enableSorting: false,
     }),
     col.display({
       id: "roles",
@@ -333,7 +413,8 @@ export default function UsersPage() {
                       action: handleCopyId,
                     },
                     { label: "Username", value: viewUser.username },
-                    { label: "Email", value: viewUser.email || "—" },
+                    { label: "Email", value: viewUser.email || "—", masked: true },
+                    { label: "Phone", value: viewUser.phone || "—", maskedPhone: true },
                     { label: "Email Status", value: viewUser.emailVerified ? "Verified" : "Unverified" },
                     { label: "Account Status", value: viewUser.enabled ? "Active" : "Disabled" },
                     { label: "Joined", value: formatDate(viewUser.createdTimestamp) },
@@ -341,7 +422,13 @@ export default function UsersPage() {
                     <div key={item.label} className="rounded-xl border border-input bg-white p-3.5">
                       <p className="text-[11px] font-medium uppercase tracking-wider text-gray-500 mb-1">{item.label}</p>
                       <div className="flex items-center gap-2">
-                        <p className="break-all text-sm font-medium text-gray-900 truncate">{item.value}</p>
+                        {"masked" in item && item.masked ? (
+                          <MaskedEmail email={viewUser.email} className="break-all text-sm font-medium text-gray-900 truncate" />
+                        ) : "maskedPhone" in item && item.maskedPhone ? (
+                          <MaskedPhone phone={viewUser.phone} className="break-all text-sm font-medium text-gray-900 truncate" />
+                        ) : (
+                          <p className="break-all text-sm font-medium text-gray-900 truncate">{item.value}</p>
+                        )}
                         {"action" in item && item.action && (
                           <button onClick={item.action} className="shrink-0 rounded p-1 text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
                             {item.icon}

@@ -1,48 +1,70 @@
 "use client"
 
 /**
- * Order Detail — buyer view.
+ * Order Detail — buyer view. Amazon-standard two-column layout, on-brand.
  *
- * Design ported from public/ux-designs/order-details.html with adaptations:
- *   • Brand tokens (Inter font, brand-gold for primary, gray scales for chrome).
- *   • Tracking stepper drives off our real order/sub-order fulfillment_status
- *     (no fake "Arriving today by 8 PM" — we show an honest line based on
- *     actual status + trackingNumber if present).
- *   • "Contact Seller" CTA is hidden until messaging ships (backlog #41).
- *   • Per-item "Write Review" opens the inline review form (existing pattern)
- *     and submits via createReview. "Buy Again" adds the item to cart.
- *   • For multi-store orders we render one tracking card per sub-order so
- *     each shipment is independently visible.
+ *   • Left: delivery tracker(s) + items, grouped by seller/sub-order. Pickup
+ *     sub-orders show pickup state (reusing the PickupCard pattern from the
+ *     checkout/complete page) instead of a shipping tracker.
+ *   • Right: Order Summary (real cents fields from OrderDto — no fabricated
+ *     numbers), shipping address, payment method, Download receipt button
+ *     (disabled placeholder — the download endpoint ships in a later task).
+ *   • Store names are resolved via getStoreById (same pattern as
+ *     CheckoutClientV2) — never render a raw storeId UUID.
+ *   • Status pills/grouping reuse components/orders/status.tsx so this page
+ *     never drifts from the orders-list definition of "Shipped" etc.
  *
- * APIs (unchanged):
- *   • getOrderByNumber, checkReviewEligibility, createReview
- *   • useCartStore.addItem for Buy Again
+ * APIs (unchanged): getOrderByNumber, checkReviewEligibility, createReview,
+ * getStoreById. useCartStore.addItem for Buy Again.
  */
 
-import { use, useEffect, useState } from "react"
+import { use, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { signIn, useSession } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { toast } from "sonner"
-import { getAccessToken } from "@/lib/auth-helpers"
+import { getAccessToken, autoSignInKeycloak } from "@/lib/auth-helpers"
 import { RequestReturnButton } from "@/components/returns/RequestReturnButton"
+import { ReportProblemButton } from "@/components/disputes/ReportProblemButton"
+import { CardBrandMark } from "@/components/account/CardBrandMark"
 import {
   getOrderByNumber,
+  listMyDisputes,
+  type DisputeDto,
   checkReviewEligibility,
   createReview,
+  getStoreById,
+  downloadReceipt,
   type OrderDto,
   type SubOrderDto,
   type OrderItemDto,
 } from "@/lib/api"
+import { statusBadge } from "@/components/orders/status"
 import {
-  ArrowLeft, Package, Truck, CheckCircle, Clock, Loader2, XCircle,
-  CreditCard, MapPin, Star, BadgeCheck, Home, ShoppingBag, Store,
+  ArrowLeft, Package, Truck, CheckCircle, CheckCircle2, Clock, Loader2, XCircle,
+  CreditCard, MapPin, Star, BadgeCheck, Home, ShoppingBag, Store, FileDown, ShieldAlert,
 } from "lucide-react"
+
+const DISPUTE_TYPE_LABEL: Record<string, string> = {
+  not_received: "Not received",
+  not_as_described: "Not as described",
+  damaged: "Damaged / defective",
+  unauthorized: "Unauthorized charge",
+  other: "Other",
+}
+const DISPUTE_STATUS_LABEL: Record<string, string> = {
+  open: "Under review",
+  needs_info: "Needs more info",
+  seller_responded: "Seller responded",
+  escalated: "Escalated",
+  resolved_refund: "Refunded",
+  resolved_declined: "Not approved",
+  withdrawn: "Withdrawn",
+}
 import { cn } from "@/lib/utils"
 import { useCartStore } from "@/stores/cart-store"
 import { logError } from "@/lib/errors"
-import { storeDisplayName } from "@/lib/house-store"
+import { HOUSE_STORE_ID, storeDisplayName } from "@/lib/house-store"
 
 /* ─────────────────────── Helpers ─────────────────────── */
 
@@ -102,7 +124,13 @@ function formatShort(iso: string) {
   return d.toLocaleString("en-US", { month: "short", day: "numeric" })
 }
 
-/* ─────────────────────── Fulfillment stepper ─────────────────────── */
+/* ─────────────────────── Fulfillment shape (ported from checkout/complete) ─────────────────────── */
+
+function isPickupSub(sub: SubOrderDto): boolean {
+  return sub.deliveryMethod === "pickup"
+}
+
+/* ─────────────────────── Shipping delivery stepper ─────────────────────── */
 
 type StepKey = "placed" | "shipped" | "out_for_delivery" | "delivered"
 const STEP_ORDER: StepKey[] = ["placed", "shipped", "out_for_delivery", "delivered"]
@@ -119,6 +147,22 @@ const STEP_ICON: Record<StepKey, typeof Package> = {
   delivered: Home,
 }
 
+/* Pickup stepper — mirrors the ship stepper shape but with pickup-specific labels. */
+type PickupStepKey = "placed" | "preparing" | "ready" | "collected"
+const PICKUP_STEP_ORDER: PickupStepKey[] = ["placed", "preparing", "ready", "collected"]
+const PICKUP_STEP_LABEL: Record<PickupStepKey, string> = {
+  placed: "Order Placed",
+  preparing: "Preparing",
+  ready: "Ready for Pickup",
+  collected: "Picked Up",
+}
+const PICKUP_STEP_ICON: Record<PickupStepKey, typeof Package> = {
+  placed: CheckCircle,
+  preparing: Package,
+  ready: Store,
+  collected: Home,
+}
+
 function statusToStepIndex(status: string): number {
   const s = status.toLowerCase()
   if (s === "delivered" || s === "completed") return 3
@@ -128,8 +172,44 @@ function statusToStepIndex(status: string): number {
   return 0
 }
 
-function statusHeadline(status: string, trackingNumber: string | null | undefined) {
+function statusToPickupStepIndex(status: string): number {
   const s = status.toLowerCase()
+  if (s === "delivered" || s === "completed") return 3
+  if (s === "ready_for_pickup" || s === "out_for_delivery") return 2
+  if (s === "shipped" || s === "dispatched" || s === "packaged") return 1
+  if (s === "cancelled" || s === "refunded") return -1
+  return 0
+}
+
+/** Short "Placed {date} · {…}" sub-line under the order header — mirrors
+ * the preview's "Placed Aug 24, 2026 · Arriving today by 9 PM" line, minus
+ * any fabricated ETA (we don't have a real delivery-window field). */
+function arrivingLine(status: string, pickup: boolean): string | null {
+  const s = status.toLowerCase()
+  if (pickup) {
+    if (s === "delivered" || s === "completed") return "Picked up"
+    if (s === "ready_for_pickup" || s === "out_for_delivery") return "Ready for pickup"
+    if (s === "shipped" || s === "dispatched" || s === "packaged") return "Preparing your pickup"
+    return null
+  }
+  if (s === "delivered" || s === "completed") return "Delivered"
+  if (s === "out_for_delivery") return "Arriving today"
+  if (s === "shipped" || s === "dispatched") return "On the way"
+  if (s === "cancelled" || s === "refunded" || s === "payment_failed") return null
+  return "Preparing your order"
+}
+
+function statusHeadline(status: string, trackingNumber: string | null | undefined, pickup: boolean) {
+  const s = status.toLowerCase()
+  if (pickup) {
+    if (s === "delivered" || s === "completed") return "Picked up"
+    if (s === "ready_for_pickup" || s === "out_for_delivery") return "Ready for pickup"
+    if (s === "shipped" || s === "dispatched" || s === "packaged") return "Preparing your pickup"
+    if (s === "cancelled") return "Cancelled"
+    if (s === "refunded") return "Refunded"
+    if (s === "payment_failed") return "Payment failed — please retry"
+    return "Order placed"
+  }
   if (s === "delivered" || s === "completed") return "Delivered"
   if (s === "out_for_delivery") return "Out for delivery today"
   if (s === "shipped" || s === "dispatched") return trackingNumber ? "On the way" : "Shipped"
@@ -148,25 +228,30 @@ function statusHeadline(status: string, trackingNumber: string | null | undefine
 function FulfillmentStepper({
   status,
   placedAt,
+  pickup,
 }: {
   status: string
   placedAt: string
+  pickup: boolean
 }) {
-  const activeIdx = statusToStepIndex(status)
+  const order: readonly string[] = pickup ? PICKUP_STEP_ORDER : STEP_ORDER
+  const label: Record<string, string> = pickup ? PICKUP_STEP_LABEL : STEP_LABEL
+  const icon: Record<string, typeof Package> = pickup ? PICKUP_STEP_ICON : STEP_ICON
+  const activeIdx = pickup ? statusToPickupStepIndex(status) : statusToStepIndex(status)
   const isCancelled = activeIdx === -1
   return (
     <div className="relative w-full">
       {/* connecting line */}
-      <div className="absolute top-5 left-5 right-5 h-1 bg-gray-200 z-0 -translate-y-1/2" />
+      <div className="absolute top-5 left-5 right-5 h-1 bg-border z-0 -translate-y-1/2" />
       {!isCancelled && activeIdx > 0 && (
         <div
           className="absolute top-5 left-5 h-1 bg-brand-gold z-0 -translate-y-1/2"
-          style={{ width: `calc(${(activeIdx / (STEP_ORDER.length - 1)) * 100}% - 1.25rem)` }}
+          style={{ width: `calc(${(activeIdx / (order.length - 1)) * 100}% - 1.25rem)` }}
         />
       )}
       <div className="relative z-10 flex justify-between w-full">
-        {STEP_ORDER.map((step, i) => {
-          const Icon = STEP_ICON[step]
+        {order.map((step, i) => {
+          const Icon = icon[step]
           const done = !isCancelled && i <= activeIdx
           const active = !isCancelled && i === activeIdx
           const dateText = i === 0
@@ -178,18 +263,18 @@ function FulfillmentStepper({
                 "h-10 w-10 rounded-full flex items-center justify-center transition-colors",
                 done
                   ? "bg-brand-gold text-brand-gold-foreground"
-                  : "bg-gray-100 text-gray-400 border border-gray-200",
+                  : "bg-muted text-muted-foreground border border-border",
                 active && "ring-4 ring-brand-gold/25",
               )}>
                 <Icon className="h-5 w-5" strokeWidth={2} />
               </div>
               <span className={cn(
                 "mt-3 text-xs text-center px-1 leading-tight",
-                done ? "text-foreground font-semibold" : "text-gray-500",
+                done ? "text-foreground font-semibold" : "text-muted-foreground",
               )}>
-                {STEP_LABEL[step]}
+                {label[step]}
               </span>
-              <span className="mt-1 text-[10px] text-gray-500 text-center">{dateText}</span>
+              <span className="mt-1 text-[10px] text-muted-foreground text-center">{dateText}</span>
             </div>
           )
         })}
@@ -200,6 +285,108 @@ function FulfillmentStepper({
         </p>
       )}
     </div>
+  )
+}
+
+/* ─────────────────────── Pickup card ─────────────────────── */
+
+/** True once the buyer has physically collected this pickup sub-order. */
+function isCollectedSub(sub: SubOrderDto): boolean {
+  return ["picked_up", "collected", "delivered", "completed"].includes(
+    (sub.fulfillmentStatus ?? "").toLowerCase(),
+  )
+}
+
+function PickupCard({ sub }: { sub: SubOrderDto }) {
+  const loc = sub.pickupLocation
+  if (!loc) return null
+  const collected = isCollectedSub(sub)
+  const addressLine = [loc.city, loc.region].filter(Boolean).join(", ") + (loc.postalCode ? ` ${loc.postalCode}` : "")
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-brand-green/30 bg-brand-green-soft/50 p-5">
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-green text-brand-green-foreground">
+          {collected ? <CheckCircle2 className="h-5 w-5" /> : <Store className="h-5 w-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-brand-green">
+            {collected ? "Picked up at" : "Collect in store"}
+          </p>
+          <p className="mt-0.5 text-base font-bold text-foreground">{loc.name || "Store pickup"}</p>
+        </div>
+      </div>
+      <div className="mt-4 space-y-2.5 border-t border-dashed border-brand-green/30 pt-4">
+        {(loc.line1 || addressLine.trim()) && (
+          <p className="flex items-start gap-2 text-sm text-foreground">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+            <span>
+              {loc.line1}
+              {loc.line1 && addressLine.trim() ? ", " : ""}
+              {addressLine.trim()}
+            </span>
+          </p>
+        )}
+        {/* Hours / "Ready in" are forward-looking — only relevant before pickup. */}
+        {!collected && (loc.hours || loc.prepTime) && (
+          <p className="flex items-start gap-2 text-sm text-muted-foreground">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+            <span>{[loc.hours, loc.prepTime && `Ready in ${loc.prepTime}`].filter(Boolean).join(" · ")}</span>
+          </p>
+        )}
+        {!collected && loc.instructions && <p className="text-sm text-muted-foreground">{loc.instructions}</p>}
+      </div>
+      {/* Only nudge for ID before collection; after pickup it's just history. */}
+      {collected ? (
+        <p className="mt-4 flex items-center gap-1.5 rounded-lg bg-card/70 px-3 py-2 text-[11px] font-semibold text-brand-green">
+          <CheckCircle2 className="h-3.5 w-3.5" /> Collected — thanks for picking up.
+        </p>
+      ) : (
+        <p className="mt-4 rounded-lg bg-card/70 px-3 py-2 text-[11px] font-semibold text-muted-foreground">
+          Show your confirmation email or a photo ID when you collect.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * A pickup is a physical place, not a seller. Two sub-orders collected at the
+ * same counter must show ONE card — otherwise a mixed-seller cart renders the
+ * identical "Collect in store" card twice. Dedupe by location identity (no id
+ * on the DTO, so name + address), keeping the first sub-order per location.
+ */
+function dedupePickupsByLocation(subs: SubOrderDto[]): SubOrderDto[] {
+  const seen = new Set<string>()
+  const out: SubOrderDto[] = []
+  for (const s of subs) {
+    const loc = s.pickupLocation
+    if (!loc) continue
+    const key = [loc.name, loc.line1, loc.city, loc.postalCode]
+      .map((v) => (v ?? "").trim().toLowerCase())
+      .join("|")
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(s)
+  }
+  return out
+}
+
+/** "Where to collect" — one card per unique pickup location. */
+function PickupLocations({ subOrders }: { subOrders: SubOrderDto[] }) {
+  const locations = dedupePickupsByLocation(subOrders.filter((s) => isPickupSub(s)))
+  if (locations.length === 0) return null
+  // Past-tense header once every shown pickup has been collected.
+  const allCollected = locations.every((s) => isCollectedSub(s))
+  const header = allCollected
+    ? (locations.length > 1 ? "Where you picked up" : "Picked up")
+    : (locations.length > 1 ? "Where to collect" : "Where to collect your order")
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <h3 className="mb-4 text-sm font-bold text-foreground">{header}</h3>
+      <div className="flex flex-col gap-4">
+        {locations.map((s) => <PickupCard key={s.id} sub={s} />)}
+      </div>
+    </section>
   )
 }
 
@@ -219,7 +406,7 @@ function InteractiveStars({
             size={size}
             className={cn(
               "cursor-pointer transition-colors",
-              filled ? "fill-brand-gold text-brand-gold" : "fill-gray-200 text-gray-200",
+              filled ? "fill-brand-gold text-brand-gold" : "fill-muted text-muted",
             )}
             onMouseEnter={() => setHover(i)}
             onClick={() => onSelect(i)}
@@ -275,7 +462,7 @@ function InlineReviewForm({
   return (
     <div className="mt-3 rounded-xl border border-brand-gold/30 bg-brand-gold/5 p-4 space-y-3">
       <div>
-        <p className="text-xs text-gray-600 mb-1.5">
+        <p className="text-xs text-muted-foreground mb-1.5">
           Rate <span className="font-semibold text-foreground">{productTitle}</span>
         </p>
         <InteractiveStars rating={rating} onSelect={setRating} />
@@ -286,7 +473,7 @@ function InlineReviewForm({
         onChange={(e) => setTitle(e.target.value)}
         maxLength={120}
         placeholder="Headline (optional)"
-        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+        className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
       />
       <textarea
         value={body}
@@ -294,13 +481,13 @@ function InlineReviewForm({
         rows={3}
         maxLength={2000}
         placeholder="What did you like or dislike? (optional)"
-        className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-gray-400 outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
+        className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold"
       />
       <div className="flex items-center gap-2 justify-end">
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-foreground transition-colors"
+          className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           Cancel
         </button>
@@ -335,6 +522,7 @@ function OrderItem({
     eligible: boolean; purchased: boolean; already_reviewed: boolean
   } | null>(null)
   const [reviewed, setReviewed] = useState(false)
+  const [imgError, setImgError] = useState(false)
 
   useEffect(() => {
     if (!isDelivered || !item.productId) return
@@ -352,6 +540,15 @@ function OrderItem({
 
   const canReview = isDelivered && eligibility?.eligible === true && !reviewed
   const alreadyReviewed = eligibility?.already_reviewed === true || reviewed
+
+  // Deep-link from the Orders list "Write a review" button (→ …/orders/[n]#review):
+  // auto-open the inline review form for the reviewable item once eligibility
+  // resolves, instead of dropping the buyer on the plain order-details page.
+  useEffect(() => {
+    if (canReview && typeof window !== "undefined" && window.location.hash === "#review") {
+      setShowForm(true)
+    }
+  }, [canReview])
 
   function handleBuyAgain() {
     if (!item.productId || adding) return
@@ -378,23 +575,27 @@ function OrderItem({
   }
 
   const eachLabel = item.quantity > 1
-    ? <span className="text-sm font-normal text-gray-500"> ({formatCents(item.unitPriceCents)} ea)</span>
+    ? <span className="text-sm font-normal text-muted-foreground"> ({formatCents(item.unitPriceCents)} ea)</span>
     : null
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 border-b border-gray-100 pb-6 last:border-0 last:pb-0">
-      <div className="w-full sm:w-28 h-28 bg-gray-100 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200">
-        {item.imageUrl ? (
-          <Image
+    <div className="flex flex-col sm:flex-row gap-4 border-b border-border pb-6 last:border-0 last:pb-0">
+      <div className="w-full sm:w-28 h-28 bg-muted flex-shrink-0 rounded-lg overflow-hidden border border-border">
+        {item.imageUrl && !imgError ? (
+          // Native <img>, not next/image: product image hosts are unpredictable
+          // (sellers upload to various CDNs), so requiring each in next.config
+          // remotePatterns silently breaks thumbnails. Same rationale as the
+          // delivery-proof photo below. onError falls back to the Package icon.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={item.imageUrl}
             alt={item.productTitle || "Product"}
-            width={112}
-            height={112}
             className="h-full w-full object-cover"
+            onError={() => setImgError(true)}
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center">
-            <Package className="h-7 w-7 text-gray-400" />
+            <Package className="h-7 w-7 text-muted-foreground" />
           </div>
         )}
       </div>
@@ -407,13 +608,26 @@ function OrderItem({
             {item.productTitle || "Product"}
           </Link>
           {item.variantName && item.variantName.toLowerCase() !== "default" && (
-            <p className="text-xs text-gray-500 mt-1">{item.variantName}</p>
+            <p className="text-xs text-muted-foreground mt-1">{item.variantName}</p>
           )}
-          <p className="text-xs text-gray-500 mt-1">Qty: {item.quantity}</p>
-          <p className="text-lg font-bold text-foreground mt-1.5">
+          <p className="text-xs text-muted-foreground mt-1">Qty: {item.quantity}</p>
+          <p className="text-lg font-bold text-brand-green mt-1.5">
             {formatCents(item.totalPriceCents)}
             {eachLabel}
           </p>
+          {/* Per-item status (Amazon-style): each item reflects its own
+              sub-order's fulfillment state, so a mixed-progress order is clear. */}
+          {(() => {
+            const b = statusBadge(sub.fulfillmentStatus)
+            return (
+              <span className={cn(
+                "mt-2 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                b.tone,
+              )}>
+                <b.Icon className="h-3 w-3" /> {b.label}
+              </span>
+            )
+          })()}
           {alreadyReviewed && (
             <span className="inline-flex items-center gap-1 mt-2 text-xs text-green-600 font-medium">
               <BadgeCheck className="h-3.5 w-3.5" /> Reviewed
@@ -427,7 +641,7 @@ function OrderItem({
               type="button"
               onClick={handleBuyAgain}
               disabled={adding}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-200 text-foreground bg-white hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-border text-foreground bg-card hover:bg-muted rounded-lg transition-colors disabled:opacity-60"
             >
               {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingBag className="h-3 w-3" />}
               Buy Again
@@ -460,79 +674,118 @@ function OrderItem({
 
 /* ─────────────────────── Sub-order section ─────────────────────── */
 
-function SubOrderBlock({
-  sub, placedAt, single, orderNumber,
+/**
+ * One order-level delivery tracker (Amazon-style): a single status timeline for
+ * the whole order, NOT one per seller. Tracking numbers and delivery photos are
+ * aggregated across sub-orders (shown plainly, without per-store headers), and
+ * per-item status lives on each item in the items list below.
+ */
+function OrderDeliveryTracker({
+  status, placedAt, pickup, badge, subOrders,
 }: {
-  sub: SubOrderDto
+  status: string
   placedAt: string
-  single: boolean
-  orderNumber: string
+  pickup: boolean
+  badge: ReturnType<typeof statusBadge>
+  subOrders: SubOrderDto[]
 }) {
-  const isDelivered = sub.fulfillmentStatus === "delivered" || sub.fulfillmentStatus === "completed"
-  const headline = statusHeadline(sub.fulfillmentStatus, sub.trackingNumber)
+  const headline = statusHeadline(status, undefined, pickup)
+  // A collected pickup is not "Delivered" — the shared status badge maps
+  // delivered/completed to "Delivered" regardless of channel, so relabel it
+  // for pickup so the pill matches the "Picked up" reality.
+  const isCollected = ["delivered", "completed", "picked_up", "collected"].includes(status.toLowerCase())
+  const badgeLabel = pickup && isCollected ? "Picked up" : badge.label
+  const tracked = subOrders.filter((s) => !!s.trackingNumber)
+  const proofs = subOrders.filter(
+    (s) => (s.fulfillmentStatus === "delivered" || s.fulfillmentStatus === "completed") && s.deliveryProofImageUrl,
+  )
 
   return (
-    <div className="space-y-6">
-      <section className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div>
-            <h2 className="text-lg font-bold text-foreground">
-              {single ? "Delivery Status" : "Shipment"}
-            </h2>
-            {!single && (
-              <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                <Store className="h-3 w-3" /> {storeDisplayName(sub.storeId)}
-              </p>
-            )}
-          </div>
-        </div>
-        <p className="text-lg font-bold text-foreground mb-6">{headline}</p>
-        <FulfillmentStepper status={sub.fulfillmentStatus} placedAt={placedAt} />
-        {sub.trackingNumber && (
-          <div className="mt-6 flex items-center justify-between rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-gray-500">Tracking number</p>
-              <p className="text-sm font-mono font-semibold text-foreground mt-0.5">
-                {sub.trackingNumber}
-              </p>
-            </div>
-            {sub.shippingCarrier && (
-              <span className="text-xs text-gray-500">{sub.shippingCarrier}</span>
-            )}
-          </div>
-        )}
-        {isDelivered && sub.deliveryProofImageUrl && (
-          <div className="mt-6">
-            <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">
-              Delivery photo{sub.deliveryProofUploadedAt ? ` · ${new Date(sub.deliveryProofUploadedAt).toLocaleString()}` : ""}
-            </p>
-            {/* Native <img> — proof photos come from external CDN (uploadthing/etc.);
-                skip next/image so we don't need every possible host in remotePatterns. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={sub.deliveryProofImageUrl}
-              alt="Delivery photo"
-              className="max-h-80 rounded-lg border border-gray-200 object-contain bg-gray-50"
-            />
-          </div>
-        )}
-      </section>
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <h3 className="text-sm font-bold text-foreground">
+          {pickup ? "Pickup status" : "Delivery status"}
+        </h3>
+        <span className={cn(
+          "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+          badge.tone,
+        )}>
+          <badge.Icon className="h-3 w-3" /> {badgeLabel}
+        </span>
+      </div>
+      <p className="mb-5 text-base font-bold text-foreground">{headline}</p>
+      <FulfillmentStepper status={status} placedAt={placedAt} pickup={pickup} />
 
-      <section className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-6">
-          <h2 className="text-lg font-bold text-foreground">
-            Items {single ? "in Order" : "in this Shipment"}
-          </h2>
-          {isDelivered && (
-            <RequestReturnButton sub={sub} orderNumber={orderNumber} />
-          )}
-        </div>
-        <div className="flex flex-col gap-6">
-          {sub.items.map((item) => (
-            <OrderItem key={item.id} item={item} sub={sub} isDelivered={isDelivered} />
+      {tracked.length > 0 && (
+        <div className="mt-5 flex flex-col gap-2">
+          {tracked.map((s) => (
+            <div key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Tracking number</p>
+                <p className="mt-0.5 font-mono text-sm font-semibold text-foreground">{s.trackingNumber}</p>
+              </div>
+              {s.shippingCarrier && (
+                <span className="text-xs text-muted-foreground">{s.shippingCarrier}</span>
+              )}
+            </div>
           ))}
         </div>
-      </section>
+      )}
+
+      {proofs.map((s) => (
+        <div key={s.id} className="mt-5">
+          <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+            Delivery photo{s.deliveryProofUploadedAt ? ` · ${new Date(s.deliveryProofUploadedAt).toLocaleString()}` : ""}
+          </p>
+          {/* Native <img> — proof photos come from external CDN (uploadthing/etc.);
+              skip next/image so we don't need every possible host in remotePatterns. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={s.deliveryProofImageUrl ?? undefined}
+            alt="Delivery photo"
+            className="max-h-80 rounded-lg border border-border bg-muted object-contain"
+          />
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function SubOrderItems({
+  sub, orderNumber, storeName, onDisputeCreated,
+}: {
+  sub: SubOrderDto
+  orderNumber: string
+  storeName: string
+  onDisputeCreated?: (d: DisputeDto) => void
+}) {
+  // "Received" covers shipped-and-delivered AND pickup fulfilment — the buyer
+  // has the goods, so returns / report-a-problem / reviews all apply. The
+  // backend allows disputes on delivered|completed|picked_up|collected, so the
+  // UI gate must match or pickup buyers can never report a problem.
+  const isDelivered = ["delivered", "completed", "picked_up", "collected"]
+    .includes(sub.fulfillmentStatus ?? "")
+  return (
+    <div className="border-t border-border pt-4 first:border-t-0 first:pt-0">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <p className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+          🏪 Sold by {storeName}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {isDelivered && <RequestReturnButton sub={sub} orderNumber={orderNumber} />}
+          {/* You can only report a problem on something you've received, so this
+              is gated on delivery just like returns (covers "marked delivered
+              but not received" too). */}
+          {isDelivered && (
+            <ReportProblemButton sub={sub} orderNumber={orderNumber} onCreated={onDisputeCreated} />
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col gap-5">
+        {sub.items.map((item) => (
+          <OrderItem key={item.id} item={item} sub={sub} isDelivered={isDelivered} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -545,11 +798,34 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   const [order, setOrder] = useState<OrderDto | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [storeNames, setStoreNames] = useState<Map<string, string>>(new Map())
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false)
+  const [disputes, setDisputes] = useState<DisputeDto[]>([])
+
+  async function handleDownloadReceipt() {
+    if (downloadingReceipt) return
+    setDownloadingReceipt(true)
+    try {
+      const token = await getAccessToken()
+      if (!token) {
+        toast.error("Session expired — please sign in again")
+        return
+      }
+      await downloadReceipt(token, orderNumber)
+    } catch (e) {
+      logError(e, "downloading receipt")
+      toast.error("Couldn't download the receipt — try again")
+    } finally {
+      setDownloadingReceipt(false)
+    }
+  }
 
   useEffect(() => {
     if (sessionStatus === "loading") return
     if (sessionStatus !== "authenticated") {
-      signIn("keycloak", { callbackUrl: `/orders/${orderNumber}` })
+      // Guarded: stands down right after a sign-out so a warm Keycloak SSO
+      // can't silently re-authenticate the user here.
+      autoSignInKeycloak({ callbackUrl: `/orders/${orderNumber}` })
       return
     }
     let cancelled = false
@@ -559,6 +835,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
         if (!token || cancelled) return
         const data = await getOrderByNumber(token, orderNumber)
         if (!cancelled) setOrder(data)
+        // The buyer's disputes for THIS order (best-effort — the order still
+        // renders if this fails).
+        try {
+          const dRes = await listMyDisputes(token, 0, 50)
+          if (!cancelled) setDisputes(dRes.content.filter((x) => x.orderNumber === orderNumber))
+        } catch { /* non-fatal */ }
       } catch (e) {
         logError(e, "loading order")
         if (!cancelled) setError("Failed to load order")
@@ -569,11 +851,40 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
     return () => { cancelled = true }
   }, [sessionStatus, orderNumber])
 
+  // Store-name resolution — never render a raw storeId UUID (same pattern as
+  // CheckoutClientV2: fetch getStoreById for every non-house storeId seen).
+  const nonHouseStoreIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const sub of order?.subOrders ?? []) {
+      if (sub.storeId && sub.storeId !== HOUSE_STORE_ID) ids.add(sub.storeId)
+    }
+    return Array.from(ids).sort()
+  }, [order])
+
+  useEffect(() => {
+    const missing = nonHouseStoreIds.filter((id) => !storeNames.has(id))
+    if (missing.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      const results = await Promise.allSettled(missing.map((id) => getStoreById(id)))
+      if (cancelled) return
+      setStoreNames((prev) => {
+        const next = new Map(prev)
+        results.forEach((r, i) => {
+          if (r.status === "fulfilled" && r.value?.name) next.set(missing[i], r.value.name)
+        })
+        return next
+      })
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonHouseStoreIds])
+
   if (loading) {
     return (
       <main className="mx-auto max-w-[1280px] px-4 sm:px-6 py-20 flex flex-col items-center gap-3">
         <Loader2 className="h-7 w-7 animate-spin text-foreground" />
-        <span className="text-sm text-gray-500">Loading order…</span>
+        <span className="text-sm text-muted-foreground">Loading order…</span>
       </main>
     )
   }
@@ -584,7 +895,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
         <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
           <XCircle className="mx-auto h-10 w-10 text-red-500" />
           <p className="mt-3 text-sm text-red-700">{error || "Order not found"}</p>
-          <Link href="/orders" className="inline-block mt-4 rounded-lg bg-white border border-red-200 px-4 py-2 text-xs font-medium text-foreground hover:bg-red-50 transition-colors">
+          <Link href="/orders" className="inline-block mt-4 rounded-lg bg-card border border-red-200 px-4 py-2 text-xs font-medium text-foreground hover:bg-red-50 transition-colors">
             Back to orders
           </Link>
         </div>
@@ -593,146 +904,218 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   }
 
   const placedAt = order.placedAt || order.createdAt
-  const single = order.subOrders.length === 1
   const overallStatus = order.status
   const allItems = order.subOrders.flatMap((so) => so.items)
   const totalItems = allItems.reduce((sum, i) => sum + i.quantity, 0)
   const orderDiscount = order.discountCents ?? 0
-  const isShipped = ["shipped", "dispatched", "out_for_delivery"].includes(overallStatus.toLowerCase())
-  const trackingHref = `/orders/${order.orderNumber}#tracking`
+  // Every applied coupon shows on its OWN line with its OWN value (stacking) —
+  // including shipping coupons. Item coupons reduce the subtotal; a shipping
+  // coupon reduces shipping, and shippingCostCents is stored NET. To show the
+  // shipping coupon AND keep the math footing, we display GROSS shipping
+  // (net + shipping coupon) so the coupon's own line subtracts it back.
+  const coupons = (order.appliedCoupons ?? []).filter((c) => c.discountCents > 0)
+  const shippingCouponCents = coupons
+    .filter((c) => c.target === "shipping")
+    .reduce((sum, c) => sum + c.discountCents, 0)
+  const grossShippingCents = (order.shippingCostCents ?? 0) + shippingCouponCents
+  // Referral-credit field lands in a later phase; guard on > 0 so this line
+  // simply stays absent until the backend populates it.
+  const referralCreditCents = (order as unknown as { referralCreditCents?: number }).referralCreditCents ?? 0
+  const badge = statusBadge(overallStatus)
+  // The overall order is "pickup" for this header line only when every
+  // sub-order is a pickup — a mixed cart still reads as a shipping order up top.
+  const allPickup = order.subOrders.length > 0 && order.subOrders.every((so) => isPickupSub(so))
+  const sub = arrivingLine(overallStatus, allPickup)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Compact top bar — mockup lines 108-118. Pure back/title; no share
-          button since the order is private. */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
-        <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <Link
-            href="/orders"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to Orders
-          </Link>
-          <h1 className="text-base font-bold text-foreground">Order Details</h1>
-          <span className="w-20" />
+    <main className="mx-auto max-w-[1080px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      <Link
+        href="/orders"
+        className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to orders
+      </Link>
+
+      <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h1 className="text-xl font-extrabold tracking-tight text-foreground">
+          Order <span className="font-mono">#{order.orderNumber}</span>
+        </h1>
+        <span className={cn(
+          "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+          badge.tone,
+        )}>
+          <badge.Icon className="h-3 w-3" /> {badge.label}
+        </span>
+      </div>
+      <p className="mb-6 text-sm text-muted-foreground">
+        Placed {formatDate(placedAt)}{sub ? ` · ${sub}` : ""}
+      </p>
+
+      <div id="tracking" className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* Left: ONE order-level tracker, then the items (grouped by seller for
+            attribution) with a per-item status, then where to collect. Items sit
+            directly under the status — not buried below the pickup location. */}
+        <div className="flex flex-col gap-4">
+          <OrderDeliveryTracker
+            status={overallStatus}
+            placedAt={placedAt}
+            pickup={allPickup}
+            badge={badge}
+            subOrders={order.subOrders}
+          />
+
+          {disputes.length > 0 && (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50/40 p-4 shadow-sm sm:p-5">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground">
+                <ShieldAlert className="h-4 w-4 text-amber-600" /> Reported problems
+              </h3>
+              <ul className="space-y-2">
+                {disputes.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-card px-3 py-2 text-sm">
+                    <span className="font-medium text-foreground">{DISPUTE_TYPE_LABEL[d.type] ?? d.type}</span>
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                      {DISPUTE_STATUS_LABEL[d.status] ?? d.status.replace(/_/g, " ")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-muted-foreground">
+                We&rsquo;ll email you as your report is reviewed — no need to ship anything back.
+              </p>
+            </section>
+          )}
+
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+            <h3 className="mb-4 text-sm font-bold text-foreground">
+              Items in this order
+            </h3>
+            <div className="flex flex-col gap-4">
+              {order.subOrders.map((so) => (
+                <SubOrderItems
+                  key={so.id}
+                  sub={so}
+                  orderNumber={orderNumber}
+                  storeName={storeDisplayName(so.storeId, storeNames.get(so.storeId))}
+                  onDisputeCreated={(d) =>
+                    setDisputes((prev) => [d, ...prev.filter((x) => x.id !== d.id)])
+                  }
+                />
+              ))}
+            </div>
+          </section>
+
+          <PickupLocations subOrders={order.subOrders} />
         </div>
-      </header>
 
-      <main className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 py-8">
-        {/* Order header */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <p className="text-sm text-gray-500 mb-1">
-              Order <span className="font-mono text-foreground font-semibold">#{order.orderNumber}</span>
-            </p>
-            <p className="text-xs text-gray-500">Placed on {formatDate(placedAt)}</p>
-          </div>
-          <div className="flex gap-2">
-            {isShipped && (
-              <a
-                href={trackingHref}
-                className="px-4 py-2 bg-brand-gold text-brand-gold-foreground text-xs font-bold rounded-lg hover:bg-brand-gold-hover transition-colors"
-              >
-                Track Package
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Two-column layout */}
-        <div id="tracking" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left: tracking + items per shipment */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
-            {order.subOrders.map((sub) => (
-              <SubOrderBlock key={sub.id} sub={sub} placedAt={placedAt} single={single} orderNumber={orderNumber} />
-            ))}
-          </div>
-
-          {/* Right: order summary + shipping + payment */}
-          <aside className="lg:col-span-4 flex flex-col gap-6 lg:sticky lg:top-20">
-            <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-foreground mb-4">Order Summary</h2>
-              <div className="space-y-3 mb-4 pb-4 border-b border-gray-200 text-sm">
-                <div className="flex justify-between text-foreground">
-                  <span>Item{totalItems === 1 ? "" : "s"} subtotal ({totalItems}):</span>
-                  <span>{formatCents(order.subtotalCents, order.currency)}</span>
-                </div>
-                <div className="flex justify-between text-foreground">
-                  <span>Shipping &amp; handling:</span>
-                  <span>{formatCents(order.shippingCostCents, order.currency)}</span>
-                </div>
-                {orderDiscount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>{order.couponCode ? `Coupon (${order.couponCode})` : "Discount"}:</span>
-                    <span>−{formatCents(orderDiscount, order.currency)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-foreground">
-                  <span>Estimated tax:</span>
-                  <span>{formatCents(order.taxCents, order.currency)}</span>
-                </div>
+        {/* Right: order summary + shipping + payment */}
+        <aside className="flex flex-col gap-4">
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+            <h3 className="mb-3 text-sm font-bold text-foreground">Order summary</h3>
+            <div className="text-sm">
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-muted-foreground">Item subtotal ({totalItems})</span>
+                <span className="tabular-nums text-foreground">{formatCents(order.subtotalCents, order.currency)}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-base font-bold text-foreground">Grand total:</span>
-                <span className="text-2xl font-bold text-foreground">
-                  {formatCents(order.totalCents, order.currency)}
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-muted-foreground">Shipping &amp; handling</span>
+                <span className="tabular-nums text-foreground">
+                  {grossShippingCents === 0 ? "FREE" : formatCents(grossShippingCents, order.currency)}
                 </span>
               </div>
-            </section>
+              {coupons.length > 0 ? (
+                coupons.map((c, i) => (
+                  <div key={`${c.code}-${i}`} className="flex items-center justify-between py-1.5 text-brand-green">
+                    <span>Coupon ({c.code}){c.target === "shipping" ? " · shipping" : ""}</span>
+                    <span className="tabular-nums font-semibold">−{formatCents(c.discountCents, order.currency)}</span>
+                  </div>
+                ))
+              ) : orderDiscount > 0 ? (
+                <div className="flex items-center justify-between py-1.5 text-brand-green">
+                  <span>{order.couponCode ? `Coupon (${order.couponCode})` : "Discount"}</span>
+                  <span className="tabular-nums font-semibold">−{formatCents(orderDiscount, order.currency)}</span>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-muted-foreground">Tax</span>
+                <span className="tabular-nums text-foreground">{formatCents(order.taxCents, order.currency)}</span>
+              </div>
+              {referralCreditCents > 0 && (
+                <div className="flex items-center justify-between py-1.5 text-brand-green">
+                  <span>Referral credit</span>
+                  <span className="tabular-nums font-semibold">−{formatCents(referralCreditCents, order.currency)}</span>
+                </div>
+              )}
+              <div className="mt-1.5 flex items-center justify-between border-t border-brand-gold/40 pt-3 text-base font-extrabold">
+                <span className="text-foreground">Grand total</span>
+                <span className="tabular-nums text-brand-green">{formatCents(order.totalCents, order.currency)}</span>
+              </div>
+              {(order.storeCreditAppliedCents ?? 0) > 0 && (
+                <>
+                  <div className="flex items-center justify-between py-1.5 text-brand-green">
+                    <span>Store credit applied</span>
+                    <span className="tabular-nums font-semibold">−{formatCents(order.storeCreditAppliedCents ?? 0, order.currency)}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-sm font-bold">
+                    <span className="text-foreground">You paid</span>
+                    <span className="tabular-nums text-foreground">{formatCents(order.totalCents - (order.storeCreditAppliedCents ?? 0), order.currency)}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
 
-            {(() => {
-              const ship = parseShippingAddress(order.shippingAddress)
-              const pay = paymentLabel(order.paymentMethod, order.last4)
-              if (!ship && !pay) return null
-              return (
-                <section className="bg-white rounded-xl border border-gray-200 p-6">
-                  <>
-                    {ship && (
-                      <div className={pay ? "mb-5" : ""}>
-                        <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-3">
-                          <MapPin className="h-4 w-4 text-gray-500" />
-                          Shipping address
-                        </h3>
-                        <div className="pl-6 text-sm text-gray-600 leading-relaxed">
-                          {ship.fullName && (
-                            <p className="text-foreground font-semibold">{ship.fullName}</p>
-                          )}
-                          {ship.line1 && (
-                            <p>{ship.line1}{ship.line2 ? `, ${ship.line2}` : ""}</p>
-                          )}
-                          {(ship.city || ship.state || ship.zip) && (
-                            <p>
-                              {[ship.city, ship.state].filter(Boolean).join(", ")}{ship.zip ? ` ${ship.zip}` : ""}
-                            </p>
-                          )}
-                          {ship.country && <p>{ship.country}</p>}
-                          {ship.phone && (
-                            <p className="text-xs text-gray-500 mt-2">{ship.phone}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {pay && (
-                      <div className={ship ? "pt-5 border-t border-gray-200" : ""}>
-                        <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-3">
-                          <CreditCard className="h-4 w-4 text-gray-500" />
-                          Payment method
-                        </h3>
-                        <div className="pl-6 text-sm text-gray-600 flex items-center gap-3">
-                          <div className="h-6 w-10 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
-                            <CreditCard className="h-3 w-3 text-gray-500" />
-                          </div>
-                          <p>{pay}</p>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                </section>
-              )
-            })()}
-          </aside>
-        </div>
-      </main>
-    </div>
+          {(() => {
+            const ship = parseShippingAddress(order.shippingAddress)
+            const pay = paymentLabel(order.paymentMethod, order.last4)
+            if (!ship && !pay) return null
+            return (
+              <>
+                {ship && (
+                  <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+                    <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      Shipping address
+                    </h3>
+                    <div className="text-sm leading-relaxed text-foreground">
+                      {ship.fullName && <p className="font-semibold">{ship.fullName}</p>}
+                      {ship.line1 && <p>{ship.line1}{ship.line2 ? `, ${ship.line2}` : ""}</p>}
+                      {(ship.city || ship.state || ship.zip) && (
+                        <p>
+                          {[ship.city, ship.state].filter(Boolean).join(", ")}{ship.zip ? ` ${ship.zip}` : ""}
+                        </p>
+                      )}
+                      {ship.country && <p>{ship.country}</p>}
+                      {ship.phone && <p className="mt-2 text-muted-foreground">{ship.phone}</p>}
+                    </div>
+                  </section>
+                )}
+                {pay && (
+                  <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+                    <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground">
+                      <CreditCard className="h-4 w-4 text-muted-foreground" />
+                      Payment
+                    </h3>
+                    <div className="flex items-center gap-2.5 text-sm text-foreground">
+                      <CardBrandMark brand={order.paymentMethod ?? null} />
+                      <span>{pay}</span>
+                    </div>
+                  </section>
+                )}
+              </>
+            )
+          })()}
+
+          <button
+            type="button"
+            onClick={handleDownloadReceipt}
+            disabled={downloadingReceipt}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {downloadingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+            Download receipt (PDF)
+          </button>
+        </aside>
+      </div>
+    </main>
   )
 }

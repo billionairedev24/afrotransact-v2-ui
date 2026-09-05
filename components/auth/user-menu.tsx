@@ -5,7 +5,6 @@ import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { User, LogOut, Package, Settings, ChevronDown, Store, Loader2 } from "lucide-react"
-import { useSignOut } from "@/hooks/useSignOut"
 import { StartSellingLink } from "@/components/selling/StartSellingLink"
 
 function UnauthedMenu({ returnTo }: { returnTo: string }) {
@@ -54,7 +53,6 @@ export function UserMenu() {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
-  const signOut = useSignOut()
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -153,13 +151,15 @@ export function UserMenu() {
           </div>
 
           <div className="border-t border-border p-1">
-            <button
-              onClick={() => { signOut() }}
+            {/* Native <a href> for a reliable full-page logout navigation —
+                see header.tsx note; React's onClick was not firing here. */}
+            <a
+              href="/api/auth/signout"
               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
             >
               <LogOut className="h-4 w-4" />
               Sign Out
-            </button>
+            </a>
           </div>
         </div>
       )}

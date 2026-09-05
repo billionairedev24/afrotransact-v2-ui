@@ -731,7 +731,7 @@ export default function ProductPageClient() {
                 if (!product || !variant) return
                 // For anonymous users we additionally keep the rich metadata
                 // (title/image/price/store) in the local zustand store so the
-                // /account/wishlist page can render it without an extra fetch.
+                // /account#wishlist section can render it without an extra fetch.
                 // Authenticated users get their wishlist hydrated from the
                 // server by productId; the page fetches product details itself.
                 const wasIn = wishlist.has(product.id)

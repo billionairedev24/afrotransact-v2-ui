@@ -11,6 +11,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { getServerAccessToken } from "@/lib/server-token"
 import { kcIssuerServer } from "@/lib/keycloak-issuers"
 
 function env(name: string, fallback: string) {
@@ -52,7 +53,7 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const accessToken = (session as { accessToken?: string }).accessToken
+  const accessToken = (await getServerAccessToken())
   const apiBase = env("NEXT_PUBLIC_API_URL", "http://localhost:8080")
 
   // Step 1: Delete user data from our backend (best-effort)

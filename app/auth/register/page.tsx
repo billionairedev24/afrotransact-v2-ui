@@ -35,6 +35,19 @@ function Spinner({ label }: { label: string }) {
   )
 }
 
+/**
+ * Reads the `atx_ref` referral cookie stamped by `/r/{code}` (short link) or
+ * `ReferralCapture` (`?ref=<code>` on any landing page). Threaded into the
+ * Keycloak registration authorization request as `referralCode` so it rides
+ * along in the query string; Keycloak/the backend register handler can pick
+ * it up once wired (a later task).
+ */
+function getReferralCodeCookie(): string | undefined {
+  if (typeof document === "undefined") return undefined
+  const match = document.cookie.match(/(?:^|; )atx_ref=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : undefined
+}
+
 function RegisterRedirect() {
   const searchParams = useSearchParams()
   const role = searchParams.get("role")
@@ -47,27 +60,29 @@ function RegisterRedirect() {
 
     void (async () => {
       try {
+        const referralCode = getReferralCodeCookie()
+        // NOTE: we intentionally do NOT pre-clear the OAuth state/PKCE cookies
+        // here. signIn() sets a FRESH next-auth.state for this flow anyway, so
+        // the old "reset-oauth-state before signIn" step was redundant — and it
+        // raced: its delete of next-auth.state could land AFTER signIn set it,
+        // wiping the state cookie (but not callback-url, which it never touched)
+        // → the callback then failed with "State cookie was missing." Letting
+        // signIn own the state cookie end-to-end fixes that.
+
+        // ONE registration provider for buyer AND seller. Seller intent is no
+        // longer a Keycloak param/provider — it's a cookie the post-login
+        // SellerIntentProvider reads to call /api/auth/grant-seller, which makes
+        // the seller role + attribute DURABLE on the Keycloak account (survives
+        // cross-device email verification). 30-min TTL covers register → (soft
+        // verify) → land back authenticated on this same browser.
         if (isSeller) {
-          // Persist seller intent so /auth/login can route back to the
-          // onboarding flow if the user verifies their email on another
-          // device (no live session when they return).
-          try {
-            localStorage.setItem(
-              "afro_register_intent",
-              JSON.stringify({ callbackUrl: "/dashboard/onboarding", role: "seller" }),
-            )
-          } catch {
-            // localStorage unavailable (SSR / private mode) — proceed anyway.
-          }
-          await signIn("keycloak-register-seller", {
-            callbackUrl: "/dashboard/onboarding",
-            registration_role: "seller",
-          })
-        } else {
-          await signIn("keycloak-register", {
-            callbackUrl: searchParams.get("callbackUrl") || "/",
-          })
+          document.cookie = "atx_seller_intent=1; path=/; max-age=1800; SameSite=Lax"
         }
+        await signIn(
+          "keycloak-register",
+          { callbackUrl: isSeller ? "/" : (searchParams.get("callbackUrl") || "/") },
+          referralCode ? { referralCode } : undefined,
+        )
       } catch {
         // Allow the user to manually retry via a refresh if NextAuth throws.
         startedRef.current = false

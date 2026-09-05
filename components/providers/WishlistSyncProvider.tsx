@@ -30,11 +30,12 @@ export function WishlistSyncProvider({ children }: { children: React.ReactNode }
       hasMerged.current = false
       return
     }
-    if (status !== "authenticated" || !session?.accessToken) return
+    if (status !== "authenticated" || !session?.user?.id) return
     if (hasMerged.current) return
 
     hasMerged.current = true
-    const token = session.accessToken as string
+    // Non-secret presence marker; the /api/gw proxy attaches the real token.
+    const token = session.user.id as string
     const localItems = useWishlistStore.getState().items
     const localIds = localItems.map((i) => i.productId)
 
@@ -56,7 +57,7 @@ export function WishlistSyncProvider({ children }: { children: React.ReactNode }
         // Allow retry on next mount.
         hasMerged.current = false
       })
-  }, [status, session?.accessToken])
+  }, [status, session?.user?.id])
 
   // Capture the query client in a ref so the async callback above can invalidate
   // without re-creating the effect on every render.

@@ -23,6 +23,23 @@ import { useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useRef, useState } from "react"
 import { ArrowRight, Loader2 } from "lucide-react"
 
+// Per-tab counter (sessionStorage) bounding the silent retry of a transient
+// OAuthCallback "state mismatch". See the mount effect in LoginRedirect.
+const OAUTH_RETRY_KEY = "atx_oauth_retry"
+const MAX_AUTO_RETRY = 1
+
+// Short-lived marker set by /api/auth/signout. While present, this page must
+// NOT auto-fire signIn — otherwise a seller who just signed out and got routed
+// here (home → /dashboard → /auth/login) would be silently re-authenticated
+// against a Keycloak SSO cookie that hadn't finished clearing, bouncing them
+// straight back in. READ-ONLY: it must NOT be cleared here, or the other
+// auto-signIn sites (onboarding, orders) would stop seeing it and re-auth. It
+// self-expires via Max-Age; a user-initiated "Sign in" click is never guarded.
+function hasSignedOutMarker(): boolean {
+  if (typeof document === "undefined") return false
+  return document.cookie.split(";").some((c) => c.trim().startsWith("atx-signed-out="))
+}
+
 function getSellerIntentCallbackUrl(): string | null {
   try {
     const raw = localStorage.getItem("afro_register_intent")
@@ -71,6 +88,13 @@ function LoginRedirect() {
 
   const startedRef = useRef(false)
   const [isLoading, setIsLoading] = useState(false)
+  // True while a transient OAuthCallback error is being silently retried — the
+  // page shows the spinner (a redirect is imminent) instead of the error card.
+  const [willAutoRetry, setWillAutoRetry] = useState(false)
+  // True when we arrived here immediately after a sign-out — suppress the
+  // auto-signIn and show a manual "signed out" screen so a lingering Keycloak
+  // SSO session can't silently re-authenticate the user.
+  const [justSignedOut, setJustSignedOut] = useState(false)
 
   async function triggerKeycloakSignIn() {
     setIsLoading(true)
@@ -78,6 +102,10 @@ function LoginRedirect() {
       const callbackUrl = resolveCallbackUrl(
         new URLSearchParams(searchParams.toString()),
       )
+      // NOTE: do NOT pre-clear state/PKCE here. signIn() sets fresh ones for
+      // this flow, so the old reset step was redundant — and it raced: deleting
+      // next-auth.state right before signIn set it could wipe the state cookie,
+      // making the callback fail with "State cookie was missing" (OAuthCallback).
       await signIn("keycloak", { callbackUrl })
     } catch {
       setIsLoading(false)
@@ -85,22 +113,105 @@ function LoginRedirect() {
   }
 
   /**
-   * Auto-redirect to Keycloak once on mount.
+   * Auto-redirect to Keycloak on mount.
    *
-   * IMPORTANT: if `error` is present (OAuth/sign-in failed server-side — e.g. Keycloak unreachable,
-   * ECONNRESET, bad issuer), do NOT retry automatically or the UI will spin in an infinite redirect loop.
-   * The user clears the failure via "Try again" which calls triggerKeycloakSignIn() explicitly.
+   * NextAuth v4 keeps a SINGLE `next-auth.state` / PKCE cookie per browser, so
+   * two overlapping sign-in flows (a second signIn while a first Keycloak page
+   * is still open, back/forward into this route, or a signout→signin overlap)
+   * make the later flow overwrite the earlier flow's cookie. Completing the
+   * earlier Keycloak page then fails the callback with "state mismatch" →
+   * `error=OAuthCallback`. That failure is TRANSIENT: a fresh sign-in sets fresh
+   * cookies and succeeds. So we auto-retry `OAuthCallback` ONCE before falling
+   * back to the manual error screen.
+   *
+   * The retry count lives in sessionStorage (per-tab, and it survives the
+   * round-trip out to Keycloak and back), capped at MAX_AUTO_RETRY so a
+   * genuinely-broken provider (Keycloak down, bad issuer) can never spin in an
+   * infinite redirect loop — after the cap we show the manual "Try again" card.
+   * Any other error code is surfaced immediately without an auto-retry.
    */
   useEffect(() => {
     if (startedRef.current) return
-    if (error) return
     if (reason && manualReasons.has(reason)) return
+
+    // Just signed out → do NOT auto-signIn (a lingering Keycloak SSO would
+    // silently re-log the user in). Show the manual signed-out screen instead.
+    if (hasSignedOutMarker()) {
+      startedRef.current = true
+      setJustSignedOut(true)
+      return
+    }
+
+    if (error) {
+      if (error === "OAuthCallback") {
+        let attempts = 0
+        try {
+          attempts = parseInt(sessionStorage.getItem(OAUTH_RETRY_KEY) || "0", 10)
+        } catch {
+          attempts = 0
+        }
+        if (attempts < MAX_AUTO_RETRY) {
+          try {
+            sessionStorage.setItem(OAUTH_RETRY_KEY, String(attempts + 1))
+          } catch {}
+          startedRef.current = true
+          setWillAutoRetry(true)
+          void triggerKeycloakSignIn()
+          return
+        }
+        // Auto-retry exhausted — reset so a future fresh attempt can self-heal
+        // again, and fall through to the manual error card below.
+        try {
+          sessionStorage.removeItem(OAUTH_RETRY_KEY)
+        } catch {}
+      }
+      return
+    }
+
+    // Clean load — clear any stale retry marker and start the flow.
+    try {
+      sessionStorage.removeItem(OAUTH_RETRY_KEY)
+    } catch {}
     startedRef.current = true
     void triggerKeycloakSignIn()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reason, error])
 
   // --- Manual confirm screens -------------------------------------------------
+
+  if (justSignedOut) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-6 px-4 text-center">
+        <div className="w-full max-w-[380px] rounded-2xl border border-border bg-card p-8 shadow-sm space-y-5">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 mx-auto">
+            <svg className="h-7 w-7 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-bold text-foreground">You&apos;ve been signed out</h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              You&apos;re signed out of AfroTransact. Sign in again whenever you&apos;re ready.
+            </p>
+          </div>
+          <button
+            onClick={triggerKeycloakSignIn}
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-gold px-4 py-3 text-sm font-semibold text-brand-gold-foreground shadow-md transition-all hover:brightness-110 disabled:opacity-80 disabled:cursor-wait"
+          >
+            {isLoading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" />Signing in&hellip;</>
+            ) : (
+              <>Sign in<ArrowRight className="h-4 w-4" /></>
+            )}
+          </button>
+          <Link href="/" className="block text-sm text-muted-foreground hover:text-foreground">
+            Back to home
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (reason === "inactive") {
     return (
@@ -164,8 +275,10 @@ function LoginRedirect() {
 
   // --- Auto-redirect path -----------------------------------------------------
 
-  // Surface OAuth / callback errors — no auto-retry from useEffect (prevents infinite redirect loops).
-  if (error) {
+  // Surface OAuth / callback errors — but while a transient OAuthCallback is
+  // being silently retried (willAutoRetry), fall through to the spinner: a
+  // redirect back to Keycloak is imminent, so the error card would only flash.
+  if (error && !willAutoRetry) {
     console.error("auth.error", { code: error })
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4 px-4 text-center">
