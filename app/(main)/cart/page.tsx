@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X, Sparkles, Tag, Zap, AlertCircle } from "lucide-react"
+import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Store, X, Sparkles, Tag, Zap, AlertCircle, Lock, Truck, CheckCircle2, ShieldCheck } from "lucide-react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 import { clearServerCart, prefetchCheckoutShippingContext } from "@/lib/api"
@@ -13,7 +13,7 @@ import { RemoteImage } from "@/components/ui/remote-image"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { useDefaultRegionCommerceGates } from "@/hooks/use-default-region-commerce-gates"
 import { useCartEligibility } from "@/components/buyer/useCartEligibility"
-import { isHouseStore } from "@/lib/house-store"
+import { isHouseStore, storeDisplayName } from "@/lib/house-store"
 import { useBuyerLocation } from "@/stores/buyer-location"
 import { RegionBlock } from "@/components/geo/RegionBlock"
 
@@ -175,35 +175,96 @@ export default function CartPage() {
     )
   }
 
+  // Free-shipping progress (only when a positive threshold is configured for
+  // the resolved zone). -1 = always-free; null = unknown → no bar.
+  const hasFreeShipThreshold =
+    freeShippingThresholdCents !== null && freeShippingThresholdCents > 0
+  const freeShipUnlocked =
+    freeShippingThresholdCents === -1 ||
+    (hasFreeShipThreshold && subtotal >= (freeShippingThresholdCents as number))
+  const freeShipRemaining = hasFreeShipThreshold
+    ? Math.max(0, (freeShippingThresholdCents as number) - subtotal)
+    : 0
+  const freeShipPct = hasFreeShipThreshold
+    ? Math.min(100, Math.round((subtotal / (freeShippingThresholdCents as number)) * 100))
+    : 0
+  const checkoutDisabled =
+    !mounted || commerceGatesLoading || !canEnterCheckoutFlow || eligibilityBlocked
+  const warmCheckout = () => {
+    if (status === "authenticated") {
+      getAccessToken().then((t) => { if (t) prefetchCheckoutShippingContext(t) })
+    }
+  }
+
   return (
-    <main className="mx-auto max-w-[1200px] px-4 sm:px-6 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Shopping Cart ({totalQty} {totalQty === 1 ? "item" : "items"})
-        </h1>
+    <main className="mx-auto max-w-[1240px] px-4 sm:px-6 py-6 sm:py-8">
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Shopping Cart</h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            {totalQty} {totalQty === 1 ? "item" : "items"}
+          </p>
+        </div>
         <button
           onClick={handleClearCart}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-500/10 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-500 hover:bg-red-500/10 hover:text-red-700 transition-colors"
         >
-          <X className="h-3.5 w-3.5" />
-          Clear Cart
+          <Trash2 className="h-3.5 w-3.5" />
+          Clear cart
         </button>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* ── Cart items column ── */}
-        <div className="flex-1 space-y-5">
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* Free-shipping progress — the strongest nudge Amazon leans on. */}
+          {hasFreeShipThreshold && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-4">
+              {freeShipUnlocked ? (
+                <p className="flex items-center gap-2 text-sm font-semibold text-green-700">
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
+                  Your order qualifies for FREE shipping.
+                </p>
+              ) : (
+                <p className="flex items-center gap-2 text-sm text-gray-700">
+                  <Truck className="h-5 w-5 shrink-0 text-brand-gold" />
+                  Add <span className="font-bold text-gray-900">{formatCents(freeShipRemaining)}</span> to get FREE shipping
+                </p>
+              )}
+              <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${freeShipUnlocked ? "bg-green-500" : "bg-brand-gold"}`}
+                  style={{ width: `${freeShipUnlocked ? 100 : freeShipPct}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {byStoreEntries.map(([storeId, groupItems]) => {
             const eligibility = eligibilityByStore.get(storeId)
             const blocked = eligibility?.result === "not_eligible"
+            const sellerName = storeDisplayName(storeId, groupItems[0]?.storeName)
             return (
               <section
                 key={storeId}
-                className="rounded-2xl border border-gray-200 bg-white overflow-hidden"
+                className="overflow-hidden rounded-2xl border border-gray-200 bg-white"
               >
+                {/* Seller group header — Amazon groups the cart by who fulfills it. */}
+                <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3 sm:px-5">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-gold/15">
+                    <Store className="h-3.5 w-3.5 text-gray-700" />
+                  </span>
+                  <p className="text-sm font-semibold text-gray-900">{sellerName}</p>
+                  {isHouseStore(storeId) && (
+                    <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-700">
+                      Official
+                    </span>
+                  )}
+                </div>
+
                 {blocked && (
-                  <div className="flex gap-2 items-start px-4 py-2.5 bg-red-50 border-b border-red-100 text-xs text-red-800">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+                  <div className="flex items-start gap-2 border-b border-red-100 bg-red-50 px-4 py-2.5 text-xs text-red-800 sm:px-5">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
                     <span>
                       {isHouseStore(storeId) ? "AfroTransact doesn't deliver to " : "This seller doesn't ship to "}
                       <span className="font-semibold">{buyerPostalCode || "your area"}</span>{" "}
@@ -211,77 +272,92 @@ export default function CartPage() {
                     </span>
                   </div>
                 )}
+
                 <div className="divide-y divide-gray-100">
                   {groupItems.map((item) => (
-                    <div key={item.variantId} className="flex gap-3 sm:gap-4 p-4 sm:p-5">
-                      <div
-                        className="relative w-20 h-20 rounded-xl shrink-0 bg-gray-50 flex items-center justify-center overflow-hidden"
+                    <div key={item.variantId} className="flex gap-4 p-4 sm:p-5">
+                      <Link
+                        href={`/product/${item.slug}`}
+                        className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-gray-50"
                       >
                         {item.imageUrl ? (
                           <Image
                             src={item.imageUrl}
                             alt={item.title}
                             fill
-                            sizes="80px"
-                            className="object-cover"
+                            sizes="96px"
+                            className="object-cover transition-transform duration-200 hover:scale-105"
                           />
                         ) : (
-                          <ShoppingCart className="h-8 w-8 text-gray-600" />
+                          <span className="flex h-full w-full items-center justify-center">
+                            <ShoppingCart className="h-8 w-8 text-gray-400" />
+                          </span>
                         )}
-                      </div>
+                      </Link>
 
-                      <div className="flex-1 min-w-0 flex flex-col gap-2">
-                        <div className="flex justify-between gap-3 items-start">
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-gray-900 font-medium text-sm leading-snug">{item.title}</p>
-                            <p className="text-gray-500 text-xs mt-0.5">{item.variantName}</p>
-                            <p className="text-foreground font-semibold text-sm mt-1">
-                              {formatCents(item.price)}
+                            <Link
+                              href={`/product/${item.slug}`}
+                              className="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 hover:text-brand-gold-hover"
+                            >
+                              {item.title}
+                            </Link>
+                            {item.variantName && (
+                              <p className="mt-0.5 text-xs text-gray-500">{item.variantName}</p>
+                            )}
+                            <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-green-700">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> In stock
                             </p>
                           </div>
-                          <p className="shrink-0 text-gray-900 font-semibold text-sm sm:hidden tabular-nums">
-                            {formatCents(item.price * item.quantity)}
-                          </p>
+                          <div className="shrink-0 text-right">
+                            <p className="text-base font-bold tabular-nums text-gray-900">
+                              {formatCents(item.price * item.quantity)}
+                            </p>
+                            {item.quantity > 1 && (
+                              <p className="mt-0.5 text-[11px] text-gray-400 tabular-nums">
+                                {formatCents(item.price)} each
+                              </p>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                          <div className="flex items-center shrink-0 rounded-lg border border-gray-200 overflow-hidden touch-manipulation">
+                        <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-3">
+                          <div className="flex items-center overflow-hidden rounded-lg border border-gray-200 touch-manipulation">
                             <button
                               type="button"
                               onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
-                              className="flex min-h-11 min-w-11 sm:min-h-0 sm:h-9 sm:w-9 items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                              className="flex h-9 min-h-9 w-9 min-w-9 items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-40"
                               aria-label="Decrease quantity"
+                              disabled={item.quantity <= 1}
                             >
                               <Minus className="h-4 w-4" />
                             </button>
-                            <span className="min-w-[2.5rem] px-1 text-center text-sm text-gray-900 font-medium tabular-nums">
+                            <span className="min-w-[2.5rem] px-1 text-center text-sm font-semibold tabular-nums text-gray-900">
                               {item.quantity}
                             </span>
                             <button
                               type="button"
                               onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
-                              className="flex min-h-11 min-w-11 sm:min-h-0 sm:h-9 sm:w-9 items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                              className="flex h-9 min-h-9 w-9 min-w-9 items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
                               aria-label="Increase quantity"
                             >
                               <Plus className="h-4 w-4" />
                             </button>
                           </div>
 
+                          <span className="h-4 w-px bg-gray-200" aria-hidden />
+
                           <button
                             type="button"
                             onClick={() => removeItem(item.variantId)}
-                            className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 transition-colors"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-600 transition-colors"
                           >
                             <Trash2 className="h-3.5 w-3.5 shrink-0" />
                             Remove
                           </button>
                         </div>
-                      </div>
-
-                      <div className="hidden sm:block shrink-0 text-right pt-0.5">
-                        <p className="text-gray-900 font-semibold text-sm tabular-nums">
-                          {formatCents(item.price * item.quantity)}
-                        </p>
                       </div>
                     </div>
                   ))}
@@ -289,73 +365,35 @@ export default function CartPage() {
               </section>
             )
           })}
+
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 px-1 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+          >
+            <ArrowRight className="h-4 w-4 rotate-180" />
+            Continue shopping
+          </Link>
         </div>
 
         {/* ── Order summary sidebar ── */}
-        <aside className="lg:w-[340px] shrink-0">
-          <div
-            className="rounded-2xl border border-gray-200 bg-white p-5 sticky top-[110px]"
-          >
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Order Summary</h2>
+        <aside className="lg:w-[360px] shrink-0">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sticky top-[110px]">
+            {/* Lead with the subtotal + CTA (Amazon puts the decision first). */}
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-gray-600">Subtotal ({totalQty} {totalQty === 1 ? "item" : "items"})</span>
+              <span className="text-xl font-bold tabular-nums text-gray-900">{formatCents(subtotal)}</span>
+            </div>
 
-            {freeShippingThresholdCents !== null && (
-              <>
-                {freeShippingThresholdCents === -1 && (
-                  <div className="mb-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-800">
-                    Free shipping on this order
-                  </div>
-                )}
-                {freeShippingThresholdCents > 0 && subtotal < freeShippingThresholdCents && (
-                  <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                    Add {formatCents(freeShippingThresholdCents - subtotal)} for free shipping
-                  </div>
-                )}
-                {freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents && (
-                  <div className="mb-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-800">
-                    You unlocked free shipping
-                  </div>
-                )}
-              </>
+            {freeShipUnlocked && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-green-700">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Eligible for FREE shipping
+              </p>
             )}
-
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-600">
-                <span>Subtotal ({totalQty} items)</span>
-                <span>{formatCents(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Shipping</span>
-                {freeShippingThresholdCents !== null &&
-                (freeShippingThresholdCents === -1 ||
-                  (freeShippingThresholdCents > 0 && subtotal >= freeShippingThresholdCents)) ? (
-                  <span className="font-semibold text-green-600">Free</span>
-                ) : (
-                  <span className="text-green-400">Calculated at checkout</span>
-                )}
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Estimated tax</span>
-                {resolvedZoneTaxRate == null ? (
-                  <span className="text-green-400">Calculated at checkout</span>
-                ) : resolvedZoneTaxRate === 0 ? (
-                  <span className="font-medium text-green-600">No tax</span>
-                ) : (
-                  <span>{formatCents(estimatedTax)}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="my-4 border-t border-gray-200" />
-
-            <div className="flex justify-between text-gray-900 font-bold text-base">
-              <span>Estimated Total</span>
-              <span>{formatCents(total)}</span>
-            </div>
 
             {mounted && eligibilityBlocked && (
               <div className="mt-4 flex gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-900">
                 <AlertCircle className="h-4 w-4 shrink-0 text-red-600" aria-hidden />
-                <span>One or more items don't ship to your delivery location. Remove them or change the location to check out.</span>
+                <span>One or more items don&apos;t ship to your delivery location. Remove them or change the location to check out.</span>
               </div>
             )}
             {mounted && !eligibilityBlocked && !locationSet && storeIds.length > 0 && (
@@ -373,24 +411,11 @@ export default function CartPage() {
 
             <button
               onClick={() => router.push("/checkout")}
-              onMouseEnter={() => {
-                // Warm profile + saved addresses so the checkout page has
-                // them on first paint instead of showing a skeleton while
-                // round-trips resolve post-mount.
-                if (status === "authenticated") {
-                  getAccessToken().then((t) => { if (t) prefetchCheckoutShippingContext(t) })
-                }
-              }}
-              onPointerDown={() => {
-                if (status === "authenticated") {
-                  getAccessToken().then((t) => { if (t) prefetchCheckoutShippingContext(t) })
-                }
-              }}
-              disabled={
-                !mounted || commerceGatesLoading || !canEnterCheckoutFlow || eligibilityBlocked
-              }
-              className={`mt-5 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-colors ${
-                !mounted || commerceGatesLoading || !canEnterCheckoutFlow || eligibilityBlocked
+              onMouseEnter={warmCheckout}
+              onPointerDown={warmCheckout}
+              disabled={checkoutDisabled}
+              className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-colors ${
+                checkoutDisabled
                   ? "cursor-not-allowed bg-gray-200 text-gray-500"
                   : "bg-brand-gold text-[#0f0f10] hover:bg-brand-gold/90"
               }`}
@@ -399,18 +424,53 @@ export default function CartPage() {
               <ArrowRight className="h-4 w-4" />
             </button>
 
-            <Link
-              href="/"
-              className="mt-3 w-full flex items-center justify-center text-sm text-gray-500 hover:text-gray-900 transition-colors py-2"
-            >
-              Continue Shopping
-            </Link>
+            <p className="mt-2.5 flex items-center justify-center gap-1.5 text-[11px] text-gray-400">
+              <Lock className="h-3 w-3" /> Secure checkout · Powered by Stripe
+            </p>
 
-            {freeShippingThresholdCents !== null && freeShippingThresholdCents > 0 && (
-              <p className="mt-4 text-center text-xs text-gray-500">
-                Free shipping on orders over {formatCents(freeShippingThresholdCents)}
-              </p>
-            )}
+            <div className="my-4 border-t border-gray-100" />
+
+            {/* Detailed breakdown — secondary to the decision above. */}
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Items ({totalQty})</span>
+                <span className="tabular-nums">{formatCents(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Shipping</span>
+                {freeShipUnlocked ? (
+                  <span className="font-semibold text-green-600">Free</span>
+                ) : (
+                  <span className="text-gray-400">Calculated at checkout</span>
+                )}
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Tax</span>
+                {resolvedZoneTaxRate == null ? (
+                  <span className="text-gray-400">Calculated at checkout</span>
+                ) : resolvedZoneTaxRate === 0 ? (
+                  <span className="font-medium text-green-600">No tax</span>
+                ) : (
+                  <span className="tabular-nums">{formatCents(estimatedTax)}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="my-4 border-t border-gray-200" />
+
+            <div className="flex items-baseline justify-between">
+              <span className="text-base font-bold text-gray-900">Estimated total</span>
+              <span className="text-lg font-bold tabular-nums text-gray-900">{formatCents(total)}</span>
+            </div>
+            <p className="mt-1 text-[11px] text-gray-400">
+              Final total, shipping &amp; tax are confirmed at checkout.
+            </p>
+
+            {/* Trust strip */}
+            <div className="mt-4 flex items-center justify-center gap-4 border-t border-gray-100 pt-4 text-[11px] font-medium text-gray-500">
+              <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-green-600" /> Buyer protection</span>
+              <span className="inline-flex items-center gap-1"><Truck className="h-3.5 w-3.5 text-gray-400" /> Tracked delivery</span>
+            </div>
           </div>
         </aside>
       </div>
