@@ -726,13 +726,19 @@ function OrderDeliveryTracker({
 }
 
 function SubOrderItems({
-  sub, orderNumber, storeName,
+  sub, orderNumber, storeName, onDisputeCreated,
 }: {
   sub: SubOrderDto
   orderNumber: string
   storeName: string
+  onDisputeCreated?: (d: DisputeDto) => void
 }) {
-  const isDelivered = sub.fulfillmentStatus === "delivered" || sub.fulfillmentStatus === "completed"
+  // "Received" covers shipped-and-delivered AND pickup fulfilment — the buyer
+  // has the goods, so returns / report-a-problem / reviews all apply. The
+  // backend allows disputes on delivered|completed|picked_up|collected, so the
+  // UI gate must match or pickup buyers can never report a problem.
+  const isDelivered = ["delivered", "completed", "picked_up", "collected"]
+    .includes(sub.fulfillmentStatus ?? "")
   return (
     <div className="border-t border-border pt-4 first:border-t-0 first:pt-0">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -744,7 +750,9 @@ function SubOrderItems({
           {/* You can only report a problem on something you've received, so this
               is gated on delivery just like returns (covers "marked delivered
               but not received" too). */}
-          {isDelivered && <ReportProblemButton sub={sub} orderNumber={orderNumber} />}
+          {isDelivered && (
+            <ReportProblemButton sub={sub} orderNumber={orderNumber} onCreated={onDisputeCreated} />
+          )}
         </div>
       </div>
       <div className="flex flex-col gap-5">
@@ -962,6 +970,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
                   sub={so}
                   orderNumber={orderNumber}
                   storeName={storeDisplayName(so.storeId, storeNames.get(so.storeId))}
+                  onDisputeCreated={(d) =>
+                    setDisputes((prev) => [d, ...prev.filter((x) => x.id !== d.id)])
+                  }
                 />
               ))}
             </div>

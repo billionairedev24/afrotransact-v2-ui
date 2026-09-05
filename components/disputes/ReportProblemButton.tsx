@@ -4,7 +4,7 @@ import { useState } from "react"
 import { AlertTriangle, CheckCircle2, ShieldAlert, X } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
-import { createDispute, type DisputeType } from "@/lib/api"
+import { createDispute, type DisputeDto, type DisputeType } from "@/lib/api"
 import { friendlyMessage } from "@/lib/errors"
 import { UploadDropzone } from "@/lib/uploadthing"
 
@@ -37,7 +37,13 @@ const fmt = (cents: number) =>
  * Item scope is optional — leaving quantities at 0 disputes the whole sub-order
  * (e.g. "order not received").
  */
-export function ReportProblemButton({ sub, orderNumber }: { sub: SubOrderLite; orderNumber: string }) {
+export function ReportProblemButton({
+  sub, orderNumber, onCreated,
+}: {
+  sub: SubOrderLite
+  orderNumber: string
+  onCreated?: (d: DisputeDto) => void
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -48,17 +54,25 @@ export function ReportProblemButton({ sub, orderNumber }: { sub: SubOrderLite; o
       >
         <ShieldAlert className="h-3.5 w-3.5" /> Report a problem
       </button>
-      {open && <DisputeModal sub={sub} orderNumber={orderNumber} onClose={() => setOpen(false)} />}
+      {open && (
+        <DisputeModal
+          sub={sub}
+          orderNumber={orderNumber}
+          onClose={() => setOpen(false)}
+          onCreated={onCreated}
+        />
+      )}
     </>
   )
 }
 
 function DisputeModal({
-  sub, orderNumber, onClose,
+  sub, orderNumber, onClose, onCreated,
 }: {
   sub: SubOrderLite
   orderNumber: string
   onClose: () => void
+  onCreated?: (d: DisputeDto) => void
 }) {
   const [type, setType] = useState<DisputeType>("not_received")
   const [buyerNotes, setBuyerNotes] = useState("")
@@ -87,7 +101,7 @@ function DisputeModal({
       const items = Object.entries(quantities)
         .filter(([, qty]) => qty > 0)
         .map(([orderItemId, quantity]) => ({ orderItemId, quantity }))
-      await createDispute(token, {
+      const created = await createDispute(token, {
         orderNumber,
         subOrderId: sub.id,
         type,
@@ -95,6 +109,9 @@ function DisputeModal({
         evidenceUrls: evidenceUrls.length > 0 ? evidenceUrls : undefined,
         items: showItemPicker && items.length > 0 ? items : undefined,
       })
+      // Surface it to the parent immediately so the "Reported problems" card
+      // updates without a hard reload (the page loads disputes once, on mount).
+      onCreated?.(created)
       setDone(true)
     } catch (e) {
       setErr(friendlyMessage(e, "Could not open the dispute."))

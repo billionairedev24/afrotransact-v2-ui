@@ -1182,6 +1182,12 @@ export interface DisputeDto {
   subOrderId: string
   storeId: string
   house: boolean
+  // Seller identity/contact — present only on the admin listing so ops can
+  // follow up when a buyer calls. Null for house disputes.
+  sellerStoreName?: string | null
+  sellerBusinessName?: string | null
+  sellerContactEmail?: string | null
+  sellerContactPhone?: string | null
   type: DisputeType
   status: DisputeStatus
   items: Array<{ orderItemId: string; quantity: number }>

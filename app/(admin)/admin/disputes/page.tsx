@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { AlertTriangle, CheckCircle2, Clock, ShieldAlert, RefreshCcw, Store, Home } from "lucide-react"
 
 import { getAccessToken } from "@/lib/auth-helpers"
+import { MaskedEmail, MaskedPhone } from "@/components/admin/MaskedContact"
 import { confirmDialog, promptDialog } from "@/components/ui/confirm"
 import { toast } from "sonner"
 import {
@@ -214,9 +215,16 @@ function DisputeRow({
             <StatusPill status={d.status} />
             <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
               {d.house ? <Home className="h-3 w-3" /> : <Store className="h-3 w-3" />}
-              {d.house ? "AfroTransact" : "Seller"}
+              {d.house ? "AfroTransact" : (d.sellerStoreName || d.sellerBusinessName || "Seller")}
             </span>
           </div>
+          {!d.house && (d.sellerContactEmail || d.sellerContactPhone) && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground/70">Seller contact:</span>
+              {d.sellerContactEmail && <MaskedEmail email={d.sellerContactEmail} className="tabular-nums" />}
+              {d.sellerContactPhone && <MaskedPhone phone={d.sellerContactPhone} className="tabular-nums" />}
+            </div>
+          )}
           <div className="mt-1 text-base font-medium">{TYPE_LABEL[d.type] ?? d.type}</div>
           <div className="text-xs text-muted-foreground">
             Opened {new Date(d.createdAt).toLocaleString()}
