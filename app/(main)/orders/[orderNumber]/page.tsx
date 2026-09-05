@@ -842,15 +842,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
   const allItems = order.subOrders.flatMap((so) => so.items)
   const totalItems = allItems.reduce((sum, i) => sum + i.quantity, 0)
   const orderDiscount = order.discountCents ?? 0
-  // Show every applied coupon code (stacking) on the discount line — not just
-  // the first. Falls back to the legacy single couponCode.
-  const couponCodes = (order.appliedCoupons ?? []).map((c) => c.code).filter(Boolean)
-  const couponLabel =
-    couponCodes.length > 0
-      ? `Coupon (${couponCodes.join(", ")})`
-      : order.couponCode
-        ? `Coupon (${order.couponCode})`
-        : "Discount"
+  // Each applied coupon shows on its OWN line with its OWN value (stacking).
+  // Item-target coupons make up order.discountCents; shipping coupons are
+  // reflected in the shipping line, so they aren't repeated here.
+  const itemCoupons = (order.appliedCoupons ?? []).filter(
+    (c) => c.target !== "shipping" && c.discountCents > 0,
+  )
   // Referral-credit field lands in a later phase; guard on > 0 so this line
   // simply stays absent until the backend populates it.
   const referralCreditCents = (order as unknown as { referralCreditCents?: number }).referralCreditCents ?? 0
@@ -931,12 +928,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderNum
                   {order.shippingCostCents === 0 ? "FREE" : formatCents(order.shippingCostCents, order.currency)}
                 </span>
               </div>
-              {orderDiscount > 0 && (
-                <div className="flex items-center justify-between py-1.5 text-brand-green">
-                  <span>{couponLabel}</span>
-                  <span className="tabular-nums font-semibold">−{formatCents(orderDiscount, order.currency)}</span>
-                </div>
-              )}
+              {orderDiscount > 0 &&
+                (itemCoupons.length > 0 ? (
+                  itemCoupons.map((c, i) => (
+                    <div key={`${c.code}-${i}`} className="flex items-center justify-between py-1.5 text-brand-green">
+                      <span>Coupon ({c.code})</span>
+                      <span className="tabular-nums font-semibold">−{formatCents(c.discountCents, order.currency)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center justify-between py-1.5 text-brand-green">
+                    <span>{order.couponCode ? `Coupon (${order.couponCode})` : "Discount"}</span>
+                    <span className="tabular-nums font-semibold">−{formatCents(orderDiscount, order.currency)}</span>
+                  </div>
+                ))}
               <div className="flex items-center justify-between py-1.5">
                 <span className="text-muted-foreground">Tax</span>
                 <span className="tabular-nums text-foreground">{formatCents(order.taxCents, order.currency)}</span>

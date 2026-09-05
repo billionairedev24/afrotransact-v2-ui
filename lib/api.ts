@@ -1804,6 +1804,9 @@ export interface OrderDto {
   subtotalCents: number
   discountCents?: number
   couponCode?: string | null
+  /** All coupons applied to the order, each with its own discount (stacking).
+   *  Empty/absent for pre-stacking orders — fall back to couponCode. */
+  appliedCoupons?: { code: string; discountCents: number; target: "items" | "shipping" | string }[]
   paymentMethod?: string | null
   last4?: string | null
   taxCents: number
