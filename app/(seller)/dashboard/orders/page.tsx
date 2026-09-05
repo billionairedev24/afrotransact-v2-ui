@@ -44,6 +44,8 @@ const FULFILLMENT_BADGE: Record<string, { label: string; className: string; icon
   delivered:           { label: "Delivered",        className: "bg-green-50 text-green-700",    icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
   delivery_exception:  { label: "Exception",        className: "bg-red-50 text-red-700",        icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
   returned:            { label: "Returned",         className: "bg-orange-50 text-orange-700",  icon: <Package className="h-3.5 w-3.5" /> },
+  ready_for_pickup:    { label: "Ready for pickup",  className: "bg-blue-50 text-blue-700",      icon: <Package className="h-3.5 w-3.5" /> },
+  picked_up:           { label: "Picked up",         className: "bg-green-50 text-green-700",    icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
 }
 
 function statusBadge(status: string) {
@@ -301,7 +303,11 @@ export default function SellerOrdersPage() {
   )
 }
 
-const SELLER_STATUSES = ["processing", "packaged", "dispatched"] as const
+// Seller-settable statuses differ by delivery type (the backend rejects the
+// wrong ones): a shipped order is packed/dispatched; a pickup order is made
+// ready then collected.
+const SHIP_STATUSES = ["processing", "packaged", "dispatched"] as const
+const PICKUP_STATUSES = ["ready_for_pickup", "picked_up"] as const
 
 function OrderDetailModal({
   order,
@@ -320,6 +326,8 @@ function OrderDetailModal({
   const proofFileInputRef = useRef<HTMLInputElement | null>(null)
   const allItems = order ? order.relevantSubs.flatMap((sub) => sub.items) : []
   const currentFulfillment = order?.relevantSubs[0]?.fulfillmentStatus ?? "pending"
+  const isPickup = order?.relevantSubs[0]?.deliveryMethod === "pickup"
+  const sellerStatuses: readonly string[] = isPickup ? PICKUP_STATUSES : SHIP_STATUSES
   const subOrderId = order?.relevantSubs[0]?.id
   const existingProof = order?.relevantSubs[0]?.deliveryProofImageUrl ?? null
 
@@ -501,11 +509,11 @@ function OrderDetailModal({
           </div>
         )}
 
-        {subOrderId && !["delivered", "returned", "out_for_delivery", "delivery_exception"].includes(currentFulfillment) && (
+        {subOrderId && !["delivered", "picked_up", "returned", "out_for_delivery", "delivery_exception"].includes(currentFulfillment) && (
           <div className="rounded-xl border border-input bg-gray-50 p-4 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Update Fulfillment Status</p>
             <div className="flex flex-wrap gap-2">
-              {SELLER_STATUSES.map((s) => (
+              {sellerStatuses.map((s) => (
                 <button
                   key={s}
                   disabled={updatingStatus !== null || s === currentFulfillment}
@@ -516,7 +524,7 @@ function OrderDetailModal({
                       : "border-input text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                 >
                   {updatingStatus === s ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (FULFILLMENT_BADGE[s]?.icon ?? <Package className="h-3.5 w-3.5" />)}
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                  {FULFILLMENT_BADGE[s]?.label ?? (s.charAt(0).toUpperCase() + s.slice(1))}
                 </button>
               ))}
             </div>
