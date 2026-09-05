@@ -22,6 +22,7 @@ import {
   Star,
   ArrowUpRight,
   ShoppingCart,
+  ShieldAlert,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -55,6 +56,7 @@ const QUICK_LINKS = [
   { href: "/admin/feature-flags", label: "Feature Flags", icon: ToggleLeft, desc: "Toggle features per region" },
   { href: "/admin/commission", label: "Commission", icon: Percent, desc: "Set rates per region" },
   { href: "/admin/subscription", label: "Subscriptions", icon: CreditCard, desc: "Manage plans & billing" },
+  { href: "/admin/disputes", label: "Disputes", icon: ShieldAlert, desc: "Resolve customer disputes" },
 ]
 
 export default function AdminOverviewPage() {
