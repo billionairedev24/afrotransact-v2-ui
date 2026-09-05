@@ -328,6 +328,11 @@ function OrderDetailModal({
   const currentFulfillment = order?.relevantSubs[0]?.fulfillmentStatus ?? "pending"
   const isPickup = order?.relevantSubs[0]?.deliveryMethod === "pickup"
   const sellerStatuses: readonly string[] = isPickup ? PICKUP_STATUSES : SHIP_STATUSES
+  // Forward-only: offer only statuses AHEAD of the current one (a status can't
+  // be undone). If the current status isn't in the track (e.g. "pending"),
+  // indexOf is -1 and all forward statuses show.
+  const currentIndex = sellerStatuses.indexOf(currentFulfillment)
+  const forwardStatuses = sellerStatuses.filter((_, i) => i > currentIndex)
   const subOrderId = order?.relevantSubs[0]?.id
   const existingProof = order?.relevantSubs[0]?.deliveryProofImageUrl ?? null
 
@@ -509,11 +514,11 @@ function OrderDetailModal({
           </div>
         )}
 
-        {subOrderId && !["delivered", "picked_up", "returned", "out_for_delivery", "delivery_exception"].includes(currentFulfillment) && (
+        {subOrderId && forwardStatuses.length > 0 && !["delivered", "picked_up", "returned", "out_for_delivery", "delivery_exception"].includes(currentFulfillment) && (
           <div className="rounded-xl border border-input bg-gray-50 p-4 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Update Fulfillment Status</p>
             <div className="flex flex-wrap gap-2">
-              {sellerStatuses.map((s) => (
+              {forwardStatuses.map((s) => (
                 <button
                   key={s}
                   disabled={updatingStatus !== null || s === currentFulfillment}
