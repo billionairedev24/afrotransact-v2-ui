@@ -1190,7 +1190,18 @@ export interface DisputeDto {
   sellerContactPhone?: string | null
   type: DisputeType
   status: DisputeStatus
-  items: Array<{ orderItemId: string; quantity: number }>
+  items: Array<{
+    orderItemId: string
+    quantity: number
+    productTitle?: string | null
+    variantName?: string | null
+    imageUrl?: string | null
+    unitPriceCents?: number | null
+    lineTotalCents?: number | null
+  }>
+  // Refund-decision context (populated on listing views).
+  suggestedRefundCents?: number | null
+  subOrderSubtotalCents?: number | null
   buyerNotes?: string | null
   evidenceUrls: string[]
   sellerNotes?: string | null

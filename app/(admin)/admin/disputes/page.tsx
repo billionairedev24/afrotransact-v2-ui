@@ -66,8 +66,11 @@ export default function AdminDisputesPage() {
     if (decision === "refund") {
       const raw = await promptDialog({
         title: "Refund the buyer",
-        description: `Amount to refund for dispute ${d.orderNumber} (USD). This fires the standard refund.`,
+        description: `Amount to refund for dispute ${d.orderNumber} (USD).${
+          d.suggestedRefundCents != null ? ` Suggested: ${fmt(d.suggestedRefundCents)} (the disputed item total).` : ""
+        } This fires the standard refund.`,
         placeholder: "0.00",
+        defaultValue: d.suggestedRefundCents != null ? (d.suggestedRefundCents / 100).toFixed(2) : undefined,
         required: true,
         confirmLabel: "Refund",
       })
@@ -239,6 +242,39 @@ function DisputeRow({
         )}
       </div>
 
+      {d.items.length > 0 && (
+        <div className="mb-3 space-y-2 rounded border border-border bg-muted/30 p-3">
+          <div className="text-xs font-medium text-muted-foreground">Disputed items</div>
+          {d.items.map((it) => (
+            <div key={it.orderItemId} className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={it.imageUrl || "/placeholder.svg"}
+                alt={it.productTitle ?? "Item"}
+                className="h-10 w-10 shrink-0 rounded border border-border object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">{it.productTitle ?? "Item"}</p>
+                {it.variantName && <p className="truncate text-xs text-muted-foreground">{it.variantName}</p>}
+                <p className="text-xs text-muted-foreground">
+                  Qty {it.quantity}
+                  {it.unitPriceCents != null && <> · {fmt(it.unitPriceCents)} each</>}
+                </p>
+              </div>
+              {it.lineTotalCents != null && (
+                <div className="text-sm font-bold tabular-nums text-foreground">{fmt(it.lineTotalCents)}</div>
+              )}
+            </div>
+          ))}
+          {d.suggestedRefundCents != null && (
+            <div className="flex items-center justify-between border-t border-border pt-2 text-sm">
+              <span className="font-medium text-muted-foreground">Suggested refund</span>
+              <span className="font-bold tabular-nums text-foreground">{fmt(d.suggestedRefundCents)}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {d.buyerNotes && (
         <div className="rounded border border-border bg-muted/50 p-3 text-sm">
           <div className="mb-1 text-xs font-medium text-muted-foreground">What the buyer said</div>
@@ -252,11 +288,16 @@ function DisputeRow({
         </div>
       )}
       {d.evidenceUrls.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {d.evidenceUrls.map((u) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={u} src={u} alt="evidence" className="h-16 w-16 rounded border border-border object-cover" />
-          ))}
+        <div className="mt-3">
+          <div className="mb-1 text-xs font-medium text-muted-foreground">Buyer&apos;s photos</div>
+          <div className="flex flex-wrap gap-2">
+            {d.evidenceUrls.map((u) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="block">
+                <img src={u} alt="evidence" className="h-16 w-16 rounded border border-border object-cover transition-opacity hover:opacity-80" />
+              </a>
+            ))}
+          </div>
         </div>
       )}
       {d.resolutionNotes && (
