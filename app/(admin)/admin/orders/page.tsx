@@ -87,6 +87,13 @@ const HOUSE_STORE_STATUSES = [
   ...ADMIN_STATUSES,
 ] as const
 
+// Pickup sub-orders have their own two-step flow — the shipping statuses aren't
+// valid for them (the backend rejects "packaged"/"dispatched" on a pickup order).
+const PICKUP_STATUSES = [
+  { value: "ready_for_pickup",   label: "Ready for pickup",   variant: "normal"  },
+  { value: "picked_up",          label: "Picked up",          variant: "normal"  },
+] as const
+
 const ADMIN_ORDERS_KEY = "admin-orders"
 
 export default function AdminOrdersPage() {
@@ -511,7 +518,7 @@ function AdminOrderDetailSheet({
                 {/* Seller-managed steps — read-only for admin.
                     Skipped entirely for house-store sub-orders (AfroTransact-
                     fulfilled) because admin owns the whole lifecycle there. */}
-                {!isHouseStore(sub.storeId) && (sub.fulfillmentStatus === "pending" || sub.fulfillmentStatus === "processing" || sub.fulfillmentStatus === "packaged") && (
+                {!isHouseStore(sub.storeId) && sub.deliveryMethod !== "pickup" && (sub.fulfillmentStatus === "pending" || sub.fulfillmentStatus === "processing" || sub.fulfillmentStatus === "packaged") && (
                   <div className="flex items-start gap-2 rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2.5">
                     <Package className="h-3.5 w-3.5 shrink-0 text-indigo-400 mt-0.5" />
                     <p className="text-xs text-indigo-700">
@@ -524,17 +531,23 @@ function AdminOrderDetailSheet({
                 {/* Fulfillment controls. House-store subs get the full lifecycle
                     (processing → returned); external-seller subs only get the
                     delivery-team scope (dispatched onwards). */}
-                {sub.fulfillmentStatus !== "delivered" && sub.fulfillmentStatus !== "returned" &&
-                  (isHouseStore(sub.storeId) || (sub.fulfillmentStatus !== "pending" && sub.fulfillmentStatus !== "processing" && sub.fulfillmentStatus !== "packaged")) && (
+                {(sub.deliveryMethod === "pickup"
+                    ? (sub.fulfillmentStatus !== "picked_up" && sub.fulfillmentStatus !== "returned")
+                    : (sub.fulfillmentStatus !== "delivered" && sub.fulfillmentStatus !== "returned" &&
+                       (isHouseStore(sub.storeId) || (sub.fulfillmentStatus !== "pending" && sub.fulfillmentStatus !== "processing" && sub.fulfillmentStatus !== "packaged")))) && (
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2">
                       <Truck className="h-3.5 w-3.5 text-gray-400" />
                       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        {isHouseStore(sub.storeId) ? "Fulfillment Controls (AfroTransact)" : "Delivery Controls"}
+                        {sub.deliveryMethod === "pickup"
+                          ? "Pickup Controls"
+                          : isHouseStore(sub.storeId) ? "Fulfillment Controls (AfroTransact)" : "Delivery Controls"}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {(isHouseStore(sub.storeId) ? HOUSE_STORE_STATUSES : ADMIN_STATUSES).map((s) => (
+                      {(sub.deliveryMethod === "pickup"
+                          ? PICKUP_STATUSES
+                          : isHouseStore(sub.storeId) ? HOUSE_STORE_STATUSES : ADMIN_STATUSES).map((s) => (
                         <button
                           key={s.value}
                           disabled={!!updating || s.value === sub.fulfillmentStatus}
