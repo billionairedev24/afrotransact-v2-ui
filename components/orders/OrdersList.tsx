@@ -356,6 +356,25 @@ export function OrdersList({
   )
 }
 
+/** One item's thumbnail with its own image-error fallback. */
+function ItemThumb({ src, alt }: { src?: string | null; alt: string }) {
+  const [err, setErr] = useState(false)
+  return (
+    <div className="h-[52px] w-[52px] shrink-0 overflow-hidden rounded-xl border border-border bg-muted ring-2 ring-card">
+      {src && !err ? (
+        // Native <img>: seller image hosts are unpredictable and must not need a
+        // next.config allow-list. onError → package icon.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={alt} className="h-full w-full object-cover" onError={() => setErr(true)} />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <Package className="h-5 w-5 text-muted-foreground" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function OrderCard({
   order,
   buyingAgain,
@@ -370,8 +389,10 @@ function OrderCard({
   const badge = statusBadge(order.status)
   const group = classifyStatus(order.status)
   const allItems = order.subOrders.flatMap((so) => so.items)
-  const firstItem = allItems[0]
   const itemCount = allItems.reduce((sum, it) => sum + it.quantity, 0)
+  const itemSummary =
+    allItems.map((it) => it.productTitle).filter(Boolean).join(", ") ||
+    `${itemCount} item${itemCount === 1 ? "" : "s"}`
   const placedDate = order.placedAt || order.createdAt
   const detailsHref = `/orders/${order.orderNumber}`
   const trackingHref = `/orders/${order.orderNumber}#tracking`
@@ -389,7 +410,6 @@ function OrderCard({
   const soldByLabel = sellerNames.join(" & ")
 
   const [downloadingReceipt, setDownloadingReceipt] = useState(false)
-  const [imgError, setImgError] = useState(false)
   async function handleDownloadReceipt() {
     if (downloadingReceipt) return
     setDownloadingReceipt(true)
@@ -432,39 +452,27 @@ function OrderCard({
 
       {/* Body — first-item preview + action row. */}
       <div className="px-4 py-4 sm:px-5">
+        {/* One order = one row. Show every item in the order (thumbnails +
+            names); the order total lives in the meta band above, so we don't
+            surface a single item's price here (that read as a partial order). */}
         <div className="flex items-center gap-4">
-          <div className="h-[58px] w-[58px] shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
-            {firstItem?.imageUrl && !imgError ? (
-              // Native <img> (not next/image): seller image hosts are unpredictable
-              // and must not require a next.config allow-list. onError → package icon.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={firstItem.imageUrl}
-                alt={firstItem.productTitle ?? "Item"}
-                className="h-full w-full object-cover"
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center">
-                <Package className="h-5 w-5 text-muted-foreground" />
+          <div className="flex -space-x-3">
+            {allItems.slice(0, 4).map((it, i) => (
+              <ItemThumb key={it.id ?? i} src={it.imageUrl} alt={it.productTitle ?? "Item"} />
+            ))}
+            {allItems.length > 4 && (
+              <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-xs font-semibold text-muted-foreground ring-2 ring-card">
+                +{allItems.length - 4}
               </div>
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-sm font-bold text-foreground">
-              {firstItem?.productTitle ?? `${itemCount} item${itemCount === 1 ? "" : "s"}`}
-            </p>
+            <p className="line-clamp-2 text-sm font-bold text-foreground">{itemSummary}</p>
             <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-              Qty {firstItem?.quantity ?? itemCount}
+              {itemCount} item{itemCount === 1 ? "" : "s"}
               {soldByLabel ? ` · Sold by ${soldByLabel}` : ""}
-              {allItems.length > 1 ? ` · +${allItems.length - 1} more item${allItems.length - 1 === 1 ? "" : "s"}` : ""}
             </p>
           </div>
-          {firstItem && (
-            <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
-              {formatCents(firstItem.unitPriceCents, order.currency)}
-            </span>
-          )}
         </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
