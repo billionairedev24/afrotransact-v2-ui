@@ -2090,12 +2090,25 @@ export interface CheckoutResponse {
   couponAutoApplied?: boolean
   currency: string
   paymentClientSecret: string | null
+  /** false when the order is fully covered (coupons / store credit + free
+   *  fulfilment leave $0 to charge): there is no Stripe step. On "Place order"
+   *  the UI calls confirmFreeCheckout(sessionId) and goes to the confirmation
+   *  page. Defaults true (a normal, chargeable checkout). */
+  paymentRequired?: boolean
   status: string
   /** Phase 2 session-mode: when present, no Order row exists yet — the buyer
    *  must be redirected through Stripe back to /checkout/complete?session=…
    *  where the UI polls /api/public/checkout-sessions/:id/result for the
    *  materialized order id. Omitted in legacy flow. */
   checkoutSessionId?: string | null
+}
+
+/** Place a fully-covered ($0-charge) order — the "Place order" click when the
+ *  checkout response has paymentRequired=false (coupons / store credit cover
+ *  everything). No Stripe. The server re-derives the charge and places the
+ *  order; the UI then polls the confirmation page for it. */
+export function confirmFreeCheckout(token: string, sessionId: string) {
+  return api<void>(`/api/v1/orders/checkout/${sessionId}/confirm-free`, { method: "POST", token })
 }
 
 export interface PickupLocationDto {

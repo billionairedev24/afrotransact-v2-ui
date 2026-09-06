@@ -86,6 +86,7 @@ import {
   getShippingQuotes,
   listSavedPaymentMethods,
   validateCoupon,
+  confirmFreeCheckout,
   resolveServiceZone,
   getStoreById,
   ApiError,
@@ -1315,6 +1316,17 @@ export default function CheckoutClientV2({
         )
         return
       }
+      // Fully covered by coupons / store credit — there's nothing to charge, so
+      // there is NO Stripe step. The order is placed on THIS "Place order" click
+      // (never auto): confirm the free order server-side, then go to the
+      // confirmation page which polls for the placed order.
+      if (result.paymentRequired === false && result.checkoutSessionId) {
+        const token = await getAccessToken()
+        if (!token) { setPlaceError("Your session expired — please sign in again."); return }
+        await confirmFreeCheckout(token, result.checkoutSessionId)
+        await handlePaymentComplete()
+        return
+      }
       const handle = paymentHandleRef.current
       if (!handle) {
         setPlaceError("Payment isn't ready yet. Please wait a moment and try again.")
@@ -1333,7 +1345,9 @@ export default function CheckoutClientV2({
   else if (!selectedAddress) disabledReason = `Select a ${shipNounLower} address`
   else if (ratesUnavailable) disabledReason = "Shipping isn't available for this address yet"
   else if (!allPickupSelected && !selectedQuoteId) disabledReason = "Choose a delivery option"
-  else if (!stripeAvailable) disabledReason = "Payment is unavailable in this region"
+  // Stripe is only required when there's actually something to charge. A fully
+  // covered order (coupons / store credit → $0) needs no card, so don't block on it.
+  else if (dCharge > 0 && !stripeAvailable) disabledReason = "Payment is unavailable in this region"
   else if (selectedSavedCardId === null && !checkoutResult && !minting) disabledReason = null // new-card path: minting on click
   if (requoting) disabledReason = "Updating delivery options…"
   // App-level email-verification gate: a signed-in but unverified buyer cannot
@@ -2034,7 +2048,12 @@ export default function CheckoutClientV2({
                 On mobile it renders FIRST (order-1) so the summary sits under it. */}
             <div className="order-1 lg:order-2 lg:mt-4 lg:border-t lg:border-gray-200 lg:pt-4">
               <h3 className="mb-2.5 text-sm font-bold text-gray-900">Payment</h3>
-              {(!selectedAddress || !selectedQuoteId) ? (
+              {dCharge === 0 ? (
+                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
+                  <span className="font-semibold">No payment needed.</span>{" "}
+                  {dCredit > 0 ? "Your store credit and coupons cover" : "Your coupon covers"} the full order — just hit <span className="font-semibold">Place order</span> to finish. No card required.
+                </div>
+              ) : (!selectedAddress || !selectedQuoteId) ? (
                 <p className="text-sm text-gray-500">Add an address and choose delivery above to enter your card.</p>
               ) : !stripeAvailable ? (
                 <div className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
