@@ -202,12 +202,19 @@
        right — the misaligned header you see when a sheet opens in the
        admin/seller panels. Reserving the gutter keeps the layout stable. */
     scrollbar-gutter: stable;
+    /* Safety net: never allow horizontal page scroll. Applied on <html> (the
+       viewport scroller) as well as <body> below, because clipping body alone
+       doesn't stop html from scrolling when something overflows (e.g. the
+       w-max marquee ticker). `clip` — NOT `hidden` — so the other axis is not
+       promoted to a scroll container, which would break the sticky checkout
+       summary. */
+    overflow-x: clip;
   }
 
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
-    overflow-x: hidden;
+    overflow-x: clip;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -359,7 +366,12 @@ body.storefront-preview footer {
   margin-top: 4px;
   font-family: inherit;
   overflow: hidden;
-  z-index: 60;
+  /* Google appends .pac-container to <body>, so it must out-rank any modal it
+     might be typed into. The checkout "Add address" modal is z-[100] (some
+     modals go to z-[200]); at z-60 the suggestions rendered BEHIND the modal —
+     you'd type and see nothing. 1000 (Google's own default) clears every modal
+     while staying under transient toasts (z-[9999]). */
+  z-index: 1000;
 }
 .pac-item {
   padding: 0.45rem 0.75rem;
