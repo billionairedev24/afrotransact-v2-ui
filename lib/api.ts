@@ -1099,6 +1099,31 @@ export function adminListAllRefunds(token: string, page = 0, size = 25) {
   return api<Page<RefundDto>>(`/api/v1/admin/refunds?page=${page}&size=${size}`, { token })
 }
 
+// ── Admin: store credit (compensation) ───────────────────────────────────────
+export interface AdminStoreCreditEntry {
+  id: string
+  deltaCents: number
+  reason: string
+  orderNumber: string | null
+  createdAt: string | null
+}
+export interface AdminStoreCreditView {
+  balanceCents: number
+  entries: AdminStoreCreditEntry[]
+}
+/** A customer's current store-credit balance + ledger history. */
+export function adminGetStoreCredit(token: string, userId: string) {
+  return api<AdminStoreCreditView>(`/api/v1/admin/store-credit/${userId}`, { token })
+}
+/** Grant a customer store credit (e.g. overcharge compensation in lieu of a
+ *  refund). Store credit keeps its unused balance, unlike a coupon. */
+export function adminGrantStoreCredit(
+  token: string,
+  body: { userId: string; amountCents: number; reason?: string; orderNumber?: string; idempotencyKey: string },
+) {
+  return api<{ balanceCents: number }>(`/api/v1/admin/store-credit/grant`, { method: "POST", body, token })
+}
+
 // ── Returns (buyer + seller) ─────────────────────────────────────────────────
 
 export type ReturnStatus =
@@ -2214,6 +2239,9 @@ export interface CouponData {
   /** Whether this coupon can be combined with other coupons (stacking).
    *  false = exclusive (must be the only coupon on the order). Defaults true. */
   stackable: boolean
+  /** Compensation coupon: a fixed_amount coupon returns its unused value to the
+   *  buyer as store credit on redemption (money owed, not a promo). */
+  residualToStoreCredit?: boolean
   sellerId: string | null
   regionId: string | null
   startsAt: string
@@ -2236,6 +2264,9 @@ export interface CouponCreateRequest {
   discountTarget?: "items" | "shipping"
   /** Whether this coupon may be stacked with others. Defaults true server-side. */
   stackable?: boolean
+  /** Compensation coupon: fixed_amount coupon returns its unused value to the
+   *  buyer as store credit on redemption. Defaults false. */
+  residualToStoreCredit?: boolean
   regionId?: string
   startsAt?: string
   expiresAt: string
