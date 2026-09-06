@@ -378,14 +378,47 @@ export default function CartPage() {
         {/* ── Order summary sidebar ── */}
         <aside className="lg:w-[360px] shrink-0">
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sticky top-[110px]">
-            {/* Lead with the subtotal + CTA (Amazon puts the decision first). */}
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm text-gray-600">Subtotal ({totalQty} {totalQty === 1 ? "item" : "items"})</span>
-              <span className="text-xl font-bold tabular-nums text-gray-900">{formatCents(subtotal)}</span>
+            {/* Breakdown first, then the total, THEN the CTA — the button sits
+                directly under the number it commits you to (not above it). */}
+            <h2 className="mb-3 text-base font-bold text-gray-900">Order summary</h2>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal ({totalQty} {totalQty === 1 ? "item" : "items"})</span>
+                <span className="tabular-nums text-gray-900">{formatCents(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Shipping</span>
+                {freeShipUnlocked ? (
+                  <span className="font-semibold text-green-600">Free</span>
+                ) : (
+                  <span className="text-gray-400">Calculated at checkout</span>
+                )}
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Tax</span>
+                {resolvedZoneTaxRate == null ? (
+                  <span className="text-gray-400">Calculated at checkout</span>
+                ) : resolvedZoneTaxRate === 0 ? (
+                  <span className="font-medium text-green-600">No tax</span>
+                ) : (
+                  <span className="tabular-nums">{formatCents(estimatedTax)}</span>
+                )}
+              </div>
             </div>
 
+            <div className="my-4 border-t border-gray-200" />
+
+            <div className="flex items-baseline justify-between">
+              <span className="text-base font-bold text-gray-900">Estimated total</span>
+              <span className="text-xl font-bold tabular-nums text-gray-900">{formatCents(total)}</span>
+            </div>
+            <p className="mt-1 text-[11px] text-gray-400">
+              Final total, shipping &amp; tax are confirmed at checkout.
+            </p>
+
             {freeShipUnlocked && (
-              <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-green-700">
+              <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-green-700">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Eligible for FREE shipping
               </p>
             )}
@@ -414,7 +447,7 @@ export default function CartPage() {
               onMouseEnter={warmCheckout}
               onPointerDown={warmCheckout}
               disabled={checkoutDisabled}
-              className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-colors ${
+              className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-colors ${
                 checkoutDisabled
                   ? "cursor-not-allowed bg-gray-200 text-gray-500"
                   : "bg-brand-gold text-[#0f0f10] hover:bg-brand-gold/90"
@@ -426,44 +459,6 @@ export default function CartPage() {
 
             <p className="mt-2.5 flex items-center justify-center gap-1.5 text-[11px] text-gray-400">
               <Lock className="h-3 w-3" /> Secure checkout · Powered by Stripe
-            </p>
-
-            <div className="my-4 border-t border-gray-100" />
-
-            {/* Detailed breakdown — secondary to the decision above. */}
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-600">
-                <span>Items ({totalQty})</span>
-                <span className="tabular-nums">{formatCents(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Shipping</span>
-                {freeShipUnlocked ? (
-                  <span className="font-semibold text-green-600">Free</span>
-                ) : (
-                  <span className="text-gray-400">Calculated at checkout</span>
-                )}
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Tax</span>
-                {resolvedZoneTaxRate == null ? (
-                  <span className="text-gray-400">Calculated at checkout</span>
-                ) : resolvedZoneTaxRate === 0 ? (
-                  <span className="font-medium text-green-600">No tax</span>
-                ) : (
-                  <span className="tabular-nums">{formatCents(estimatedTax)}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="my-4 border-t border-gray-200" />
-
-            <div className="flex items-baseline justify-between">
-              <span className="text-base font-bold text-gray-900">Estimated total</span>
-              <span className="text-lg font-bold tabular-nums text-gray-900">{formatCents(total)}</span>
-            </div>
-            <p className="mt-1 text-[11px] text-gray-400">
-              Final total, shipping &amp; tax are confirmed at checkout.
             </p>
 
             {/* Trust strip */}
