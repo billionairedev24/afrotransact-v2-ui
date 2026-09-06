@@ -411,6 +411,9 @@ function CouponForm({
   // Whether this coupon can be combined with other coupons (stacking). New
   // coupons default to combinable; false makes it exclusive.
   const [stackable, setStackable] = useState<boolean>(coupon?.stackable ?? true)
+  // Compensation coupon: a fixed-amount coupon returns its unused value to the
+  // buyer as store credit on redemption (money owed, not a promo).
+  const [residualToStoreCredit, setResidualToStoreCredit] = useState<boolean>(coupon?.residualToStoreCredit ?? false)
   const [expiresAt, setExpiresAt] = useState(coupon?.expiresAt ? coupon.expiresAt.slice(0, 16) : "")
   const [submitting, setSubmitting] = useState(false)
 
@@ -430,6 +433,7 @@ function CouponForm({
         scope,
         discountTarget,
         stackable,
+        residualToStoreCredit: type === "fixed_amount" ? residualToStoreCredit : false,
         expiresAt: new Date(expiresAt).toISOString(),
       })
     } catch (e) {
@@ -521,6 +525,22 @@ function CouponForm({
           <span className="block text-xs text-gray-500">When off, this coupon is exclusive — it must be the only coupon on the order.</span>
         </span>
       </label>
+
+      {type === "fixed_amount" && (
+        <label className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+          <input
+            type="checkbox"
+            checked={residualToStoreCredit}
+            onChange={e => setResidualToStoreCredit(e.target.checked)}
+            disabled={readOnly}
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-brand-gold"
+          />
+          <span className="text-sm">
+            <span className="font-medium text-gray-900">Keep unused balance as store credit</span>
+            <span className="block text-xs text-gray-500">For a compensation coupon (money owed in lieu of a refund): if the order is smaller than the coupon, the leftover value is returned to the buyer&apos;s store credit instead of being forfeited.</span>
+          </span>
+        </label>
+      )}
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">{readOnly ? "Close" : "Cancel"}</button>
