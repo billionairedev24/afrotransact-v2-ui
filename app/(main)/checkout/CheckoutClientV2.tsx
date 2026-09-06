@@ -1836,10 +1836,10 @@ export default function CheckoutClientV2({
         {/* Right rail: Order summary */}
         <aside className="lg:col-span-1">
           <div className="lg:sticky lg:top-24 flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            {/* On mobile the payment form comes first and the order summary
-                sits directly beneath it (flex order); desktop keeps the summary
-                on top of the sticky rail. */}
-            <div className="order-2 mt-4 border-t border-gray-200 pt-4 lg:order-1 lg:mt-0 lg:border-0 lg:pt-0">
+            {/* Order summary sits at the TOP of the panel on every breakpoint,
+                so the Promo code box is visible without scrolling past the
+                payment form on mobile. Payment follows directly beneath it. */}
+            <div>
             <h2 className="text-lg font-bold text-gray-900 mb-3">Order summary</h2>
 
             {couponsEnabled && (
@@ -2042,11 +2042,10 @@ export default function CheckoutClientV2({
             )}
             </div>
 
-            {/* Payment — lives in the sticky summary panel next to Pay so the
-                card entry is always on screen; buyers no longer scroll past a
-                long item list to find it (or hit Pay before entering a card).
-                On mobile it renders FIRST (order-1) so the summary sits under it. */}
-            <div className="order-1 lg:order-2 lg:mt-4 lg:border-t lg:border-gray-200 lg:pt-4">
+            {/* Payment — in the summary panel, directly beneath the order
+                summary + Promo code on every breakpoint. The sticky bottom bar
+                keeps Place order in reach on mobile. */}
+            <div className="mt-4 border-t border-gray-200 pt-4">
               <h3 className="mb-2.5 text-sm font-bold text-gray-900">Payment</h3>
               {dCharge === 0 ? (
                 <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
