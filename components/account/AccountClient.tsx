@@ -25,7 +25,7 @@ import { signOut } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
 import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
 import { getAccessToken } from "@/lib/auth-helpers"
-import { getBuyerOrders, getWishlist, getReferralMe } from "@/lib/api"
+import { getBuyerOrders, getWishlist } from "@/lib/api"
 import { OrdersSection } from "@/components/account/sections/OrdersSection"
 import { RecipientsSection } from "@/components/account/sections/RecipientsSection"
 import { PreordersSection } from "@/components/account/sections/PreordersSection"
@@ -147,27 +147,15 @@ export function AccountClient({ email }: { firstName?: string; email: string }) 
     wishlist: wishlistCountQuery.data,
   }
 
-  // Wallet ("Wallet & credit") is driven by the referral program — hide the
-  // rail item entirely (not just an empty state) when referral is off.
-  const referralEnabledQuery = useQuery({
-    queryKey: ["account-hub", "referral-enabled"],
-    queryFn: async () => {
-      const token = await getAccessToken()
-      if (!token) return false
-      const me = await getReferralMe(token)
-      return me?.enabled === true
-    },
-    staleTime: 60_000,
-  })
-  const referralEnabled = referralEnabledQuery.data === true
-
   // Rail visibility: Recipients is hidden for now (diaspora ship-to not
-  // launched), and Wallet only appears when the referral program is enabled.
+  // launched). Wallet is ALWAYS shown — it is the buyer's store-credit home
+  // (coupon residuals, refunds, admin grants), which has nothing to do with
+  // the referral program. Referral is standalone: the invite link inside the
+  // Wallet section appears only when the referral program is enabled (handled
+  // by WalletSection itself), but the Wallet rail item never depends on it.
   const visibleSections = useMemo(
-    () => SECTIONS.filter(
-      (s) => s.id !== "recipients" && (s.id !== "wallet" || referralEnabled),
-    ),
-    [referralEnabled],
+    () => SECTIONS.filter((s) => s.id !== "recipients"),
+    [],
   )
 
   function selectSection(id: SectionId) {
