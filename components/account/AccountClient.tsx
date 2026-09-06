@@ -25,7 +25,7 @@ import { signOut } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
 import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
 import { getAccessToken } from "@/lib/auth-helpers"
-import { getBuyerOrders, getWishlist, getReferralMe } from "@/lib/api"
+import { getBuyerOrders, getWishlist, getReferralMe, getStoreCreditMe } from "@/lib/api"
 import { OrdersSection } from "@/components/account/sections/OrdersSection"
 import { RecipientsSection } from "@/components/account/sections/RecipientsSection"
 import { PreordersSection } from "@/components/account/sections/PreordersSection"
@@ -147,8 +147,11 @@ export function AccountClient({ email }: { firstName?: string; email: string }) 
     wishlist: wishlistCountQuery.data,
   }
 
-  // Wallet ("Wallet & credit") is driven by the referral program — hide the
-  // rail item entirely (not just an empty state) when referral is off.
+  // Wallet ("Wallet & credit") surfaces the referral program AND store credit.
+  // Store credit is issued independently of referrals (coupon residuals, refund
+  // compensation, admin grants), so the rail item must appear whenever EITHER
+  // the referral program is on OR the buyer holds a store-credit balance —
+  // otherwise a buyer who was granted credit could never find it.
   const referralEnabledQuery = useQuery({
     queryKey: ["account-hub", "referral-enabled"],
     queryFn: async () => {
@@ -161,13 +164,26 @@ export function AccountClient({ email }: { firstName?: string; email: string }) 
   })
   const referralEnabled = referralEnabledQuery.data === true
 
+  const storeCreditQuery = useQuery({
+    queryKey: ["account-hub", "store-credit-balance"],
+    queryFn: async () => {
+      const token = await getAccessToken()
+      if (!token) return 0
+      const sc = await getStoreCreditMe(token).catch(() => null)
+      return sc?.balanceCents ?? 0
+    },
+    staleTime: 60_000,
+  })
+  const hasStoreCredit = (storeCreditQuery.data ?? 0) > 0
+
   // Rail visibility: Recipients is hidden for now (diaspora ship-to not
-  // launched), and Wallet only appears when the referral program is enabled.
+  // launched); Wallet appears when the referral program is on OR the buyer
+  // has store credit to spend.
   const visibleSections = useMemo(
     () => SECTIONS.filter(
-      (s) => s.id !== "recipients" && (s.id !== "wallet" || referralEnabled),
+      (s) => s.id !== "recipients" && (s.id !== "wallet" || referralEnabled || hasStoreCredit),
     ),
-    [referralEnabled],
+    [referralEnabled, hasStoreCredit],
   )
 
   function selectSection(id: SectionId) {
