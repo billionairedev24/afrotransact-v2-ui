@@ -1402,8 +1402,11 @@ export default function CheckoutClientV2({
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sections column */}
-        <div className="lg:col-span-2 space-y-4">
+        {/* Sections column. min-w-0: grid/flex children default to min-width:auto,
+            so one wide descendant (a nowrap row, the Stripe frame) would refuse
+            to shrink and push the whole column past a 393px viewport → page-wide
+            horizontal scroll. min-w-0 lets it shrink and wrap instead. */}
+        <div className="lg:col-span-2 space-y-4 min-w-0">
 
           {/* 1. Shipping address */}
           <Section
@@ -1833,8 +1836,10 @@ export default function CheckoutClientV2({
 
         </div>
 
-        {/* Right rail: Order summary */}
-        <aside className="lg:col-span-1">
+        {/* Right rail: Order summary. min-w-0 for the same reason as the left
+            column — the Stripe payment frame must not force the panel wider
+            than the viewport on mobile. */}
+        <aside className="lg:col-span-1 min-w-0">
           <div className="lg:sticky lg:top-24 flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             {/* Order summary sits at the TOP of the panel on every breakpoint,
                 so the Promo code box is visible without scrolling past the
