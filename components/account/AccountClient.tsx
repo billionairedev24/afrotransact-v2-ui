@@ -25,7 +25,7 @@ import { signOut } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
 import { clearClientCartOnly } from "@/lib/client-cart-cleanup"
 import { getAccessToken } from "@/lib/auth-helpers"
-import { getBuyerOrders, getWishlist, getReferralMe, getStoreCreditMe } from "@/lib/api"
+import { getBuyerOrders, getWishlist } from "@/lib/api"
 import { OrdersSection } from "@/components/account/sections/OrdersSection"
 import { RecipientsSection } from "@/components/account/sections/RecipientsSection"
 import { PreordersSection } from "@/components/account/sections/PreordersSection"
@@ -147,43 +147,15 @@ export function AccountClient({ email }: { firstName?: string; email: string }) 
     wishlist: wishlistCountQuery.data,
   }
 
-  // Wallet ("Wallet & credit") surfaces the referral program AND store credit.
-  // Store credit is issued independently of referrals (coupon residuals, refund
-  // compensation, admin grants), so the rail item must appear whenever EITHER
-  // the referral program is on OR the buyer holds a store-credit balance —
-  // otherwise a buyer who was granted credit could never find it.
-  const referralEnabledQuery = useQuery({
-    queryKey: ["account-hub", "referral-enabled"],
-    queryFn: async () => {
-      const token = await getAccessToken()
-      if (!token) return false
-      const me = await getReferralMe(token)
-      return me?.enabled === true
-    },
-    staleTime: 60_000,
-  })
-  const referralEnabled = referralEnabledQuery.data === true
-
-  const storeCreditQuery = useQuery({
-    queryKey: ["account-hub", "store-credit-balance"],
-    queryFn: async () => {
-      const token = await getAccessToken()
-      if (!token) return 0
-      const sc = await getStoreCreditMe(token).catch(() => null)
-      return sc?.balanceCents ?? 0
-    },
-    staleTime: 60_000,
-  })
-  const hasStoreCredit = (storeCreditQuery.data ?? 0) > 0
-
   // Rail visibility: Recipients is hidden for now (diaspora ship-to not
-  // launched); Wallet appears when the referral program is on OR the buyer
-  // has store credit to spend.
+  // launched). Wallet is ALWAYS shown — it is the buyer's store-credit home
+  // (coupon residuals, refunds, admin grants), which has nothing to do with
+  // the referral program. Referral is standalone: the invite link inside the
+  // Wallet section appears only when the referral program is enabled (handled
+  // by WalletSection itself), but the Wallet rail item never depends on it.
   const visibleSections = useMemo(
-    () => SECTIONS.filter(
-      (s) => s.id !== "recipients" && (s.id !== "wallet" || referralEnabled || hasStoreCredit),
-    ),
-    [referralEnabled, hasStoreCredit],
+    () => SECTIONS.filter((s) => s.id !== "recipients"),
+    [],
   )
 
   function selectSection(id: SectionId) {
