@@ -50,6 +50,13 @@ const POLL_TIMEOUT_MS = 30_000
 // so a guest session always materializes an already-captured order and skips
 // this second poll entirely (it also can't call the authenticated order API).
 const ORDER_POLL_TIMEOUT_MS = 60_000
+
+// After the fast poll gives up, keep checking quietly rather than stranding the
+// buyer on "Almost there…" for an order that lands moments later. Slow enough
+// to be free (one request per 5s), bounded so an abandoned tab isn't polling
+// forever.
+const BACKGROUND_POLL_INTERVAL_MS = 5_000
+const BACKGROUND_WATCH_MS = 10 * 60_000
 const RESERVING_STATUSES = new Set(["reserving"])
 const CANCELLED_STATUSES = new Set(["cancelled", "canceled"])
 
@@ -786,6 +793,80 @@ function CheckoutCompleteContent() {
       clearTimeout(timer)
     }
   }, [sessionId, clearCart, uid, authStatus])
+
+  // Self-heal after the timeout screen.
+  //
+  // The fast poll gives up after POLL_TIMEOUT_MS and the page used to stop
+  // there permanently — so an order that materialized five seconds later left
+  // the buyer staring at "Almost there…" indefinitely, with no way to find out
+  // it had actually succeeded except reloading. (Exactly what a slow webhook
+  // produced in testing.)
+  //
+  // Keep watching quietly instead: a slow poll, plus an immediate re-check
+  // whenever the tab regains focus, since a buyer who tabs away and back is
+  // precisely the person asking "did it go through?".
+  useEffect(() => {
+    if (!sessionId || pollState !== "timeout" || settledRef.current) return
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const startedAt = Date.now()
+
+    const resolveOnce = async () => {
+      if (cancelled || settledRef.current) return
+      try {
+        const res = await fetch(`/api/public/checkout-sessions/${encodeURIComponent(sessionId)}/result`, {
+          cache: "no-store",
+        })
+        if (!res.ok || cancelled) return
+        const data = (await res.json()) as SessionResult
+        if (data.status !== "converted" || !("orderId" in data) || !data.orderId) return
+
+        // Converted — but under manual capture the order may still be
+        // "reserving", so resolve its real outcome before promising anything.
+        if (data.orderNumber && uid) {
+          try {
+            const order = await getOrderByNumber(uid, data.orderNumber)
+            const status = (order?.status ?? "").toLowerCase()
+            if (cancelled) return
+            if (CANCELLED_STATUSES.has(status)) {
+              settledRef.current = true
+              setUnavailableOrderNumber(data.orderNumber)
+              setPollState("unavailable")
+              return
+            }
+            if (RESERVING_STATUSES.has(status)) return // still deciding — keep waiting
+          } catch {
+            // Can't read the order (guest, or a blip). The session says
+            // converted, which is enough to stop alarming the buyer.
+          }
+        }
+        if (cancelled) return
+        settledRef.current = true
+        setConfirmed({ orderNumber: data.orderNumber })
+      } catch {
+        // offline / transient — the next tick tries again
+      }
+    }
+
+    const tick = async () => {
+      await resolveOnce()
+      if (cancelled || settledRef.current) return
+      if (Date.now() - startedAt >= BACKGROUND_WATCH_MS) return // give up quietly
+      timer = setTimeout(tick, BACKGROUND_POLL_INTERVAL_MS)
+    }
+
+    const onFocus = () => { if (document.visibilityState === "visible") void resolveOnce() }
+    document.addEventListener("visibilitychange", onFocus)
+    window.addEventListener("focus", onFocus)
+    timer = setTimeout(tick, BACKGROUND_POLL_INTERVAL_MS)
+
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+      document.removeEventListener("visibilitychange", onFocus)
+      window.removeEventListener("focus", onFocus)
+    }
+  }, [sessionId, pollState, uid])
 
   // ── Session-mode rendering ────────────────────────────────────────────
   if (sessionId) {
