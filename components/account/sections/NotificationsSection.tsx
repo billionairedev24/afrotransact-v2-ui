@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Toggle } from "@/components/ui/Toggle"
 import { getAccessToken } from "@/lib/auth-helpers"
-import { getUserProfile, API_BASE } from "@/lib/api"
+import { getUserProfile, gatewayUrl } from "@/lib/api"
 
 interface NotificationPrefs {
   order_updates: boolean
@@ -96,9 +96,12 @@ export function NotificationsSection() {
           // ignore
         }
       }
-      const res = await fetch(`${API_BASE}/api/v1/users/me/preferences`, {
+      // Through the BFF proxy: `token` here is a non-secret session marker, not
+      // a bearer token, so sending it as Authorization 401s at the gateway. The
+      // proxy attaches the real credential server-side.
+      const res = await fetch(gatewayUrl("/api/v1/users/me/preferences"), {
         method: "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...existing, notifications: updated }),
       })
       if (!res.ok) throw new Error("save failed")
