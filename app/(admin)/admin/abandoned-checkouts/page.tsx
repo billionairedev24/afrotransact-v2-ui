@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { Loader2, AlertCircle, ShoppingCart, CheckCircle2, Percent, DollarSign, Mail, Phone, Package, User } from "lucide-react"
-import { API_BASE, ApiError } from "@/lib/api"
+import { gatewayUrl, ApiError } from "@/lib/api"
 import { friendlyMessage, logError } from "@/lib/errors"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { Sheet, SheetHeader, SheetBody } from "@/components/ui/Sheet"
@@ -77,12 +77,21 @@ function formatDateTime(iso: string | null) {
   }
 }
 
-async function fetchJson<T>(path: string, token: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    cache: "no-store",
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+/**
+ * Route through the same-origin BFF proxy, which attaches the real access
+ * token server-side from the HttpOnly session.
+ *
+ * Do NOT go straight to API_BASE with an Authorization header here.
+ * `getAccessToken()` no longer returns a bearer token — since the BFF change
+ * it returns the user id as a non-secret "is there a session?" marker. Sending
+ * it as `Bearer <uuid>` reaches the gateway as a malformed token and is
+ * rejected with 401 every time. The proxy strips whatever the browser sends
+ * and re-attaches the genuine token, which is why every other admin surface
+ * works.
+ */
+async function fetchJson<T>(path: string): Promise<T> {
+  const res = await fetch(gatewayUrl(path), { cache: "no-store" })
+  if (!res.ok) throw new ApiError(res.status, await res.text().catch(() => ""), path)
   return (await res.json()) as T
 }
 
@@ -99,11 +108,13 @@ export default function AbandonedCheckoutsPage() {
     async function load() {
       try {
         setLoading(true)
-        const token = await getAccessToken()
-        if (!token) throw new Error("Not signed in")
+        // Session gate only — this is a non-secret marker, not a bearer token.
+        // The proxy supplies the real credential.
+        const signedIn = await getAccessToken()
+        if (!signedIn) throw new Error("Not signed in")
         const [a, l] = await Promise.all([
-          fetchJson<AnalyticsResponse>(`/api/v1/admin/analytics/abandoned-checkouts`, token),
-          fetchJson<ListResponse>(`/api/v1/admin/abandoned-checkouts?page=${page}&size=25`, token),
+          fetchJson<AnalyticsResponse>(`/api/v1/admin/analytics/abandoned-checkouts`),
+          fetchJson<ListResponse>(`/api/v1/admin/abandoned-checkouts?page=${page}&size=25`),
         ])
         if (!cancelled) {
           setAnalytics(a)

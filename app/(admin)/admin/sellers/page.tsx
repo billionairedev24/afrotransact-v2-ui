@@ -19,7 +19,6 @@ import {
   setSellerTestAccount,
   triggerOnboardingReminders,
   sendSellerReminder,
-  API_BASE,
 } from "@/lib/api"
 import type { OnboardingStats, AdminSellerDetail } from "@/lib/api"
 import { toast } from "sonner"
@@ -151,18 +150,15 @@ export default function AdminSellersPage() {
   async function handleTriggerReminders() {
     setTriggeringReminders(true)
     try {
-      const token = await getAccessToken()
-      if (!token) return
-      const res = await fetch(`${API_BASE}/api/v1/admin/sellers/onboarding-reminders/trigger`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        toast.success(data.message || `${data.sent ?? data.triggered ?? 0} reminder(s) sent`)
-      } else {
-        toast.error("Failed to trigger reminders")
-      }
+      // Use the shared helper (already imported): it routes through the BFF
+      // proxy, which attaches the real token server-side. The previous raw
+      // fetch went straight to API_BASE with `Bearer <getAccessToken()>` —
+      // but that returns a non-secret session marker, not a bearer token, so
+      // the gateway rejected it with 401 every time.
+      const signedIn = await getAccessToken()
+      if (!signedIn) return
+      const data = await triggerOnboardingReminders(signedIn)
+      toast.success(`${data.triggered ?? 0} reminder(s) sent`)
     } catch {
       toast.error("Failed to trigger reminders")
     } finally {
