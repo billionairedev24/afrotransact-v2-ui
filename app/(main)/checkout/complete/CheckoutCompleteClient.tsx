@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, Suspense, Fragment } from "react"
+import { useEffect, useRef, useState, Suspense, Fragment } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
@@ -33,6 +33,25 @@ const fmtMoney = (cents: number | undefined, currency = "USD") =>
 // POLL_INTERVAL_MS for up to POLL_TIMEOUT_MS.
 const POLL_INTERVAL_MS = 1200
 const POLL_TIMEOUT_MS = 30_000
+
+// Phase 3 (manual-capture reservation flow): for a house-only cart the session
+// converts on payment AUTHORIZATION, not on capture — the order materializes in
+// status "reserving" while inventory tries to reserve the stock. Only once
+// `inv.reservation.confirmed` lands is the card actually captured (order ->
+// "confirmed"); a failed reservation voids the authorization and cancels the
+// order ("cancelled") without ever charging the buyer.
+//
+// So "session converted" no longer means "order placed". After conversion we
+// keep polling the order itself until it leaves "reserving", and only then show
+// the confirmation — otherwise a buyer whose items sold out would first be told
+// their order is on the way and then silently have it cancelled.
+//
+// Guests are unaffected: the manual-capture path is authenticated + house-only,
+// so a guest session always materializes an already-captured order and skips
+// this second poll entirely (it also can't call the authenticated order API).
+const ORDER_POLL_TIMEOUT_MS = 60_000
+const RESERVING_STATUSES = new Set(["reserving"])
+const CANCELLED_STATUSES = new Set(["cancelled", "canceled"])
 
 type SessionResult =
   | { status: "initiated" }
@@ -501,16 +520,148 @@ function OrderPlaced({ orderNumber }: { orderNumber?: string | null }) {
   )
 }
 
+type ProgressStep = { key: string; label: string; state: "done" | "active" | "todo" }
+
+/**
+ * Shared waiting-state shell. The post-payment wait is now two consecutive
+ * steps (confirming payment → securing stock), and they must look like one
+ * continuous process rather than two different pages flashing by.
+ */
+function ProgressShell({
+  title,
+  body,
+  steps,
+  footer,
+}: {
+  title: string
+  body: string
+  steps: ProgressStep[]
+  footer: string
+}) {
+  return (
+    <main className="mx-auto max-w-[560px] px-4 py-16 sm:py-24">
+      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-gold/15">
+          <Loader2 className="h-8 w-8 animate-spin text-brand-gold-foreground" />
+        </div>
+        <h1 className="text-xl font-bold text-foreground">{title}</h1>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{body}</p>
+        <ul className="mx-auto mt-7 max-w-[260px] space-y-3.5 text-left">
+          {steps.map((s) => (
+            <li
+              key={s.key}
+              className={`flex items-center gap-3 text-sm ${
+                s.state === "done"
+                  ? "font-medium text-foreground"
+                  : s.state === "active"
+                    ? "font-semibold text-foreground"
+                    : "text-muted-foreground"
+              }`}
+            >
+              {s.state === "done" ? (
+                <CheckCircle className="h-5 w-5 shrink-0 text-brand-green" />
+              ) : s.state === "active" ? (
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin text-brand-gold-foreground" />
+              ) : (
+                <Clock className="h-5 w-5 shrink-0" />
+              )}
+              {s.label}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-7 text-xs text-muted-foreground">{footer}</p>
+      </div>
+    </main>
+  )
+}
+
+/**
+ * Terminal state for a reservation that failed after authorization: the items
+ * sold out between checkout and reservation, so the authorization was voided
+ * and the order cancelled.
+ *
+ * Deliberately NOT styled as an error — nothing went wrong on the buyer's side
+ * and no money moved. The one fact that must land unmissably is "you have not
+ * been charged", so it gets its own callout rather than a line of body copy.
+ */
+function ReservationUnavailable({ orderNumber }: { orderNumber?: string | null }) {
+  return (
+    <main className="mx-auto max-w-[600px] px-4 py-16 sm:py-24">
+      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+          <Package className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground">
+          Sorry — that sold out
+        </h1>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+          Someone beat you to the last of it while we were confirming your order, so we couldn&apos;t
+          complete it.
+        </p>
+
+        <div className="mt-6 flex items-start gap-3 rounded-xl border border-brand-green/30 bg-brand-green-soft/50 px-4 py-3 text-left">
+          <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-brand-green" />
+          <p className="text-sm text-foreground">
+            <span className="font-bold">You have not been charged.</span> We only ever take payment once
+            your items are secured — the hold on your card has been released and will disappear from your
+            statement within a few days.
+          </p>
+        </div>
+
+        {orderNumber && (
+          <div className="mt-6 flex justify-center">
+            <OrderStamp orderNumber={orderNumber} />
+          </div>
+        )}
+
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-gold px-6 py-3 text-sm font-bold text-brand-gold-foreground transition-colors hover:bg-brand-gold-hover"
+          >
+            Keep shopping <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/help"
+            className="rounded-xl border border-border px-6 py-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"
+          >
+            Contact support
+          </Link>
+        </div>
+      </div>
+
+      <div className="mt-14">
+        <h2 className="mb-1 text-lg font-bold text-foreground">You might like these instead</h2>
+        <p className="mb-4 text-sm text-muted-foreground">Popular picks other shoppers are loving right now.</p>
+        <PopularPicksStrip />
+      </div>
+    </main>
+  )
+}
+
 function CheckoutCompleteContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const clearCart = useCartStore((s) => s.clearCart)
   const redirectStatus = searchParams.get("redirect_status")
   const sessionId = searchParams.get("session")
-  const [pollState, setPollState] = useState<"idle" | "polling" | "timeout" | "failed">(
-    sessionId ? "polling" : "idle",
-  )
+  const { data: authSession, status: authStatus } = useSession()
+  // Auth presence (not a secret): the /api/gw proxy attaches the real token.
+  // Kept as a plain string so the poll effect isn't restarted by a new session
+  // object identity on every render.
+  const uid = (authSession as { user?: { id?: string } } | null)?.user?.id
+  // Once the outcome is known it must never be re-litigated by a re-run of the
+  // poll effect (which restarts when `uid` resolves from undefined).
+  const settledRef = useRef(false)
+  const [pollState, setPollState] = useState<
+    "idle" | "polling" | "securing" | "timeout" | "failed" | "unavailable"
+  >(sessionId ? "polling" : "idle")
   const [confirmed, setConfirmed] = useState<{ orderNumber?: string } | null>(null)
+  const [unavailableOrderNumber, setUnavailableOrderNumber] = useState<string | null>(null)
+  // Which wait timed out. It changes what we may truthfully claim: during the
+  // reservation wait the money is only AUTHORIZED, so we must not tell the
+  // buyer their payment went through.
+  const [timedOutPhase, setTimedOutPhase] = useState<"payment" | "reservation">("payment")
 
   const legacyStatus = redirectStatus === "failed" ? "failed" : "success"
 
@@ -527,8 +678,70 @@ function CheckoutCompleteContent() {
   // Session-mode poll
   useEffect(() => {
     if (!sessionId) return
+    // Wait for NextAuth to resolve: starting while `uid` is still undefined
+    // would make a signed-in buyer look like a guest and skip the reservation
+    // watch — the exact case this exists for.
+    if (authStatus === "loading") return
+    if (settledRef.current) return
     let cancelled = false
     const startedAt = Date.now()
+
+    /**
+     * Second poll phase: the session has converted, but under the manual-capture
+     * flow the order may still be "reserving". Watch it until inventory settles
+     * it — captured/confirmed (show the confirmation) or cancelled (sold out,
+     * authorization voided, buyer never charged).
+     *
+     * Without an order number or a signed-in buyer we cannot read the order, so
+     * we confirm as before. That is exactly the auto-capture/guest case, where
+     * the order is already captured by the time the session converts.
+     */
+    const watchReservation = async (orderNumber?: string) => {
+      if (!orderNumber || !uid) {
+        settledRef.current = true
+        setConfirmed({ orderNumber })
+        return
+      }
+      const reservationStartedAt = Date.now()
+
+      const check = async () => {
+        if (cancelled) return
+        let status: string | null = null
+        try {
+          const order = await getOrderByNumber(uid, orderNumber)
+          status = (order?.status ?? "").toLowerCase()
+        } catch {
+          // Read failure is not a verdict — keep watching until the budget runs
+          // out rather than guessing at the buyer's expense.
+        }
+        if (cancelled) return
+
+        if (status && CANCELLED_STATUSES.has(status)) {
+          setUnavailableOrderNumber(orderNumber)
+          settledRef.current = true
+          setPollState("unavailable")
+          return
+        }
+        if (status && !RESERVING_STATUSES.has(status)) {
+          settledRef.current = true
+          setConfirmed({ orderNumber })
+          return
+        }
+        // Still reserving (or unreadable) — keep the buyer informed and wait.
+        setPollState("securing")
+        if (Date.now() - reservationStartedAt >= ORDER_POLL_TIMEOUT_MS) {
+          // Don't claim success we can't verify: fall back to the neutral
+          // "we're finishing your order" screen.
+          setTimedOutPhase("reservation")
+          setPollState("timeout")
+          return
+        }
+        timer = setTimeout(check, POLL_INTERVAL_MS)
+      }
+
+      setPollState("securing")
+      await check()
+    }
 
     const tick = async () => {
       if (cancelled) return
@@ -545,10 +758,14 @@ function CheckoutCompleteContent() {
             // to the order detail (which can race materialization → empty cart).
             clearCart()
             try { clearGuestCart() } catch { /* non-fatal */ }
-            setConfirmed({ orderNumber: data.orderNumber })
+            // Conversion alone is not confirmation under the manual-capture flow
+            // — hand off to the reservation watch, which settles the order before
+            // we promise the buyer anything.
+            void watchReservation(data.orderNumber)
             return
           }
           if (data.status === "failed" || data.status === "abandoned") {
+            settledRef.current = true
             setPollState("failed")
             return
           }
@@ -568,43 +785,47 @@ function CheckoutCompleteContent() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [sessionId, clearCart])
+  }, [sessionId, clearCart, uid, authStatus])
 
   // ── Session-mode rendering ────────────────────────────────────────────
   if (sessionId) {
     if (confirmed) {
       return <OrderPlaced orderNumber={confirmed.orderNumber} />
     }
+    // Sold out after authorization: inventory couldn't reserve the stock, so the
+    // authorization was voided and the order cancelled. The single most
+    // important thing to tell the buyer is that they have NOT been charged.
+    if (pollState === "unavailable") {
+      return <ReservationUnavailable orderNumber={unavailableOrderNumber} />
+    }
+    // Authorized, reserving stock — payment is held, not taken. Same shell as
+    // the "confirming" state so the transition reads as one continuous step.
+    if (pollState === "securing") {
+      return (
+        <ProgressShell
+          title="Securing your items"
+          body="Your payment is authorized — we're confirming the last of your items are in stock before anything is charged."
+          steps={[
+            { key: "auth", label: "Payment authorized", state: "done" },
+            { key: "stock", label: "Confirming stock", state: "active" },
+            { key: "place", label: "Placing your order", state: "todo" },
+          ]}
+          footer="Keep this page open — you haven't been charged yet."
+        />
+      )
+    }
     if (pollState === "polling") {
       return (
-        <main className="mx-auto max-w-[560px] px-4 py-16 sm:py-24">
-          <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-gold/15">
-              <Loader2 className="h-8 w-8 animate-spin text-brand-gold-foreground" />
-            </div>
-            <h1 className="text-xl font-bold text-foreground">Confirming your payment</h1>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-              Payment received — we&apos;re placing your order now. This usually takes just a few seconds.
-            </p>
-            <ul className="mx-auto mt-7 max-w-[260px] space-y-3.5 text-left">
-              <li className="flex items-center gap-3 text-sm font-medium text-foreground">
-                <CheckCircle className="h-5 w-5 shrink-0 text-brand-green" />
-                Payment received
-              </li>
-              <li className="flex items-center gap-3 text-sm font-semibold text-foreground">
-                <Loader2 className="h-5 w-5 shrink-0 animate-spin text-brand-gold-foreground" />
-                Placing your order
-              </li>
-              <li className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Clock className="h-5 w-5 shrink-0" />
-                Emailing your receipt
-              </li>
-            </ul>
-            <p className="mt-7 text-xs text-muted-foreground">
-              Keep this page open — there&apos;s nothing more to pay.
-            </p>
-          </div>
-        </main>
+        <ProgressShell
+          title="Confirming your payment"
+          body="Payment received — we're placing your order now. This usually takes just a few seconds."
+          steps={[
+            { key: "paid", label: "Payment received", state: "done" },
+            { key: "place", label: "Placing your order", state: "active" },
+            { key: "email", label: "Emailing your receipt", state: "todo" },
+          ]}
+          footer="Keep this page open — there's nothing more to pay."
+        />
       )
     }
     // timeout: payment likely succeeded but the order is still materializing —
@@ -615,7 +836,9 @@ function CheckoutCompleteContent() {
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-foreground" />
           <h1 className="text-xl font-bold text-gray-900 mt-6">Almost there…</h1>
           <p className="text-gray-500 text-sm mt-2">
-            Your payment went through and we&apos;re finishing your order. It&apos;ll appear in your orders shortly.
+            {timedOutPhase === "reservation"
+              ? "We're still finalizing your order — it'll appear in your orders shortly. You're only charged once your items are confirmed, so nothing has been taken yet."
+              : "Your payment went through and we're finishing your order. It'll appear in your orders shortly."}
           </p>
           <div className="flex justify-center gap-3 mt-6">
             <button
