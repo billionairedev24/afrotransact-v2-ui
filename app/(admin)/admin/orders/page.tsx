@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useCallback } from "react"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import {
@@ -146,6 +146,43 @@ export default function AdminOrdersPage() {
     [orders],
   )
 
+  // The CSV export emitted only an item COUNT, so "how many of product X sold"
+  // was unanswerable from the file. Export the real orders instead, which carry
+  // their line items, as a workbook with a per-product sheet and charts.
+  //
+  // Fetches EVERY page, not just the one on screen: the table is
+  // server-paginated, so exporting `orders` would build an "Analytics" sheet
+  // from one page and present it as the whole picture. Capped, and the cap is
+  // surfaced rather than silently truncating.
+  const [exporting, setExporting] = useState(false)
+  const handleExportWorkbook = useCallback(async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Not signed in")
+      const [{ downloadOrdersWorkbook }, { fetchAllPages }] = await Promise.all([
+        import("@/lib/orders-xlsx"),
+        import("@/lib/fetch-all-pages"),
+      ])
+      const { rows, truncated, totalAvailable } = await fetchAllPages<OrderDto>(
+        (page, size) => getAdminOrders(token, page, size),
+      )
+      if (truncated) {
+        toast.warning(
+          `Exporting the first ${rows.length.toLocaleString()} of ${totalAvailable.toLocaleString()} orders. ` +
+          `Narrow the range for a complete file.`,
+        )
+      }
+      await downloadOrdersWorkbook({ orders: rows, filename: "admin-orders" })
+    } catch (e) {
+      logError(e, "adminOrders.export")
+      toast.error(friendlyMessage(e, "Couldn't build the export. Please try again."))
+    } finally {
+      setExporting(false)
+    }
+  }, [exporting])
+
   const columns = useMemo(() => [
     col.accessor("orderNumber", {
       header: "Order",
@@ -227,6 +264,8 @@ export default function AdminOrdersPage() {
         searchPlaceholder="Search orders…"
         searchColumn="orderNumber"
         enableExport
+        onExport={handleExportWorkbook}
+        exporting={exporting}
         exportFilename="admin-orders"
         emptyMessage="No orders in the system yet."
         pageSize={pageSize}

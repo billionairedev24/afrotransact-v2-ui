@@ -44,6 +44,14 @@ export interface DataTableProps<TData> {
   searchColumn?: string
   enableSelection?: boolean
   enableExport?: boolean
+  /**
+   * Replaces the built-in CSV export for this table. Used by admin orders,
+   * which needs a real .xlsx (line-item sheet + charts) that CSV cannot carry.
+   * Every other table keeps the CSV default.
+   */
+  onExport?: () => void | Promise<void>
+  /** Shows the export button as busy — a full-history export is not instant. */
+  exporting?: boolean
   exportFilename?: string
   emptyMessage?: string
   pageSize?: number
@@ -242,6 +250,8 @@ export function DataTable<TData>({
   searchColumn,
   enableSelection = false,
   enableExport = false,
+  onExport,
+  exporting = false,
   exportFilename = "export",
   emptyMessage = "No results found.",
   pageSize: initialPageSize = 10,
@@ -336,6 +346,13 @@ export function DataTable<TData>({
     downloadCsv(rows, exportFilename)
   }, [table, exportFilename])
 
+  // A caller-supplied exporter wins; the CSV path stays the default so no
+  // other table changes behaviour.
+  const runExport = useCallback(() => {
+    if (onExport) return void onExport()
+    handleExport()
+  }, [onExport, handleExport])
+
   const pageIndex = isServer ? serverPagination!.pageIndex : table.getState().pagination.pageIndex
   const pageCount = isServer ? serverPagination!.pageCount : table.getPageCount()
   const totalRows = isServer ? serverPagination!.totalRows : table.getFilteredRowModel().rows.length
@@ -396,12 +413,12 @@ export function DataTable<TData>({
 
           {enableExport && (
             <button
-              onClick={handleExport}
-              disabled={totalRows === 0}
+              onClick={runExport}
+              disabled={totalRows === 0 || exporting}
               className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
             >
-              <Download className="h-4 w-4" />
-              Export
+              <Download className={`h-4 w-4 ${exporting ? "animate-pulse" : ""}`} />
+              {exporting ? "Exporting…" : "Export"}
             </button>
           )}
         </div>

@@ -21,6 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "country-state-city": "^3.2.1",
+    "exceljs": "^4.4.0",
     "libphonenumber-js": "^1.13.6",
     "lucide-react": "^1.17.0",
     "nanoid": "^5.1.11",
