@@ -2067,6 +2067,9 @@ export default function CheckoutClientV2({
                 <InlinePayment
                   ref={paymentHandleRef}
                   clientSecret={checkoutResult?.paymentClientSecret ?? null}
+                  // Elements must be configured with the SAME capture method as
+                  // the intent; it cannot infer it and defaults to "automatic".
+                  manualCapture={checkoutResult?.manualCapture ?? false}
                   checkoutSessionId={checkoutResult?.checkoutSessionId ?? null}
                   // The PaymentIntent is minted for the CHARGE (order total minus
                   // any applied store credit), so the Stripe amount and the
@@ -2283,6 +2286,8 @@ type InlinePaymentProps = {
   checkoutSessionId: string | null
   totalCents: number
   saveCard: boolean
+  /** Mirrors the PaymentIntent's capture_method into the Elements options. */
+  manualCapture: boolean
   onSaveCardChange: (next: boolean) => void
   savedCards: SavedPaymentMethod[]
   selectedSavedCardId: string | null
@@ -2296,7 +2301,7 @@ const InlinePayment = forwardRef<PaymentHandle, InlinePaymentProps>(function Inl
 ) {
   // clientSecret is forwarded to the form via {...props} for confirm; it is
   // deliberately NOT used to key <Elements> (see note below).
-  const { totalCents, saveCard } = props
+  const { totalCents, saveCard, manualCapture } = props
   return (
     // IMPORTANT: do NOT key this on clientSecret or saveCard. In deferred mode
     // (mode:"payment") the PaymentElement holds NO PaymentIntent reference —
@@ -2315,6 +2320,12 @@ const InlinePayment = forwardRef<PaymentHandle, InlinePaymentProps>(function Inl
         currency: "usd",
         appearance: V2_STRIPE_APPEARANCE,
         paymentMethodCreation: "manual",
+        // Deferred mode validates these against the intent at confirm time and
+        // defaults captureMethod to "automatic". Omitting it while the server
+        // mints a manual-capture intent makes Stripe reject every confirmation
+        // ("provided capture_method (manual) does not match the expected
+        // capture_method (automatic)") — which is exactly how checkout broke.
+        ...(manualCapture ? { captureMethod: "manual" as const } : {}),
         ...(saveCard ? { setupFutureUsage: "off_session" as const } : {}),
       }}
     >
