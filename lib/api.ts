@@ -2120,6 +2120,22 @@ export interface CheckoutResponse {
    *  the UI calls confirmFreeCheckout(sessionId) and goes to the confirmation
    *  page. Defaults true (a normal, chargeable checkout). */
   paymentRequired?: boolean
+  /**
+   * True when the PaymentIntent was minted with capture_method=manual.
+   *
+   * MUST be mirrored into the Stripe Elements options. Elements runs in
+   * deferred mode (mode:"payment"), so it holds no PaymentIntent and validates
+   * its own captureMethod against the intent at confirm time — defaulting to
+   * "automatic". If the two disagree Stripe refuses the confirmation:
+   *
+   *   "The provided capture_method (manual) does not match the expected
+   *    capture_method (automatic)."
+   *
+   * That took production checkout down: the server flipped to manual capture,
+   * the client had no way to know, and every confirm failed before an
+   * authorization ever existed.
+   */
+  manualCapture?: boolean
   status: string
   /** Phase 2 session-mode: when present, no Order row exists yet — the buyer
    *  must be redirected through Stripe back to /checkout/complete?session=…
