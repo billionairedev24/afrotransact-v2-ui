@@ -2051,6 +2051,15 @@ export interface BuyNowItem {
 }
 
 export interface CheckoutRequest {
+  /**
+   * Whether to spend the buyer's store credit on this order.
+   *
+   * Web always sends it explicitly and defaults it to false — credit is opt-in,
+   * and reserving writes a real debit server-side, so nothing is spent until
+   * the buyer asks. OMITTING it means "old client" to the backend, which keeps
+   * applying automatically so the mobile app doesn't silently stop redeeming.
+   */
+  applyStoreCredit?: boolean
   regionId: string
   shippingAddressId?: string
   fullName?: string
