@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useCallback } from "react"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import {
@@ -146,6 +146,14 @@ export default function AdminOrdersPage() {
     [orders],
   )
 
+  // The CSV export emitted only an item COUNT, so "how many of product X sold"
+  // was unanswerable from the file. Export the real orders instead, which carry
+  // their line items, as a workbook with a per-product sheet and charts.
+  const handleExportWorkbook = useCallback(async () => {
+    const { downloadOrdersWorkbook } = await import("@/lib/orders-xlsx")
+    await downloadOrdersWorkbook({ orders, filename: "admin-orders" })
+  }, [orders])
+
   const columns = useMemo(() => [
     col.accessor("orderNumber", {
       header: "Order",
@@ -227,6 +235,7 @@ export default function AdminOrdersPage() {
         searchPlaceholder="Search orders…"
         searchColumn="orderNumber"
         enableExport
+        onExport={handleExportWorkbook}
         exportFilename="admin-orders"
         emptyMessage="No orders in the system yet."
         pageSize={pageSize}
