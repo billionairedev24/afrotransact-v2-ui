@@ -50,6 +50,8 @@ export interface DataTableProps<TData> {
    * Every other table keeps the CSV default.
    */
   onExport?: () => void | Promise<void>
+  /** Shows the export button as busy — a full-history export is not instant. */
+  exporting?: boolean
   exportFilename?: string
   emptyMessage?: string
   pageSize?: number
@@ -249,6 +251,7 @@ export function DataTable<TData>({
   enableSelection = false,
   enableExport = false,
   onExport,
+  exporting = false,
   exportFilename = "export",
   emptyMessage = "No results found.",
   pageSize: initialPageSize = 10,
@@ -411,11 +414,11 @@ export function DataTable<TData>({
           {enableExport && (
             <button
               onClick={runExport}
-              disabled={totalRows === 0}
+              disabled={totalRows === 0 || exporting}
               className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
             >
-              <Download className="h-4 w-4" />
-              Export
+              <Download className={`h-4 w-4 ${exporting ? "animate-pulse" : ""}`} />
+              {exporting ? "Exporting…" : "Export"}
             </button>
           )}
         </div>
