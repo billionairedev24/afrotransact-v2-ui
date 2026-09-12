@@ -32,7 +32,15 @@ import { AddToCartControl } from "@/components/cart/AddToCartControl"
 
 interface ProductRowProps {
   title: string
-  products: SearchResult[]
+  /**
+   * Optional on purpose. An upstream that returns a well-formed 200 with an
+   * unexpected body (a different service answering the port, a changed
+   * envelope) yields undefined here rather than throwing, so `safe()` at the
+   * call site never catches it. Typing this as required meant a single such
+   * response crashed the whole prerender and failed the production build
+   * instead of hiding one row.
+   */
+  products?: SearchResult[]
   viewAllHref?: string
   viewAllLabel?: string
   /** Pill rendered next to the title (e.g. "Ending soon"). */
@@ -166,7 +174,7 @@ function MiniProductCard({ product }: { product: SearchResult }) {
 
 export function ProductRow({
   title,
-  products,
+  products = [],
   viewAllHref,
   viewAllLabel = "See all",
   badge,

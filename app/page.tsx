@@ -260,7 +260,7 @@ export default async function HomePage() {
         <ProductRow
           title="Today's Deals"
           badge="Ending soon"
-          products={todaysDealsRes.results}
+          products={todaysDealsRes.results ?? []}
           viewAllHref="/search?is_deal=true"
           viewAllLabel="See all deals"
         />
@@ -280,7 +280,7 @@ export default async function HomePage() {
         {/* 6. New Arrivals */}
         <ProductRow
           title="New Arrivals"
-          products={newLocalRes.results}
+          products={newLocalRes.results ?? []}
           viewAllHref="/search?sort=newest"
           viewAllLabel="Explore all new items"
         />
@@ -288,7 +288,7 @@ export default async function HomePage() {
         {/* 6. Trending in Austin (keeps the regional surface even though it's not in the mockup) */}
         <ProductRow
           title="Trending in Austin"
-          products={trendingAustinRes.results}
+          products={trendingAustinRes.results ?? []}
           viewAllHref="/search?region_code=us-tx-austin&sort=popularity"
         />
         </GeoGate>

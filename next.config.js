@@ -7,8 +7,17 @@ const enforceHttps = process.env.ENFORCE_HTTPS === 'true'
 // Local seed data uses loremflickr.com placeholder product images. Allowed in
 // dev only so `next/image` (and CSP) don't block seeded catalogs; prod images
 // come from real storage (cdn/S3/uploadthing) so this host stays out of prod.
+//
+// ALLOW_SEED_IMAGES exists because the LOCAL storefront is run as a standalone
+// PRODUCTION build (`npm run build && npm start`), not `next dev`. That makes
+// NODE_ENV === 'production' on a developer's machine, which emptied this list
+// and left CSP blocking every seeded product image — the catalogue looked
+// broken locally while being perfectly fine. Opting in explicitly keeps the
+// real production CSP clean: deployed environments never set this flag, so the
+// placeholder host cannot leak into prod by forgetting to unset NODE_ENV.
 const isProd = process.env.NODE_ENV === 'production'
-const devImageHosts = isProd ? [] : ['https://loremflickr.com']
+const allowSeedImages = process.env.ALLOW_SEED_IMAGES === 'true'
+const devImageHosts = !isProd || allowSeedImages ? ['https://loremflickr.com'] : []
 
 // 'unsafe-eval' is required ONLY in development (React/Next use eval for HMR and
 // enhanced debugging); it is NOT needed in production and is dropped there to
@@ -69,8 +78,12 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.ingest.uploadthing.com' },
       { protocol: 'https', hostname: '**.amazonaws.com' },
       { protocol: 'https', hostname: '**.s3.amazonaws.com' },
-      // dev-only: local seed data placeholder images
-      ...(isProd ? [] : [{ protocol: 'https', hostname: 'loremflickr.com' }]),
+      // Local seed data placeholder images. Gated the same way as the CSP
+      // img-src entry above — see the ALLOW_SEED_IMAGES note at the top of this
+      // file for why NODE_ENV alone is not enough locally.
+      ...(!isProd || allowSeedImages
+        ? [{ protocol: 'https', hostname: 'loremflickr.com' }]
+        : []),
     ],
   },
 
