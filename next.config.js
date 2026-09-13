@@ -17,7 +17,21 @@ const enforceHttps = process.env.ENFORCE_HTTPS === 'true'
 // placeholder host cannot leak into prod by forgetting to unset NODE_ENV.
 const isProd = process.env.NODE_ENV === 'production'
 const allowSeedImages = process.env.ALLOW_SEED_IMAGES === 'true'
-const devImageHosts = !isProd || allowSeedImages ? ['https://loremflickr.com'] : []
+const devImageHosts =
+  !isProd || allowSeedImages
+    ? [
+        // picsum serves a real, distinct photograph per seed and redirects
+        // to its Fastly CDN — BOTH hosts must be listed or the redirect is
+        // blocked and the image silently fails to render.
+        'https://picsum.photos',
+        'https://fastly.picsum.photos',
+        // loremflickr is kept for older seed rows. Note its keyword search
+        // returns nothing for most product terms and it then serves its own
+        // defaultImage placeholder, so every product looks identical — do
+        // not reach for it when seeding new data.
+        'https://loremflickr.com',
+      ]
+    : []
 
 // 'unsafe-eval' is required ONLY in development (React/Next use eval for HMR and
 // enhanced debugging); it is NOT needed in production and is dropped there to
@@ -82,7 +96,11 @@ const nextConfig = {
       // img-src entry above — see the ALLOW_SEED_IMAGES note at the top of this
       // file for why NODE_ENV alone is not enough locally.
       ...(!isProd || allowSeedImages
-        ? [{ protocol: 'https', hostname: 'loremflickr.com' }]
+        ? [
+            { protocol: 'https', hostname: 'picsum.photos' },
+            { protocol: 'https', hostname: 'fastly.picsum.photos' },
+            { protocol: 'https', hostname: 'loremflickr.com' },
+          ]
         : []),
     ],
   },
