@@ -42,12 +42,6 @@ export function HeroSplit({ dealCount }: { dealCount: number }) {
             >
               Start shopping
             </Link>
-            <Link
-              href="/stores"
-              className="rounded-lg border border-white/30 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              Browse sellers
-            </Link>
           </div>
         </div>
 
