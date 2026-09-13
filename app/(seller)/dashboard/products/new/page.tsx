@@ -44,6 +44,10 @@ import {
 } from "@/lib/api"
 import { logError } from "@/lib/errors"
 import { useUploadThing } from "@/lib/uploadthing"
+import {
+  VariantMatrixBuilder,
+  type GeneratedVariant,
+} from "@/components/variants/VariantMatrixBuilder"
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -214,6 +218,11 @@ export default function NewProductPage() {
   const [stockQuantity, setStockQuantity] = useState("")
   const [attributes, setAttributes] = useState<AttributePair[]>([])
   const [images, setImages] = useState<ProductImageEntry[]>([])
+  // Category-driven variants. When the selected category binds variant axes,
+  // these replace the freeform rows entirely — a seller should not be offered
+  // two competing ways to describe the same thing.
+  const [matrixVariants, setMatrixVariants] = useState<GeneratedVariant[]>([])
+  const [categoryHasAxes, setCategoryHasAxes] = useState(false)
   const [variants, setVariants] = useState<VariantRow[]>([])
   const [showMediaPicker, setShowMediaPicker] = useState(false)
   const [mediaLibrary, setMediaLibrary] = useState<MediaItem[]>([])
@@ -625,7 +634,27 @@ export default function NewProductPage() {
           ? { lengthIn: pl, widthIn: pw, heightIn: ph }
           : {}
 
-      const variantPayload = variants.length > 0
+      // A category with bound axes produces canonical options the server can
+      // actually reason about; fall through to the freeform rows only for
+      // categories that bind nothing.
+      const matrixPayload = categoryHasAxes && matrixVariants.length > 0
+        ? matrixVariants.map((v) => {
+            const vPrice = parseFloat(v.price)
+            const stock = parseInt(v.stockQuantity, 10)
+            return {
+              name: v.label,
+              sku: v.sku.trim() || `SKU-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+              price: isNaN(vPrice) ? parseFloat(price) : vPrice,
+              currency: "USD",
+              stockQuantity: isNaN(stock) ? 0 : stock,
+              options: v.options,
+              weightKg: isNaN(weightKg) ? undefined : weightKg,
+              ...parcelDims,
+            }
+          })
+        : null
+
+      const variantPayload = matrixPayload ?? (variants.length > 0
         ? variants.map((v) => {
             const vPrice = parseFloat(v.price)
             const compare = v.compareAtPrice.trim() ? parseFloat(v.compareAtPrice) : undefined
@@ -657,7 +686,7 @@ export default function NewProductPage() {
             stockQuantity: parseInt(stockQuantity, 10),
             weightKg: isNaN(weightKg) ? undefined : weightKg,
             ...parcelDims,
-          }]
+          }])
 
       const product = await createProduct(token, {
         storeId: selectedStoreId,
@@ -1174,7 +1203,21 @@ export default function NewProductPage() {
             </button>
           </div>
 
+          {/* Category-driven matrix. Renders only when the selected category
+              binds variant axes; otherwise it returns null and the freeform
+              editor below stays in charge, so an uncurated category keeps
+              working exactly as it always has. */}
+          <VariantMatrixBuilder
+            className="mt-4"
+            categoryId={categoryId || null}
+            basePrice={price}
+            baseStock={stockQuantity}
+            value={matrixVariants}
+            onChange={setMatrixVariants}
+            onAxesResolved={setCategoryHasAxes}
+          />
           {/* Variants table — mockup lines 344-373 */}
+          {!categoryHasAxes && (
           <div className="mt-4 overflow-x-auto rounded-lg border border-input">
             <table className="min-w-full">
               <thead className="bg-gray-50">
@@ -1247,7 +1290,9 @@ export default function NewProductPage() {
               </tbody>
             </table>
           </div>
+          )}
 
+          {!categoryHasAxes && (
           <button
             type="button"
             onClick={addVariant}
@@ -1255,6 +1300,7 @@ export default function NewProductPage() {
           >
             + Add New Variant Combination
           </button>
+          )}
         </section>
 
         {/* ─── Tags & Discoverability — SIDEBAR row 3 — mockup lines 432-455 ─── */}

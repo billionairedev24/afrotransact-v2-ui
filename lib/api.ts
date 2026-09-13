@@ -470,6 +470,39 @@ export function getAllStores(opts?: { revalidate?: number }) {
   })
 }
 
+/**
+ * One attribute in force for a category, inheritance already resolved.
+ *
+ * `variantAxis` is the field that matters for a form: axes distinguish one
+ * purchasable variant from another and belong in the variant matrix, while
+ * specs describe the whole product. Submitting a spec as a variant option is
+ * rejected server-side, so the two must be rendered differently.
+ */
+export interface CategoryAttribute {
+  key: string
+  displayName: string
+  /** enum | text | number */
+  dataType: string
+  unit: string | null
+  /** Allowed values for `enum`; empty for text/number. */
+  valueSet: string[]
+  variantAxis: boolean
+  required: boolean
+  sortOrder: number
+}
+
+/**
+ * Attributes a category expects. An EMPTY array means nothing is bound to this
+ * category, so no variant options are enforced and a free-text fallback is safe.
+ */
+export function getCategoryAttributes(categoryId: string, opts?: { revalidate?: number }) {
+  return api<CategoryAttribute[]>(`/api/v1/categories/${categoryId}/attributes`, {
+    next: opts?.revalidate !== undefined
+      ? { revalidate: opts.revalidate, tags: ["categories"] }
+      : undefined,
+  })
+}
+
 export function getStoreById(id: string, opts?: { revalidate?: number }) {
   return api<StoreInfo>(`/api/v1/stores/${id}`, {
     next: opts?.revalidate !== undefined
