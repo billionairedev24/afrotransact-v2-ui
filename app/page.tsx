@@ -11,6 +11,7 @@ import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
 import { ProductRow } from "@/components/landing/ProductRow"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 import { SellerRail } from "@/components/landing/SellerRail"
+import { HomeViews } from "@/components/landing/HomeViews"
 import { resolveHomepageCategories } from "@/lib/homepage-categories"
 import {
   getAllStores,
@@ -153,41 +154,78 @@ export default async function HomePage() {
               live tree — never a blind slice of whatever the API returned. */}
           <CategoryRail categories={destinations} />
 
-          {/* 3. Time-sensitive first. */}
-          <ProductRow
-            title="Today's Deals"
-            badge="Ending soon"
-            products={dealResults}
-            viewAllHref="/search?is_deal=true"
-            viewAllLabel="See all deals"
+          {/* 3. The customer picks the lens. Hero and categories stay put above
+              it — swapping the entire page on a tap makes the site feel like
+              four different sites; varying only the merchandising keeps the
+              identity fixed. Panels are server-rendered and all present in the
+              DOM, so switching costs no round trip and the content still exists
+              without JavaScript. */}
+          <HomeViews
+            views={[
+              { id: "discover", label: "Discover" },
+              { id: "deals", label: "Deals" },
+              { id: "new", label: "New in" },
+              { id: "sellers", label: "Sellers" },
+            ]}
+            panels={{
+              discover: (
+                <>
+                  <ProductRow
+                    title="Today's Deals"
+                    badge="Ending soon"
+                    products={dealResults}
+                    viewAllHref="/search?is_deal=true"
+                    viewAllLabel="See all deals"
+                  />
+                  <ProductRow
+                    title="Under $20"
+                    products={underTwenty.results ?? []}
+                    viewAllHref="/search?max_price=20"
+                    viewAllLabel="See everything under $20"
+                  />
+                  <ForYouRail />
+                  <ProductRow
+                    title="New Arrivals"
+                    products={newArrivals.results ?? []}
+                    viewAllHref="/search?sort=newest"
+                    viewAllLabel="Explore all new items"
+                  />
+                  <SellerRail stores={(stores ?? []).slice(0, 8)} />
+                </>
+              ),
+              deals: (
+                <>
+                  <ProductRow
+                    title="Today's Deals"
+                    badge="Ending soon"
+                    products={dealResults}
+                    viewAllHref="/search?is_deal=true"
+                    viewAllLabel="See all deals"
+                  />
+                  <ProductRow
+                    title="Under $20"
+                    products={underTwenty.results ?? []}
+                    viewAllHref="/search?max_price=20"
+                    viewAllLabel="See everything under $20"
+                  />
+                </>
+              ),
+              new: (
+                <ProductRow
+                  title="New Arrivals"
+                  products={newArrivals.results ?? []}
+                  viewAllHref="/search?sort=newest"
+                  viewAllLabel="Explore all new items"
+                />
+              ),
+              sellers: <SellerRail stores={(stores ?? []).slice(0, 12)} />,
+            }}
           />
 
-          {/* 4. A price angle — fills honestly while the catalogue is small. */}
-          <ProductRow
-            title="Under $20"
-            products={underTwenty.results ?? []}
-            viewAllHref="/search?max_price=20"
-            viewAllLabel="See everything under $20"
-          />
-
-          {/* 5. Personalised. Self-hides for guests and thin histories. */}
-          <ForYouRail />
-
-          {/* 6. Freshness. */}
-          <ProductRow
-            title="New Arrivals"
-            products={newArrivals.results ?? []}
-            viewAllHref="/search?sort=newest"
-            viewAllLabel="Explore all new items"
-          />
-
-          {/* 7. Who you are actually buying from. */}
-          <SellerRail stores={(stores ?? []).slice(0, 12)} />
-
-          {/* 8. Seller recruitment, kept to one slim strip. */}
+          {/* 4. Seller recruitment, kept to one slim strip. */}
           <SellOnAfrotransactStrip />
 
-          {/* 9. Why buy here at all. */}
+          {/* 5. Why buy here at all. */}
           <TrustMissionBand />
         </GeoGate>
       </main>
