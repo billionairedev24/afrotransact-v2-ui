@@ -51,13 +51,18 @@ export function HeroSplit({ dealCount }: { dealCount: number }) {
           </div>
         </div>
 
-        {/* The live tile. */}
+        {/* The live tile.
+            Deliberately NOT brand-gold. The TickerBar directly above this is
+            bg-brand-gold, so a gold tile here put two large yellow blocks in
+            the first screenful and made the page read as cheap. Gold is now
+            reserved for exactly two things — the ticker, and the primary CTA —
+            so it still means "act on this" instead of being wallpaper. */}
         <Link
           href={hasDeals ? "/search?is_deal=true" : "/search?sort=newest"}
-          className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-brand-gold p-6 text-brand-gold-foreground transition hover:brightness-[0.97]"
+          className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-brand-dark p-6 text-brand-dark-foreground transition hover:brightness-125"
         >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-gold">
               {hasDeals ? "Today's deals" : "Just landed"}
             </p>
             <p className="mt-3 font-display text-2xl leading-tight md:text-3xl">
@@ -66,7 +71,7 @@ export function HeroSplit({ dealCount }: { dealCount: number }) {
                 : "New arrivals this week"}
             </p>
           </div>
-          <span className="mt-6 text-sm font-semibold underline-offset-4 group-hover:underline">
+          <span className="mt-6 text-sm font-semibold text-white/90 underline-offset-4 group-hover:underline">
             {hasDeals ? "See all deals" : "See what's new"} →
           </span>
         </Link>

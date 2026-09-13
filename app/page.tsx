@@ -10,14 +10,17 @@ import { CategoryRail } from "@/components/landing/CategoryRail"
 import { TrustMissionBand } from "@/components/landing/TrustMissionBand"
 import { ProductRow } from "@/components/landing/ProductRow"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
+import { SellerRail } from "@/components/landing/SellerRail"
 import { resolveHomepageCategories } from "@/lib/homepage-categories"
 import {
+  getAllStores,
   getCategories,
   getFeaturedDeals,
   searchProducts,
   type CategoryRef,
   type DealData,
   type SearchResult,
+  type StoreInfo,
 } from "@/lib/api"
 
 // Home is public, catalog-driven content: revalidate often enough to feel fresh,
@@ -55,7 +58,7 @@ function descendantTokens(root: CategoryRef): Set<string> {
 export default async function HomePage() {
   const emptySearch = { results: [] as SearchResult[] } as Awaited<ReturnType<typeof searchProducts>>
 
-  const [categories, featuredDeals, newArrivals, underTwenty, ratingPool] = await Promise.all([
+  const [categories, featuredDeals, newArrivals, underTwenty, ratingPool, stores] = await Promise.all([
     safe<CategoryRef[]>(getCategories({ revalidate: 300 }), []),
     // Sourced from the deals endpoint rather than searchProducts({is_deal}):
     // the search service silently ignores that filter and would return the
@@ -67,6 +70,9 @@ export default async function HomePage() {
     safe(searchProducts({ max_price: "20", size: "20" }, { revalidate: 120 }), emptySearch),
     // Supplies one representative photo per category circle.
     safe(searchProducts({ size: "96", sort_by: "rating" }, { revalidate: 60 }), emptySearch),
+    // Sellers are the differentiator, so they get a row rather than one hero
+    // button. Cached longer than the catalogue — the roster changes rarely.
+    safe<StoreInfo[]>(getAllStores({ revalidate: 300 }), []),
   ])
 
   // ── Category destinations ────────────────────────────────────────────────
@@ -175,10 +181,13 @@ export default async function HomePage() {
             viewAllLabel="Explore all new items"
           />
 
-          {/* 7. Seller recruitment, kept to one slim strip. */}
+          {/* 7. Who you are actually buying from. */}
+          <SellerRail stores={(stores ?? []).slice(0, 12)} />
+
+          {/* 8. Seller recruitment, kept to one slim strip. */}
           <SellOnAfrotransactStrip />
 
-          {/* 8. Why buy here at all. */}
+          {/* 9. Why buy here at all. */}
           <TrustMissionBand />
         </GeoGate>
       </main>
