@@ -27,6 +27,7 @@ import {
   Trash2, Package, MapPin, RotateCcw, Heart, Star,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { VariantAxisSelector } from "@/components/products/VariantAxisSelector"
 import ProductReviews from "@/components/reviews/ProductReviews"
 import { SellOnAfrotransactStrip } from "@/components/landing/SellOnAfrotransactStrip"
 import { useCartStore } from "@/stores/cart-store"
@@ -478,10 +479,32 @@ export default function ProductPageClient() {
             const named = product.variants.filter((v) => (v.name ?? "").trim() && v.name.toLowerCase() !== "default")
             const showPicker = named.length >= 1 && variant
             if (!showPicker) return null
+            // Canonical options (slice 1) let us group by axis and show
+            // colours as swatches. Decided HERE rather than from the returned
+            // element: the component returns null when there are no axes, but
+            // the JSX expression itself is always truthy, so testing it would
+            // hide the legacy picker on exactly the products that need it.
+            const hasCanonicalOptions = product.variants.some((v) => {
+              if (!v.options) return false
+              try {
+                const o = JSON.parse(v.options)
+                return !!o && typeof o === "object" && !Array.isArray(o) && Object.keys(o).length > 0
+              } catch {
+                return false
+              }
+            })
             return (
             <>
             <hr className="border-gray-200" />
             <div className="space-y-3">
+              {hasCanonicalOptions && (
+                <VariantAxisSelector
+                  variants={product.variants}
+                  selected={variant}
+                  onSelect={(v) => { setSelectedVariant(v); setQuantity(1) }}
+                />
+              )}
+              <div className={cn(hasCanonicalOptions && "hidden")}>
               <p className="text-sm">
                 <span className="text-gray-500">Option:</span>{" "}
                 <span className="font-bold text-foreground">{variant.name || "Default"}</span>
@@ -508,6 +531,7 @@ export default function ProductPageClient() {
                     </button>
                   )
                 })}
+              </div>
               </div>
             </div>
             </>

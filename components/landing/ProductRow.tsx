@@ -22,6 +22,7 @@
 import { useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { ProductPlaceholder } from "@/components/products/ProductPlaceholder"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
@@ -120,9 +121,7 @@ function MiniProductCard({ product }: { product: SearchResult }) {
               className="object-cover transition-transform group-hover:scale-105"
             />
           ) : (
-            <div className="absolute inset-0 bg-woven flex items-center justify-center">
-              <img src="/brand/logo-mark.svg" alt="" aria-hidden className="h-10 w-10 opacity-50" />
-            </div>
+            <ProductPlaceholder title={product.title} />
           )}
           {!product.in_stock && (
             <span className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-1 uppercase rounded-sm">

@@ -1,5 +1,6 @@
-import { Heart, ShoppingCart, Star, Leaf, Loader2 } from "lucide-react"
+import { Heart, ShoppingCart, Star, Loader2 } from "lucide-react"
 import Image from "next/image"
+import { ProductPlaceholder } from "@/components/products/ProductPlaceholder"
 import { cn } from "@/lib/utils"
 import { ProximityBadge } from "./proximity-badge"
 
@@ -63,7 +64,7 @@ export function ProductCard({
             priority={imagePriority}
           />
         ) : (
-          <Leaf className="h-12 w-12 text-muted-foreground/50" />
+          <ProductPlaceholder title={name} />
         )}
       </div>
 
