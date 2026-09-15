@@ -342,13 +342,11 @@ export default function CheckoutClientV2({
   // ─── region + region config ───────────────────────────────────────
   const [region, setRegion] = useState<Region | null>(null)
   const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
-  // configFeatures is now a legacy backstop for paymentMethods/threshold fetch;
-  // the *authoritative* feature map comes from the Service Zones resolver via
-  // useEffectiveFeatures below. We still call getRegionConfig for non-feature
-  // data (payment methods, free-shipping threshold).
-  const [configFeatures, setConfigFeatures] = useState<Record<string, boolean>>({})
-  const { features: zoneOrRegionFeatures, source: featuresSource } =
-    useEffectiveFeatures(region?.code ?? null)
+  // Feature flags come from ONE place: the Service Zones resolver, via
+  // useEffectiveFeatures. getRegionConfig is still called below, but only for
+  // non-feature data (payment methods); its `features` map is the legacy source
+  // that disagreed with the zone tree in production and is no longer read.
+  const { features: zoneFeatures } = useEffectiveFeatures()
   useEffect(() => {
     if (!mounted) return
     let cancelled = false
@@ -370,8 +368,9 @@ export default function CheckoutClientV2({
       try {
         const cfg = await getRegionConfig(region.code).catch(() => null)
         if (cancelled || !cfg) return
+        // paymentMethods ONLY — cfg.features is the legacy feature source
+        // and is deliberately not read here any more.
         setPaymentMethods(cfg.paymentMethods ?? [])
-        setConfigFeatures(cfg.features ?? {})
       } catch { /* non-fatal */ }
     })()
     return () => { cancelled = true }
@@ -910,8 +909,9 @@ export default function CheckoutClientV2({
 
   // ─── coupons (region-gated) ────────────────────────────────────────
   // Prefer zone-resolved features; fall back to the legacy region config map.
-  const effectiveFeatures =
-    Object.keys(zoneOrRegionFeatures).length > 0 ? zoneOrRegionFeatures : configFeatures
+  // One source. The per-region config used to back-stop this and silently
+  // disagreed with the zone tree in production — see useEffectiveFeatures.
+  const effectiveFeatures = zoneFeatures
   // "Global shipping" = realtime carrier shipping. When it's off we run a
   // courier-free delivery model, so the UI says "Delivery" rather than
   // "Shipping" (we don't hand parcels to a shipping provider). Prefer the
@@ -925,26 +925,10 @@ export default function CheckoutClientV2({
   // get "Coupons are not available in your region" back. Default to `true`
   // when the flag is missing so a broken feature fetch doesn't hide a
   // working coupon system.
-  //
-  // PRODUCTION BUG (iPhone 16, coupon box missing): the two feature sources
-  // disagree. Every zone in prod returns coupons_enabled TRUE, while the LEGACY
-  // per-region config returns FALSE for every region. useEffectiveFeatures
-  // prefers the zone and falls back to the region only when no zone resolved —
-  // so whether a buyer sees the coupon box depended on whether their device had
-  // a resolved zone. A desktop that had browsed before carried one in its
-  // persisted buyer-location store and saw the box; a real phone that denied
-  // location (or a fresh install with nothing persisted) fell through to the
-  // stale region config and lost it. That looked like "iOS hides the coupon
-  // box" and is actually contradictory config plus a fallback that can only
-  // ever turn features OFF.
-  //
-  // Zones supersede regions — the region path is explicitly legacy — so a
-  // legacy fallback must not be able to disable a feature the zone tree
-  // enables. Only an explicit zone-level false hides the input now.
-  const couponsEnabled =
-    featuresSource === "region"
-      ? true
-      : effectiveFeatures["coupons_enabled"] !== false
+  // Coupons are zone-gated. Defaults to ON when the flag is absent — an
+  // unresolved zone means "we do not know yet", and that must not silently
+  // take a working coupon system away from the buyer.
+  const couponsEnabled = effectiveFeatures["coupons_enabled"] !== false
   // Max coupons a buyer may stack, read off the SAME zone-resolve bundle that
   // carries coupons_enabled. Default 2 when absent (matches the backend
   // default); clamp to ≥1 so a bad config never hides the coupon input.
