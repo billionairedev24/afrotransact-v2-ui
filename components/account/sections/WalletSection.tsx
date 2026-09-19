@@ -41,6 +41,10 @@ const REASON_LABELS: Record<string, string> = {
   referral_referred: "Welcome credit — you were referred",
   checkout_redeem: "Redeemed at checkout",
   refund_reverse: "Refund reversal",
+  // Posted when a refunded order takes back a referral reward. Without an
+  // entry here it renders as the raw reason ("referral clawback"), which is
+  // the worst possible copy for a line that removes someone's money.
+  referral_clawback: "Referral reward reversed — order refunded",
 }
 
 function reasonLabel(reason: string) {
