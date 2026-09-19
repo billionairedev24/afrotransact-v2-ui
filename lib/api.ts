@@ -2513,6 +2513,12 @@ export interface ReferralSettings {
   reward_cents: number
   currency: string
   max_referrals_per_user: number
+  /**
+   * Spend required of a referred buyer before EITHER side is credited.
+   * 0 means no threshold: credit lands the moment the code is claimed.
+   * Optional because settings saved before this field existed omit it.
+   */
+  qualifying_spend_cents?: number
 }
 
 /** Public — no auth. Storefront (account hub Wallet, `?ref=` capture) reads this. */
@@ -5008,7 +5014,12 @@ export interface ReferralMeDto {
   link?: string
   rewardCents?: number
   currency?: string
+  /** Referrals that have paid out. */
   referredCount?: number
+  /** Referrals claimed but still waiting on the friend's qualifying purchase. */
+  pendingCount?: number
+  /** Spend a referred friend must make before either side is credited. 0/absent = no threshold. */
+  qualifyingSpendCents?: number
 }
 
 export interface StoreCreditEntryDto {
@@ -5030,6 +5041,14 @@ export interface ReferralClaimResponseDto {
   reason?: string
   rewardCents?: number
   currency?: string
+  /**
+   * The claim SUCCEEDED but the credit is held until this buyer spends
+   * `qualifyingSpendCents`. Distinct from `granted: false` on its own, which
+   * means the claim was rejected — never show an error for a pending claim.
+   */
+  pending?: boolean
+  /** Spend required to release the credit. Only set when `pending`. */
+  qualifyingSpendCents?: number
 }
 
 /**

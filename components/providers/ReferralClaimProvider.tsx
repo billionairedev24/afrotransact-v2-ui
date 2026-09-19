@@ -10,6 +10,11 @@
  * that carries an `atx_ref` cookie, it calls `POST /api/v1/referral/claim`,
  * which grants store credit to BOTH sides in one transaction.
  *
+ * When the referral program sets a qualifying-spend threshold, the claim comes
+ * back `pending` instead: accepted, but the credit is held until this buyer's
+ * first qualifying order. That is a success, not a denial — it clears the
+ * cookie and tells the buyer what to spend, and must never render as an error.
+ *
  * The claim is idempotent and fully guarded server-side (self-referral,
  * already-claimed, new-account-only window, per-referrer cap), so calling it
  * on every load while the cookie is present is safe. We clear the cookie on a
@@ -64,7 +69,25 @@ export function ReferralClaimProvider({ children }: { children: React.ReactNode 
     ;(async () => {
       try {
         const res = await claimReferral(token, code)
-        if (res.granted) {
+        if (res.pending) {
+          // Claim accepted, credit held until this buyer spends enough. This
+          // is a SUCCESS, so the cookie is done: the referral row exists and
+          // any further claim would be denied as "already".
+          clearReferralCookie()
+          const amount =
+            res.rewardCents != null
+              ? formatPrice(res.rewardCents, res.currency ?? "USD")
+              : "store credit"
+          const threshold =
+            res.qualifyingSpendCents != null
+              ? formatPrice(res.qualifyingSpendCents, res.currency ?? "USD")
+              : null
+          toast.success(`🎁 ${amount} in store credit is reserved for you`, {
+            description: threshold
+              ? `Spend ${threshold} on your first order and it's yours.`
+              : "Complete your first order to unlock it.",
+          })
+        } else if (res.granted) {
           clearReferralCookie()
           const amount =
             res.rewardCents != null
