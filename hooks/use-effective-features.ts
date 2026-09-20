@@ -1,12 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { getRegionConfig } from "@/lib/api"
 import { useBuyerLocation } from "@/stores/buyer-location"
 
 type FeatureMap = Record<string, boolean>
 
-export type EffectiveFeaturesSource = "zone" | "region" | "none"
+/** No "region" any more — there is exactly one source. */
+export type EffectiveFeaturesSource = "zone" | "none"
 
 export interface EffectiveFeaturesResult {
   features: FeatureMap
@@ -17,58 +16,36 @@ export interface EffectiveFeaturesResult {
 /**
  * Resolve feature flags for the current buyer.
  *
- * Order of precedence:
- *  1. `resolvedZone.effectiveFeatures` from the buyer-location store (set
- *     by the Service Zones resolver when a location is chosen).
- *  2. `getRegionConfig(fallbackRegionCode).features` — legacy per-region
- *     config path used before zones existed.
- *  3. Empty map.
+ * ONE source: `resolvedZone.effectiveFeatures`, set by the Service Zones
+ * resolver. There is deliberately no second source.
  *
- * The hook is intentionally tolerant: resolver miss, network errors, or
- * a missing fallback region all collapse silently to `source: "none"` so
- * downstream callers can default-on / default-off as they see fit.
+ * There used to be a fallback to `getRegionConfig(code).features`, the
+ * per-region config that predates zones. It caused a production bug that was
+ * hard to see: every zone returned `coupons_enabled: true` while every region
+ * still returned `coupons_enabled: false`, so whether a buyer saw the coupon
+ * box depended on whether their device happened to have resolved a zone. A
+ * desktop that had browsed before carried one in its persisted store and kept
+ * the box; a real phone that denied location, or a fresh device, fell through
+ * to the stale region config and lost it. It looked like an iOS bug and was
+ * two disagreeing config sources.
+ *
+ * Two sources for one answer will always eventually disagree, and the one that
+ * loses will be whichever the reader forgot about. So a resolver miss now
+ * returns an EMPTY map — "we do not know yet" — and callers default a missing
+ * flag to its safe value rather than being handed stale data.
  */
-export function useEffectiveFeatures(
-  fallbackRegionCode?: string | null,
-): EffectiveFeaturesResult {
+export function useEffectiveFeatures(): EffectiveFeaturesResult {
   const resolved = useBuyerLocation((s) => s.resolvedZone)
-  const [regionFeatures, setRegionFeatures] = useState<FeatureMap | null>(null)
-  const [loading, setLoading] = useState(false)
 
   const zoneHasFeatures =
     !!resolved && Object.keys(resolved.effectiveFeatures ?? {}).length > 0
 
-  useEffect(() => {
-    if (zoneHasFeatures) {
-      setRegionFeatures(null)
-      return
-    }
-    if (!fallbackRegionCode) {
-      setRegionFeatures(null)
-      return
-    }
-    let cancelled = false
-    setLoading(true)
-    getRegionConfig(fallbackRegionCode)
-      .then((cfg) => {
-        if (!cancelled) setRegionFeatures(cfg?.features ?? null)
-      })
-      .catch(() => {
-        if (!cancelled) setRegionFeatures(null)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [zoneHasFeatures, fallbackRegionCode])
-
   if (zoneHasFeatures && resolved) {
     return { features: resolved.effectiveFeatures, source: "zone", loading: false }
   }
-  if (regionFeatures) {
-    return { features: regionFeatures, source: "region", loading }
-  }
-  return { features: {}, source: "none", loading }
+  // No zone resolved yet. Deliberately returns EMPTY rather than falling back
+  // to per-region config: callers default a missing flag to its safe value, and
+  // "we do not know yet" must never be answered with stale data from a second
+  // source. See the note above for what that cost in production.
+  return { features: {}, source: "none", loading: false }
 }

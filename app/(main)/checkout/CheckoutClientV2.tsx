@@ -342,12 +342,11 @@ export default function CheckoutClientV2({
   // ─── region + region config ───────────────────────────────────────
   const [region, setRegion] = useState<Region | null>(null)
   const [paymentMethods, setPaymentMethods] = useState<RegionPaymentMethod[]>([])
-  // configFeatures is now a legacy backstop for paymentMethods/threshold fetch;
-  // the *authoritative* feature map comes from the Service Zones resolver via
-  // useEffectiveFeatures below. We still call getRegionConfig for non-feature
-  // data (payment methods, free-shipping threshold).
-  const [configFeatures, setConfigFeatures] = useState<Record<string, boolean>>({})
-  const { features: zoneOrRegionFeatures } = useEffectiveFeatures(region?.code ?? null)
+  // Feature flags come from ONE place: the Service Zones resolver, via
+  // useEffectiveFeatures. getRegionConfig is still called below, but only for
+  // non-feature data (payment methods); its `features` map is the legacy source
+  // that disagreed with the zone tree in production and is no longer read.
+  const { features: zoneFeatures } = useEffectiveFeatures()
   useEffect(() => {
     if (!mounted) return
     let cancelled = false
@@ -369,8 +368,9 @@ export default function CheckoutClientV2({
       try {
         const cfg = await getRegionConfig(region.code).catch(() => null)
         if (cancelled || !cfg) return
+        // paymentMethods ONLY — cfg.features is the legacy feature source
+        // and is deliberately not read here any more.
         setPaymentMethods(cfg.paymentMethods ?? [])
-        setConfigFeatures(cfg.features ?? {})
       } catch { /* non-fatal */ }
     })()
     return () => { cancelled = true }
@@ -391,6 +391,14 @@ export default function CheckoutClientV2({
     return p ? [p.firstName, p.lastName].filter(Boolean).join(" ") : ""
   })
   const [profilePhone, setProfilePhone] = useState<string>(initialContext?.profile?.phone ?? "")
+  /**
+   * A usable phone already on the account. When we have one, the address form
+   * does not ask again — the buyer has given it to us and asking a second time
+   * mid-checkout is friction that buys nothing. It is still editable behind a
+   * link for the case where THIS delivery needs a different number.
+   */
+  const hasProfilePhone = !!normalizeToE164(profilePhone ?? "", "US")
+  const [overridePhone, setOverridePhone] = useState(false)
   const [form, setForm] = useState({
     fullName: profileName || sessionName,
     line1: "", line2: "", city: "", state: "", zip: "", phone: profilePhone,
@@ -452,6 +460,7 @@ export default function CheckoutClientV2({
 
   function openNewAddress() {
     setAddrEditingId(null)
+    setOverridePhone(false)
     setForm({ fullName: profileName || sessionName, line1: "", line2: "", city: "", state: "", zip: "", phone: normalizeToE164(profilePhone, "US") })
     setAddressQuery("")
     setMakeDefault(addresses.length === 0)
@@ -459,6 +468,13 @@ export default function CheckoutClientV2({
   }
   function openEditAddress(a: UserAddress) {
     setAddrEditingId(a.id)
+    // An address carrying its own number differs from the account default, so
+    // open straight into the editable field rather than hiding that difference.
+    setOverridePhone(
+      !!(a.phone ?? "").trim() &&
+        normalizeToE164(a.phone ?? "", a.countryCode || "US") !==
+          normalizeToE164(profilePhone ?? "", "US"),
+    )
     setForm({
       fullName: profileName || sessionName,
       line1: a.line1, line2: a.line2 ?? "",
@@ -481,6 +497,12 @@ export default function CheckoutClientV2({
     const phoneE164 = normalizeToE164(form.phone ?? "", "US")
     if ((form.phone ?? "").trim() && !phoneE164) {
       toast.error("Enter a valid phone number including area code (e.g. +1 512 555 1234).")
+      return
+    }
+    // Required only when we have nothing on file. Couriers need a number, but
+    // a buyer who already gave us one should never be asked for it again.
+    if (!phoneE164 && !hasProfilePhone) {
+      toast.error("Add a phone number so the courier can reach you about this delivery.")
       return
     }
     setAddrSaving(true)
@@ -887,8 +909,9 @@ export default function CheckoutClientV2({
 
   // ─── coupons (region-gated) ────────────────────────────────────────
   // Prefer zone-resolved features; fall back to the legacy region config map.
-  const effectiveFeatures =
-    Object.keys(zoneOrRegionFeatures).length > 0 ? zoneOrRegionFeatures : configFeatures
+  // One source. The per-region config used to back-stop this and silently
+  // disagreed with the zone tree in production — see useEffectiveFeatures.
+  const effectiveFeatures = zoneFeatures
   // "Global shipping" = realtime carrier shipping. When it's off we run a
   // courier-free delivery model, so the UI says "Delivery" rather than
   // "Shipping" (we don't hand parcels to a shipping provider). Prefer the
@@ -902,6 +925,9 @@ export default function CheckoutClientV2({
   // get "Coupons are not available in your region" back. Default to `true`
   // when the flag is missing so a broken feature fetch doesn't hide a
   // working coupon system.
+  // Coupons are zone-gated. Defaults to ON when the flag is absent — an
+  // unresolved zone means "we do not know yet", and that must not silently
+  // take a working coupon system away from the buyer.
   const couponsEnabled = effectiveFeatures["coupons_enabled"] !== false
   // Max coupons a buyer may stack, read off the SAME zone-resolve bundle that
   // carries coupons_enabled. Default 2 when absent (matches the backend
@@ -2140,11 +2166,52 @@ export default function CheckoutClientV2({
             </div>
             <div className="p-6 space-y-4">
               <Field label="Full name" value={form.fullName} onChange={(v) => setForm({ ...form, fullName: v })} />
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
-                <PhoneInput value={form.phone} onChange={(e164) => setForm({ ...form, phone: e164 })} defaultCountry="US" className="w-full" />
-                <p className="mt-1 text-[11px] text-gray-500">Include your country and area code — used for delivery updates.</p>
-              </div>
+              {hasProfilePhone && !overridePhone ? (
+                // Already on file. Show it so the buyer can SEE which number
+                // the courier will use — a silent default is worse than a
+                // visible one — but do not make them re-enter it.
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                    <span className="text-sm font-medium text-gray-900">
+                      {normalizeToE164(profilePhone, "US") || profilePhone}
+                    </span>
+                    <span className="text-[11px] text-gray-500">from your account</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOverridePhone(true)
+                        setForm((f) => ({ ...f, phone: "" }))
+                      }}
+                      className="ml-auto text-xs font-semibold text-brand-green underline-offset-2 hover:underline"
+                    >
+                      Use a different number
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                    Phone {!hasProfilePhone && <span className="text-red-600">*</span>}
+                  </label>
+                  <PhoneInput value={form.phone} onChange={(e164) => setForm({ ...form, phone: e164 })} defaultCountry="US" className="w-full" />
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    Include your country and area code — used for delivery updates.
+                  </p>
+                  {hasProfilePhone && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOverridePhone(false)
+                        setForm((f) => ({ ...f, phone: normalizeToE164(profilePhone, "US") }))
+                      }}
+                      className="mt-1 text-xs font-semibold text-brand-green underline-offset-2 hover:underline"
+                    >
+                      Use the number on my account instead
+                    </button>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Street address</label>
                 <AddressAutocomplete
