@@ -24,4 +24,7 @@ export const features = {
   marketplaceEnabled: () => envBool("NEXT_PUBLIC_FEATURE_MARKETPLACE_ENABLED", true),
   /** Stripe payment method offering at checkout. */
   stripeEnabled: () => envBool("NEXT_PUBLIC_FEATURE_STRIPE_ENABLED", true),
+  /** Server-render the first /search result set. Off = the page falls back to
+   *  the pure client fetch it used before the SSR seed shipped. */
+  searchSsrEnabled: () => envBool("NEXT_PUBLIC_FEATURE_SEARCH_SSR", true),
 }

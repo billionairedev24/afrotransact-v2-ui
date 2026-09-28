@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -227,7 +227,25 @@ function ProductCard({ product, featured = false }: { product: SearchResult; fea
   )
 }
 
-export default function CategoryPageClient() {
+/** Server-rendered seed for the first paint. The server component resolves the
+ *  category tree and the first page of products so the grid ships in the initial
+ *  HTML; every later interaction (filters, paging, featured) still fetches
+ *  client-side exactly as before. `initialProducts` is null when the server
+ *  couldn't seed (error, `?page=2`, `?featured_id=`) — the client then fetches
+ *  on mount, which is the pre-SSR behavior. */
+export interface CategorySeed {
+  initialName?: string | null
+  initialQuerySlugs?: string[] | null
+  initialProducts?: SearchResult[] | null
+  initialTotal?: number
+}
+
+export default function CategoryPageClient({
+  initialName = null,
+  initialQuerySlugs = null,
+  initialProducts = null,
+  initialTotal = 0,
+}: CategorySeed = {}) {
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -239,16 +257,29 @@ export default function CategoryPageClient() {
   const featuredId = searchParams.get("featured_id") ?? searchParams.get("featured") ?? null
   const pageSize = 24
 
-  const [name, setName] = useState(slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
+  // The server seeded this render only when it matched the plain first page.
+  // Everything else (a `?page=`/`?featured_id=` deep link) fetches on mount as
+  // it always did.
+  const seedApplies = initialProducts !== null && page === 1 && !featuredId
+  // Consumed once: after the first client fetch (or any param change) the seed
+  // is stale and must never suppress a fetch again.
+  const seedUsed = useRef(seedApplies)
+  // The slug the seed belongs to; a client-side nav to another category clears
+  // it so the tree is re-resolved for the new slug.
+  const slugRef = useRef(seedApplies || initialQuerySlugs ? slug : null)
+
+  const [name, setName] = useState(
+    initialName ?? slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+  )
   const [featuredProduct, setFeaturedProduct] = useState<SearchResult | null>(null)
-  const [products, setProducts] = useState<SearchResult[]>([])
-  const [loading, setLoading] = useState(true)
+  const [products, setProducts] = useState<SearchResult[]>(seedApplies ? initialProducts! : [])
+  const [loading, setLoading] = useState(!seedApplies)
   const [error, setError] = useState<string | null>(null)
-  const [total, setTotal] = useState(0)
+  const [total, setTotal] = useState(seedApplies ? initialTotal : 0)
   // The category slugs to actually query: this category + all descendants, so
   // a parent category surfaces every product across its sub-categories. null
   // until resolved from the tree (gates the search so we don't flash "empty").
-  const [querySlugs, setQuerySlugs] = useState<string[] | null>(null)
+  const [querySlugs, setQuerySlugs] = useState<string[] | null>(initialQuerySlugs)
 
   // Category browse is intentionally NOT geo-filtered: buyers want to see
   // every product in a category regardless of where the seller ships from
@@ -261,6 +292,10 @@ export default function CategoryPageClient() {
 
   useEffect(() => {
     let cancelled = false
+    // The server already resolved the tree for this slug — don't re-fetch the
+    // categories just to compute the same slugs on mount.
+    if (initialQuerySlugs && slug === slugRef.current) return
+    slugRef.current = slug
     // Gate the product search until we've resolved this category's descendant
     // slugs from the tree (a parent must query all its children).
     setQuerySlugs(null)
@@ -278,6 +313,9 @@ export default function CategoryPageClient() {
   useEffect(() => {
     // Wait until we know which slugs to query (this category + descendants).
     if (!querySlugs) { setLoading(true); return }
+    // First paint of a server-seeded page: state already holds exactly what
+    // this fetch would return. Skip it once, then behave normally.
+    if (seedUsed.current) { seedUsed.current = false; return }
     setLoading(true)
     setError(null)
     setFeaturedProduct(null)
