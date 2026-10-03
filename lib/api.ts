@@ -2552,6 +2552,31 @@ export function updateReferralSettings(token: string, data: ReferralSettings) {
   return api<ReferralSettings>("/api/v1/admin/config/referral-settings", { method: "PUT", body: data, token })
 }
 
+/**
+ * Platform-wide WhatsApp community link rendered in every transactional email
+ * footer and the PDF receipt.
+ *
+ * `enabled` is separate from a non-empty URL on purpose: it lets an admin pull
+ * the link out of all outbound email immediately (a revoked or abused invite)
+ * without losing the URL they intend to put back.
+ */
+export interface WhatsAppSettings {
+  enabled: boolean
+  community_url: string
+}
+
+/**
+ * Admin-only — there is deliberately NO public route for this. The only other
+ * reader is notification-service, server-to-server over the internal router.
+ */
+export function getWhatsAppSettings(token: string) {
+  return api<WhatsAppSettings>("/api/v1/admin/config/whatsapp", { token })
+}
+
+export function updateWhatsAppSettings(token: string, data: WhatsAppSettings) {
+  return api<WhatsAppSettings>("/api/v1/admin/config/whatsapp", { method: "PUT", body: data, token })
+}
+
 /** Coupon stacking configuration. `max_stackable_coupons` in 1..10 (1 disables
  *  stacking — buyers can apply only a single coupon). */
 export interface CouponSettings {
