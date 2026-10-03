@@ -10,6 +10,8 @@ import {
   updatePaymentSettings,
   getAlertsSettings,
   updateAlertsSettings,
+  getWhatsAppSettings,
+  updateWhatsAppSettings,
   getAdminShippingSettings,
   putAdminShippingSettings,
   getAiSettings,
@@ -34,6 +36,7 @@ import {
   Globe,
   MapPin,
   Gift,
+  MessageCircle,
 } from "lucide-react"
 
 const INPUT_CLASS =
@@ -169,6 +172,13 @@ export default function SettingsPage() {
   const [slackWebhookUrl, setSlackWebhookUrl] = useState("")
   const [savingAlerts, setSavingAlerts] = useState(false)
 
+  // WhatsApp community link — rendered in every transactional email footer and
+  // the PDF receipt. Kept here rather than on its own page because it is a
+  // single field, like the Slack webhook directly above it.
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false)
+  const [whatsappUrl, setWhatsappUrl] = useState("")
+  const [savingWhatsapp, setSavingWhatsapp] = useState(false)
+
   useEffect(() => {
     if (status !== "authenticated") { setLoading(false); return }
     let cancelled = false
@@ -177,11 +187,12 @@ export default function SettingsPage() {
       const token = await getAccessToken()
       if (!token) { if (!cancelled) setLoading(false); return }
 
-      const [payResult, shipResult, aiResult, alertsResult] = await Promise.allSettled([
+      const [payResult, shipResult, aiResult, alertsResult, whatsappResult] = await Promise.allSettled([
         getPaymentSettings(token),
         getAdminShippingSettings(token),
         getAiSettings(token),
         getAlertsSettings(token),
+        getWhatsAppSettings(token),
       ])
 
       if (!cancelled) {
@@ -212,6 +223,14 @@ export default function SettingsPage() {
         } else {
           logError(alertsResult.reason, "settings.loadAlerts")
           toast.error(describeSettingsError("Alerts settings", alertsResult.reason))
+        }
+
+        if (whatsappResult.status === "fulfilled") {
+          setWhatsappEnabled(whatsappResult.value.enabled ?? false)
+          setWhatsappUrl(whatsappResult.value.community_url ?? "")
+        } else {
+          logError(whatsappResult.reason, "settings.loadWhatsApp")
+          toast.error(describeSettingsError("WhatsApp community settings", whatsappResult.reason))
         }
 
         if (aiResult.status === "fulfilled") {
@@ -277,6 +296,34 @@ export default function SettingsPage() {
       toast.error(describeSettingsError("Alerts settings were not saved", err))
     } finally {
       setSavingAlerts(false)
+    }
+  }
+
+  async function handleSaveWhatsApp() {
+    const token = await getAccessToken()
+    if (!token) return
+    const url = whatsappUrl.trim()
+    // Mirrors the server-side check in config-service so a bad paste fails
+    // before the round trip. The server validates regardless — this link is
+    // rendered into every customer email, so it is never trusted from here.
+    if (url !== "" && !/^https:\/\/(chat\.whatsapp\.com|wa\.me)\/.+/.test(url)) {
+      toast.error("Use a https://chat.whatsapp.com/… invite or a https://wa.me/… link.")
+      return
+    }
+    setSavingWhatsapp(true)
+    try {
+      const updated = await updateWhatsAppSettings(token, {
+        enabled: whatsappEnabled,
+        community_url: url,
+      })
+      setWhatsappEnabled(updated.enabled)
+      setWhatsappUrl(updated.community_url)
+      toast.success("WhatsApp community link saved")
+    } catch (err) {
+      logError(err, "settings.saveWhatsApp")
+      toast.error(describeSettingsError("WhatsApp community link was not saved", err))
+    } finally {
+      setSavingWhatsapp(false)
     }
   }
 
@@ -537,6 +584,67 @@ export default function SettingsPage() {
             </button>
             {slackEnabled && slackWebhookUrl && (
               <span className="text-xs text-gray-500">Slack delivery active</span>
+            )}
+          </div>
+        </div>
+      </Section>
+
+      <Section
+        icon={MessageCircle}
+        title="WhatsApp community"
+        subtitle="The community link in every transactional email footer and on PDF receipts."
+        anchorId="whatsapp"
+      >
+        <div className="space-y-4">
+          <label className="flex items-center gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={whatsappEnabled}
+              onChange={(e) => setWhatsappEnabled(e.target.checked)}
+              className="h-4 w-4 rounded border-input accent-primary"
+            />
+            <span className="font-medium text-gray-900">Show the WhatsApp link in emails and receipts</span>
+          </label>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500">
+              Community link
+            </label>
+            <input
+              type="url"
+              inputMode="url"
+              value={whatsappUrl}
+              onChange={(e) => setWhatsappUrl(e.target.value)}
+              placeholder="https://chat.whatsapp.com/your-invite-code"
+              autoComplete="off"
+              className={INPUT_CLASS + " font-mono text-xs"}
+            />
+            <p className="mt-1.5 text-xs text-gray-500 leading-relaxed">
+              Paste a community or group invite (<span className="font-mono">chat.whatsapp.com</span>) or a
+              direct link to a number (<span className="font-mono">wa.me</span>). Because this is stored as a
+              setting, rotating a revoked invite takes effect without a release. Changes reach outbound email
+              within about a minute.
+            </p>
+            <p className="mt-1.5 text-xs text-gray-500 leading-relaxed">
+              A group invite is open-join and shows every member&apos;s phone number to the others. For a link
+              that sits in every receipt, a broadcast-only Channel exposes nobody.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={handleSaveWhatsApp}
+              disabled={savingWhatsapp || loading}
+              className="flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2 text-sm font-bold text-[#0f0f10] hover:bg-brand-gold-hover transition-colors disabled:opacity-50"
+            >
+              {savingWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save WhatsApp Link
+            </button>
+            {whatsappEnabled && whatsappUrl.trim() !== "" ? (
+              <span className="text-xs text-gray-500">Showing in emails and receipts</span>
+            ) : (
+              <span className="text-xs text-gray-500">Hidden — emails omit the WhatsApp link entirely</span>
             )}
           </div>
         </div>
