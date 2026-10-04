@@ -2105,6 +2105,7 @@ export default function CheckoutClientV2({
                   // "Your order total changed."
                   totalCents={dCharge}
                   saveCard={saveCard}
+                  intentSetupFutureUsage={checkoutResult?.setupFutureUsage}
                   onSaveCardChange={setSaveCard}
                   savedCards={savedCards}
                   selectedSavedCardId={selectedSavedCardId}
@@ -2355,6 +2356,9 @@ type InlinePaymentProps = {
   saveCard: boolean
   /** Mirrors the PaymentIntent's capture_method into the Elements options. */
   manualCapture: boolean
+  /** The intent's REAL setup_future_usage, for the pre-confirm assertion.
+   *  undefined when the backend doesn't report it yet. */
+  intentSetupFutureUsage?: string | null
   onSaveCardChange: (next: boolean) => void
   savedCards: SavedPaymentMethod[]
   selectedSavedCardId: string | null
@@ -2379,7 +2383,31 @@ const InlinePayment = forwardRef<PaymentHandle, InlinePaymentProps>(function Inl
     // WIPED the card the buyer had already typed whenever they ticked "save
     // card" (or the PI re-minted). A stable key keeps the iframe mounted; Stripe
     // updates the option in place, and the re-minted PI still syncs at confirm.
+    // `key` forces a clean remount when the buyer's save-card choice changes.
+    //
+    // Why a remount and not just elements.update(): setting a value through
+    // update demonstrably works (that is how the intent's captureMethod
+    // reaches Elements after the mint), but CLEARING one is not something we
+    // can rely on — and clearing is exactly what unticking "save card"
+    // requires. A stuck "off_session" on Elements against an intent the server
+    // has correctly reset to null is precisely the mismatch Stripe refuses:
+    //
+    //   The provided setup_future_usage(null) does not match the expected
+    //   setup_future_usage(off_session).
+    //
+    // Remounting is correct whichever way update() behaves, so it takes the
+    // question off the table. It is keyed on `saveCard` — the buyer's own
+    // choice, known BEFORE the intent is minted — and deliberately NOT on
+    // anything derived from `checkoutResult`. The new-card path mints on Pay
+    // click and confirms immediately afterwards, so a key that changed at mint
+    // time would tear the iframe down mid-confirm and destroy the card the
+    // buyer just typed.
+    //
+    // The cost is that toggling the checkbox clears a half-typed card, which is
+    // why the checkbox now sits ABOVE the payment form: the choice is made
+    // before there is anything to lose.
     <Elements
+      key={saveCard ? "sfu-off-session" : "sfu-none"}
       stripe={getV2Stripe()}
       options={{
         mode: "payment",
@@ -2423,6 +2451,7 @@ function InlinePaymentForm({
   checkoutSessionId,
   totalCents,
   saveCard,
+  intentSetupFutureUsage,
   onSaveCardChange,
   savedCards,
   selectedSavedCardId,
@@ -2479,6 +2508,28 @@ function InlinePaymentForm({
         return false
       }
 
+      // Elements and the intent MUST agree on setup_future_usage; deferred mode
+      // refuses the confirmation outright when they don't, with a message no
+      // buyer can act on and that we never see. We now know the intent's real
+      // value, so catch the disagreement here and say something useful.
+      //
+      // Skipped when the backend doesn't report the field (undefined), so this
+      // keeps working against an older order-service.
+      if (intentSetupFutureUsage !== undefined) {
+        const elementsSfu = saveCard ? "off_session" : null
+        const intentSfu = intentSetupFutureUsage ?? null
+        if (elementsSfu !== intentSfu) {
+          logError(
+            new Error(
+              `setup_future_usage mismatch: elements=${String(elementsSfu)} intent=${String(intentSfu)}`,
+            ),
+            "checkout.sfuMismatch",
+          )
+          onError("Your payment setup got out of sync. Please re-enter your card and try again.")
+          return false
+        }
+      }
+
       const { error: submitError } = await elements.submit()
       if (submitError) {
         onError(submitError.message ?? "Payment validation failed.")
@@ -2502,7 +2553,7 @@ function InlinePaymentForm({
       }
       return true
     },
-  }), [stripe, elements, clientSecret, checkoutSessionId, totalCents, usingSaved, selectedSavedCardId, onError])
+  }), [stripe, elements, clientSecret, checkoutSessionId, totalCents, usingSaved, selectedSavedCardId, saveCard, intentSetupFutureUsage, onError])
 
   // Track the currently-selected payment-method type from Stripe's PaymentElement
   // so the "save for next time" checkbox can name the right thing (card / bank
@@ -2594,11 +2645,12 @@ function InlinePaymentForm({
 
       {!usingSaved && (
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <PaymentElement
-            options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }}
-            onChange={(e) => { if (e.value?.type) setPmType(e.value.type) }}
-          />
-          <label className="mt-4 flex items-center gap-2 cursor-pointer">
+          {/* Deliberately ABOVE the payment form. Toggling this remounts
+              Elements (see the `key` on <Elements>), which clears anything
+              already typed — so the choice is offered before there is a card to
+              lose, rather than underneath the form where ticking it late used
+              to be the natural gesture. */}
+          <label className="mb-4 flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={saveCard}
@@ -2607,6 +2659,10 @@ function InlinePaymentForm({
             />
             <span className="text-sm text-foreground">{saveLabel}</span>
           </label>
+          <PaymentElement
+            options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }}
+            onChange={(e) => { if (e.value?.type) setPmType(e.value.type) }}
+          />
         </div>
       )}
 
