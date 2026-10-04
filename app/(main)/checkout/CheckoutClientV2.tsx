@@ -2105,6 +2105,7 @@ export default function CheckoutClientV2({
                   // "Your order total changed."
                   totalCents={dCharge}
                   saveCard={saveCard}
+                  intentSetupFutureUsage={checkoutResult?.setupFutureUsage}
                   onSaveCardChange={setSaveCard}
                   savedCards={savedCards}
                   selectedSavedCardId={selectedSavedCardId}
@@ -2355,6 +2356,9 @@ type InlinePaymentProps = {
   saveCard: boolean
   /** Mirrors the PaymentIntent's capture_method into the Elements options. */
   manualCapture: boolean
+  /** The intent's REAL setup_future_usage, for the pre-confirm assertion.
+   *  undefined when the backend doesn't report it yet. */
+  intentSetupFutureUsage?: string | null
   onSaveCardChange: (next: boolean) => void
   savedCards: SavedPaymentMethod[]
   selectedSavedCardId: string | null
@@ -2447,6 +2451,7 @@ function InlinePaymentForm({
   checkoutSessionId,
   totalCents,
   saveCard,
+  intentSetupFutureUsage,
   onSaveCardChange,
   savedCards,
   selectedSavedCardId,
@@ -2503,6 +2508,28 @@ function InlinePaymentForm({
         return false
       }
 
+      // Elements and the intent MUST agree on setup_future_usage; deferred mode
+      // refuses the confirmation outright when they don't, with a message no
+      // buyer can act on and that we never see. We now know the intent's real
+      // value, so catch the disagreement here and say something useful.
+      //
+      // Skipped when the backend doesn't report the field (undefined), so this
+      // keeps working against an older order-service.
+      if (intentSetupFutureUsage !== undefined) {
+        const elementsSfu = saveCard ? "off_session" : null
+        const intentSfu = intentSetupFutureUsage ?? null
+        if (elementsSfu !== intentSfu) {
+          logError(
+            new Error(
+              `setup_future_usage mismatch: elements=${String(elementsSfu)} intent=${String(intentSfu)}`,
+            ),
+            "checkout.sfuMismatch",
+          )
+          onError("Your payment setup got out of sync. Please re-enter your card and try again.")
+          return false
+        }
+      }
+
       const { error: submitError } = await elements.submit()
       if (submitError) {
         onError(submitError.message ?? "Payment validation failed.")
@@ -2526,7 +2553,7 @@ function InlinePaymentForm({
       }
       return true
     },
-  }), [stripe, elements, clientSecret, checkoutSessionId, totalCents, usingSaved, selectedSavedCardId, onError])
+  }), [stripe, elements, clientSecret, checkoutSessionId, totalCents, usingSaved, selectedSavedCardId, saveCard, intentSetupFutureUsage, onError])
 
   // Track the currently-selected payment-method type from Stripe's PaymentElement
   // so the "save for next time" checkbox can name the right thing (card / bank

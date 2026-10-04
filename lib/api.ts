@@ -2136,6 +2136,16 @@ export interface CheckoutResponse {
    * authorization ever existed.
    */
   manualCapture?: boolean
+  /**
+   * The PaymentIntent's ACTUAL `setup_future_usage` — "off_session" when the
+   * card is being saved, null/absent otherwise.
+   *
+   * Same contract as `manualCapture`: Elements runs in deferred mode and
+   * validates its own options against the intent at confirm time, so the client
+   * must mirror what the intent really holds rather than infer it from the
+   * "save card" checkbox. Absent when the backend predates this field.
+   */
+  setupFutureUsage?: string | null
   status: string
   /** Phase 2 session-mode: when present, no Order row exists yet — the buyer
    *  must be redirected through Stripe back to /checkout/complete?session=…
