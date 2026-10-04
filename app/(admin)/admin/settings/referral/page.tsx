@@ -20,9 +20,11 @@ const EMPTY_SETTINGS: ReferralSettings = {
   reward_cents: 0,
   currency: "USD",
   max_referrals_per_user: 0,
+  qualifying_spend_cents: 0,
 }
 
 const MAX_REWARD_DOLLARS = 10_000
+const MAX_QUALIFYING_SPEND_DOLLARS = 10_000
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -53,6 +55,7 @@ export default function AdminReferralSettingsPage() {
   const [settings, setSettings] = useState<ReferralSettings>(EMPTY_SETTINGS)
   const [rewardDollars, setRewardDollars] = useState<number>(0)
   const [maxReferralsPerUser, setMaxReferralsPerUser] = useState<number>(0)
+  const [qualifyingSpendDollars, setQualifyingSpendDollars] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -65,6 +68,7 @@ export default function AdminReferralSettingsPage() {
       setSettings(data)
       setRewardDollars((data.reward_cents ?? 0) / 100)
       setMaxReferralsPerUser(data.max_referrals_per_user ?? 0)
+      setQualifyingSpendDollars((data.qualifying_spend_cents ?? 0) / 100)
     } catch (e) {
       logError(e, "referralSettings.load")
       toast.error(describeReferralError(e))
@@ -92,6 +96,14 @@ export default function AdminReferralSettingsPage() {
       toast.error("Max referrals per user must be a whole number of zero or greater.")
       return
     }
+    if (Number.isNaN(qualifyingSpendDollars) || qualifyingSpendDollars < 0) {
+      toast.error("Required spend must be zero or greater.")
+      return
+    }
+    if (qualifyingSpendDollars > MAX_QUALIFYING_SPEND_DOLLARS) {
+      toast.error(`Required spend can't exceed $${MAX_QUALIFYING_SPEND_DOLLARS.toLocaleString()}.`)
+      return
+    }
 
     setSaving(true)
     try {
@@ -100,11 +112,13 @@ export default function AdminReferralSettingsPage() {
         reward_cents: Math.round(rewardDollars * 100),
         currency: "USD",
         max_referrals_per_user: maxReferralsPerUser,
+        qualifying_spend_cents: Math.round(qualifyingSpendDollars * 100),
       }
       const updated = await updateReferralSettings(token, payload)
       setSettings(updated)
       setRewardDollars((updated.reward_cents ?? 0) / 100)
       setMaxReferralsPerUser(updated.max_referrals_per_user ?? 0)
+      setQualifyingSpendDollars((updated.qualifying_spend_cents ?? 0) / 100)
       toast.success("Referral settings saved")
     } catch (err) {
       logError(err, "referralSettings.save")
@@ -193,6 +207,29 @@ export default function AdminReferralSettingsPage() {
               />
               <p className="text-xs text-gray-400 mt-1.5">
                 Caps how many rewarded referrals a single referrer can earn. Guards against reward farming.
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">
+                Required spend to unlock ($, 0 = pay out immediately)
+              </label>
+              <div className="relative max-w-[180px]">
+                <span className="absolute left-3 top-2.5 text-xs text-gray-400">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={MAX_QUALIFYING_SPEND_DOLLARS}
+                  step={0.01}
+                  value={qualifyingSpendDollars}
+                  onChange={(e) => setQualifyingSpendDollars(Number(e.target.value))}
+                  className={`${INPUT_CLASS} pl-6`}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                A new buyer must spend this much before either side is credited. Measured on
+                the order subtotal, so shipping and tax don&apos;t count. Changing this only
+                affects referrals claimed from now on &mdash; anyone already waiting keeps the
+                amount they were promised.
               </p>
             </div>
           </div>

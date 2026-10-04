@@ -102,6 +102,7 @@ import {
   type UserAddress,
   type ValidateCouponResponse,
   type ResolvedZone,
+  getStoreCreditMe,
 } from "@/lib/api"
 
 // A store name that is actually a raw UUID (storeId used as a placeholder
@@ -1139,6 +1140,12 @@ export default function CheckoutClientV2({
   const [minting, setMinting] = useState(false)
   const [placeError, setPlaceError] = useState<string | null>(null)
   const idempotencyKeyRef = useRef<string | null>(null)
+
+  // Store credit is OPT-IN: nothing is debited until the buyer asks for it.
+  // Reserving writes a real debit server-side, so silently applying it would
+  // spend a balance the buyer may be saving for something else.
+  const [applyStoreCredit, setApplyStoreCredit] = useState(false)
+  const [creditBalanceCents, setCreditBalanceCents] = useState(0)
   const placingRef = useRef(false)
 
   // Reset the PI whenever the inputs that determine its amount change. This
@@ -1154,7 +1161,7 @@ export default function CheckoutClientV2({
   useEffect(() => {
     idempotencyKeyRef.current = null
     setCheckoutResult(null)
-  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard, appliedCouponsKey, allPickupSelected, groupMethod])
+  }, [selectedAddressId, selectedQuoteId, subtotal, region?.id, saveCard, appliedCouponsKey, allPickupSelected, groupMethod, applyStoreCredit])
 
   // ── Amazon-way: the backend's minted order is the SINGLE source of truth for
   //    what the card will be charged. Once `checkoutResult` exists we display
@@ -1234,6 +1241,9 @@ export default function CheckoutClientV2({
         selectedShippingService: allPickupSelected ? "PICKUP" : (freeShippingApplies ? undefined : selectedQuote?.serviceCode),
         selectedShippingAmountCents: shippingCents,
         saveCard,
+        // Explicit on web. The backend treats ABSENT as "old client, keep
+        // applying" for the mobile app, so this must always be sent.
+        applyStoreCredit,
         couponCodes: appliedCoupons.length > 0 ? appliedCoupons.map((c) => c.code) : undefined,
         // Omitted entirely (undefined) unless at least one store in the cart
         // actually offers pickup — this is what keeps a ship-only cart's
@@ -1274,7 +1284,7 @@ export default function CheckoutClientV2({
       placingRef.current = false
       setMinting(false)
     }
-  }, [authToken, region, selectedAddress, effectiveItems, isBuyNow, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, appliedCoupons, profileName, profilePhone, sessionName, router])
+  }, [authToken, region, selectedAddress, effectiveItems, isBuyNow, checkoutResult, selectedQuote, allPickupSelected, primaryPickupOption, anyPickupOffered, fulfillmentGroups, payloadShipCents, groupMethod, storePickupByStoreId, saveCard, applyStoreCredit, appliedCoupons, profileName, profilePhone, sessionName, router])
 
   // ─── place order ───────────────────────────────────────────────────
   const paymentHandleRef = useRef<PaymentHandle | null>(null)
@@ -1302,6 +1312,16 @@ export default function CheckoutClientV2({
     const sid = checkoutResult?.checkoutSessionId
     router.push(sid ? `/checkout/complete?session=${encodeURIComponent(sid)}` : "/checkout/complete")
   }, [isBuyNow, clearBuyNow, clearCart, router, checkoutResult])
+
+  // Balance drives whether the opt-in row is worth showing at all.
+  useEffect(() => {
+    if (!authToken) { setCreditBalanceCents(0); return }
+    let cancelled = false
+    getStoreCreditMe(authToken)
+      .then((r) => { if (!cancelled) setCreditBalanceCents(r?.balanceCents ?? 0) })
+      .catch(() => { /* no wallet, or unreachable — just don't offer it */ })
+    return () => { cancelled = true }
+  }, [authToken])
 
   // Pre-mint the PI as soon as we have an address + rate, so clientSecret is
   // ready by the time the buyer scrolls to payment. mintIntent is idempotent
@@ -2038,6 +2058,32 @@ export default function CheckoutClientV2({
                 <dt className={cn("font-bold text-gray-900", dCredit > 0 ? "text-sm" : "text-base")}>{totalsAreFinal ? "Order total" : "Estimated total"}</dt>
                 <dd className={cn("font-bold text-gray-900 tabular-nums", dCredit > 0 ? "text-sm" : "text-base")}>{formatCents(dTotal)}</dd>
               </div>
+              {/* Opt-in row. Shown whenever the buyer has a balance, so credit
+                  is offered rather than spent on their behalf — reserving it
+                  writes a real debit, and they may be saving it. Toggling
+                  re-prices through the same path as any other pricing change. */}
+              {creditBalanceCents > 0 && (
+                <label className="mt-2 flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                  <span className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={applyStoreCredit}
+                      onChange={(e) => setApplyStoreCredit(e.target.checked)}
+                      disabled={minting}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
+                    />
+                    <span className="text-sm">
+                      <span className="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-100">
+                        <Wallet className="h-3.5 w-3.5" /> Use my store credit
+                      </span>
+                      <span className="mt-0.5 block text-xs text-gray-600 dark:text-gray-400">
+                        {formatCents(creditBalanceCents)} available
+                        {applyStoreCredit && minting ? " · updating total…" : ""}
+                      </span>
+                    </span>
+                  </span>
+                </label>
+              )}
               {dCredit > 0 && (
                 <>
                   <div className="flex justify-between italic text-emerald-700 dark:text-emerald-400">
