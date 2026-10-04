@@ -2392,8 +2392,25 @@ const InlinePayment = forwardRef<PaymentHandle, InlinePaymentProps>(function Inl
         // mints a manual-capture intent makes Stripe reject every confirmation
         // ("provided capture_method (manual) does not match the expected
         // capture_method (automatic)") — which is exactly how checkout broke.
-        ...(manualCapture ? { captureMethod: "manual" as const } : {}),
-        ...(saveCard ? { setupFutureUsage: "off_session" as const } : {}),
+        //
+        // These keys MUST be present on every render, never spread in
+        // conditionally. react-stripe-js diffs the options with
+        // `extractAllowedOptionsUpdates`, which reduces over
+        // `Object.keys(newOptions)` — so a key that is ABSENT from the new
+        // object can never produce an `elements.update()` call. Removing
+        // `setupFutureUsage` when the buyer unticks "save card" therefore left
+        // Elements permanently on "off_session" while the server correctly
+        // reconciled the intent back to null, and Stripe refused every
+        // confirmation:
+        //
+        //   The provided setup_future_usage(null) does not match the expected
+        //   setup_future_usage(off_session).
+        //
+        // ("provided" is the intent, "expected" is the Elements config.) Passing
+        // the value explicitly — null to clear, which Stripe accepts for both
+        // create and update — makes the diff see the change and push it through.
+        captureMethod: manualCapture ? ("manual" as const) : ("automatic" as const),
+        setupFutureUsage: saveCard ? ("off_session" as const) : null,
       }}
     >
       <InlinePaymentForm {...props} handleRef={ref} />
