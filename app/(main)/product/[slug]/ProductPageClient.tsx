@@ -65,6 +65,14 @@ function parseDescription(raw: string): { bullets: string[]; lead: string } {
   return { bullets, lead: rest.join("\n\n") }
 }
 
+/** First variant with stock, else the first variant, else null. Keeps the
+ *  detail page's default selection consistent with the listing's
+ *  "any variant in stock" view of the same product. */
+function firstSellableVariant(variants?: ProductVariant[] | null): ProductVariant | null {
+  if (!variants || variants.length === 0) return null
+  return variants.find((v) => (v.stockQuantity ?? 0) > 0) ?? variants[0]
+}
+
 export default function ProductPageClient() {
   const params = useParams()
   const router = useRouter()
@@ -117,7 +125,14 @@ export default function ProductPageClient() {
           : await getProductBySlug(slug).catch(() => getProductById(slug))
         if (cancelled) return
         setProduct(data)
-        setSelectedVariant(data.variants[0] ?? null)
+        // Default to the first variant that can actually be bought. Opening on
+        // variants[0] regardless of stock is why a product the listing shows as
+        // available renders "Out of Stock" the moment you click it: the listing
+        // asks "does ANY variant have stock", the detail page asks "does THIS
+        // one", and they disagree whenever the first variant is the sold-out
+        // one. Falls back to variants[0] when nothing is in stock, so a
+        // genuinely sold-out product still renders.
+        setSelectedVariant(firstSellableVariant(data.variants))
 
         trackEvent({
           event_type: "view",
@@ -170,7 +185,7 @@ export default function ProductPageClient() {
   const reviewsEnabled = features.reviewsEnabled()
   const marketplaceEnabled = features.marketplaceEnabled()
 
-  const variant = selectedVariant ?? product?.variants[0] ?? null
+  const variant = selectedVariant ?? firstSellableVariant(product?.variants) ?? null
   const inStock = variant ? variant.stockQuantity > 0 : false
 
   // Honest delivery line: only claim "Free" when the buyer's resolved zone is
