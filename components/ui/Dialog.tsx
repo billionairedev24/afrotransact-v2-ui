@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useRef, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -13,6 +14,9 @@ interface DialogProps {
 
 export function Dialog({ open, onClose, children, className }: DialogProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  // createPortal needs document.body, which does not exist during SSR.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   useEffect(() => {
     if (!open) return
@@ -27,10 +31,21 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
     }
   }, [open, onClose])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  // Portal onto <body>, exactly as Sheet does, and sit ABOVE it.
+  //
+  // Sheet portals to the end of <body> while Dialog used to render inline in
+  // the page tree. With both at z-50 the tie was broken by DOM order, so the
+  // slide-over always painted over a dialog opened from inside it — the edit
+  // modal on the admin products page was invisible until the sheet was closed.
+  // Portalling also frees the dialog from any ancestor `overflow` or
+  // transform that would otherwise clip it.
+  //
+  // z-[60] encodes the rule rather than relying on order: a dialog is the
+  // focused, blocking layer, so it belongs above a sheet.
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div
         ref={overlayRef}
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -44,7 +59,8 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

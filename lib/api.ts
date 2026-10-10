@@ -1804,6 +1804,24 @@ export function updateVariantPrice(
   })
 }
 
+/** Set a variant's absolute stock quantity.
+ *
+ *  Catalog stock is normally projected FROM inventory, so an admin edit here is
+ *  a manual override — useful while inventory is out of sync, and the reason
+ *  `updateVariantPrice` deliberately omits the field. The catalog republishes
+ *  product.variant_stock_changed (carrying the product-level aggregate), so
+ *  search picks the change up without a reindex.
+ *
+ *  Note: with at.catalog.inventory-stock-sync.enabled left on, the next
+ *  inv.stock.v1 event for this variant will overwrite whatever is set here. */
+export function updateVariantStock(token: string, variantId: string, quantity: number) {
+  return api<void>(`/api/v1/products/variants/${variantId}/stock`, {
+    method: "PATCH",
+    body: { quantity },
+    token,
+  })
+}
+
 export function addProductImage(
   token: string,
   productId: string,
@@ -2145,6 +2163,16 @@ export interface CheckoutResponse {
    * authorization ever existed.
    */
   manualCapture?: boolean
+  /**
+   * The PaymentIntent's ACTUAL `setup_future_usage` — "off_session" when the
+   * card is being saved, null/absent otherwise.
+   *
+   * Same contract as `manualCapture`: Elements runs in deferred mode and
+   * validates its own options against the intent at confirm time, so the client
+   * must mirror what the intent really holds rather than infer it from the
+   * "save card" checkbox. Absent when the backend predates this field.
+   */
+  setupFutureUsage?: string | null
   status: string
   /** Phase 2 session-mode: when present, no Order row exists yet — the buyer
    *  must be redirected through Stripe back to /checkout/complete?session=…

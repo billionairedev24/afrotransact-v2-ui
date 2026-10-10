@@ -41,6 +41,7 @@ import {
   approveProduct,
   rejectProduct,
   updateVariantPrice,
+  updateVariantStock,
   updateProduct,
   triggerSearchReindex,
   triggerSearchPurge,
@@ -518,11 +519,13 @@ export default function AdminProductsPage() {
           product={priceEdit.product}
           variant={priceEdit.variant}
           onClose={() => setPriceEdit(null)}
-          onSaved={(price, compareAtPrice) => {
+          onSaved={(price, compareAtPrice, stockQuantity) => {
             const updated: Product = {
               ...priceEdit.product,
               variants: priceEdit.product.variants.map((vv) =>
-                vv.id === priceEdit.variant.id ? { ...vv, price, compareAtPrice } : vv,
+                vv.id === priceEdit.variant.id
+                  ? { ...vv, price, compareAtPrice, stockQuantity }
+                  : vv,
               ),
             }
             applyProductUpdate(updated)
@@ -975,12 +978,13 @@ function PriceEditDialog({
   product: Product
   variant: ProductVariant
   onClose: () => void
-  onSaved: (price: number, compareAtPrice: number | null) => void
+  onSaved: (price: number, compareAtPrice: number | null, stockQuantity: number) => void
 }) {
   const [price, setPrice] = useState(String(variant.price))
   const [compareAt, setCompareAt] = useState(
     variant.compareAtPrice != null ? String(variant.compareAtPrice) : "",
   )
+  const [stock, setStock] = useState(String(variant.stockQuantity ?? 0))
   const [saving, setSaving] = useState(false)
 
   async function save() {
@@ -994,15 +998,28 @@ function PriceEditDialog({
       toast.error("Compare-at price is invalid.")
       return
     }
+    const stockTrimmed = stock.trim()
+    const q = stockTrimmed === "" ? NaN : Number(stockTrimmed)
+    if (!Number.isInteger(q) || q < 0) {
+      toast.error("Stock must be a whole number of 0 or more.")
+      return
+    }
     setSaving(true)
     try {
       const token = await getAccessToken()
       if (!token) throw new Error("No token")
       await updateVariantPrice(token, { id: variant.id, sku: variant.sku }, p, c)
-      onSaved(p, c)
+      // Separate call: price and stock are different endpoints because the
+      // catalog owns price outright while stock is normally projected from
+      // inventory. Only sent when actually changed, so an untouched price edit
+      // never overwrites a stock level inventory just pushed.
+      if (q !== (variant.stockQuantity ?? 0)) {
+        await updateVariantStock(token, variant.id, q)
+      }
+      onSaved(p, c, q)
     } catch (e) {
-      logError(e, "admin.updateVariantPrice")
-      toast.error("Could not update the price. Please try again.")
+      logError(e, "admin.updateVariantPriceOrStock")
+      toast.error("Could not save the changes. Please try again.")
     } finally {
       setSaving(false)
     }
@@ -1010,11 +1027,11 @@ function PriceEditDialog({
 
   return (
     <Dialog open onClose={() => !saving && onClose()}>
-      <DialogHeader onClose={() => !saving && onClose()}>Edit price</DialogHeader>
+      <DialogHeader onClose={() => !saving && onClose()}>Edit price &amp; stock</DialogHeader>
       <DialogBody>
         <p className="mb-4 text-sm text-gray-500">
           {product.title} — <span className="font-mono text-xs">{variant.sku}</span>. Saving updates
-          the storefront and inventory. Stock is managed in the inventory app.
+          the storefront and search.
         </p>
         <div className="grid grid-cols-2 gap-4">
           <label className="block">
@@ -1042,6 +1059,21 @@ function PriceEditDialog({
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
             />
           </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-gray-600">Stock on hand</span>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+            />
+            <span className="mt-1 block text-[11px] leading-snug text-gray-500">
+              Manual override. Inventory normally owns this, so a later sync
+              from the inventory app will replace it.
+            </span>
+          </label>
         </div>
       </DialogBody>
       <DialogFooter>
@@ -1056,7 +1088,7 @@ function PriceEditDialog({
           disabled={saving}
           className="rounded-lg bg-brand-dark px-4 py-2 text-sm font-semibold text-brand-gold hover:opacity-90 disabled:opacity-50"
         >
-          {saving ? "Saving…" : "Save price"}
+          {saving ? "Saving…" : "Save changes"}
         </button>
       </DialogFooter>
     </Dialog>
