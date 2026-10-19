@@ -41,6 +41,10 @@ const REASON_LABELS: Record<string, string> = {
   referral_referred: "Welcome credit — you were referred",
   checkout_redeem: "Redeemed at checkout",
   refund_reverse: "Refund reversal",
+  // Posted when a refunded order takes back a referral reward. Without an
+  // entry here it renders as the raw reason ("referral clawback"), which is
+  // the worst possible copy for a line that removes someone's money.
+  referral_clawback: "Referral reward reversed — order refunded",
 }
 
 function reasonLabel(reason: string) {
@@ -235,12 +239,25 @@ export function WalletSection() {
                   </p>
                 )}
                 <p className="mt-0.5 text-sm text-muted-foreground">
-                  Share your link — you both get store credit when they place their first order.
+                  {typeof referral.qualifyingSpendCents === "number" && referral.qualifyingSpendCents > 0
+                    ? `Share your link — you both get store credit once they spend ${formatCents(
+                        referral.qualifyingSpendCents,
+                        currency,
+                      )} on their first order.`
+                    : "Share your link — you both get store credit when they place their first order."}
                 </p>
                 {typeof referral.referredCount === "number" && (
                   <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                     <Users className="h-3.5 w-3.5" />
                     {referral.referredCount} friend{referral.referredCount === 1 ? "" : "s"} referred
+                    {typeof referral.pendingCount === "number" && referral.pendingCount > 0 && (
+                      // Surfaced so a referrer who sees "0 friends referred" after
+                      // sharing understands the reward is waiting on a purchase
+                      // rather than assuming their link is broken.
+                      <span className="font-medium text-muted-foreground/80">
+                        · {referral.pendingCount} awaiting their first order
+                      </span>
+                    )}
                   </p>
                 )}
               </div>
