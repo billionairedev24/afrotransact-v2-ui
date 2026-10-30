@@ -65,8 +65,12 @@ export function StartSellingLink({
   // surfaces. Guests + buyers see it.
   if (isAdmin || isSeller) return null
 
-  // Guests go through the seller-flavoured registration; signed-in buyers
-  // skip straight to onboarding. Keycloak handles the upgrade-role step.
+  // Guests go through the seller-flavoured registration, which sets the
+  // intent cookie that SellerIntentProvider acts on. Signed-in buyers skip
+  // straight to onboarding and so never pass that cookie-setting page — the
+  // onboarding page itself grants the seller role on demand for them (the
+  // retired Keycloak SPI used to infer it, which is why this once "just
+  // worked"; nothing in Keycloak upgrades the role any more).
   const href = session
     ? "/dashboard/onboarding"
     : "/auth/register?role=seller&callbackUrl=/dashboard/onboarding"

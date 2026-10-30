@@ -247,7 +247,7 @@ function emptyPrincipal(): Principal {
 }
 
 export default function SellerOnboardingPage() {
-  const { status } = useSession()
+  const { data: session, status, update } = useSession()
   const router = useRouter()
 
   const [step, setStep] = useState(0)
@@ -398,8 +398,32 @@ export default function SellerOnboardingPage() {
     }
 
     async function init() {
-      const token = await getAccessToken()
+      let token = await getAccessToken()
       if (!token) { setLoading(false); return }
+
+      // Every onboarding write is @PreAuthorize("hasRole('seller')") on the
+      // seller service, so the session's token MUST carry the seller realm role
+      // before we touch them. SellerIntentProvider grants it right after a
+      // "Start Selling" registration, but anyone arriving another way (signed up
+      // as a buyer first, cookie lost, deep link) reaches here without it — and
+      // every save then failed with a 500 "Failed to save business info".
+      // Seller signup is self-service, so grant on demand, then refresh the
+      // session so the proxy attaches a token that actually has the role.
+      const roles = (session?.user as { roles?: string[] } | undefined)?.roles ?? []
+      if (!roles.includes("seller")) {
+        try {
+          const res = await fetch("/api/auth/grant-seller", { method: "POST" })
+          if (!res.ok) throw new Error(`grant-seller ${res.status}`)
+          await update()
+          token = await getAccessToken()
+          if (!token) { setLoading(false); return }
+        } catch (e) {
+          logError(e, "granting seller role")
+          toast.error("We couldn't enable your seller account. Please try again.")
+          setLoading(false)
+          return
+        }
+      }
 
       // Pre-flight check: if the seller record already exists and is
       // suspended, never touch the onboarding endpoints. This prevents
@@ -442,7 +466,12 @@ export default function SellerOnboardingPage() {
       }
       if (progress) {
         hydrateFromProgress(progress)
-        document.cookie = "afro_seller_intent=; path=/; max-age=0"
+        // The intent cookie is `atx_seller_intent` (set by the seller-flavoured
+        // registration). This previously cleared `afro_seller_intent`, a name
+        // nothing ever writes, so it was a no-op. grant-seller clears it
+        // server-side on a successful grant; clear it here too so reaching
+        // onboarding with progress in hand doesn't leave it lying around.
+        document.cookie = "atx_seller_intent=; path=/; max-age=0"
       }
       try {
         const allPlans = await getPublicPlans()
@@ -459,7 +488,10 @@ export default function SellerOnboardingPage() {
     }
 
     init()
-  }, [status, initialized, hydrateFromProgress])
+    // `session`/`update` are read inside init() only; the `initialized` guard
+    // above makes a re-run from a session change a no-op, so they are safe to
+    // list without re-triggering onboarding bootstrap.
+  }, [status, initialized, hydrateFromProgress, session?.user, update])
 
   // After returning from Stripe Connect onboarding, refresh account status
   useEffect(() => {

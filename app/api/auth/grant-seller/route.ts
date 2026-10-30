@@ -15,9 +15,18 @@ const SELLER_INTENT_COOKIE = "atx_seller_intent"
  * "Start Selling" sets the `atx_seller_intent` cookie before registration, and
  * once the (now-soft-verify) registration produces a session, this route makes
  * the intent durable on the Keycloak ACCOUNT — so it survives email
- * verification even on a different device/browser. Self-service is intentionally
- * open (same as before), gated only on being authenticated + carrying the
- * cookie our own flow sets. Idempotent: a no-op if already a seller.
+ * verification even on a different device/browser. Idempotent: a no-op if
+ * already a seller.
+ *
+ * Seller signup is SELF-SERVICE: any authenticated user may become a seller, so
+ * being signed in is the only gate. The intent cookie is an optimisation (it
+ * tells us to grant eagerly right after registration), NOT an authorization
+ * check — requiring it was a prod bug. A user who registered as a buyer first,
+ * or who lost the cookie (different browser, cleared cookies, or reaching
+ * /dashboard/onboarding by link instead of through "Start Selling"), got
+ * `400 no_seller_intent` here, was never granted the `seller` realm role, and
+ * then hit "Access Denied" on every role-guarded onboarding endpoint — surfacing
+ * as "Failed to save business info" with no usable signal.
  */
 export async function POST(req: NextRequest) {
   const token = await getToken({ req })
@@ -28,12 +37,6 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "no_user" }, { status: 400 })
   }
-  // Only honor the grant when THIS flow set the intent cookie — mirrors today's
-  // self-service openness without letting any authenticated call self-promote.
-  if (!req.cookies.get(SELLER_INTENT_COOKIE)) {
-    return NextResponse.json({ error: "no_seller_intent" }, { status: 400 })
-  }
-
   const roles = (token.roles as string[] | undefined) ?? []
   const clearCookie = (res: NextResponse) => {
     res.cookies.set(SELLER_INTENT_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" })
