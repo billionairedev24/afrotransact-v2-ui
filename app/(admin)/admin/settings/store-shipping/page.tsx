@@ -112,7 +112,7 @@ export default function AdminStoreShippingPage() {
       )}
 
       <div className="rounded-xl border border-input bg-white overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-hide">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
               <tr>
