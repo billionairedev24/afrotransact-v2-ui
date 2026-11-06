@@ -1,95 +1,155 @@
 "use client"
 
 /**
- * Public booth capture. Someone at the stand scans a QR code or taps a link and
- * fills this in themselves — no account, no login. The link carries a
- * short-lived token minted by an admin, so this page is only live for the
- * duration of the event.
+ * A lead's own registration page, opened from the personal link we emailed
+ * after meeting them at an event.
+ *
+ * This page belongs to the person, not to us: it carries the brand, speaks in
+ * the second person, and opens already filled in with what they told us at the
+ * stand. It is explicitly NOT a booth-rep tool — there is no "add another",
+ * because the only person who should ever use it is the one whose name is on
+ * the link.
  */
 
 import { use, useEffect, useState } from "react"
+import Image from "next/image"
 import { toast } from "sonner"
-import { Check, Loader2 } from "lucide-react"
-import { LeadCaptureForm } from "@/components/leads/LeadCaptureForm"
+import { Check, Loader2, ShieldCheck } from "lucide-react"
+import { LeadFields, type LeadFieldsValues } from "@/components/leads/LeadFields"
 import { logError } from "@/lib/errors"
-import { submitPublicLead, validateLeadCaptureToken, type CaptureLeadInput } from "@/lib/api"
+import { getLeadProfile, completeLeadProfile } from "@/lib/api"
 
-export default function PublicLeadCapturePage({
+type LinkState = "checking" | "live" | "dead"
+
+export default function LeadRegistrationPage({
   params,
 }: {
   params: Promise<{ token: string }>
 }) {
   const { token } = use(params)
-  const [linkState, setLinkState] = useState<"checking" | "live" | "dead">("checking")
-  const [submitted, setSubmitted] = useState(false)
+  const [state, setState] = useState<LinkState>("checking")
+  const [initial, setInitial] = useState<Partial<LeadFieldsValues> | undefined>()
+  const [done, setDone] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    validateLeadCaptureToken(token)
-      .then((res) => { if (!cancelled) setLinkState(res.valid ? "live" : "dead") })
-      // Check it up front so a dead link says so immediately, rather than
-      // after someone has typed out all their details.
-      .catch(() => { if (!cancelled) setLinkState("dead") })
+    // Check the link before they type anything: discovering a dead link after
+    // filling in a whole form is the worst version of this page.
+    getLeadProfile(token)
+      .then((p) => {
+        if (cancelled) return
+        setInitial({
+          firstName: p.firstName, lastName: p.lastName, email: p.email,
+          phone: p.phone, businessName: p.businessName, sells: p.sells,
+          categories: p.categories, city: p.city,
+        })
+        setState("live")
+      })
+      .catch(() => { if (!cancelled) setState("dead") })
     return () => { cancelled = true }
   }, [token])
 
-  async function submit(data: CaptureLeadInput & { website?: string }) {
+  async function submit(values: LeadFieldsValues) {
     try {
-      await submitPublicLead(token, data)
-      setSubmitted(true)
+      await completeLeadProfile(token, {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        phone: values.phone,
+        businessName: values.businessName,
+        sells: values.sells,
+        categories: values.categories,
+        city: values.city,
+      })
+      setDone(true)
+      window.scrollTo({ top: 0, behavior: "smooth" })
     } catch (e) {
-      logError(e, "submitting public lead")
-      toast.error("Could not send that. Check your connection and tap again.")
+      logError(e, "completing lead profile")
+      toast.error("That didn't send. Check your connection and try again.")
       throw e
     }
   }
 
-  if (linkState === "checking") {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-4">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </main>
-    )
-  }
-
-  if (linkState === "dead") {
-    return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10">
-        <h1 className="text-2xl font-semibold text-foreground">This link has closed</h1>
-        <p className="mt-2 text-muted-foreground">
-          Come and see us at the stand and we&apos;ll sign you up there.
-        </p>
-      </main>
-    )
-  }
-
-  if (submitted) {
-    return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
-          <Check className="h-6 w-6" />
-        </div>
-        <h1 className="text-2xl font-semibold text-foreground">You&apos;re on the list</h1>
-        <p className="mt-2 text-muted-foreground">
-          We&apos;ll email you a link to set up your store. Nothing else to do today.
-        </p>
-        <button
-          onClick={() => setSubmitted(false)}
-          className="mx-auto mt-6 text-sm font-medium text-foreground underline underline-offset-4"
-        >
-          Add someone else
-        </button>
-      </main>
-    )
-  }
-
   return (
-    <main className="mx-auto w-full max-w-md px-4 py-8">
-      <h1 className="text-2xl font-semibold text-foreground">Sell on AfroTransact</h1>
-      <p className="mb-6 mt-1 text-sm text-muted-foreground">
-        Leave your details and we&apos;ll set your store up with you. Takes under a minute.
-      </p>
-      <LeadCaptureForm onSubmit={submit} submitLabel="Send my details" includeHoneypot />
-    </main>
+    <div className="min-h-screen bg-muted/40">
+      <header className="border-b border-border bg-background">
+        <div className="mx-auto flex h-16 w-full max-w-xl items-center px-5">
+          <Image
+            src="/brand/logo.svg"
+            alt="AfroTransact"
+            width={150}
+            height={28}
+            priority
+            className="h-7 w-auto"
+          />
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-xl px-5 py-10">
+        {state === "checking" && (
+          <div className="flex justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {state === "dead" && (
+          <section className="rounded-2xl border border-border bg-background p-8">
+            <h1 className="font-display text-2xl font-semibold text-foreground">
+              This link has expired
+            </h1>
+            <p className="mt-3 text-muted-foreground">
+              Links stay active for two weeks. Reply to the email we sent you and
+              we&apos;ll send a fresh one.
+            </p>
+          </section>
+        )}
+
+        {state === "live" && done && (
+          <section className="rounded-2xl border border-border bg-background p-8 text-center">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary">
+              <Check className="h-7 w-7 text-primary-foreground" />
+            </div>
+            <h1 className="font-display text-2xl font-semibold text-foreground">
+              Thank you — that&apos;s everything we need
+            </h1>
+            <p className="mx-auto mt-3 max-w-sm text-muted-foreground">
+              Our team will review your details and email you a link to set up
+              your store. Nothing else to do for now.
+            </p>
+          </section>
+        )}
+
+        {state === "live" && !done && (
+          <>
+            <h1 className="font-display text-3xl font-semibold leading-tight text-foreground">
+              {initial?.firstName
+                ? `Welcome, ${initial.firstName}`
+                : "Finish your details"}
+            </h1>
+            <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+              We&apos;ve filled in what you gave us. Add a little about what you
+              sell and our team will take it from there — it takes about a minute.
+            </p>
+
+            <section className="mt-8 rounded-2xl border border-border bg-background p-6 sm:p-7">
+              <LeadFields
+                voice="self"
+                initial={initial}
+                lockedFields={["email"]}
+                onSubmit={submit}
+                submitLabel="Send my details"
+              />
+            </section>
+
+            <p className="mt-6 flex items-start gap-2 text-[13px] leading-relaxed text-muted-foreground">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                This link is personal to you. We use these details only to set up
+                your store, and never share them.
+              </span>
+            </p>
+          </>
+        )}
+      </main>
+    </div>
   )
 }

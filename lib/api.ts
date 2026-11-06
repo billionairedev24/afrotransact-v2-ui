@@ -5174,8 +5174,11 @@ export interface SellerLead {
   sells: string | null
   city: string | null
   notes: string | null
+  categories: string | null
   stage: LeadStage
   source: "BOOTH" | "PUBLIC"
+  linkSentAt: string | null
+  profileCompletedAt: string | null
   capturedByUserId: string | null
   inviteId: string | null
   createdAt: string
@@ -5189,6 +5192,7 @@ export interface CaptureLeadInput {
   phone?: string
   businessName?: string
   sells?: string
+  categories?: string
   city?: string
   notes?: string
 }
@@ -5247,20 +5251,44 @@ export function mintLeadCaptureLink(token: string, label?: string, expiresInHour
   )
 }
 
-/** Public booth capture — no session. The gateway allows this prefix
- *  unauthenticated; the server accepts only an admin-minted capture token. */
-export function submitPublicLead(
-  captureToken: string,
-  data: CaptureLeadInput & { website?: string },
-) {
-  return api<{ ok: boolean }>(
-    `/api/v1/public/seller-leads?token=${encodeURIComponent(captureToken)}`,
-    { method: "POST", body: data },
+/** Emails this lead a personal registration link. Re-sending mints a fresh
+ *  token, because the usual reason to press it twice is a lost email. */
+export function sendLeadRegistrationLink(token: string, id: string, expiresInHours?: number) {
+  const suffix = expiresInHours ? `?expiresInHours=${expiresInHours}` : ""
+  return api<{ token: string; label: string | null; expiresAt: string }>(
+    `/api/v1/admin/seller-leads/${id}/send-link${suffix}`,
+    { method: "POST", token },
   )
 }
 
-export function validateLeadCaptureToken(captureToken: string) {
-  return api<{ valid: boolean }>(
-    `/api/v1/public/seller-leads/validate?token=${encodeURIComponent(captureToken)}`,
+// ── Lead's own registration page (no session; the link carries the token) ──
+
+export interface LeadProfile {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  businessName: string
+  sells: string
+  categories: string
+  city: string
+  completed: boolean
+}
+
+/** Prefill for a personal link. Rejects (403) when the link is dead, which is
+ *  how the page knows to show "expired" before anyone types anything. */
+export function getLeadProfile(captureToken: string) {
+  return api<LeadProfile>(
+    `/api/v1/public/seller-leads/profile?token=${encodeURIComponent(captureToken)}`,
+  )
+}
+
+export function completeLeadProfile(
+  captureToken: string,
+  data: Partial<CaptureLeadInput>,
+) {
+  return api<{ ok: boolean; firstName: string }>(
+    `/api/v1/public/seller-leads/profile?token=${encodeURIComponent(captureToken)}`,
+    { method: "PUT", body: data },
   )
 }

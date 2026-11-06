@@ -11,7 +11,7 @@ import Link from "next/link"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { ArrowLeft, Users } from "lucide-react"
-import { LeadCaptureForm } from "@/components/leads/LeadCaptureForm"
+import { LeadFields } from "@/components/leads/LeadFields"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { logError } from "@/lib/errors"
 import { captureSellerLead, findDuplicateLeads, type CaptureLeadInput } from "@/lib/api"
@@ -78,14 +78,19 @@ export default function CaptureLeadPage() {
 
       <h1 className="text-2xl font-semibold text-foreground">New lead</h1>
       <p className="mb-6 mt-1 text-sm text-muted-foreground">
-        Name and email are enough. Everything else helps you follow up well.
+        Name and email are enough. Everything else helps you follow up well —
+        and you can send them a link to finish the rest themselves.
       </p>
 
-      <LeadCaptureForm
+      <LeadFields
+        voice="admin"
         onSubmit={async (data) => { await capture.mutateAsync(data) }}
         onEmailBlur={checkDuplicate}
         duplicateWarning={duplicateWarning}
-        submitLabel="Save lead"
+        submitLabel="Save and add another"
+        // Only sensible here: an admin works through a queue of people. The
+        // lead's own page never resets — one person, one submission.
+        resetAfterSubmit
       />
     </div>
   )
