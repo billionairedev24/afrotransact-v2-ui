@@ -11,7 +11,7 @@ import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createColumnHelper } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Loader2, Plus, Download, Link2, Search, Send } from "lucide-react"
+import { Loader2, Plus, Download, Link2, Send } from "lucide-react"
 import { DataTable } from "@/components/ui/DataTable"
 import { confirmDialog } from "@/components/ui/confirm"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -321,20 +321,15 @@ export default function LeadsPage() {
         ))}
       </div>
 
-      <div className="mb-4 relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPageIndex(0) }}
-          placeholder="Search name, email, business"
-          className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm focus:border-foreground focus:outline-none focus:ring-2 focus:ring-foreground/15"
-        />
-      </div>
-
       <DataTable
         columns={columns}
         data={rows}
         loading={leads.isLoading}
+        // Search is server-side: with server pagination, client filtering would
+        // only ever search the page already loaded.
+        searchPlaceholder="Search name, email, business"
+        searchValue={search}
+        onSearchChange={(v) => { setSearch(v); setPageIndex(0) }}
         emptyMessage={
           search || stageFilter
             ? "No leads match that filter."
