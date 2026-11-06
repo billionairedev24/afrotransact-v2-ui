@@ -203,10 +203,10 @@ export function LeadFields({
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {/* min-w-0 on the grid child: grid items default to min-width:auto, so
-            without it the phone control's intrinsic width wins and it overflows
-            onto the next column instead of shrinking. */}
+      {/* Sized to their content rather than split down the middle: a phone
+          number and a city name are both short, and stretching them to half the
+          card each made the row look empty. */}
+      <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0">
           <label htmlFor="lead-phone" className={label}>
             Phone <span className="font-normal text-muted-foreground">(optional)</span>
@@ -219,11 +219,11 @@ export function LeadFields({
             value={values.phone ?? ""}
             onChange={(e164) => set("phone", e164)}
             ariaInvalid={!!errors.phone}
-            className="w-full min-w-0 [&_select]:h-12 [&_select]:rounded-lg [&_input]:h-12 [&_input]:rounded-lg [&_input]:text-base [&_input]:px-3"
+            className="min-w-0 [&_select]:h-12 [&_select]:rounded-lg [&_input]:h-12 [&_input]:w-[10.5rem] [&_input]:rounded-lg [&_input]:text-base [&_input]:px-3"
           />
           <Err name="phone" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1 sm:max-w-[13rem]">
           <label htmlFor="lead-city" className={label}>
             City <span className="font-normal text-muted-foreground">(optional)</span>
           </label>

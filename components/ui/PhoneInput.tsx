@@ -102,8 +102,22 @@ export function PhoneInput({
   }, [value])
 
   function handleChange(raw: string) {
-    const formatter = new AsYouType(country)
-    const formatted = formatter.input(raw)
+    const prevDigits = display.replace(/\D/g, "")
+    const nextDigits = raw.replace(/\D/g, "")
+    let digits = nextDigits
+
+    // Deleting a formatting character has to delete a digit.
+    //
+    // Backspacing "(543)" removes only the ")", leaving the digits unchanged.
+    // Re-running the formatter puts the ")" straight back, so the field looks
+    // frozen and the number can never be cleared. When the text got shorter but
+    // the digits did not, drop a digit — that is what the person was reaching
+    // for.
+    if (raw.length < display.length && nextDigits === prevDigits) {
+      digits = digits.slice(0, -1)
+    }
+
+    const formatted = digits ? new AsYouType(country).input(digits) : ""
     setDisplay(formatted)
     const parsed = parsePhoneNumberFromString(formatted, country)
     onChange(parsed && parsed.isValid() ? parsed.number : "")

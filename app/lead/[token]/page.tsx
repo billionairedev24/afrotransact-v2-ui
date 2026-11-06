@@ -17,23 +17,20 @@
 import { use, useEffect, useState } from "react"
 import Image from "next/image"
 import { toast } from "sonner"
-import { Check, Loader2, ShieldCheck, Store, Truck, Wallet } from "lucide-react"
+import { Check, Loader2, ShieldCheck } from "lucide-react"
 import { LeadFields, type LeadFieldsValues } from "@/components/leads/LeadFields"
 import { logError } from "@/lib/errors"
 import { getLeadProfile, completeLeadProfile } from "@/lib/api"
 
 type LinkState = "checking" | "live" | "dead"
 
+// Deliberately generic: this page is the first thing a lead sees, and
+// promising specifics we have not agreed with them yet (pricing, delivery,
+// payout schedules) sets expectations nobody has signed off.
 const STEPS = [
   { title: "You send your details", body: "The short form on this page — about a minute." },
-  { title: "We set your store up with you", body: "Our team calls to agree pricing, delivery and payouts." },
-  { title: "You start selling", body: "We email a link to finish your account and list your first products." },
-]
-
-const REASONS = [
-  { icon: Store, title: "Your own storefront", body: "A page for your business, found by shoppers looking for exactly what you sell." },
-  { icon: Truck, title: "Delivery handled", body: "We cover the logistics in the cities we serve, so you pack and we move it." },
-  { icon: Wallet, title: "Paid out directly", body: "Money lands in your account on a schedule you can plan around." },
+  { title: "We get in touch", body: "Someone from our team follows up with you." },
+  { title: "You start selling", body: "We'll help you get set up." },
 ]
 
 export default function LeadRegistrationPage({
@@ -191,24 +188,6 @@ export default function LeadRegistrationPage({
                   </ol>
                 </section>
 
-                <section className="rounded-2xl border border-border bg-background p-6">
-                  <h2 className="font-display text-lg font-semibold text-foreground">
-                    Why sellers join us
-                  </h2>
-                  <ul className="mt-4 space-y-4">
-                    {REASONS.map(({ icon: Icon, title, body }) => (
-                      <li key={title} className="flex gap-3">
-                        <Icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-gold-ink" aria-hidden />
-                        <span>
-                          <span className="block text-sm font-medium text-foreground">{title}</span>
-                          <span className="mt-0.5 block text-[13px] leading-relaxed text-muted-foreground">
-                            {body}
-                          </span>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
               </aside>
             </div>
           </>
