@@ -62,6 +62,10 @@ export function LeadFields({
     initial?.categories ? initial.categories.split(",").map((c) => c.trim()).filter(Boolean) : [],
   )
   const [honeypot, setHoneypot] = useState("")
+  // PhoneInput reports "" for anything that is not a complete, valid number,
+  // so without this an invalid entry is indistinguishable from an empty field
+  // and the person is told to "enter a phone number" while staring at one.
+  const [phoneTyped, setPhoneTyped] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [categories, setCategories] = useState<CategoryRef[]>([])
@@ -107,9 +111,15 @@ export function LeadFields({
     // A half-typed number is worse than none: it looks captured and cannot be
     // called. isValidE164 only passes a complete number, so this covers both
     // "missing" and "half entered".
-    if (isRequired("phone") && !values.phone?.trim()) {
-      next.phone = "Enter a phone number"
-    } else if (values.phone && !isValidE164(values.phone)) {
+    if (!values.phone?.trim()) {
+      if (phoneTyped) {
+        // Digits are present but they are not a real number — a wrong area or
+        // exchange code, or too few digits.
+        next.phone = "That number doesn't look right. Check the digits and the country."
+      } else if (isRequired("phone")) {
+        next.phone = "Enter a phone number"
+      }
+    } else if (!isValidE164(values.phone)) {
       next.phone = "Enter a complete phone number, including the country code"
     }
     if (isRequired("city") && !values.city?.trim()) {
@@ -234,7 +244,7 @@ export function LeadFields({
           <PhoneInput
             id="lead-phone"
             value={values.phone ?? ""}
-            onChange={(e164) => set("phone", e164)}
+            onChange={(e164, meta) => { set("phone", e164); setPhoneTyped(meta.hasInput) }}
             ariaInvalid={!!errors.phone}
             className="min-w-0 [&_select]:h-12 [&_select]:rounded-lg [&_input]:h-12 [&_input]:w-[10.5rem] [&_input]:rounded-lg [&_input]:text-base [&_input]:px-3"
           />
