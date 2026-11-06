@@ -38,11 +38,24 @@ const COUNTRY_OPTIONS: { value: CountryCode; label: string }[] = [
 
 const DEFAULT_COUNTRY: CountryCode = "US"
 
+export interface PhoneInputMeta {
+  /** True once the person has typed any digit at all. */
+  hasInput: boolean
+  /** What is on screen, e.g. "(512) 555-1234". */
+  national: string
+}
+
 export interface PhoneInputProps {
   /** Current value as E.164 (e.g. "+15125551234"), or empty string. */
   value: string
-  /** Receives E.164 when valid, empty string when invalid/partial. */
-  onChange: (e164: string) => void
+  /**
+   * Receives E.164 when valid, empty string when invalid/partial.
+   *
+   * `meta` lets a caller tell those two apart: a field with digits in it that
+   * are not a real number needs "that number doesn't look right", not "enter a
+   * phone number". Callers that ignore the second argument are unaffected.
+   */
+  onChange: (e164: string, meta: PhoneInputMeta) => void
   defaultCountry?: CountryCode
   placeholder?: string
   required?: boolean
@@ -83,9 +96,9 @@ export function PhoneInput({
   // effect below can ignore the echo.
   const selfEmitted = useRef(false)
 
-  function emit(e164: string) {
+  function emit(e164: string, national: string) {
     selfEmitted.current = true
-    onChange(e164)
+    onChange(e164, { hasInput: national.replace(/\D/g, "").length > 0, national })
   }
   const [display, setDisplay] = useState<string>(() => {
     if (!value) return ""
@@ -140,7 +153,7 @@ export function PhoneInput({
     const formatted = digits ? new AsYouType(country).input(digits) : ""
     setDisplay(formatted)
     const parsed = parsePhoneNumberFromString(formatted, country)
-    emit(parsed && parsed.isValid() ? parsed.number : "")
+    emit(parsed && parsed.isValid() ? parsed.number : "", formatted)
   }
 
   function handleCountry(next: CountryCode) {
@@ -151,7 +164,7 @@ export function PhoneInput({
       const formatted = formatter.input(display)
       setDisplay(formatted)
       const parsed = parsePhoneNumberFromString(formatted, next)
-      emit(parsed && parsed.isValid() ? parsed.number : "")
+      emit(parsed && parsed.isValid() ? parsed.number : "", formatted)
     }
   }
 
