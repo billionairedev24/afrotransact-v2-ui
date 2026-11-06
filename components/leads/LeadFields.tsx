@@ -204,19 +204,26 @@ export function LeadFields({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
+        {/* min-w-0 on the grid child: grid items default to min-width:auto, so
+            without it the phone control's intrinsic width wins and it overflows
+            onto the next column instead of shrinking. */}
+        <div className="min-w-0">
           <label htmlFor="lead-phone" className={label}>
             Phone <span className="font-normal text-muted-foreground">(optional)</span>
           </label>
+          {/* PhoneInput styles its own select/input, so match them to the rest
+              of this form here rather than restyling a component used by
+              checkout and seller onboarding too. */}
           <PhoneInput
             id="lead-phone"
             value={values.phone ?? ""}
             onChange={(e164) => set("phone", e164)}
             ariaInvalid={!!errors.phone}
+            className="w-full min-w-0 [&_select]:h-12 [&_select]:rounded-lg [&_input]:h-12 [&_input]:rounded-lg [&_input]:text-base [&_input]:px-3"
           />
           <Err name="phone" />
         </div>
-        <div>
+        <div className="min-w-0">
           <label htmlFor="lead-city" className={label}>
             City <span className="font-normal text-muted-foreground">(optional)</span>
           </label>

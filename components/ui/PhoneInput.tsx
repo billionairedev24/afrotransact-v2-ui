@@ -149,7 +149,11 @@ export function PhoneInput({
         type="tel"
         inputMode="tel"
         autoComplete="tel"
-        className="flex-1 border border-border rounded px-3 py-2 bg-background"
+        // min-w-0 lets the number field shrink below its intrinsic width.
+        // Without it a flex item refuses to go narrower than its content, so in
+        // any constrained container (a grid cell, a narrow column) this input
+        // overflows and lands on top of whatever sits beside it.
+        className="flex-1 min-w-0 border border-border rounded px-3 py-2 bg-background"
         value={display}
         placeholder={placeholder ?? callingCode + " 555 555 5555"}
         onChange={(e) => handleChange(e.target.value)}
