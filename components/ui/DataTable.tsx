@@ -444,7 +444,10 @@ export function DataTable<TData>({
       </div>
 
       {/* ── Table: only this region scrolls horizontally on narrow viewports ─── */}
-      <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border border-border bg-card [-webkit-overflow-scrolling:touch]">
+      {/* scrollbar-hide: tables still scroll sideways (trackpad, shift+wheel,
+          touch) but never show a horizontal scrollbar, which reads as chrome
+          cutting across the data. */}
+      <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain scrollbar-hide rounded-xl border border-border bg-card [-webkit-overflow-scrolling:touch]">
         <table className="w-full min-w-max text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (

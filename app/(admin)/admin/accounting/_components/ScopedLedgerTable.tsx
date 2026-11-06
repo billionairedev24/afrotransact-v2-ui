@@ -55,7 +55,7 @@ export function JournalTable({ entries, loading }: JournalTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+    <div className="overflow-x-auto scrollbar-hide rounded-2xl border border-border bg-card">
       <table className="w-full min-w-[720px] text-sm">
         <thead>
           <tr className="border-b border-border text-left text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -134,7 +134,7 @@ export function TrialBalanceTable({ rows, totalDebitsCents, totalCreditsCents, l
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+    <div className="overflow-x-auto scrollbar-hide rounded-2xl border border-border bg-card">
       <table className="w-full min-w-[560px] text-sm">
         <thead>
           <tr className="border-b border-border text-left text-[10px] uppercase tracking-wide text-muted-foreground">
