@@ -157,7 +157,7 @@ export function LeadFields({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label htmlFor="lead-first" className={label}>First name</label>
@@ -203,29 +203,42 @@ export function LeadFields({
         )}
       </div>
 
-      <div>
-        <label htmlFor="lead-phone" className={label}>
-          Phone <span className="font-normal text-muted-foreground">(optional)</span>
-        </label>
-        <PhoneInput
-          id="lead-phone"
-          value={values.phone ?? ""}
-          onChange={(e164) => set("phone", e164)}
-          ariaInvalid={!!errors.phone}
-        />
-        <Err name="phone" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="lead-phone" className={label}>
+            Phone <span className="font-normal text-muted-foreground">(optional)</span>
+          </label>
+          <PhoneInput
+            id="lead-phone"
+            value={values.phone ?? ""}
+            onChange={(e164) => set("phone", e164)}
+            ariaInvalid={!!errors.phone}
+          />
+          <Err name="phone" />
+        </div>
+        <div>
+          <label htmlFor="lead-city" className={label}>
+            City <span className="font-normal text-muted-foreground">(optional)</span>
+          </label>
+          <input
+            id="lead-city" value={values.city}
+            onChange={(e) => set("city", e.target.value)}
+            className={fieldOk}
+            autoComplete="address-level2" autoCapitalize="words"
+          />
+        </div>
       </div>
 
       <div>
         <label htmlFor="lead-business" className={label}>
-          {you ? "Business name" : "Business name"}{" "}
-          <span className="font-normal text-muted-foreground">(optional)</span>
+          Business name <span className="font-normal text-muted-foreground">(optional)</span>
         </label>
         <input
           id="lead-business" value={values.businessName}
           onChange={(e) => set("businessName", e.target.value)}
           className={errors.businessName ? fieldBad : fieldOk}
           autoCapitalize="words" aria-invalid={!!errors.businessName}
+          placeholder="Amara Foods"
         />
         <Err name="businessName" />
       </div>
@@ -268,18 +281,6 @@ export function LeadFields({
           onChange={(e) => set("sells", e.target.value)}
           className={fieldOk}
           placeholder="Jollof spice blends, dried fish"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="lead-city" className={label}>
-          City <span className="font-normal text-muted-foreground">(optional)</span>
-        </label>
-        <input
-          id="lead-city" value={values.city}
-          onChange={(e) => set("city", e.target.value)}
-          className={fieldOk}
-          autoComplete="address-level2" autoCapitalize="words"
         />
       </div>
 
