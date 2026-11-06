@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   AsYouType,
   getCountryCallingCode,
@@ -38,11 +38,24 @@ const COUNTRY_OPTIONS: { value: CountryCode; label: string }[] = [
 
 const DEFAULT_COUNTRY: CountryCode = "US"
 
+export interface PhoneInputMeta {
+  /** True once the person has typed any digit at all. */
+  hasInput: boolean
+  /** What is on screen, e.g. "(512) 555-1234". */
+  national: string
+}
+
 export interface PhoneInputProps {
   /** Current value as E.164 (e.g. "+15125551234"), or empty string. */
   value: string
-  /** Receives E.164 when valid, empty string when invalid/partial. */
-  onChange: (e164: string) => void
+  /**
+   * Receives E.164 when valid, empty string when invalid/partial.
+   *
+   * `meta` lets a caller tell those two apart: a field with digits in it that
+   * are not a real number needs "that number doesn't look right", not "enter a
+   * phone number". Callers that ignore the second argument are unaffected.
+   */
+  onChange: (e164: string, meta: PhoneInputMeta) => void
   defaultCountry?: CountryCode
   placeholder?: string
   required?: boolean
@@ -79,14 +92,34 @@ export function PhoneInput({
   }, [value, defaultCountry])
 
   const [country, setCountry] = useState<CountryCode>(initialCountry)
+  // True while a value change is this component's own doing, so the sync
+  // effect below can ignore the echo.
+  const selfEmitted = useRef(false)
+
+  function emit(e164: string, national: string) {
+    selfEmitted.current = true
+    onChange(e164, { hasInput: national.replace(/\D/g, "").length > 0, national })
+  }
   const [display, setDisplay] = useState<string>(() => {
     if (!value) return ""
     const parsed = parsePhoneNumberFromString(value)
     return parsed?.formatNational() ?? value
   })
 
-  // Sync display when the parent resets the value (e.g. form clear).
+  // Sync display when the parent genuinely changes the value from outside
+  // (prefill, form clear) — NEVER when it is just echoing back what this
+  // component itself emitted.
+  //
+  // That distinction matters: handleChange reports "" for any number that is
+  // not yet valid, so backspacing one digit off a complete number pushes "" to
+  // the parent, which lands back here as a changed `value`. Without this guard
+  // the effect read that as a reset and wiped the entire field, so a single
+  // backspace deleted the whole number.
   useEffect(() => {
+    if (selfEmitted.current) {
+      selfEmitted.current = false
+      return
+    }
     if (!value) {
       setDisplay("")
       return
@@ -102,11 +135,25 @@ export function PhoneInput({
   }, [value])
 
   function handleChange(raw: string) {
-    const formatter = new AsYouType(country)
-    const formatted = formatter.input(raw)
+    const prevDigits = display.replace(/\D/g, "")
+    const nextDigits = raw.replace(/\D/g, "")
+    let digits = nextDigits
+
+    // Deleting a formatting character has to delete a digit.
+    //
+    // Backspacing "(543)" removes only the ")", leaving the digits unchanged.
+    // Re-running the formatter puts the ")" straight back, so the field looks
+    // frozen and the number can never be cleared. When the text got shorter but
+    // the digits did not, drop a digit — that is what the person was reaching
+    // for.
+    if (raw.length < display.length && nextDigits === prevDigits) {
+      digits = digits.slice(0, -1)
+    }
+
+    const formatted = digits ? new AsYouType(country).input(digits) : ""
     setDisplay(formatted)
     const parsed = parsePhoneNumberFromString(formatted, country)
-    onChange(parsed && parsed.isValid() ? parsed.number : "")
+    emit(parsed && parsed.isValid() ? parsed.number : "", formatted)
   }
 
   function handleCountry(next: CountryCode) {
@@ -117,7 +164,7 @@ export function PhoneInput({
       const formatted = formatter.input(display)
       setDisplay(formatted)
       const parsed = parsePhoneNumberFromString(formatted, next)
-      onChange(parsed && parsed.isValid() ? parsed.number : "")
+      emit(parsed && parsed.isValid() ? parsed.number : "", formatted)
     }
   }
 
@@ -149,7 +196,11 @@ export function PhoneInput({
         type="tel"
         inputMode="tel"
         autoComplete="tel"
-        className="flex-1 border border-border rounded px-3 py-2 bg-background"
+        // min-w-0 lets the number field shrink below its intrinsic width.
+        // Without it a flex item refuses to go narrower than its content, so in
+        // any constrained container (a grid cell, a narrow column) this input
+        // overflows and lands on top of whatever sits beside it.
+        className="flex-1 min-w-0 border border-border rounded px-3 py-2 bg-background"
         value={display}
         placeholder={placeholder ?? callingCode + " 555 555 5555"}
         onChange={(e) => handleChange(e.target.value)}

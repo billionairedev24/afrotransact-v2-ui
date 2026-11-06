@@ -2,13 +2,15 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Users, Mail, AlertTriangle, FileText } from "lucide-react"
+import { Users, Mail, AlertTriangle, FileText, UserPlus } from "lucide-react"
 
 type Tab = { href: string; label: string; icon: typeof Users; match: (p: string) => boolean }
 
 const TABS: Tab[] = [
   { href: "/admin/sellers",           label: "All Sellers", icon: Users,
     match: (p) => p === "/admin/sellers" },
+  { href: "/admin/sellers/leads",     label: "Leads",       icon: UserPlus,
+    match: (p) => p.startsWith("/admin/sellers/leads") },
   { href: "/admin/sellers/invites",   label: "Invites",     icon: Mail,
     match: (p) => p.startsWith("/admin/sellers/invites") },
   { href: "/admin/sellers/lifecycle", label: "Lifecycle",   icon: AlertTriangle,

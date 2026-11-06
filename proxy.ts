@@ -38,7 +38,11 @@ function isPublicBetaPath(pathname: string): boolean {
   //   /auth/*     — sign in / sign up / verify / reset
   //   /sell/*     — seller pricing + apply pages
   //   /help/*     — FAQ subpages
-  return ["/invite/", "/auth/", "/sell/", "/help/"].some((p) => pathname.startsWith(p))
+  //   /lead/*     — a conference lead's personal registration link. These are
+  //                 emailed to people who have no account at all, so bouncing
+  //                 them to /login makes the link useless to the only person
+  //                 it was ever meant for.
+  return ["/invite/", "/auth/", "/sell/", "/help/", "/lead/"].some((p) => pathname.startsWith(p))
 }
 
 function isWellKnownAsset(pathname: string): boolean {

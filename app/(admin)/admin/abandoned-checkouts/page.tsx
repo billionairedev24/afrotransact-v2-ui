@@ -227,7 +227,7 @@ export default function AbandonedCheckoutsPage() {
           <h2 className="text-sm font-semibold text-gray-700">Recent abandoned checkouts</h2>
           {loading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" aria-hidden />}
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-hide">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
               <tr>

@@ -105,6 +105,7 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     let userMessage = res.statusText
+    let errorCode: string | undefined
 
     if (res.status === 502 || res.status === 503 || res.status === 504) {
       userMessage = "The service is temporarily unavailable. Please try again in a few minutes. (HTTP " + res.status + ")"
@@ -114,6 +115,10 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
       try {
         const parsed = JSON.parse(text)
         userMessage = parsed.error || parsed.message || res.statusText
+        // Machine-readable code, when the service sends one. Callers branch on
+        // this to explain WHY something failed — "that email already has an
+        // account" reads very differently from a generic failure toast.
+        errorCode = typeof parsed.code === "string" ? parsed.code : undefined
       } catch {
         if (text) userMessage = text
       }
@@ -147,7 +152,7 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     if (process.env.NEXT_PHASE !== "phase-production-build") {
       console.error(`[API] ${opts.method ?? "GET"} ${path} → ${res.status}`, userMessage)
     }
-    throw new ApiError(res.status, userMessage, path)
+    throw new ApiError(res.status, userMessage, path, errorCode)
   }
 
   if (res.status === 204) return undefined as T
@@ -175,6 +180,8 @@ export class ApiError extends Error {
     public status: number,
     public body: string,
     public path: string,
+    /** Service-supplied machine-readable code, e.g. "user_exists". */
+    public code?: string,
   ) {
     super(`API ${path} returned ${status}: ${body}`)
     this.name = "ApiError"
@@ -5158,4 +5165,138 @@ export function pingLoginSession(token: string, sessionId: string, userAgent: st
 /** Fetches every captured device fingerprint for the current user. */
 export function getLoginSessionDevices(token: string) {
   return api<LoginSessionDeviceDto[]>("/api/v1/users/me/login-sessions", { token })
+}
+
+// ── Seller Leads (conference capture + follow-up pipeline) ──
+
+export type LeadStage = "NEW" | "CONTACTED" | "INVITED" | "ONBOARDING" | "WON" | "LOST"
+
+export interface SellerLead {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string | null
+  businessName: string | null
+  sells: string | null
+  city: string | null
+  notes: string | null
+  categories: string | null
+  stage: LeadStage
+  source: "BOOTH" | "PUBLIC"
+  linkSentAt: string | null
+  profileCompletedAt: string | null
+  capturedByUserId: string | null
+  inviteId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CaptureLeadInput {
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  businessName?: string
+  sells?: string
+  categories?: string
+  city?: string
+  notes?: string
+}
+
+export function captureSellerLead(token: string, data: CaptureLeadInput) {
+  return api<SellerLead>("/api/v1/admin/seller-leads", { method: "POST", body: data, token })
+}
+
+export function listSellerLeads(
+  token: string,
+  params: { stage?: string; q?: string; page?: number; size?: number } = {},
+) {
+  const qs = new URLSearchParams()
+  if (params.stage) qs.set("stage", params.stage)
+  if (params.q) qs.set("q", params.q)
+  if (params.page !== undefined) qs.set("page", String(params.page))
+  if (params.size !== undefined) qs.set("size", String(params.size))
+  const suffix = qs.toString() ? `?${qs.toString()}` : ""
+  return api<Page<SellerLead>>(`/api/v1/admin/seller-leads${suffix}`, { token })
+}
+
+export function getSellerLeadStats(token: string) {
+  return api<Record<LeadStage, number>>("/api/v1/admin/seller-leads/stats", { token })
+}
+
+/** Existing leads with this email. Warns the person capturing; never blocks. */
+export function findDuplicateLeads(token: string, email: string) {
+  return api<SellerLead[]>(
+    `/api/v1/admin/seller-leads/duplicates?email=${encodeURIComponent(email)}`,
+    { token },
+  )
+}
+
+export function updateSellerLead(
+  token: string,
+  id: string,
+  data: Partial<CaptureLeadInput> & { stage?: LeadStage },
+) {
+  return api<SellerLead>(`/api/v1/admin/seller-leads/${id}`, { method: "PATCH", body: data, token })
+}
+
+/** Turns the lead into a real seller invite. Idempotent server-side. */
+export function convertSellerLead(token: string, id: string, expiresInHours?: number) {
+  const suffix = expiresInHours ? `?expiresInHours=${expiresInHours}` : ""
+  return api<SellerLead>(`/api/v1/admin/seller-leads/${id}/convert${suffix}`, { method: "POST", token })
+}
+
+/** Take only an email and send that person their own link, creating the lead
+ *  on the way. An address we already hold gets a fresh link rather than a
+ *  duplicate record. */
+export function sendLeadLinkByEmail(
+  token: string,
+  data: { email: string; firstName?: string; lastName?: string },
+) {
+  return api<SellerLead>("/api/v1/admin/seller-leads/send-link-by-email", {
+    method: "POST", body: data, token,
+  })
+}
+
+/** Emails this lead a personal registration link. Re-sending mints a fresh
+ *  token, because the usual reason to press it twice is a lost email. */
+export function sendLeadRegistrationLink(token: string, id: string, expiresInHours?: number) {
+  const suffix = expiresInHours ? `?expiresInHours=${expiresInHours}` : ""
+  return api<{ token: string; label: string | null; expiresAt: string }>(
+    `/api/v1/admin/seller-leads/${id}/send-link${suffix}`,
+    { method: "POST", token },
+  )
+}
+
+// ── Lead's own registration page (no session; the link carries the token) ──
+
+export interface LeadProfile {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  businessName: string
+  sells: string
+  categories: string
+  city: string
+  completed: boolean
+}
+
+/** Prefill for a personal link. Rejects (403) when the link is dead, which is
+ *  how the page knows to show "expired" before anyone types anything. */
+export function getLeadProfile(captureToken: string) {
+  return api<LeadProfile>(
+    `/api/v1/public/seller-leads/profile?token=${encodeURIComponent(captureToken)}`,
+  )
+}
+
+export function completeLeadProfile(
+  captureToken: string,
+  data: Partial<CaptureLeadInput>,
+) {
+  return api<{ ok: boolean; firstName: string }>(
+    `/api/v1/public/seller-leads/profile?token=${encodeURIComponent(captureToken)}`,
+    { method: "PUT", body: data },
+  )
 }

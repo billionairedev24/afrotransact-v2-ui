@@ -139,7 +139,7 @@ export default function AdminWaitlistPage() {
       ) : rows.length === 0 ? (
         <p className="text-sm text-gray-600">No signups yet.</p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-input bg-white">
+        <div className="overflow-x-auto scrollbar-hide rounded-2xl border border-input bg-white">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-600">
               <tr>

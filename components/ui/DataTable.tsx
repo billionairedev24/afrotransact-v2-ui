@@ -42,6 +42,15 @@ export interface DataTableProps<TData> {
   loading?: boolean
   searchPlaceholder?: string
   searchColumn?: string
+  /**
+   * Server-side search. When provided, the toolbar's search box becomes a
+   * controlled input that reports changes here instead of filtering the rows
+   * already loaded in the browser. Tables using serverPagination need this:
+   * client-side filtering would only ever search the current page, which looks
+   * like missing data. Without it the built-in client filtering is unchanged.
+   */
+  searchValue?: string
+  onSearchChange?: (value: string) => void
   enableSelection?: boolean
   enableExport?: boolean
   /**
@@ -248,6 +257,8 @@ export function DataTable<TData>({
   loading = false,
   searchPlaceholder = "Search…",
   searchColumn,
+  searchValue,
+  onSearchChange,
   enableSelection = false,
   enableExport = false,
   onExport,
@@ -378,10 +389,14 @@ export function DataTable<TData>({
           <input
             type="text"
             placeholder={searchPlaceholder}
-            value={searchColumn ? (table.getColumn(searchColumn)?.getFilterValue() as string ?? "") : globalFilter}
+            value={onSearchChange
+              ? (searchValue ?? "")
+              : searchColumn ? (table.getColumn(searchColumn)?.getFilterValue() as string ?? "") : globalFilter}
             onChange={(e) => {
               const v = e.target.value
-              if (searchColumn) {
+              if (onSearchChange) {
+                onSearchChange(v)
+              } else if (searchColumn) {
                 table.getColumn(searchColumn)?.setFilterValue(v)
               } else {
                 setGlobalFilter(v)
@@ -389,12 +404,16 @@ export function DataTable<TData>({
             }}
             className="h-10 w-full rounded-lg border border-border bg-muted pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
           />
-          {(searchColumn
-            ? (table.getColumn(searchColumn)?.getFilterValue() as string)
-            : globalFilter) && (
+          {(onSearchChange
+            ? searchValue
+            : searchColumn
+              ? (table.getColumn(searchColumn)?.getFilterValue() as string)
+              : globalFilter) && (
             <button
               onClick={() => {
-                if (searchColumn) {
+                if (onSearchChange) {
+                  onSearchChange("")
+                } else if (searchColumn) {
                   table.getColumn(searchColumn)?.setFilterValue("")
                 } else {
                   setGlobalFilter("")
@@ -425,7 +444,10 @@ export function DataTable<TData>({
       </div>
 
       {/* ── Table: only this region scrolls horizontally on narrow viewports ─── */}
-      <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain rounded-xl border border-border bg-card [-webkit-overflow-scrolling:touch]">
+      {/* scrollbar-hide: tables still scroll sideways (trackpad, shift+wheel,
+          touch) but never show a horizontal scrollbar, which reads as chrome
+          cutting across the data. */}
+      <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain scrollbar-hide rounded-xl border border-border bg-card [-webkit-overflow-scrolling:touch]">
         <table className="w-full min-w-max text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
