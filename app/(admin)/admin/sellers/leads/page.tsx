@@ -11,8 +11,9 @@ import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createColumnHelper } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Loader2, Plus, Download, Send, Mail, MailCheck, X } from "lucide-react"
+import { Loader2, Plus, Download, Mail, X, Eye } from "lucide-react"
 import { DataTable } from "@/components/ui/DataTable"
+import { LeadDetailsPanel } from "@/components/leads/LeadDetailsPanel"
 import { confirmDialog } from "@/components/ui/confirm"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { logError } from "@/lib/errors"
@@ -23,6 +24,7 @@ import {
   convertSellerLead,
   sendLeadRegistrationLink,
   sendLeadLinkByEmail,
+  ApiError,
   type SellerLead,
   type LeadStage,
 } from "@/lib/api"
@@ -54,6 +56,7 @@ export default function LeadsPage() {
   const [emailOpen, setEmailOpen] = useState(false)
   const [emailForm, setEmailForm] = useState({ email: "", firstName: "", lastName: "" })
   const [emailError, setEmailError] = useState("")
+  const [viewing, setViewing] = useState<SellerLead | null>(null)
 
   const stats = useQuery({
     queryKey: ["admin", "seller-leads", "stats"],
@@ -110,7 +113,18 @@ export default function LeadsPage() {
     },
     onError: (e) => {
       logError(e, "converting lead")
-      toast.error("Could not send that invite.")
+      // The service tells us WHY. "user_exists" is the common one and reads as
+      // a mystery failure otherwise: the person already has an account, so
+      // there is nothing to fix — they just need looking up instead.
+      const code = e instanceof ApiError ? e.code : undefined
+      if (code === "user_exists") {
+        toast.error(
+          "That email already has an account. Check All Sellers or Invites — they may already be set up.",
+          { duration: 8000 },
+        )
+        return
+      }
+      toast.error(e instanceof ApiError ? e.body : "Could not send that invite.")
     },
   })
 
@@ -126,7 +140,7 @@ export default function LeadsPage() {
     },
     onError: (e) => {
       logError(e, "sending registration link")
-      toast.error("Could not email that link.")
+      toast.error(e instanceof ApiError ? e.body : "Could not email that link.")
     },
   })
 
@@ -168,32 +182,36 @@ export default function LeadsPage() {
   const rows = useMemo<SellerLead[]>(() => leads.data?.content ?? [], [leads.data])
 
   const columns = useMemo(() => [
-    col.accessor("email", {
-      header: "Lead",
+    col.accessor("firstName", {
+      header: "Name",
       cell: (info) => {
         const l = info.row.original
-        return (
-          <div className="min-w-0">
-            <div className="truncate font-medium text-foreground">
-              {l.firstName} {l.lastName}
-            </div>
-            <div className="truncate text-xs text-muted-foreground">{l.email}</div>
-            {l.phone && <div className="truncate text-xs text-muted-foreground">{l.phone}</div>}
-          </div>
-        )
+        const name = [l.firstName, l.lastName].filter(Boolean).join(" ")
+        return <span className="font-medium text-foreground">{name || "—"}</span>
       },
+    }),
+    col.accessor("email", {
+      header: "Email",
+      cell: (info) => <span className="text-sm">{info.getValue() || "—"}</span>,
+    }),
+    col.accessor("phone", {
+      header: "Phone",
+      cell: (info) => <span className="tabular-nums text-sm">{info.getValue() || "—"}</span>,
     }),
     col.accessor("businessName", {
       header: "Business",
+      cell: (info) => <span className="text-sm">{info.getValue() || "—"}</span>,
+    }),
+    col.accessor("city", {
+      header: "City",
+      cell: (info) => <span className="text-sm">{info.getValue() || "—"}</span>,
+    }),
+    col.accessor("categories", {
+      header: "Sells",
       cell: (info) => {
         const l = info.row.original
-        return (
-          <div className="min-w-0">
-            <div className="truncate text-sm text-foreground">{l.businessName || "—"}</div>
-            {l.sells && <div className="truncate text-xs text-muted-foreground">{l.sells}</div>}
-            {l.city && <div className="truncate text-xs text-muted-foreground">{l.city}</div>}
-          </div>
-        )
+        const text = l.categories || l.sells
+        return <span className="text-sm">{text || "—"}</span>
       },
     }),
     col.accessor("stage", {
@@ -204,6 +222,7 @@ export default function LeadsPage() {
           <select
             value={l.stage}
             disabled={moveStage.isPending}
+            onClick={(e) => e.stopPropagation()}
             onChange={async (e) => {
               const next = e.target.value as LeadStage
               if (next === "LOST" && !l.notes) {
@@ -221,30 +240,29 @@ export default function LeadsPage() {
             }}
             className={`rounded-full border px-2 py-1 text-xs font-medium ${STAGE_META[l.stage].tone}`}
           >
-            {STAGES.map((s) => (
-              <option key={s} value={s}>{STAGE_META[s].label}</option>
+            {STAGES.map((st) => (
+              <option key={st} value={st}>{STAGE_META[st].label}</option>
             ))}
           </select>
         )
       },
     }),
+    col.accessor("linkSentAt", {
+      header: "Link sent",
+      cell: (info) => <span className="tabular-nums text-xs">{fmtDate(info.getValue())}</span>,
+    }),
+    col.accessor("profileCompletedAt", {
+      header: "Details in",
+      cell: (info) => {
+        const v = info.getValue()
+        return v
+          ? <span className="text-xs text-emerald-700">{fmtDate(v)}</span>
+          : <span className="text-xs text-muted-foreground">—</span>
+      },
+    }),
     col.accessor("createdAt", {
       header: "Captured",
-      cell: (info) => {
-        const l = info.row.original
-        return (
-          <div>
-            <div className="tabular-nums text-xs">{fmtDate(info.getValue())}</div>
-            {l.profileCompletedAt ? (
-              <div className="text-[11px] text-emerald-700">details completed</div>
-            ) : l.linkSentAt ? (
-              <div className="text-[11px] text-muted-foreground">link sent</div>
-            ) : l.source === "PUBLIC" ? (
-              <div className="text-[11px] text-muted-foreground">via capture link</div>
-            ) : null}
-          </div>
-        )
-      },
+      cell: (info) => <span className="tabular-nums text-xs">{fmtDate(info.getValue())}</span>,
     }),
     col.display({
       id: "actions",
@@ -253,55 +271,20 @@ export default function LeadsPage() {
       enableHiding: false,
       cell: (info) => {
         const l = info.row.original
-        const alreadyInvited = !!l.inviteId
-        const linkSent = !!l.linkSentAt
         return (
-          <div className="inline-flex justify-end gap-1">
+          <div className="inline-flex justify-end">
             <button
-              disabled={sendLink.isPending}
-              onClick={async () => {
-                const ok = await confirmDialog({
-                  title: linkSent ? `Resend link to ${l.firstName}?` : `Email ${l.firstName} a link?`,
-                  description: linkSent
-                    ? `Sends a fresh link to ${l.email}. The previous one stops working.`
-                    : `Emails ${l.email} a personal link to finish their details.`,
-                  confirmLabel: linkSent ? "Resend link" : "Send link",
-                })
-                if (ok) sendLink.mutate(l.id)
-              }}
-              title={linkSent
-                ? `Link sent ${fmtDate(l.linkSentAt)} — resend`
-                : "Email a personal registration link"}
-              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40"
+              onClick={(e) => { e.stopPropagation(); setViewing(l) }}
+              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted"
             >
-              {sendLink.isPending && sendLink.variables === l.id
-                ? <Loader2 className="h-3 w-3 animate-spin" />
-                : linkSent ? <MailCheck className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
-              {linkSent ? "Resend" : "Send link"}
-            </button>
-            <button
-              disabled={alreadyInvited || convert.isPending}
-              onClick={async () => {
-                const ok = await confirmDialog({
-                  title: `Invite ${l.firstName} ${l.lastName}?`,
-                  description: `Creates their account and emails ${l.email} a link to set a password.`,
-                  confirmLabel: "Send invite",
-                })
-                if (ok) convert.mutate(l.id)
-              }}
-              title={alreadyInvited ? "Already invited" : "Create their account and email an invite"}
-              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {convert.isPending && convert.variables === l.id
-                ? <Loader2 className="h-3 w-3 animate-spin" />
-                : <Send className="h-3 w-3" />}
-              {alreadyInvited ? "Invited" : "Invite"}
+              <Eye className="h-3 w-3" />
+              View
             </button>
           </div>
         )
       },
     }),
-  ], [moveStage, convert, sendLink])
+  ], [moveStage])
 
   const total = stats.data ? Object.values(stats.data).reduce((a, b) => a + b, 0) : 0
 
@@ -468,6 +451,20 @@ export default function LeadsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {viewing && (
+        <LeadDetailsPanel
+          // Re-read from the current page so the panel reflects a stage change
+          // or a link send made while it is open, instead of a stale snapshot.
+          lead={rows.find((r) => r.id === viewing.id) ?? viewing}
+          stageLabel={(st) => STAGE_META[st].label}
+          onClose={() => setViewing(null)}
+          onSendLink={() => sendLink.mutate(viewing.id)}
+          onInvite={() => convert.mutate(viewing.id)}
+          sending={sendLink.isPending}
+          inviting={convert.isPending}
+        />
       )}
 
       <DataTable
