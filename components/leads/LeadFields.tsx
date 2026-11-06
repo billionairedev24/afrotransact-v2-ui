@@ -27,6 +27,10 @@ export interface LeadFieldsProps {
   initial?: Partial<LeadFieldsValues>
   /** Locked fields render read-only — the lead's email is fixed by the link. */
   lockedFields?: Array<keyof LeadFieldsValues>
+  /** Fields beyond name and email that must be filled in. The lead's own page
+   *  asks for everything; booth capture stays deliberately minimal, because a
+   *  queue of people is the wrong moment to insist on a full record. */
+  requiredFields?: Array<keyof LeadFieldsValues>
   onSubmit: (values: LeadFieldsValues & { website?: string }) => Promise<void>
   onEmailBlur?: (email: string) => void
   duplicateWarning?: string | null
@@ -45,6 +49,7 @@ export function LeadFields({
   voice,
   initial,
   lockedFields = [],
+  requiredFields = [],
   onSubmit,
   onEmailBlur,
   duplicateWarning,
@@ -73,6 +78,10 @@ export function LeadFields({
   }, [initial])
 
   const isLocked = (k: keyof LeadFieldsValues) => lockedFields.includes(k)
+  const isRequired = (k: keyof LeadFieldsValues) => requiredFields.includes(k)
+  /** Renders "(optional)" only where a field genuinely is. */
+  const optional = (k: keyof LeadFieldsValues) =>
+    isRequired(k) ? null : <span className="font-normal text-muted-foreground">(optional)</span>
   const you = voice === "self"
 
   function set<K extends keyof LeadFieldsValues>(key: K, value: LeadFieldsValues[K]) {
@@ -95,12 +104,20 @@ export function LeadFields({
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
       next.email = "That email address doesn't look right"
     }
-    // Phone is optional, but a half-typed number is worse than none: it looks
-    // captured and cannot be called.
-    if (values.phone && !isValidE164(values.phone)) {
+    // A half-typed number is worse than none: it looks captured and cannot be
+    // called. isValidE164 only passes a complete number, so this covers both
+    // "missing" and "half entered".
+    if (isRequired("phone") && !values.phone?.trim()) {
+      next.phone = "Enter a phone number"
+    } else if (values.phone && !isValidE164(values.phone)) {
       next.phone = "Enter a complete phone number, including the country code"
     }
-    if (values.businessName && values.businessName.trim().length < 2) {
+    if (isRequired("city") && !values.city?.trim()) {
+      next.city = "Enter a city"
+    }
+    if (isRequired("businessName") && !values.businessName?.trim()) {
+      next.businessName = "Enter a business name"
+    } else if (values.businessName && values.businessName.trim().length < 2) {
       next.businessName = "Enter the full business name"
     }
     setErrors(next)
@@ -209,7 +226,7 @@ export function LeadFields({
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0">
           <label htmlFor="lead-phone" className={label}>
-            Phone <span className="font-normal text-muted-foreground">(optional)</span>
+            Phone {optional("phone")}
           </label>
           {/* PhoneInput styles its own select/input, so match them to the rest
               of this form here rather than restyling a component used by
@@ -225,20 +242,22 @@ export function LeadFields({
         </div>
         <div className="min-w-0 flex-1 sm:max-w-[13rem]">
           <label htmlFor="lead-city" className={label}>
-            City <span className="font-normal text-muted-foreground">(optional)</span>
+            City {optional("city")}
           </label>
           <input
             id="lead-city" value={values.city}
             onChange={(e) => set("city", e.target.value)}
-            className={fieldOk}
+            className={errors.city ? fieldBad : fieldOk}
             autoComplete="address-level2" autoCapitalize="words"
+            aria-invalid={!!errors.city}
           />
+          <Err name="city" />
         </div>
       </div>
 
       <div>
         <label htmlFor="lead-business" className={label}>
-          Business name <span className="font-normal text-muted-foreground">(optional)</span>
+          Business name {optional("businessName")}
         </label>
         <input
           id="lead-business" value={values.businessName}
