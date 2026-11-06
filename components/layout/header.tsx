@@ -128,6 +128,10 @@ function MobileMenuRow({
   )
 }
 
+/** Root categories shown as nav links. Which ones is decided by sort order
+ *  in /admin/categories. */
+const NAV_CATEGORY_LINKS = 6
+
 export function Header() {
   const router = useRouter()
   const pathname = usePathname()
@@ -201,7 +205,23 @@ export function Header() {
 
   useEffect(() => {
     getCategories()
-      .then(cats => setCategories(cats.filter(c => !c.parentId).slice(0, 8)))
+      .then(cats => setCategories(
+        cats
+          .filter(c => !c.parentId)
+          // The search dropdown lists EVERY root category — it is a filter, and
+          // a filter that silently omits options is worse than a long one (it
+          // already scrolls). An earlier slice(0, 8) hid every category added
+          // after the eighth: Fashion was invisible in search while its
+          // products were perfectly findable by typing their name.
+          //
+          // Explicit ordering so the admin's sort order actually drives this,
+          // instead of leaving it to whatever order rows come back in.
+          // Tie-break on existing order, not name: with every sortOrder at 0 an
+          // alphabetical fallback would reshuffle the whole storefront.
+          .map((c, i) => ({ c, i }))
+          .sort((x, y) => (x.c.sortOrder ?? 0) - (y.c.sortOrder ?? 0) || x.i - y.i)
+          .map(({ c }) => c),
+      ))
       .catch(() => {})
   }, [])
 
@@ -209,9 +229,12 @@ export function Header() {
     // Services category is intentionally filtered out — AfroTransact is
     // product-only during closed beta. (Server also enforces this via
     // V13__remove_services_category.sql.)
+    // The nav bar has room for a handful; `categories` is already sorted by the
+    // admin's sort order, so this takes the first few of THAT rather than an
+    // arbitrary slice.
     ...categories
       .filter(cat => !isServicesCategory(cat.slug))
-      .slice(0, 6)
+      .slice(0, NAV_CATEGORY_LINKS)
       .map(cat => {
         const style = getCategoryIcon(cat.slug)
         return { name: cat.name, href: `/category/${cat.slug}`, icon: style.icon, accent: style.accent, disabled: false }
