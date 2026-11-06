@@ -11,7 +11,7 @@ import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createColumnHelper } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Loader2, Plus, Download, Link2, Send, Mail, MailCheck } from "lucide-react"
+import { Loader2, Plus, Download, Send, Mail, MailCheck, X } from "lucide-react"
 import { DataTable } from "@/components/ui/DataTable"
 import { confirmDialog } from "@/components/ui/confirm"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -21,8 +21,8 @@ import {
   getSellerLeadStats,
   updateSellerLead,
   convertSellerLead,
-  mintLeadCaptureLink,
   sendLeadRegistrationLink,
+  sendLeadLinkByEmail,
   type SellerLead,
   type LeadStage,
 } from "@/lib/api"
@@ -51,6 +51,9 @@ export default function LeadsPage() {
   const [search, setSearch] = useState("")
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(25)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [emailForm, setEmailForm] = useState({ email: "", firstName: "", lastName: "" })
+  const [emailError, setEmailError] = useState("")
 
   const stats = useQuery({
     queryKey: ["admin", "seller-leads", "stats"],
@@ -127,26 +130,21 @@ export default function LeadsPage() {
     },
   })
 
-  const captureLink = useMutation({
-    mutationFn: async () => {
+  const emailLink = useMutation({
+    mutationFn: async (data: { email: string; firstName?: string; lastName?: string }) => {
       const token = await getAccessToken()
       if (!token) throw new Error("Your session expired. Sign in again.")
-      return mintLeadCaptureLink(token, "Conference booth", 48)
+      return sendLeadLinkByEmail(token, data)
     },
-    onSuccess: async (res) => {
-      const url = `${window.location.origin}/lead/${res.token}`
-      try {
-        await navigator.clipboard.writeText(url)
-        toast.success("Capture link copied — valid for 48 hours")
-      } catch {
-        // Clipboard needs permission that a phone browser may refuse. Showing
-        // the URL is worse than copying it, but far better than losing it.
-        toast.success(url, { duration: 30_000 })
-      }
+    onSuccess: (lead) => {
+      invalidate()
+      setEmailOpen(false)
+      setEmailForm({ email: "", firstName: "", lastName: "" })
+      toast.success(`Link sent to ${lead.email}`)
     },
     onError: (e) => {
-      logError(e, "minting capture link")
-      toast.error("Could not create a capture link.")
+      logError(e, "sending link by email")
+      toast.error("Could not send that link.")
     },
   })
 
@@ -318,12 +316,11 @@ export default function LeadsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => captureLink.mutate()}
-            disabled={captureLink.isPending}
-            className="inline-flex h-10 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
+            onClick={() => { setEmailOpen(true); setEmailError("") }}
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium hover:bg-muted"
           >
-            <Link2 className="h-4 w-4" />
-            Copy capture link
+            <Mail className="h-4 w-4" />
+            Email a link
           </button>
           <button
             onClick={exportCsv}
@@ -364,6 +361,114 @@ export default function LeadsPage() {
           </button>
         ))}
       </div>
+
+      {emailOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="email-link-title"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+          onClick={() => setEmailOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-2xl border border-border bg-background p-6 sm:rounded-2xl"
+          >
+            <div className="mb-1 flex items-start justify-between gap-4">
+              <h2 id="email-link-title" className="text-lg font-semibold text-foreground">
+                Email a registration link
+              </h2>
+              <button
+                onClick={() => setEmailOpen(false)}
+                aria-label="Close"
+                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mb-5 text-sm text-muted-foreground">
+              Their address is all you need. They&apos;ll get a link that opens a
+              short form, and they appear here as a new lead straight away.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const email = emailForm.email.trim()
+                if (!email) { setEmailError("Enter an email address"); return }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                  setEmailError("That email address doesn't look right"); return
+                }
+                setEmailError("")
+                emailLink.mutate({
+                  email,
+                  firstName: emailForm.firstName.trim() || undefined,
+                  lastName: emailForm.lastName.trim() || undefined,
+                })
+              }}
+              className="space-y-4"
+              noValidate
+            >
+              <div>
+                <label htmlFor="link-email" className="mb-1.5 block text-sm font-medium text-foreground">
+                  Email
+                </label>
+                <input
+                  id="link-email"
+                  type="email"
+                  inputMode="email"
+                  autoFocus
+                  value={emailForm.email}
+                  onChange={(e) => { setEmailForm((f) => ({ ...f, email: e.target.value })); setEmailError("") }}
+                  aria-invalid={!!emailError}
+                  className={`h-12 w-full rounded-lg border bg-background px-3 text-base text-foreground focus:outline-none focus:ring-2 ${
+                    emailError
+                      ? "border-rose-400 focus:border-rose-500 focus:ring-rose-200"
+                      : "border-border focus:border-primary focus:ring-primary/40"
+                  }`}
+                />
+                {emailError && <p className="mt-1.5 text-sm text-rose-700">{emailError}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="link-first" className="mb-1.5 block text-sm font-medium text-foreground">
+                    First name <span className="font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  <input
+                    id="link-first"
+                    value={emailForm.firstName}
+                    onChange={(e) => setEmailForm((f) => ({ ...f, firstName: e.target.value }))}
+                    autoCapitalize="words"
+                    className="h-12 w-full rounded-lg border border-border bg-background px-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="link-last" className="mb-1.5 block text-sm font-medium text-foreground">
+                    Last name <span className="font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  <input
+                    id="link-last"
+                    value={emailForm.lastName}
+                    onChange={(e) => setEmailForm((f) => ({ ...f, lastName: e.target.value }))}
+                    autoCapitalize="words"
+                    className="h-12 w-full rounded-lg border border-border bg-background px-3 text-base text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={emailLink.isPending}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-base font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {emailLink.isPending && <Loader2 className="h-5 w-5 animate-spin" />}
+                {emailLink.isPending ? "Sending…" : "Send link"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       <DataTable
         columns={columns}
