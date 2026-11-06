@@ -5215,15 +5215,16 @@ export function convertSellerLead(token: string, id: string, expiresInHours?: nu
   return api<SellerLead>(`/api/v1/admin/seller-leads/${id}/convert${suffix}`, { method: "POST", token })
 }
 
-export function mintLeadCaptureLink(token: string, label?: string, expiresInHours?: number) {
-  const qs = new URLSearchParams()
-  if (label) qs.set("label", label)
-  if (expiresInHours) qs.set("expiresInHours", String(expiresInHours))
-  const suffix = qs.toString() ? `?${qs.toString()}` : ""
-  return api<{ token: string; label: string | null; expiresAt: string }>(
-    `/api/v1/admin/seller-leads/capture-links${suffix}`,
-    { method: "POST", token },
-  )
+/** Take only an email and send that person their own link, creating the lead
+ *  on the way. An address we already hold gets a fresh link rather than a
+ *  duplicate record. */
+export function sendLeadLinkByEmail(
+  token: string,
+  data: { email: string; firstName?: string; lastName?: string },
+) {
+  return api<SellerLead>("/api/v1/admin/seller-leads/send-link-by-email", {
+    method: "POST", body: data, token,
+  })
 }
 
 /** Emails this lead a personal registration link. Re-sending mints a fresh
