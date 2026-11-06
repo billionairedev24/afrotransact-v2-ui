@@ -11,7 +11,7 @@ import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createColumnHelper } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Loader2, Plus, Download, Link2, Send } from "lucide-react"
+import { Loader2, Plus, Download, Link2, Send, Mail, MailCheck } from "lucide-react"
 import { DataTable } from "@/components/ui/DataTable"
 import { confirmDialog } from "@/components/ui/confirm"
 import { getAccessToken } from "@/lib/auth-helpers"
@@ -22,6 +22,7 @@ import {
   updateSellerLead,
   convertSellerLead,
   mintLeadCaptureLink,
+  sendLeadRegistrationLink,
   type SellerLead,
   type LeadStage,
 } from "@/lib/api"
@@ -107,6 +108,22 @@ export default function LeadsPage() {
     onError: (e) => {
       logError(e, "converting lead")
       toast.error("Could not send that invite.")
+    },
+  })
+
+  const sendLink = useMutation({
+    mutationFn: async (id: string) => {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Your session expired. Sign in again.")
+      return sendLeadRegistrationLink(token, id)
+    },
+    onSuccess: () => {
+      invalidate()
+      toast.success("Registration link emailed")
+    },
+    onError: (e) => {
+      logError(e, "sending registration link")
+      toast.error("Could not email that link.")
     },
   })
 
@@ -220,9 +237,13 @@ export default function LeadsPage() {
         return (
           <div>
             <div className="tabular-nums text-xs">{fmtDate(info.getValue())}</div>
-            {l.source === "PUBLIC" && (
+            {l.profileCompletedAt ? (
+              <div className="text-[11px] text-emerald-700">details completed</div>
+            ) : l.linkSentAt ? (
+              <div className="text-[11px] text-muted-foreground">link sent</div>
+            ) : l.source === "PUBLIC" ? (
               <div className="text-[11px] text-muted-foreground">via capture link</div>
-            )}
+            ) : null}
           </div>
         )
       },
@@ -235,8 +256,31 @@ export default function LeadsPage() {
       cell: (info) => {
         const l = info.row.original
         const alreadyInvited = !!l.inviteId
+        const linkSent = !!l.linkSentAt
         return (
-          <div className="inline-flex justify-end">
+          <div className="inline-flex justify-end gap-1">
+            <button
+              disabled={sendLink.isPending}
+              onClick={async () => {
+                const ok = await confirmDialog({
+                  title: linkSent ? `Resend link to ${l.firstName}?` : `Email ${l.firstName} a link?`,
+                  description: linkSent
+                    ? `Sends a fresh link to ${l.email}. The previous one stops working.`
+                    : `Emails ${l.email} a personal link to finish their details.`,
+                  confirmLabel: linkSent ? "Resend link" : "Send link",
+                })
+                if (ok) sendLink.mutate(l.id)
+              }}
+              title={linkSent
+                ? `Link sent ${fmtDate(l.linkSentAt)} — resend`
+                : "Email a personal registration link"}
+              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40"
+            >
+              {sendLink.isPending && sendLink.variables === l.id
+                ? <Loader2 className="h-3 w-3 animate-spin" />
+                : linkSent ? <MailCheck className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
+              {linkSent ? "Resend" : "Send link"}
+            </button>
             <button
               disabled={alreadyInvited || convert.isPending}
               onClick={async () => {
@@ -259,7 +303,7 @@ export default function LeadsPage() {
         )
       },
     }),
-  ], [moveStage, convert])
+  ], [moveStage, convert, sendLink])
 
   const total = stats.data ? Object.values(stats.data).reduce((a, b) => a + b, 0) : 0
 
