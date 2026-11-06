@@ -40,6 +40,10 @@ async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
   }
 }
 
+/** How many root categories get a section on the landing page. Which ones is
+ *  decided by sort order in /admin/categories. */
+const HOME_CATEGORY_SECTIONS = 6
+
 export default async function HomePage() {
   const emptySearch = { results: [] as SearchResult[] } as Awaited<ReturnType<typeof searchProducts>>
   const [
@@ -127,9 +131,21 @@ export default async function HomePage() {
   }
 
   // Exclude `services` everywhere in the landing render (closed-beta requirement).
+  //
+  // Ordered by the admin's sort order, so which categories make the homepage is
+  // a decision taken in /admin/categories rather than whatever order rows
+  // happen to come back in. Every root currently carries sortOrder 0, which is
+  // why a newly added category (Fashion) landed last and never appeared here.
   const roots = categories
     .filter((c) => c.parentId == null && c.slug !== "services")
-    .slice(0, 4)
+    // Tie-break on the existing order, NOT on name: every root currently has
+    // sortOrder 0, and an alphabetical fallback would silently drop Grocery
+    // off the homepage and surface the duplicate "Fish & Seafood" twice.
+    // Until someone sets an order in /admin/categories this is a no-op.
+    .map((c, i) => ({ c, i }))
+    .sort((x, y) => (x.c.sortOrder ?? 0) - (y.c.sortOrder ?? 0) || x.i - y.i)
+    .map(({ c }) => c)
+    .slice(0, HOME_CATEGORY_SECTIONS)
 
   // Warm the category tiles fetcher (keeps client traffic at zero / parity with
   // previous page). Result is unused now that the bento grid pulls from
