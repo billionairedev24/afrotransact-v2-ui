@@ -5159,3 +5159,108 @@ export function pingLoginSession(token: string, sessionId: string, userAgent: st
 export function getLoginSessionDevices(token: string) {
   return api<LoginSessionDeviceDto[]>("/api/v1/users/me/login-sessions", { token })
 }
+
+// ── Seller Leads (conference capture + follow-up pipeline) ──
+
+export type LeadStage = "NEW" | "CONTACTED" | "INVITED" | "ONBOARDING" | "WON" | "LOST"
+
+export interface SellerLead {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string | null
+  businessName: string | null
+  sells: string | null
+  city: string | null
+  notes: string | null
+  stage: LeadStage
+  source: "BOOTH" | "PUBLIC"
+  capturedByUserId: string | null
+  inviteId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CaptureLeadInput {
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  businessName?: string
+  sells?: string
+  city?: string
+  notes?: string
+}
+
+export function captureSellerLead(token: string, data: CaptureLeadInput) {
+  return api<SellerLead>("/api/v1/admin/seller-leads", { method: "POST", body: data, token })
+}
+
+export function listSellerLeads(
+  token: string,
+  params: { stage?: string; q?: string; page?: number; size?: number } = {},
+) {
+  const qs = new URLSearchParams()
+  if (params.stage) qs.set("stage", params.stage)
+  if (params.q) qs.set("q", params.q)
+  if (params.page !== undefined) qs.set("page", String(params.page))
+  if (params.size !== undefined) qs.set("size", String(params.size))
+  const suffix = qs.toString() ? `?${qs.toString()}` : ""
+  return api<Page<SellerLead>>(`/api/v1/admin/seller-leads${suffix}`, { token })
+}
+
+export function getSellerLeadStats(token: string) {
+  return api<Record<LeadStage, number>>("/api/v1/admin/seller-leads/stats", { token })
+}
+
+/** Existing leads with this email. Warns the person capturing; never blocks. */
+export function findDuplicateLeads(token: string, email: string) {
+  return api<SellerLead[]>(
+    `/api/v1/admin/seller-leads/duplicates?email=${encodeURIComponent(email)}`,
+    { token },
+  )
+}
+
+export function updateSellerLead(
+  token: string,
+  id: string,
+  data: Partial<CaptureLeadInput> & { stage?: LeadStage },
+) {
+  return api<SellerLead>(`/api/v1/admin/seller-leads/${id}`, { method: "PATCH", body: data, token })
+}
+
+/** Turns the lead into a real seller invite. Idempotent server-side. */
+export function convertSellerLead(token: string, id: string, expiresInHours?: number) {
+  const suffix = expiresInHours ? `?expiresInHours=${expiresInHours}` : ""
+  return api<SellerLead>(`/api/v1/admin/seller-leads/${id}/convert${suffix}`, { method: "POST", token })
+}
+
+export function mintLeadCaptureLink(token: string, label?: string, expiresInHours?: number) {
+  const qs = new URLSearchParams()
+  if (label) qs.set("label", label)
+  if (expiresInHours) qs.set("expiresInHours", String(expiresInHours))
+  const suffix = qs.toString() ? `?${qs.toString()}` : ""
+  return api<{ token: string; label: string | null; expiresAt: string }>(
+    `/api/v1/admin/seller-leads/capture-links${suffix}`,
+    { method: "POST", token },
+  )
+}
+
+/** Public booth capture — no session. The gateway allows this prefix
+ *  unauthenticated; the server accepts only an admin-minted capture token. */
+export function submitPublicLead(
+  captureToken: string,
+  data: CaptureLeadInput & { website?: string },
+) {
+  return api<{ ok: boolean }>(
+    `/api/v1/public/seller-leads?token=${encodeURIComponent(captureToken)}`,
+    { method: "POST", body: data },
+  )
+}
+
+export function validateLeadCaptureToken(captureToken: string) {
+  return api<{ valid: boolean }>(
+    `/api/v1/public/seller-leads/validate?token=${encodeURIComponent(captureToken)}`,
+  )
+}
