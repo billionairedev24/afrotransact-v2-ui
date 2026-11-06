@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   AsYouType,
   getCountryCallingCode,
@@ -79,14 +79,34 @@ export function PhoneInput({
   }, [value, defaultCountry])
 
   const [country, setCountry] = useState<CountryCode>(initialCountry)
+  // True while a value change is this component's own doing, so the sync
+  // effect below can ignore the echo.
+  const selfEmitted = useRef(false)
+
+  function emit(e164: string) {
+    selfEmitted.current = true
+    onChange(e164)
+  }
   const [display, setDisplay] = useState<string>(() => {
     if (!value) return ""
     const parsed = parsePhoneNumberFromString(value)
     return parsed?.formatNational() ?? value
   })
 
-  // Sync display when the parent resets the value (e.g. form clear).
+  // Sync display when the parent genuinely changes the value from outside
+  // (prefill, form clear) — NEVER when it is just echoing back what this
+  // component itself emitted.
+  //
+  // That distinction matters: handleChange reports "" for any number that is
+  // not yet valid, so backspacing one digit off a complete number pushes "" to
+  // the parent, which lands back here as a changed `value`. Without this guard
+  // the effect read that as a reset and wiped the entire field, so a single
+  // backspace deleted the whole number.
   useEffect(() => {
+    if (selfEmitted.current) {
+      selfEmitted.current = false
+      return
+    }
     if (!value) {
       setDisplay("")
       return
@@ -120,7 +140,7 @@ export function PhoneInput({
     const formatted = digits ? new AsYouType(country).input(digits) : ""
     setDisplay(formatted)
     const parsed = parsePhoneNumberFromString(formatted, country)
-    onChange(parsed && parsed.isValid() ? parsed.number : "")
+    emit(parsed && parsed.isValid() ? parsed.number : "")
   }
 
   function handleCountry(next: CountryCode) {
@@ -131,7 +151,7 @@ export function PhoneInput({
       const formatted = formatter.input(display)
       setDisplay(formatted)
       const parsed = parsePhoneNumberFromString(formatted, next)
-      onChange(parsed && parsed.isValid() ? parsed.number : "")
+      emit(parsed && parsed.isValid() ? parsed.number : "")
     }
   }
 
