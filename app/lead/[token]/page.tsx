@@ -28,7 +28,7 @@ type LinkState = "checking" | "live" | "dead"
 // promising specifics we have not agreed with them yet (pricing, delivery,
 // payout schedules) sets expectations nobody has signed off.
 const STEPS = [
-  { title: "You send your details", body: "The short form on this page — about a minute." },
+  { title: "You send your details", body: "" },
   { title: "We get in touch", body: "Someone from our team follows up with you." },
   { title: "You start selling", body: "We'll help you get set up." },
 ]
@@ -83,7 +83,9 @@ export default function LeadRegistrationPage({
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <header className="bg-brand-dark">
+      {/* Stays put while the form scrolls — the brand should not slide away
+          on the one page a lead ever sees of ours. */}
+      <header className="sticky top-0 z-40 bg-brand-dark">
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center px-5">
           <Image
             src="/brand/logo-white.svg"
@@ -151,6 +153,7 @@ export default function LeadRegistrationPage({
                   voice="self"
                   initial={initial}
                   lockedFields={["email"]}
+                  requiredFields={["phone", "city", "businessName"]}
                   onSubmit={submit}
                   submitLabel="Send my details"
                 />
@@ -179,9 +182,11 @@ export default function LeadRegistrationPage({
                         </span>
                         <span>
                           <span className="block text-sm font-medium text-foreground">{s.title}</span>
-                          <span className="mt-0.5 block text-[13px] leading-relaxed text-muted-foreground">
-                            {s.body}
-                          </span>
+                          {s.body && (
+                            <span className="mt-0.5 block text-[13px] leading-relaxed text-muted-foreground">
+                              {s.body}
+                            </span>
+                          )}
                         </span>
                       </li>
                     ))}
