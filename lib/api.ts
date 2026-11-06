@@ -105,6 +105,7 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     let userMessage = res.statusText
+    let errorCode: string | undefined
 
     if (res.status === 502 || res.status === 503 || res.status === 504) {
       userMessage = "The service is temporarily unavailable. Please try again in a few minutes. (HTTP " + res.status + ")"
@@ -114,6 +115,10 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
       try {
         const parsed = JSON.parse(text)
         userMessage = parsed.error || parsed.message || res.statusText
+        // Machine-readable code, when the service sends one. Callers branch on
+        // this to explain WHY something failed — "that email already has an
+        // account" reads very differently from a generic failure toast.
+        errorCode = typeof parsed.code === "string" ? parsed.code : undefined
       } catch {
         if (text) userMessage = text
       }
@@ -147,7 +152,7 @@ async function api<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     if (process.env.NEXT_PHASE !== "phase-production-build") {
       console.error(`[API] ${opts.method ?? "GET"} ${path} → ${res.status}`, userMessage)
     }
-    throw new ApiError(res.status, userMessage, path)
+    throw new ApiError(res.status, userMessage, path, errorCode)
   }
 
   if (res.status === 204) return undefined as T
@@ -175,6 +180,8 @@ export class ApiError extends Error {
     public status: number,
     public body: string,
     public path: string,
+    /** Service-supplied machine-readable code, e.g. "user_exists". */
+    public code?: string,
   ) {
     super(`API ${path} returned ${status}: ${body}`)
     this.name = "ApiError"
