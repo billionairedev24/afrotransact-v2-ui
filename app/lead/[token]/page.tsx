@@ -92,7 +92,7 @@ export default function LeadRegistrationPage({
             voice="self"
             initial={initial}
             lockedFields={["email"]}
-            requiredFields={["phone", "city", "businessName"]}
+            requiredFields={["phone", "city", "businessName", "categories"]}
             onSubmit={submit}
             submitLabel="Send my details"
           />
