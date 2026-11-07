@@ -11,10 +11,10 @@
  * about them in the third person.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Loader2, Check } from "lucide-react"
 import { PhoneInput, isValidE164 } from "@/components/ui/PhoneInput"
-import { getCategories, type CategoryRef, type CaptureLeadInput } from "@/lib/api"
+import type { CaptureLeadInput } from "@/lib/api"
 
 export type LeadFieldsVoice = "admin" | "self"
 
@@ -40,6 +40,24 @@ export interface LeadFieldsProps {
   includeHoneypot?: boolean
 }
 
+/**
+ * What a seller sells, as a short fixed list rather than the live catalog
+ * taxonomy.
+ *
+ * The catalog has thirteen roots, several of them duplicates and most of them
+ * grocery subcategories — accurate for merchandising, useless to someone
+ * describing their own business at a stand. These five plus a fallback cover
+ * what we actually need to route a lead, and "Services" and "Other" each ask
+ * for a line of detail so the answer stays meaningful.
+ */
+const SELLS_OPTIONS = ["Groceries", "Fashion", "Books", "Electronics", "Services", "Other"] as const
+
+/** Options whose answer is meaningless without a line of detail. */
+const SELLS_NEEDS_DETAIL: Record<string, string> = {
+  Services: "What kind of service?",
+  Other: "What do you sell?",
+}
+
 const EMPTY: LeadFieldsValues = {
   firstName: "", lastName: "", email: "", phone: "",
   businessName: "", sells: "", categories: "", city: "", notes: "",
@@ -58,9 +76,7 @@ export function LeadFields({
   includeHoneypot = false,
 }: LeadFieldsProps) {
   const [values, setValues] = useState<LeadFieldsValues>({ ...EMPTY, ...initial })
-  const [picked, setPicked] = useState<string[]>(
-    initial?.categories ? initial.categories.split(",").map((c) => c.trim()).filter(Boolean) : [],
-  )
+  const [sellsKind, setSellsKind] = useState<string>(initial?.categories?.trim() ?? "")
   const [honeypot, setHoneypot] = useState("")
   // PhoneInput reports "" for anything that is not a complete, valid number,
   // so without this an invalid entry is indistinguishable from an empty field
@@ -68,17 +84,13 @@ export function LeadFields({
   const [phoneTyped, setPhoneTyped] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
-  const [categories, setCategories] = useState<CategoryRef[]>([])
   const firstFieldRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    // Categories are a nicety: if the catalog call fails the rest of the form
-    // still works, and the free-text line still captures what they sell.
-    getCategories({ revalidate: 3600 }).then(setCategories).catch(() => setCategories([]))
-  }, [])
-
-  useEffect(() => {
-    if (initial) setValues((v) => ({ ...v, ...initial }))
+    if (initial) {
+      setValues((v) => ({ ...v, ...initial }))
+      if (initial.categories) setSellsKind(initial.categories.trim())
+    }
   }, [initial])
 
   const isLocked = (k: keyof LeadFieldsValues) => lockedFields.includes(k)
@@ -93,11 +105,12 @@ export function LeadFields({
     if (errors[key as string]) setErrors((e) => ({ ...e, [key as string]: "" }))
   }
 
-  function toggleCategory(name: string) {
-    setPicked((cur) =>
-      cur.includes(name) ? cur.filter((c) => c !== name) : [...cur, name],
-    )
-    if (errors.categories) setErrors((e) => ({ ...e, categories: "" }))
+  function pickSellsKind(kind: string) {
+    setSellsKind(kind)
+    // The detail line belongs to the previous choice; keep it only while the
+    // choice still asks for one.
+    if (!SELLS_NEEDS_DETAIL[kind]) setValues((v) => ({ ...v, sells: "" }))
+    setErrors((e) => ({ ...e, categories: "", sells: "" }))
   }
 
   function validate(): boolean {
@@ -125,6 +138,16 @@ export function LeadFields({
     if (isRequired("city") && !values.city?.trim()) {
       next.city = "Enter a city"
     }
+    if (isRequired("categories") && !sellsKind) {
+      next.categories = you ? "Choose what you sell" : "Choose what they sell"
+    }
+    // "Services" or "Other" on its own tells us nothing — the detail line is
+    // the actual answer, so it is required whenever one of those is chosen.
+    if (SELLS_NEEDS_DETAIL[sellsKind] && !values.sells?.trim()) {
+      next.sells = sellsKind === "Services"
+        ? "Say what kind of service"
+        : "Say what you sell"
+    }
     if (isRequired("businessName") && !values.businessName?.trim()) {
       next.businessName = "Enter a business name"
     } else if (values.businessName && values.businessName.trim().length < 2) {
@@ -147,12 +170,12 @@ export function LeadFields({
     try {
       await onSubmit({
         ...values,
-        categories: picked.join(", "),
+        categories: sellsKind,
         website: includeHoneypot ? honeypot : undefined,
       })
       if (resetAfterSubmit) {
         setValues(EMPTY)
-        setPicked([])
+        setSellsKind("")
         setHoneypot("")
         firstFieldRef.current?.focus()
       }
@@ -163,11 +186,6 @@ export function LeadFields({
       setSaving(false)
     }
   }
-
-  const topLevel = useMemo(
-    () => categories.filter((c) => !c.parentId).slice(0, 14),
-    [categories],
-  )
 
   const field =
     "h-12 w-full rounded-lg border bg-background px-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -279,46 +297,41 @@ export function LeadFields({
         <Err name="businessName" />
       </div>
 
-      {topLevel.length > 0 && (
-        <fieldset>
-          <legend className={label}>
-            {you ? "What do you sell?" : "What do they sell?"}
-          </legend>
-          <div className="flex flex-wrap gap-2">
-            {topLevel.map((c) => {
-              const on = picked.includes(c.name)
-              return (
-                <button
-                  key={c.id} type="button"
-                  onClick={() => toggleCategory(c.name)}
-                  aria-pressed={on}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
-                    on
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-foreground hover:bg-muted"
-                  }`}
-                >
-                  {on && <Check className="h-3.5 w-3.5" />}
-                  {c.name}
-                </button>
-              )
-            })}
-          </div>
-        </fieldset>
-      )}
-
       <div>
-        <label htmlFor="lead-sells" className={label}>
-          {you ? "Anything else you sell" : "Anything else they sell"}{" "}
-          <span className="font-normal text-muted-foreground">(optional)</span>
+        <label htmlFor="lead-sells-kind" className={label}>
+          {you ? "What do you sell?" : "What do they sell?"} {optional("categories")}
         </label>
-        <input
-          id="lead-sells" value={values.sells}
-          onChange={(e) => set("sells", e.target.value)}
-          className={fieldOk}
-          placeholder="Jollof spice blends, dried fish"
-        />
+        <select
+          id="lead-sells-kind"
+          value={sellsKind}
+          onChange={(e) => pickSellsKind(e.target.value)}
+          aria-invalid={!!errors.categories}
+          className={`${errors.categories ? fieldBad : fieldOk} appearance-none bg-background pr-9`}
+        >
+          <option value="">Choose one…</option>
+          {SELLS_OPTIONS.map((o) => (
+            <option key={o} value={o}>{o}</option>
+          ))}
+        </select>
+        <Err name="categories" />
       </div>
+
+      {SELLS_NEEDS_DETAIL[sellsKind] && (
+        <div>
+          <label htmlFor="lead-sells" className={label}>
+            {SELLS_NEEDS_DETAIL[sellsKind]}
+          </label>
+          <input
+            id="lead-sells"
+            value={values.sells}
+            onChange={(e) => set("sells", e.target.value)}
+            className={errors.sells ? fieldBad : fieldOk}
+            aria-invalid={!!errors.sells}
+            placeholder={sellsKind === "Services" ? "Tailoring, catering, braiding" : "Handmade jewellery"}
+          />
+          <Err name="sells" />
+        </div>
+      )}
 
       {voice === "admin" && (
         <div>
