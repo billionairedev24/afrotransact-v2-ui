@@ -11,9 +11,10 @@ import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createColumnHelper } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Loader2, Plus, Download, Mail, X, Eye } from "lucide-react"
+import { Loader2, Plus, Download, Mail, X, Eye, QrCode } from "lucide-react"
 import { DataTable } from "@/components/ui/DataTable"
 import { LeadDetailsPanel } from "@/components/leads/LeadDetailsPanel"
+import { LeadQrDialog } from "@/components/leads/LeadQrDialog"
 import { confirmDialog } from "@/components/ui/confirm"
 import { getAccessToken } from "@/lib/auth-helpers"
 import { logError } from "@/lib/errors"
@@ -57,6 +58,7 @@ export default function LeadsPage() {
   const [emailForm, setEmailForm] = useState({ email: "", firstName: "", lastName: "" })
   const [emailError, setEmailError] = useState("")
   const [viewing, setViewing] = useState<SellerLead | null>(null)
+  const [qrOpen, setQrOpen] = useState(false)
 
   const stats = useQuery({
     queryKey: ["admin", "seller-leads", "stats"],
@@ -299,6 +301,13 @@ export default function LeadsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
+            onClick={() => setQrOpen(true)}
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium hover:bg-muted"
+          >
+            <QrCode className="h-4 w-4" />
+            Show QR code
+          </button>
+          <button
             onClick={() => { setEmailOpen(true); setEmailError("") }}
             className="inline-flex h-10 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium hover:bg-muted"
           >
@@ -452,6 +461,8 @@ export default function LeadsPage() {
           </div>
         </div>
       )}
+
+      {qrOpen && <LeadQrDialog onClose={() => setQrOpen(false)} />}
 
       {viewing && (
         <LeadDetailsPanel
