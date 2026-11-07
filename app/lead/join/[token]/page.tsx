@@ -74,7 +74,7 @@ export default function LeadJoinPage({
             voice="self"
             requiredFields={["phone", "city", "businessName", "categories"]}
             onSubmit={submit}
-            submitLabel="Send my details"
+            submitLabel="Submit"
             includeHoneypot
           />
         </LeadFormLayout>
