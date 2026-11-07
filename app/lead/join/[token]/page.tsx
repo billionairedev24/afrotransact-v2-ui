@@ -72,7 +72,7 @@ export default function LeadJoinPage({
         >
           <LeadFields
             voice="self"
-            requiredFields={["phone", "city", "businessName"]}
+            requiredFields={["phone", "city", "businessName", "categories"]}
             onSubmit={submit}
             submitLabel="Send my details"
             includeHoneypot
