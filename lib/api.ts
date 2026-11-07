@@ -5275,3 +5275,35 @@ export function completeLeadProfile(
     { method: "PUT", body: data },
   )
 }
+
+// ── Scannable QR lead capture ──
+
+/** The shared link behind the QR code. Get-or-create: opening the dialog twice
+ *  returns the SAME code, so a printed poster keeps working. */
+export function getLeadJoinLink(token: string) {
+  return api<{ token: string; label: string | null; expiresAt: string }>(
+    "/api/v1/admin/seller-leads/join-link",
+    { token },
+  )
+}
+
+export function revokeLeadJoinLink(token: string) {
+  return api<void>("/api/v1/admin/seller-leads/join-link", { method: "DELETE", token })
+}
+
+export function validateLeadJoinToken(joinToken: string) {
+  return api<{ valid: boolean }>(
+    `/api/v1/public/seller-leads/join/validate?token=${encodeURIComponent(joinToken)}`,
+  )
+}
+
+/** Someone who scanned the QR code, filling in their own details. */
+export function submitJoinLead(
+  joinToken: string,
+  data: CaptureLeadInput & { website?: string },
+) {
+  return api<{ ok: boolean; firstName: string }>(
+    `/api/v1/public/seller-leads/join?token=${encodeURIComponent(joinToken)}`,
+    { method: "POST", body: data },
+  )
+}

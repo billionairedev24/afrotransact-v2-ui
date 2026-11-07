@@ -4,34 +4,24 @@
  * A lead's own registration page, opened from the personal link we emailed
  * after meeting them at an event.
  *
- * This page belongs to the person, not to us: it carries the brand, speaks in
- * the second person, and opens already filled in with what they told us at the
- * stand. It is explicitly NOT a booth-rep tool — there is no "add another",
- * because the only person who should ever use it is the one named on the link.
+ * Shares its shell and form with the scanned QR page — the only difference is
+ * that this one knows who they are, so it opens already filled in with what
+ * they told us at the stand and their email is fixed by the link.
  *
- * Layout: the form leads, with the three things a seller actually wants to
- * know beside it (what happens next, what it costs them, who to ask). On a
- * phone that column falls below the form, so nothing delays the first field.
+ * There is deliberately no "add another": the only person who should ever use
+ * this page is the one named on the link.
  */
 
 import { use, useEffect, useState } from "react"
-import Image from "next/image"
 import { toast } from "sonner"
-import { Check, Loader2, ShieldCheck } from "lucide-react"
 import { LeadFields, type LeadFieldsValues } from "@/components/leads/LeadFields"
+import {
+  LeadPageShell, LeadPageLoading, LeadLinkDead, LeadThankYou, LeadFormLayout,
+} from "@/components/leads/LeadPageShell"
 import { logError } from "@/lib/errors"
 import { getLeadProfile, completeLeadProfile } from "@/lib/api"
 
 type LinkState = "checking" | "live" | "dead"
-
-// Deliberately generic: this page is the first thing a lead sees, and
-// promising specifics we have not agreed with them yet (pricing, delivery,
-// payout schedules) sets expectations nobody has signed off.
-const STEPS = [
-  { title: "You send your details", body: "" },
-  { title: "We get in touch", body: "Someone from our team follows up with you." },
-  { title: "You start selling", body: "We'll help you get set up." },
-]
 
 export default function LeadRegistrationPage({
   params,
@@ -45,8 +35,8 @@ export default function LeadRegistrationPage({
 
   useEffect(() => {
     let cancelled = false
-    // Check the link before they type anything: discovering a dead link after
-    // filling in a whole form is the worst version of this page.
+    // Checked before they type anything: discovering a dead link after filling
+    // in a whole form is the worst version of this page.
     getLeadProfile(token)
       .then((p) => {
         if (cancelled) return
@@ -82,128 +72,32 @@ export default function LeadRegistrationPage({
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Stays put while the form scrolls — the brand should not slide away
-          on the one page a lead ever sees of ours. */}
-      <header className="sticky top-0 z-40 bg-brand-dark">
-        <div className="mx-auto flex h-16 w-full max-w-5xl items-center px-5">
-          <Image
-            src="/brand/logo-white.svg"
-            alt="AfroTransact"
-            width={160}
-            height={30}
-            priority
-            className="h-7 w-auto"
+    <LeadPageShell>
+      {state === "checking" && <LeadPageLoading />}
+
+      {state === "dead" && (
+        <LeadLinkDead message="Links stay active for two weeks. Reply to the email we sent you and we'll send a fresh one." />
+      )}
+
+      {state === "live" && done && (
+        <LeadThankYou body="Our team will review your details and get in touch. Nothing else to do for now." />
+      )}
+
+      {state === "live" && !done && (
+        <LeadFormLayout
+          title={initial?.firstName ? `Welcome, ${initial.firstName}` : "Finish your details"}
+          intro="Thanks for stopping by our stand. We've filled in what you gave us — add a little about what you sell and our team will take it from there."
+        >
+          <LeadFields
+            voice="self"
+            initial={initial}
+            lockedFields={["email"]}
+            requiredFields={["phone", "city", "businessName"]}
+            onSubmit={submit}
+            submitLabel="Send my details"
           />
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-5xl px-5 py-10 lg:py-14">
-        {state === "checking" && (
-          <div className="flex justify-center py-24">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {state === "dead" && (
-          <section className="mx-auto max-w-md rounded-2xl border border-border bg-background p-8">
-            <h1 className="font-display text-2xl font-semibold text-foreground">
-              This link has expired
-            </h1>
-            <p className="mt-3 text-muted-foreground">
-              Links stay active for two weeks. Reply to the email we sent you and
-              we&apos;ll send a fresh one.
-            </p>
-          </section>
-        )}
-
-        {state === "live" && done && (
-          <section className="mx-auto max-w-md rounded-2xl border border-border bg-background p-8 text-center">
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary">
-              <Check className="h-7 w-7 text-primary-foreground" />
-            </div>
-            <h1 className="font-display text-2xl font-semibold text-foreground">
-              Thank you — that&apos;s everything we need
-            </h1>
-            <p className="mx-auto mt-3 max-w-sm text-muted-foreground">
-              Our team will review your details and call you to set your store up.
-              Nothing else to do for now.
-            </p>
-          </section>
-        )}
-
-        {state === "live" && !done && (
-          <>
-            <div className="max-w-2xl">
-              <h1 className="font-display text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
-                {initial?.firstName
-                  ? `Welcome, ${initial.firstName}`
-                  : "Let's get your store started"}
-              </h1>
-              <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground sm:text-base">
-                Thanks for stopping by our stand. We&apos;ve filled in what you gave
-                us — add a little about what you sell and our team will take it
-                from there.
-              </p>
-            </div>
-
-            <div className="mt-8 grid items-start gap-6 lg:mt-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-8">
-              <section className="rounded-2xl border border-border bg-background p-6 shadow-sm sm:p-7">
-                <LeadFields
-                  voice="self"
-                  initial={initial}
-                  lockedFields={["email"]}
-                  requiredFields={["phone", "city", "businessName"]}
-                  onSubmit={submit}
-                  submitLabel="Send my details"
-                />
-                <p className="mt-5 flex items-start gap-2 border-t border-border pt-5 text-[13px] leading-relaxed text-muted-foreground">
-                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>
-                    This link is personal to you. We use these details only to set
-                    up your store, and never share them.
-                  </span>
-                </p>
-              </section>
-
-              <aside className="space-y-6">
-                <section className="rounded-2xl border border-border bg-background p-6">
-                  <h2 className="font-display text-lg font-semibold text-foreground">
-                    What happens next
-                  </h2>
-                  <ol className="mt-4 space-y-4">
-                    {STEPS.map((s, i) => (
-                      <li key={s.title} className="flex gap-3">
-                        <span
-                          aria-hidden
-                          className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
-                        >
-                          {i + 1}
-                        </span>
-                        <span>
-                          <span className="block text-sm font-medium text-foreground">{s.title}</span>
-                          {s.body && (
-                            <span className="mt-0.5 block text-[13px] leading-relaxed text-muted-foreground">
-                              {s.body}
-                            </span>
-                          )}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                </section>
-
-              </aside>
-            </div>
-          </>
-        )}
-      </main>
-
-      <footer className="mx-auto w-full max-w-5xl px-5 pb-10">
-        <p className="border-t border-border pt-6 text-[13px] text-muted-foreground">
-          Questions? Reply to the email we sent you and a person will answer.
-        </p>
-      </footer>
-    </div>
+        </LeadFormLayout>
+      )}
+    </LeadPageShell>
   )
 }
